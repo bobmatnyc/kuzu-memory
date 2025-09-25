@@ -84,9 +84,9 @@ class Memory(BaseModel):
     
     # Temporal information
     created_at: datetime = Field(default_factory=datetime.now, description="When memory was created")
-    valid_from: datetime = Field(default_factory=datetime.now, description="When memory becomes valid")
+    valid_from: Optional[datetime] = Field(default_factory=datetime.now, description="When memory becomes valid")
     valid_to: Optional[datetime] = Field(None, description="When memory expires (None = never)")
-    accessed_at: datetime = Field(default_factory=datetime.now, description="Last access time")
+    accessed_at: Optional[datetime] = Field(default_factory=datetime.now, description="Last access time")
     access_count: int = Field(default=0, ge=0, description="Number of times accessed")
     
     # Classification
@@ -109,7 +109,7 @@ class Memory(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat(),
         }
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "content": "User prefers Python for backend development",
                 "memory_type": "preference",
@@ -262,7 +262,7 @@ class MemoryContext(BaseModel):
 
     class Config:
         """Pydantic configuration."""
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "original_prompt": "What's my name?",
                 "enhanced_prompt": "## Relevant Context:\n- User's name is Alice\n\nWhat's my name?",

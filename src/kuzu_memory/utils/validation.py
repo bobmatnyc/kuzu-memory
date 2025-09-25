@@ -26,17 +26,24 @@ VALID_ENTITY_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9\s\-_\.]{1,100}$')
 SAFE_TEXT_PATTERN = re.compile(r'^[\w\s\.\,\!\?\-\(\)\[\]\{\}:;\'\"@#$%&*+=<>/\\|`~]*$', re.UNICODE)
 
 
-def validate_text_input(text: str, field_name: str = "text") -> str:
+def validate_text_input(
+    text: str,
+    field_name: str = "text",
+    min_length: int = 1,
+    max_length: int = MAX_TEXT_LENGTH
+) -> str:
     """
     Validate text input for memory operations.
-    
+
     Args:
         text: Text to validate
         field_name: Name of the field for error messages
-        
+        min_length: Minimum allowed length
+        max_length: Maximum allowed length
+
     Returns:
         Cleaned and validated text
-        
+
     Raises:
         ValidationError: If text is invalid
     """
@@ -45,12 +52,19 @@ def validate_text_input(text: str, field_name: str = "text") -> str:
     
     if not text.strip():
         raise ValidationError(field_name, text, "cannot be empty or whitespace-only")
-    
-    if len(text) > MAX_TEXT_LENGTH:
+
+    if len(text) < min_length:
         raise ValidationError(
-            field_name, 
-            f"{len(text)} chars", 
-            f"exceeds maximum length of {MAX_TEXT_LENGTH} characters"
+            field_name,
+            f"{len(text)} chars",
+            f"must be at least {min_length} characters long"
+        )
+
+    if len(text) > max_length:
+        raise ValidationError(
+            field_name,
+            f"{len(text)} chars",
+            f"exceeds maximum length of {max_length} characters"
         )
     
     # Check for potentially dangerous content

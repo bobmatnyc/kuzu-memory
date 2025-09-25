@@ -1,0 +1,176 @@
+"""
+Installer Registry for KuzuMemory
+
+Manages available installers and provides lookup functionality.
+"""
+
+from pathlib import Path
+from typing import Dict, List, Type, Optional
+import logging
+
+from .base import BaseInstaller
+from .auggie import AuggieInstaller
+from .universal import UniversalInstaller
+
+logger = logging.getLogger(__name__)
+
+
+class InstallerRegistry:
+    """
+    Registry of available installers for different AI systems.
+    
+    Provides lookup and discovery functionality for installers.
+    """
+    
+    def __init__(self):
+        """Initialize the installer registry."""
+        self._installers: Dict[str, Type[BaseInstaller]] = {}
+        self._register_builtin_installers()
+    
+    def _register_builtin_installers(self):
+        """Register built-in installers."""
+        self.register('auggie', AuggieInstaller)
+        self.register('claude', AuggieInstaller)  # Alias for Auggie
+        self.register('universal', UniversalInstaller)
+        self.register('generic', UniversalInstaller)  # Alias for Universal
+    
+    def register(self, name: str, installer_class: Type[BaseInstaller]):
+        """
+        Register an installer.
+        
+        Args:
+            name: Name/identifier for the installer
+            installer_class: Installer class
+        """
+        if not issubclass(installer_class, BaseInstaller):
+            raise ValueError(f"Installer class must inherit from BaseInstaller")
+        
+        self._installers[name.lower()] = installer_class
+        logger.debug(f"Registered installer: {name} -> {installer_class.__name__}")
+    
+    def get_installer(self, name: str, project_root: Path) -> Optional[BaseInstaller]:
+        """
+        Get installer instance by name.
+        
+        Args:
+            name: Name of the installer
+            project_root: Project root directory
+            
+        Returns:
+            Installer instance or None if not found
+        """
+        installer_class = self._installers.get(name.lower())
+        if installer_class:
+            return installer_class(project_root)
+        return None
+    
+    def list_installers(self) -> List[Dict[str, str]]:
+        """
+        List all available installers.
+        
+        Returns:
+            List of installer information dictionaries
+        """
+        installers = []
+        seen_classes = set()
+        
+        for name, installer_class in self._installers.items():
+            # Avoid duplicates for aliases
+            if installer_class in seen_classes:
+                continue
+            seen_classes.add(installer_class)
+            
+            # Create temporary instance to get info
+            temp_instance = installer_class(Path('.'))
+            
+            installers.append({
+                'name': name,
+                'ai_system': temp_instance.ai_system_name,
+                'description': temp_instance.description,
+                'class': installer_class.__name__
+            })
+        
+        return sorted(installers, key=lambda x: x['name'])
+    
+    def get_installer_names(self) -> List[str]:
+        """
+        Get list of all installer names.
+        
+        Returns:
+            List of installer names
+        """
+        return sorted(self._installers.keys())
+    
+    def has_installer(self, name: str) -> bool:
+        """
+        Check if installer exists.
+        
+        Args:
+            name: Installer name
+            
+        Returns:
+            True if installer exists
+        """
+        return name.lower() in self._installers
+
+
+# Global registry instance
+_registry = InstallerRegistry()
+
+
+def get_installer(name: str, project_root: Path) -> Optional[BaseInstaller]:
+    """
+    Get installer instance by name.
+    
+    Args:
+        name: Name of the installer
+        project_root: Project root directory
+        
+    Returns:
+        Installer instance or None if not found
+    """
+    return _registry.get_installer(name, project_root)
+
+
+def list_installers() -> List[Dict[str, str]]:
+    """
+    List all available installers.
+    
+    Returns:
+        List of installer information dictionaries
+    """
+    return _registry.list_installers()
+
+
+def get_installer_names() -> List[str]:
+    """
+    Get list of all installer names.
+    
+    Returns:
+        List of installer names
+    """
+    return _registry.get_installer_names()
+
+
+def has_installer(name: str) -> bool:
+    """
+    Check if installer exists.
+    
+    Args:
+        name: Installer name
+        
+    Returns:
+        True if installer exists
+    """
+    return _registry.has_installer(name)
+
+
+def register_installer(name: str, installer_class: Type[BaseInstaller]):
+    """
+    Register a custom installer.
+    
+    Args:
+        name: Name/identifier for the installer
+        installer_class: Installer class
+    """
+    _registry.register(name, installer_class)

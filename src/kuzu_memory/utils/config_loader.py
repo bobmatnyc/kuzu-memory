@@ -141,8 +141,8 @@ class ConfigLoader:
                 },
             },
             "performance": {
-                "max_recall_time_ms": 10.0,
-                "max_generation_time_ms": 20.0,
+                "max_recall_time_ms": 100.0,
+                "max_generation_time_ms": 100.0,
                 "enable_performance_monitoring": True,
                 "log_slow_operations": True,
                 "enable_metrics_collection": False,

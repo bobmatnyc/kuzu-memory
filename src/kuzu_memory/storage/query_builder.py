@@ -1,0 +1,606 @@
+"""
+Database query construction and optimization for KuzuMemory.
+
+Handles complex query building, filtering, and database interaction logic.
+"""
+
+import logging
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timedelta
+import json
+
+from ..core.models import Memory, MemoryType, ExtractedMemory
+from ..utils.exceptions import DatabaseError, PerformanceError
+from ..utils.validation import sanitize_for_database
+
+logger = logging.getLogger(__name__)
+
+
+class QueryBuilder:
+    """Handles database query construction and execution."""
+
+    def __init__(self, db_adapter):
+        """Initialize query builder with database adapter."""
+        self.db_adapter = db_adapter
+        self.query_stats = {
+            'queries_executed': 0,
+            'queries_failed': 0,
+            'avg_query_time': 0.0,
+            'slow_queries': []
+        }
+
+    def get_existing_memories_for_deduplication(
+        self,
+        content: str,
+        source: str,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        days_back: int = 30
+    ) -> List[Memory]:
+        """
+        Get existing memories for deduplication analysis.
+
+        Args:
+            content: Content to check for duplicates
+            source: Source of the content
+            user_id: Optional user ID filter
+            session_id: Optional session ID filter
+            days_back: Number of days to look back for duplicates
+
+        Returns:
+            List of potentially duplicate memories
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Build query conditions
+            conditions = []
+            params = {}
+
+            # Time-based filtering (most important for performance)
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            conditions.append("m.created_at >= $cutoff_date")
+            params['cutoff_date'] = cutoff_date
+
+            # Source filtering
+            if source:
+                conditions.append("m.source_type = $source_type")
+                params['source_type'] = source
+
+            # User filtering
+            if user_id:
+                conditions.append("m.user_id = $user_id")
+                params['user_id'] = user_id
+
+            # Session filtering
+            if session_id:
+                conditions.append("m.session_id = $session_id")
+                params['session_id'] = session_id
+
+            # Content similarity filtering (basic)
+            content_words = content.lower().split()
+            if len(content_words) > 0:
+                # Look for memories with overlapping words (basic similarity)
+                first_words = content_words[:5]  # Use first 5 words for initial filtering
+                word_conditions = []
+                for i, word in enumerate(first_words):
+                    word_param = f"word_{i}"
+                    word_conditions.append(f"LOWER(m.content) CONTAINS ${word_param}")
+                    params[word_param] = word
+
+                if word_conditions:
+                    conditions.append(f"({' OR '.join(word_conditions)})")
+
+            # Construct final query
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            query = f"""
+            MATCH (m:Memory)
+            WHERE {where_clause}
+            RETURN m
+            ORDER BY m.created_at DESC
+            LIMIT 100
+            """
+
+            # Execute query
+            results = self.db_adapter.execute_query(query, params)
+
+            # Convert results to Memory objects
+            memories = []
+            for result in results:
+                try:
+                    memory_data = result['m']
+                    memory = self._convert_db_result_to_memory(memory_data)
+                    if memory:
+                        memories.append(memory)
+                except Exception as e:
+                    logger.warning(f"Error converting memory result: {e}")
+
+            # Update query performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, len(memories))
+
+            return memories
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error querying existing memories: {e}")
+            raise DatabaseError(f"Failed to query existing memories: {e}")
+
+    def store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
+        """
+        Store or update a memory in the database.
+
+        Args:
+            memory: Memory object to store
+            is_update: Whether this is an update operation
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Prepare memory data for storage
+            memory_data = {
+                'id': memory.id,
+                'content': sanitize_for_database(memory.content),
+                'source': memory.source_type,
+                'memory_type': memory.memory_type.value,
+                'created_at': memory.created_at,
+                'expires_at': memory.valid_to,
+                'user_id': memory.user_id,
+                'session_id': memory.session_id,
+                'agent_id': memory.agent_id,
+                'metadata': json.dumps(memory.metadata, default=str) if memory.metadata else '{}'
+            }
+
+            if is_update:
+                # Update existing memory
+                query = """
+                MATCH (m:Memory {id: $id})
+                SET m.content = $content,
+                    m.source_type = $source,
+                    m.memory_type = $memory_type,
+                    m.valid_to = $expires_at,
+                    m.user_id = $user_id,
+                    m.session_id = $session_id,
+                    m.agent_id = $agent_id,
+                    m.metadata = $metadata,
+                    m.updated_at = $updated_at
+                RETURN m
+                """
+                memory_data['updated_at'] = datetime.now()
+            else:
+                # Create new memory
+                query = """
+                CREATE (m:Memory {
+                    id: $id,
+                    content: $content,
+                    source_type: $source,
+                    memory_type: $memory_type,
+                    created_at: $created_at,
+                    valid_to: $expires_at,
+                    user_id: $user_id,
+                    session_id: $session_id,
+                    agent_id: $agent_id,
+                    metadata: $metadata
+                })
+                RETURN m
+                """
+
+            # Execute storage query
+            result = self.db_adapter.execute_query(query, memory_data)
+
+            if not result:
+                raise DatabaseError(f"Failed to {'update' if is_update else 'create'} memory")
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, 1)
+
+            logger.debug(f"Memory {'updated' if is_update else 'stored'}: {memory.id}")
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error storing memory in database: {e}")
+            raise DatabaseError(f"Failed to store memory: {e}")
+
+    def store_memory_entities(self, memory: Memory) -> None:
+        """
+        Store entities extracted from a memory.
+
+        Args:
+            memory: Memory object with entities to store
+        """
+        if not hasattr(memory, 'entities') or not memory.entities:
+            return
+
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Store each entity and create relationships
+            for entity in memory.entities:
+                # Create or update entity node
+                # Generate entity ID
+                entity_id = f"{entity['name']}:{entity['type']}"
+
+                entity_query = """
+                MERGE (e:Entity {id: $id})
+                ON CREATE SET e.name = $name,
+                             e.entity_type = $entity_type,
+                             e.first_seen = $created_at,
+                             e.last_seen = $created_at,
+                             e.mention_count = 1
+                ON MATCH SET e.mention_count = COALESCE(e.mention_count, 0) + 1,
+                            e.last_seen = $created_at
+                RETURN e
+                """
+
+                entity_params = {
+                    'id': entity_id,
+                    'name': entity['name'],
+                    'entity_type': entity['type'],
+                    'created_at': datetime.now()
+                    # memory_id not needed for entity creation
+                }
+
+                self.db_adapter.execute_query(entity_query, entity_params)
+
+                # Create relationship between memory and entity
+                relationship_query = """
+                MATCH (m:Memory {id: $memory_id})
+                MATCH (e:Entity {id: $entity_id})
+                MERGE (m)-[r:MENTIONS]->(e)
+                ON CREATE SET r.confidence = $confidence,
+                             r.extraction_method = $extraction_method
+                RETURN r
+                """
+
+                relationship_params = {
+                    'memory_id': memory.id,
+                    'entity_id': entity_id,
+                    'confidence': entity.get('confidence', 1.0),
+                    'extraction_method': entity.get('extraction_method', 'pattern')
+                }
+
+                self.db_adapter.execute_query(relationship_query, relationship_params)
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, len(memory.entities))
+
+            logger.debug(f"Stored {len(memory.entities)} entities for memory {memory.id}")
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error storing memory entities: {e}")
+            raise DatabaseError(f"Failed to store memory entities: {e}")
+
+    def get_recent_memories(self, limit: int = 10, **filters) -> List[Memory]:
+        """
+        Get recent memories with optional filtering.
+
+        Args:
+            limit: Maximum number of memories to return
+            **filters: Additional filters (memory_type, source, user_id, etc.)
+
+        Returns:
+            List of recent memories
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Build query conditions
+            conditions = []
+            params = {'limit': limit}
+
+            # Apply filters
+            for filter_key, filter_value in filters.items():
+                if filter_value is not None:
+                    if filter_key == 'memory_type' and isinstance(filter_value, MemoryType):
+                        conditions.append(f"m.memory_type = ${filter_key}")
+                        params[filter_key] = filter_value.value
+                    else:
+                        conditions.append(f"m.{filter_key} = ${filter_key}")
+                        params[filter_key] = filter_value
+
+            # Add expiration filter
+            conditions.append("(m.valid_to IS NULL OR m.valid_to > $now)")
+            params['now'] = datetime.now()
+
+            # Construct query
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            query = f"""
+            MATCH (m:Memory)
+            WHERE {where_clause}
+            RETURN m
+            ORDER BY m.created_at DESC
+            LIMIT $limit
+            """
+
+            # Execute query
+            results = self.db_adapter.execute_query(query, params)
+
+            # Convert results to Memory objects
+            memories = []
+            for result in results:
+                try:
+                    memory_data = result['m']
+                    memory = self._convert_db_result_to_memory(memory_data)
+                    if memory:
+                        memories.append(memory)
+                except Exception as e:
+                    logger.warning(f"Error converting memory result: {e}")
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, len(memories))
+
+            return memories
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error getting recent memories: {e}")
+            raise DatabaseError(f"Failed to get recent memories: {e}")
+
+    def get_memory_by_id(self, memory_id: str) -> Optional[Memory]:
+        """
+        Get a specific memory by its ID.
+
+        Args:
+            memory_id: ID of the memory to retrieve
+
+        Returns:
+            Memory object or None if not found
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            query = """
+            MATCH (m:Memory {id: $memory_id})
+            WHERE m.valid_to IS NULL OR m.valid_to > $now
+            RETURN m
+            """
+
+            params = {
+                'memory_id': memory_id,
+                'now': datetime.now()
+            }
+
+            # Execute query
+            results = self.db_adapter.execute_query(query, params)
+
+            if not results:
+                return None
+
+            # Convert result to Memory object
+            memory_data = results[0]['m']
+            memory = self._convert_db_result_to_memory(memory_data)
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, 1 if memory else 0)
+
+            return memory
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error getting memory by ID: {e}")
+            raise DatabaseError(f"Failed to get memory by ID: {e}")
+
+    def cleanup_expired_memories(self) -> int:
+        """
+        Remove expired memories from the database.
+
+        Returns:
+            Number of memories removed
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Query to find and delete expired memories
+            query = """
+            MATCH (m:Memory)
+            WHERE m.valid_to IS NOT NULL AND m.valid_to <= $now
+            WITH m
+            OPTIONAL MATCH (m)-[r]-()
+            DELETE r, m
+            RETURN count(m) as deleted_count
+            """
+
+            params = {'now': datetime.now()}
+
+            # Execute cleanup query
+            results = self.db_adapter.execute_query(query, params)
+            deleted_count = results[0]['deleted_count'] if results else 0
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, deleted_count)
+
+            logger.info(f"Cleaned up {deleted_count} expired memories")
+            return deleted_count
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error cleaning up expired memories: {e}")
+            raise DatabaseError(f"Failed to cleanup expired memories: {e}")
+
+    def get_memory_statistics(self) -> Dict[str, Any]:
+        """
+        Get comprehensive memory statistics from the database.
+
+        Returns:
+            Dictionary with various statistics
+        """
+        try:
+            self.query_stats['queries_executed'] += 1
+            start_time = datetime.now()
+
+            # Multiple queries for different statistics
+            stats_queries = {
+                'total_memories': """
+                    MATCH (m:Memory)
+                    WHERE m.valid_to IS NULL OR m.valid_to > $now
+                    RETURN count(m) as count
+                """,
+                'memory_by_type': """
+                    MATCH (m:Memory)
+                    WHERE m.valid_to IS NULL OR m.valid_to > $now
+                    RETURN m.memory_type as type, count(m) as count
+                    ORDER BY count DESC
+                """,
+                'memory_by_source': """
+                    MATCH (m:Memory)
+                    WHERE m.valid_to IS NULL OR m.valid_to > $now
+                    RETURN m.source as source, count(m) as count
+                    ORDER BY count DESC
+                    LIMIT 10
+                """,
+                'recent_activity': """
+                    MATCH (m:Memory)
+                    WHERE m.created_at >= $week_ago AND (m.valid_to IS NULL OR m.valid_to > $now)
+                    RETURN count(m) as recent_count
+                """
+            }
+
+            params = {
+                'now': datetime.now(),
+                'week_ago': datetime.now() - timedelta(days=7)
+            }
+
+            stats = {}
+
+            # Execute each statistics query
+            for stat_name, query in stats_queries.items():
+                try:
+                    results = self.db_adapter.execute_query(query, params)
+
+                    if stat_name in ['total_memories', 'recent_activity']:
+                        stats[stat_name] = results[0]['count'] if results else 0
+                    else:
+                        stats[stat_name] = {
+                            result[list(result.keys())[0]]: result['count']
+                            for result in results
+                        }
+
+                except Exception as e:
+                    logger.warning(f"Error getting {stat_name} statistics: {e}")
+                    stats[stat_name] = {}
+
+            # Add query performance statistics
+            stats['query_performance'] = self.query_stats.copy()
+
+            # Update performance stats
+            execution_time = (datetime.now() - start_time).total_seconds()
+            self._update_query_stats(execution_time, len(stats))
+
+            return stats
+
+        except Exception as e:
+            self.query_stats['queries_failed'] += 1
+            logger.error(f"Error getting memory statistics: {e}")
+            return {}
+
+    def _convert_db_result_to_memory(self, memory_data: Dict[str, Any]) -> Optional[Memory]:
+        """
+        Convert database result to Memory object.
+
+        Args:
+            memory_data: Raw memory data from database
+
+        Returns:
+            Memory object or None if conversion fails
+        """
+        try:
+            # Parse metadata
+            metadata = {}
+            if memory_data.get('metadata'):
+                try:
+                    metadata = json.loads(memory_data['metadata'])
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse metadata for memory {memory_data.get('id')}")
+
+            # Create Memory object
+            memory = Memory(
+                id=memory_data['id'],
+                content=memory_data['content'],
+                content_hash=memory_data.get('content_hash', ''),
+                created_at=memory_data['created_at'],
+                valid_from=memory_data.get('valid_from'),
+                valid_to=memory_data.get('valid_to'),
+                accessed_at=memory_data.get('accessed_at'),
+                access_count=memory_data.get('access_count', 0),
+                memory_type=MemoryType(memory_data['memory_type']),
+                importance=memory_data.get('importance', 0.5),
+                confidence=memory_data.get('confidence', 1.0),
+                source_type=memory_data.get('source_type', 'conversation'),
+                agent_id=memory_data.get('agent_id', 'default'),
+                user_id=memory_data.get('user_id'),
+                session_id=memory_data.get('session_id'),
+                metadata=metadata
+            )
+
+            return memory
+
+        except Exception as e:
+            logger.error(f"Error converting database result to Memory: {e}")
+            return None
+
+    def _update_query_stats(self, execution_time: float, result_count: int):
+        """
+        Update query performance statistics.
+
+        Args:
+            execution_time: Time taken to execute query in seconds
+            result_count: Number of results returned
+        """
+        try:
+            # Update average query time
+            total_queries = self.query_stats['queries_executed']
+            if total_queries > 1:
+                current_avg = self.query_stats['avg_query_time']
+                self.query_stats['avg_query_time'] = (
+                    (current_avg * (total_queries - 1) + execution_time) / total_queries
+                )
+            else:
+                self.query_stats['avg_query_time'] = execution_time
+
+            # Track slow queries (> 1 second)
+            if execution_time > 1.0:
+                slow_query_info = {
+                    'execution_time': execution_time,
+                    'result_count': result_count,
+                    'timestamp': datetime.now()
+                }
+                self.query_stats['slow_queries'].append(slow_query_info)
+
+                # Keep only last 10 slow queries
+                if len(self.query_stats['slow_queries']) > 10:
+                    self.query_stats['slow_queries'] = self.query_stats['slow_queries'][-10:]
+
+            # Log performance warnings
+            if execution_time > 2.0:
+                logger.warning(f"Slow query detected: {execution_time:.2f}s for {result_count} results")
+
+        except Exception as e:
+            logger.warning(f"Error updating query statistics: {e}")
+
+    def get_query_performance_stats(self) -> Dict[str, Any]:
+        """Get query performance statistics."""
+        return {
+            'total_queries': self.query_stats['queries_executed'],
+            'failed_queries': self.query_stats['queries_failed'],
+            'success_rate': (
+                (self.query_stats['queries_executed'] - self.query_stats['queries_failed']) /
+                max(self.query_stats['queries_executed'], 1)
+            ) * 100,
+            'average_query_time': self.query_stats['avg_query_time'],
+            'slow_query_count': len(self.query_stats['slow_queries']),
+            'recent_slow_queries': self.query_stats['slow_queries'][-5:]  # Last 5 slow queries
+        }

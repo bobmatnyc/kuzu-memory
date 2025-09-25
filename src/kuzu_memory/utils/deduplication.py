@@ -32,14 +32,14 @@ class DeduplicationEngine:
     def __init__(
         self,
         exact_threshold: float = 1.0,      # SHA256 exact match
-        near_threshold: float = 0.95,      # Normalized similarity threshold
-        semantic_threshold: float = 0.85,  # Token overlap threshold
+        near_threshold: float = 0.80,      # Normalized similarity threshold
+        semantic_threshold: float = 0.50,  # Token overlap threshold
         min_length_for_similarity: int = 10,  # Minimum length to check similarity
         enable_update_detection: bool = True,  # Detect updates vs duplicates
     ):
         """
         Initialize deduplication engine.
-        
+
         Args:
             exact_threshold: Threshold for exact hash matches (always 1.0)
             near_threshold: Threshold for normalized text similarity
@@ -47,6 +47,14 @@ class DeduplicationEngine:
             min_length_for_similarity: Minimum text length to perform similarity checks
             enable_update_detection: Whether to detect updates vs pure duplicates
         """
+        # Validate thresholds
+        if not (0.0 <= near_threshold <= 1.0):
+            raise ValueError(f"near_threshold must be between 0.0 and 1.0, got {near_threshold}")
+        if not (0.0 <= semantic_threshold <= 1.0):
+            raise ValueError(f"semantic_threshold must be between 0.0 and 1.0, got {semantic_threshold}")
+        if min_length_for_similarity < 0:
+            raise ValueError(f"min_length_for_similarity must be non-negative, got {min_length_for_similarity}")
+
         self.exact_threshold = exact_threshold
         self.near_threshold = near_threshold
         self.semantic_threshold = semantic_threshold
@@ -76,27 +84,30 @@ class DeduplicationEngine:
     def _normalize_text(self, text: str) -> str:
         """
         Normalize text for comparison.
-        
+
         Args:
             text: Text to normalize
-            
+
         Returns:
             Normalized text
         """
+        if not text:
+            return ""
+
         # Convert to lowercase
         normalized = text.lower()
-        
+
         # Remove extra whitespace
         normalized = ' '.join(normalized.split())
-        
+
         # Remove common punctuation that doesn't affect meaning
         normalized = re.sub(r'[.,!?;:()"\'-]', '', normalized)
-        
+
         # Remove articles and common words that don't affect core meaning
-        stop_words = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'and', 'or', 'but'}
+        stop_words = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'and', 'or', 'but', 'in', 'at', 'to', 'for', 'of', 'with', 'as', 'on', 'by'}
         words = normalized.split()
-        filtered_words = [word for word in words if word not in stop_words]
-        
+        filtered_words = [word for word in words if word not in stop_words and len(word) > 1]
+
         return ' '.join(filtered_words)
     
     def _calculate_text_similarity(self, text1: str, text2: str) -> float:
@@ -120,29 +131,41 @@ class DeduplicationEngine:
     def _calculate_token_overlap(self, text1: str, text2: str) -> float:
         """
         Calculate token overlap between two texts.
-        
+
         Args:
             text1: First text
             text2: Second text
-            
+
         Returns:
             Overlap ratio between 0.0 and 1.0
         """
         if not text1 or not text2:
             return 0.0
-        
+
+        # Normalize both texts for better comparison
+        normalized1 = self._normalize_text(text1)
+        normalized2 = self._normalize_text(text2)
+
         # Tokenize and create sets
-        tokens1 = set(text1.lower().split())
-        tokens2 = set(text2.lower().split())
-        
+        tokens1 = set(normalized1.split()) if normalized1 else set()
+        tokens2 = set(normalized2.split()) if normalized2 else set()
+
         if not tokens1 or not tokens2:
             return 0.0
-        
+
         # Calculate Jaccard similarity (intersection over union)
         intersection = len(tokens1.intersection(tokens2))
         union = len(tokens1.union(tokens2))
-        
-        return intersection / union if union > 0 else 0.0
+
+        jaccard = intersection / union if union > 0 else 0.0
+
+        # Also calculate overlap coefficient (intersection / min(set sizes))
+        # This is more generous for partial matches
+        min_size = min(len(tokens1), len(tokens2))
+        overlap_coeff = intersection / min_size if min_size > 0 else 0.0
+
+        # Return the higher of the two (more generous matching)
+        return max(jaccard, overlap_coeff)
     
     def _is_update_or_correction(self, new_content: str, existing_content: str) -> bool:
         """

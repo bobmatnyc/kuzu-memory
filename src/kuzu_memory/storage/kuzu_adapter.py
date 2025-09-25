@@ -3,6 +3,8 @@ Kuzu database adapter for KuzuMemory.
 
 Provides connection management, query execution, and database operations
 with connection pooling, error handling, and performance monitoring.
+
+Supports both Python API and CLI adapters for optimal performance.
 """
 
 import logging
@@ -20,6 +22,7 @@ except ImportError:
     kuzu = None
 
 from ..core.config import KuzuMemoryConfig
+from ..core.models import Memory, MemoryType
 from ..utils.exceptions import (
     DatabaseError,
     DatabaseLockError,
@@ -35,6 +38,26 @@ from .schema import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig):
+    """
+    Factory function to create the appropriate Kuzu adapter.
+
+    Args:
+        db_path: Path to the database
+        config: KuzuMemory configuration
+
+    Returns:
+        KuzuAdapter instance (either Python API or CLI-based)
+    """
+    if config.storage.use_cli_adapter:
+        logger.info("Using Kuzu CLI adapter for optimal performance")
+        from .kuzu_cli_adapter import KuzuCLIAdapter
+        return KuzuCLIAdapter(db_path, config)
+    else:
+        logger.info("Using Kuzu Python API adapter")
+        return KuzuAdapter(db_path, config)
 
 
 class KuzuConnectionPool:
@@ -468,10 +491,103 @@ class KuzuAdapter:
                 logger.info(f"Cleaned up {cleaned_count} expired memories")
             
             return cleaned_count
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
+
+    def get_recent_memories(self, limit: int = 10, **filters) -> List[Memory]:
+        """
+        Get recent memories, optionally filtered.
+
+        Args:
+            limit: Maximum number of memories to return
+            **filters: Optional filters (e.g., memory_type, user_id)
+
+        Returns:
+            List of recent memories
+        """
+        try:
+            query = """
+                MATCH (m:Memory)
+                WHERE (m.valid_to IS NULL OR m.valid_to > $current_time)
+            """
+
+            parameters = {
+                'current_time': datetime.now().isoformat(),
+                'limit': limit
+            }
+
+            # Add filters
+            if 'memory_type' in filters:
+                query += " AND m.memory_type = $memory_type"
+                parameters['memory_type'] = filters['memory_type']
+
+            if 'user_id' in filters:
+                query += " AND m.user_id = $user_id"
+                parameters['user_id'] = filters['user_id']
+
+            query += " RETURN m ORDER BY m.created_at DESC LIMIT $limit"
+
+            results = self.execute_query(query, parameters)
+
+            memories = []
+            for result in results:
+                memory_data = result['m']
+                memory = self._result_to_memory(memory_data)
+                if memory:
+                    memories.append(memory)
+
+            return memories
+
+        except Exception as e:
+            logger.error(f"Failed to get recent memories: {e}")
+            return []
+
+    def get_memory_by_id(self, memory_id: str) -> Optional[Memory]:
+        """
+        Get a specific memory by ID.
+
+        Args:
+            memory_id: Memory ID to retrieve
+
+        Returns:
+            Memory object or None if not found
+        """
+        try:
+            query = """
+                MATCH (m:Memory)
+                WHERE m.id = $memory_id
+                RETURN m
+            """
+
+            results = self.execute_query(query, {'memory_id': memory_id})
+
+            if results:
+                memory_data = results[0]['m']
+                return self._result_to_memory(memory_data)
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get memory by ID: {e}")
+            return None
+
+    def _result_to_memory(self, memory_data: Dict[str, Any]) -> Optional[Memory]:
+        """
+        Convert database result to Memory object.
+
+        Args:
+            memory_data: Raw memory data from database
+
+        Returns:
+            Memory object or None if conversion fails
+        """
+        try:
+            return Memory.from_dict(memory_data)
+        except Exception as e:
+            logger.warning(f"Failed to parse memory from database: {e}")
+            return None
     
     def close(self) -> None:
         """Close the database adapter."""

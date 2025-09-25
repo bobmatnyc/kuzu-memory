@@ -1,888 +1,452 @@
 """
-Auggie Rules Integration for KuzuMemory.
+Auggie Integration for KuzuMemory.
 
-Provides intelligent memory-driven prompt modification and response learning
-through integration with Auggie's rules system.
+Main integration interface that coordinates rules engine and memory learning.
+Refactored to use modular components for better maintainability.
 """
 
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Callable, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
+from typing import Dict, List, Any, Optional
+from pathlib import Path
 
 from ..core.models import Memory, MemoryContext, MemoryType
 from ..utils.exceptions import KuzuMemoryError
-
+from .auggie_rules import AuggieRuleEngine, RuleType, RulePriority, AuggieRule
+from .auggie_memory import ResponseLearner, MemorySynchronizer
 
 logger = logging.getLogger(__name__)
 
 
-class RuleType(Enum):
-    """Types of Auggie rules for memory integration."""
-    CONTEXT_ENHANCEMENT = "context_enhancement"
-    PROMPT_MODIFICATION = "prompt_modification"
-    RESPONSE_FILTERING = "response_filtering"
-    LEARNING_TRIGGER = "learning_trigger"
-    MEMORY_PRIORITIZATION = "memory_prioritization"
-
-
-class RulePriority(Enum):
-    """Priority levels for rule execution."""
-    CRITICAL = 1
-    HIGH = 2
-    MEDIUM = 3
-    LOW = 4
-
-
-@dataclass
-class AuggieRule:
-    """Represents an Auggie rule for memory integration."""
-    id: str
-    name: str
-    description: str
-    rule_type: RuleType
-    priority: RulePriority
-    conditions: Dict[str, Any]
-    actions: Dict[str, Any]
-    enabled: bool = True
-    created_at: datetime = None
-    last_executed: datetime = None
-    execution_count: int = 0
-    success_rate: float = 1.0
-    
-    def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now()
-    
-    def matches_conditions(self, context: Dict[str, Any]) -> bool:
-        """Check if rule conditions match the given context."""
-        try:
-            for condition_key, condition_value in self.conditions.items():
-                if condition_key not in context:
-                    return False
-                
-                context_value = context[condition_key]
-                
-                # Handle different condition types
-                if isinstance(condition_value, dict):
-                    if "contains" in condition_value:
-                        if condition_value["contains"].lower() not in str(context_value).lower():
-                            return False
-                    elif "equals" in condition_value:
-                        if context_value != condition_value["equals"]:
-                            return False
-                    elif "greater_than" in condition_value:
-                        if float(context_value) <= float(condition_value["greater_than"]):
-                            return False
-                    elif "less_than" in condition_value:
-                        if float(context_value) >= float(condition_value["less_than"]):
-                            return False
-                    elif "in" in condition_value:
-                        if context_value not in condition_value["in"]:
-                            return False
-                elif context_value != condition_value:
-                    return False
-            
-            return True
-            
-        except Exception as e:
-            logger.warning(f"Error evaluating rule conditions for {self.id}: {e}")
-            return False
-    
-    def execute_actions(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute rule actions and return modifications."""
-        try:
-            self.last_executed = datetime.now()
-            self.execution_count += 1
-            
-            modifications = {}
-            
-            for action_key, action_value in self.actions.items():
-                if action_key == "add_context":
-                    modifications["added_context"] = action_value
-                elif action_key == "modify_prompt":
-                    modifications["prompt_modifications"] = action_value
-                elif action_key == "set_priority":
-                    modifications["memory_priority"] = action_value
-                elif action_key == "filter_memories":
-                    modifications["memory_filters"] = action_value
-                elif action_key == "learn_from_response":
-                    modifications["learning_config"] = action_value
-                else:
-                    modifications[action_key] = action_value
-            
-            return modifications
-            
-        except Exception as e:
-            logger.error(f"Error executing rule actions for {self.id}: {e}")
-            return {}
-
-
-class AuggieRuleEngine:
-    """Rule engine for memory-driven AI interactions."""
-    
-    def __init__(self, kuzu_memory=None):
-        """Initialize the rule engine."""
-        self.kuzu_memory = kuzu_memory
-        self.rules: Dict[str, AuggieRule] = {}
-        self.rule_execution_history: List[Dict[str, Any]] = []
-        self.learning_callbacks: List[Callable] = []
-        
-        # Load default rules
-        self._load_default_rules()
-    
-    def _load_default_rules(self):
-        """Load default Auggie rules for memory integration."""
-        default_rules = [
-            # Context Enhancement Rules
-            AuggieRule(
-                id="enhance_with_identity",
-                name="Enhance with Identity Context",
-                description="Add user identity information to prompts",
-                rule_type=RuleType.CONTEXT_ENHANCEMENT,
-                priority=RulePriority.HIGH,
-                conditions={
-                    "has_identity_memories": True,
-                    "prompt_length": {"greater_than": 10}
-                },
-                actions={
-                    "add_context": "Include relevant identity information from memories",
-                    "memory_types": ["identity"]
-                }
-            ),
-            
-            # Prompt Modification Rules
-            AuggieRule(
-                id="personalize_coding_help",
-                name="Personalize Coding Assistance",
-                description="Customize coding help based on user preferences",
-                rule_type=RuleType.PROMPT_MODIFICATION,
-                priority=RulePriority.MEDIUM,
-                conditions={
-                    "prompt_category": "coding",
-                    "has_preference_memories": True
-                },
-                actions={
-                    "modify_prompt": {
-                        "add_preferences": True,
-                        "include_tech_stack": True,
-                        "mention_experience_level": True
-                    }
-                }
-            ),
-            
-            # Learning Trigger Rules
-            AuggieRule(
-                id="learn_from_corrections",
-                name="Learn from User Corrections",
-                description="Trigger learning when user corrects AI responses",
-                rule_type=RuleType.LEARNING_TRIGGER,
-                priority=RulePriority.CRITICAL,
-                conditions={
-                    "response_contains": {"contains": "actually"},
-                    "user_correction": True
-                },
-                actions={
-                    "learn_from_response": {
-                        "extract_correction": True,
-                        "update_memories": True,
-                        "confidence_boost": 0.9
-                    }
-                }
-            ),
-            
-            # Memory Prioritization Rules
-            AuggieRule(
-                id="prioritize_recent_decisions",
-                name="Prioritize Recent Decisions",
-                description="Give higher priority to recent decision memories",
-                rule_type=RuleType.MEMORY_PRIORITIZATION,
-                priority=RulePriority.MEDIUM,
-                conditions={
-                    "memory_type": "decision",
-                    "memory_age_days": {"less_than": 7}
-                },
-                actions={
-                    "set_priority": 0.9,
-                    "boost_confidence": 0.1
-                }
-            )
-        ]
-        
-        for rule in default_rules:
-            self.add_rule(rule)
-    
-    def add_rule(self, rule: AuggieRule):
-        """Add a rule to the engine."""
-        self.rules[rule.id] = rule
-        logger.info(f"Added rule: {rule.name} ({rule.id})")
-    
-    def remove_rule(self, rule_id: str):
-        """Remove a rule from the engine."""
-        if rule_id in self.rules:
-            del self.rules[rule_id]
-            logger.info(f"Removed rule: {rule_id}")
-    
-    def get_applicable_rules(self, context: Dict[str, Any]) -> List[AuggieRule]:
-        """Get rules that apply to the given context."""
-        applicable_rules = []
-        
-        for rule in self.rules.values():
-            if rule.enabled and rule.matches_conditions(context):
-                applicable_rules.append(rule)
-        
-        # Sort by priority
-        applicable_rules.sort(key=lambda r: r.priority.value)
-        return applicable_rules
-    
-    def execute_rules(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute applicable rules and return combined modifications."""
-        applicable_rules = self.get_applicable_rules(context)
-        
-        combined_modifications = {
-            "context_additions": [],
-            "prompt_modifications": {},
-            "memory_filters": {},
-            "learning_triggers": [],
-            "executed_rules": []
-        }
-        
-        for rule in applicable_rules:
-            try:
-                modifications = rule.execute_actions(context)
-                
-                # Combine modifications
-                if "added_context" in modifications:
-                    combined_modifications["context_additions"].append(modifications["added_context"])
-                
-                if "prompt_modifications" in modifications:
-                    combined_modifications["prompt_modifications"].update(modifications["prompt_modifications"])
-                
-                if "memory_filters" in modifications:
-                    combined_modifications["memory_filters"].update(modifications["memory_filters"])
-                
-                if "learning_config" in modifications:
-                    combined_modifications["learning_triggers"].append(modifications["learning_config"])
-                
-                combined_modifications["executed_rules"].append({
-                    "rule_id": rule.id,
-                    "rule_name": rule.name,
-                    "modifications": modifications
-                })
-                
-                # Update rule success rate
-                rule.success_rate = (rule.success_rate * (rule.execution_count - 1) + 1.0) / rule.execution_count
-                
-            except Exception as e:
-                logger.error(f"Error executing rule {rule.id}: {e}")
-                # Update rule success rate for failure
-                rule.success_rate = (rule.success_rate * (rule.execution_count - 1) + 0.0) / rule.execution_count
-        
-        # Record execution history
-        self.rule_execution_history.append({
-            "timestamp": datetime.now(),
-            "context": context,
-            "applicable_rules": [r.id for r in applicable_rules],
-            "modifications": combined_modifications
-        })
-        
-        return combined_modifications
-    
-    def add_learning_callback(self, callback: Callable):
-        """Add a callback for learning events."""
-        self.learning_callbacks.append(callback)
-    
-    def trigger_learning(self, learning_data: Dict[str, Any]):
-        """Trigger learning callbacks with data."""
-        for callback in self.learning_callbacks:
-            try:
-                callback(learning_data)
-            except Exception as e:
-                logger.error(f"Error in learning callback: {e}")
-    
-    def get_rule_statistics(self) -> Dict[str, Any]:
-        """Get statistics about rule execution."""
-        stats = {
-            "total_rules": len(self.rules),
-            "enabled_rules": sum(1 for r in self.rules.values() if r.enabled),
-            "total_executions": len(self.rule_execution_history),
-            "rule_performance": {}
-        }
-        
-        for rule_id, rule in self.rules.items():
-            stats["rule_performance"][rule_id] = {
-                "name": rule.name,
-                "execution_count": rule.execution_count,
-                "success_rate": rule.success_rate,
-                "last_executed": rule.last_executed.isoformat() if rule.last_executed else None
-            }
-        
-        return stats
-
-
-class ResponseLearner:
-    """Learns from AI responses and user feedback to improve memory system."""
-    
-    def __init__(self, kuzu_memory=None, rule_engine: AuggieRuleEngine = None):
-        """Initialize the response learner."""
-        self.kuzu_memory = kuzu_memory
-        self.rule_engine = rule_engine
-        self.learning_history: List[Dict[str, Any]] = []
-        
-        # Learning patterns
-        self.correction_patterns = [
-            r"actually,?\s*(.*)",
-            r"no,?\s*(.*)",
-            r"correction:?\s*(.*)",
-            r"wait,?\s*(.*)",
-            r"sorry,?\s*(.*)",
-            r"let me correct that:?\s*(.*)"
-        ]
-    
-    def learn_from_response(self, original_prompt: str, ai_response: str, 
-                          user_feedback: str = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Learn from AI response and user feedback."""
-        learning_results = {
-            "timestamp": datetime.now(),
-            "original_prompt": original_prompt,
-            "ai_response": ai_response,
-            "user_feedback": user_feedback,
-            "extracted_memories": [],
-            "updated_rules": [],
-            "confidence_adjustments": {}
-        }
-        
-        try:
-            # Extract new memories from response
-            if self.kuzu_memory and ai_response:
-                new_memories = self._extract_memories_from_response(ai_response, context)
-                learning_results["extracted_memories"] = new_memories
-            
-            # Learn from user feedback/corrections
-            if user_feedback:
-                corrections = self._extract_corrections(user_feedback)
-                learning_results["corrections"] = corrections
-                
-                # Update memories based on corrections
-                if corrections and self.kuzu_memory:
-                    self._apply_corrections(corrections, context)
-            
-            # Analyze response quality and adjust rules
-            quality_score = self._analyze_response_quality(ai_response, user_feedback)
-            learning_results["quality_score"] = quality_score
-            
-            if quality_score < 0.7:  # Poor response
-                self._adjust_rules_for_poor_response(original_prompt, context)
-            
-            # Record learning event
-            self.learning_history.append(learning_results)
-            
-            return learning_results
-            
-        except Exception as e:
-            logger.error(f"Error in response learning: {e}")
-            learning_results["error"] = str(e)
-            return learning_results
-    
-    def _extract_memories_from_response(self, response: str, context: Dict[str, Any] = None) -> List[str]:
-        """Extract new memories from AI response."""
-        if not self.kuzu_memory:
-            return []
-        
-        try:
-            # Use KuzuMemory to extract memories from the response
-            user_id = context.get("user_id", "response_learner") if context else "response_learner"
-            session_id = context.get("session_id", "learning_session") if context else "learning_session"
-            
-            memory_ids = self.kuzu_memory.generate_memories(
-                content=response,
-                user_id=user_id,
-                session_id=session_id,
-                source="ai_response",
-                metadata={"learning": True, "response_extraction": True}
-            )
-            
-            return memory_ids
-            
-        except Exception as e:
-            logger.error(f"Error extracting memories from response: {e}")
-            return []
-    
-    def _extract_corrections(self, feedback: str) -> List[Dict[str, Any]]:
-        """Extract corrections from user feedback."""
-        import re
-        
-        corrections = []
-        
-        for pattern in self.correction_patterns:
-            matches = re.finditer(pattern, feedback, re.IGNORECASE)
-            for match in matches:
-                correction_text = match.group(1).strip()
-                if correction_text:
-                    corrections.append({
-                        "pattern": pattern,
-                        "correction": correction_text,
-                        "confidence": 0.9
-                    })
-        
-        return corrections
-    
-    def _apply_corrections(self, corrections: List[Dict[str, Any]], context: Dict[str, Any] = None):
-        """Apply corrections by updating memories."""
-        if not self.kuzu_memory:
-            return
-        
-        try:
-            user_id = context.get("user_id", "correction_learner") if context else "correction_learner"
-            session_id = context.get("session_id", "correction_session") if context else "correction_session"
-            
-            for correction in corrections:
-                # Store correction as high-confidence memory
-                self.kuzu_memory.generate_memories(
-                    content=correction["correction"],
-                    user_id=user_id,
-                    session_id=session_id,
-                    source="user_correction",
-                    metadata={
-                        "correction": True,
-                        "confidence_boost": correction["confidence"],
-                        "learning_source": "user_feedback"
-                    }
-                )
-                
-        except Exception as e:
-            logger.error(f"Error applying corrections: {e}")
-    
-    def _analyze_response_quality(self, response: str, feedback: str = None) -> float:
-        """Analyze the quality of AI response."""
-        quality_score = 0.8  # Default score
-        
-        try:
-            # Negative indicators
-            if feedback:
-                feedback_lower = feedback.lower()
-                if any(word in feedback_lower for word in ["wrong", "incorrect", "no", "actually"]):
-                    quality_score -= 0.3
-                if any(word in feedback_lower for word in ["correction", "fix", "mistake"]):
-                    quality_score -= 0.2
-            
-            # Positive indicators
-            if len(response) > 50:  # Detailed response
-                quality_score += 0.1
-            
-            # Ensure score is within bounds
-            quality_score = max(0.0, min(1.0, quality_score))
-            
-            return quality_score
-            
-        except Exception as e:
-            logger.error(f"Error analyzing response quality: {e}")
-            return 0.5
-    
-    def _adjust_rules_for_poor_response(self, prompt: str, context: Dict[str, Any] = None):
-        """Adjust rules based on poor response quality."""
-        if not self.rule_engine:
-            return
-        
-        try:
-            # Create a rule to improve future similar prompts
-            rule_id = f"improve_response_{hash(prompt) % 10000}"
-            
-            improvement_rule = AuggieRule(
-                id=rule_id,
-                name=f"Improve Response for Similar Prompts",
-                description=f"Improve responses for prompts similar to: {prompt[:50]}...",
-                rule_type=RuleType.CONTEXT_ENHANCEMENT,
-                priority=RulePriority.HIGH,
-                conditions={
-                    "prompt_similarity": {"greater_than": 0.7},
-                    "context_type": context.get("context_type", "general") if context else "general"
-                },
-                actions={
-                    "add_context": "Include more specific context and examples",
-                    "memory_types": ["preference", "pattern", "solution"]
-                }
-            )
-            
-            self.rule_engine.add_rule(improvement_rule)
-            
-        except Exception as e:
-            logger.error(f"Error adjusting rules for poor response: {e}")
-    
-    def get_learning_statistics(self) -> Dict[str, Any]:
-        """Get statistics about learning activities."""
-        if not self.learning_history:
-            return {"total_learning_events": 0}
-        
-        stats = {
-            "total_learning_events": len(self.learning_history),
-            "memories_extracted": sum(len(event.get("extracted_memories", [])) for event in self.learning_history),
-            "corrections_applied": sum(len(event.get("corrections", [])) for event in self.learning_history),
-            "average_quality_score": sum(event.get("quality_score", 0.5) for event in self.learning_history) / len(self.learning_history),
-            "recent_events": self.learning_history[-5:] if len(self.learning_history) > 5 else self.learning_history
-        }
-        
-        return stats
-
-
 class AuggieIntegration:
-    """Main integration class for KuzuMemory and Auggie rules system."""
+    """
+    Main Auggie integration class that coordinates rule engine and learning.
 
-    def __init__(self, kuzu_memory=None, config: Dict[str, Any] = None):
-        """Initialize the Auggie integration."""
-        self.kuzu_memory = kuzu_memory
-        self.config = config or {}
+    Provides intelligent memory-driven prompt modification and response learning
+    through integration with Auggie's rules system.
+    """
+
+    def __init__(self, kuzu_memory=None, project_root: Optional[Path] = None, memory_system=None, config=None):
+        """Initialize Auggie integration with project context."""
+        self.project_root = project_root or Path.cwd()
+
+        # Accept either memory_system or kuzu_memory parameter for backwards compatibility
+        # kuzu_memory is the primary parameter for test compatibility
+        if kuzu_memory is not None:
+            self.memory_system = kuzu_memory
+            self.kuzu_memory = kuzu_memory  # Alias for test compatibility
+        elif memory_system is not None:
+            self.memory_system = memory_system
+            self.kuzu_memory = memory_system  # Alias for test compatibility
+        else:
+            self.memory_system = None
+            self.kuzu_memory = None
 
         # Initialize components
-        self.rule_engine = AuggieRuleEngine(kuzu_memory)
-        self.response_learner = ResponseLearner(kuzu_memory, self.rule_engine)
+        self.rule_engine = AuggieRuleEngine()
+        self.response_learner = ResponseLearner()
 
-        # Set up learning callbacks
-        self.rule_engine.add_learning_callback(self._handle_learning_event)
+        # Memory synchronizer (initialized when memory system is available)
+        self.memory_synchronizer = None
+        if self.memory_system:
+            self.memory_synchronizer = MemorySynchronizer(self.memory_system)
 
         # Integration statistics
         self.integration_stats = {
             "prompts_enhanced": 0,
             "responses_learned": 0,
-            "rules_triggered": 0,
-            "memories_created": 0
+            "rules_executed": 0,
+            "patterns_discovered": 0,
+            "last_activity": None,
+            "integration_started": datetime.now()
         }
 
-    def enhance_prompt(self, prompt: str, user_id: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Enhance a prompt using memories and rules."""
+        # Configuration
+        default_config = {
+            "auto_learning": True,
+            "rule_execution_timeout": 5.0,
+            "max_context_memories": 10,
+            "learning_threshold": 0.7,
+            "sync_interval_hours": 24
+        }
+
+        # Merge user-provided config with defaults
+        self.config = default_config.copy()
+        if config:
+            self.config.update(config)
+
+        logger.info("Auggie integration initialized")
+
+    def is_auggie_project(self) -> bool:
+        """Check if the current project has Auggie integration setup."""
+        auggie_indicators = [
+            self.project_root / ".augment",
+            self.project_root / "AGENTS.md",
+            self.project_root / ".augment" / "rules",
+            self.project_root / "auggie.json"
+        ]
+
+        return any(indicator.exists() for indicator in auggie_indicators)
+
+    def is_integration_active(self) -> bool:
+        """Check if Auggie integration is active and working."""
         try:
-            # Build context for rule evaluation
-            rule_context = self._build_rule_context(prompt, user_id, context)
+            # Check if rule engine is functional
+            if not self.rule_engine.rules:
+                return False
 
-            # Get relevant memories
-            memory_context = None
-            if self.kuzu_memory:
-                memory_context = self.kuzu_memory.attach_memories(
-                    prompt=prompt,
-                    user_id=user_id,
-                    max_memories=self.config.get("max_context_memories", 8)
-                )
-                rule_context.update(self._extract_memory_features(memory_context))
+            # Check if we have recent activity
+            if self.integration_stats["last_activity"]:
+                last_activity = datetime.fromisoformat(self.integration_stats["last_activity"])
+                if datetime.now() - last_activity > timedelta(days=7):
+                    return False
 
-            # Execute applicable rules
-            rule_modifications = self.rule_engine.execute_rules(rule_context)
+            return True
+        except Exception:
+            return False
 
-            # Apply modifications to create enhanced prompt
-            enhanced_prompt = self._apply_prompt_modifications(
-                prompt, memory_context, rule_modifications
+    def setup_project_integration(self):
+        """Set up Auggie integration for the current project."""
+        try:
+            augment_dir = self.project_root / ".augment"
+            augment_dir.mkdir(exist_ok=True)
+
+            rules_dir = augment_dir / "rules"
+            rules_dir.mkdir(exist_ok=True)
+
+            # Create basic configuration
+            config_path = augment_dir / "kuzu-memory-config.json"
+            if not config_path.exists():
+                config_data = {
+                    "integration_type": "kuzu-memory",
+                    "auto_learning": True,
+                    "rule_execution": True,
+                    "memory_sync": True,
+                    "created": datetime.now().isoformat()
+                }
+
+                with config_path.open('w') as f:
+                    json.dump(config_data, f, indent=2)
+
+            logger.info("Auggie project integration set up successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to set up Auggie integration: {e}")
+            raise KuzuMemoryError(f"Integration setup failed: {e}")
+
+    def enhance_prompt(self, prompt: str, user_id: str = "default",
+                      context: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        """
+        Enhance a prompt using Auggie rules and memory context.
+
+        Args:
+            prompt: Original prompt to enhance
+            user_id: User identifier for context
+            context: Additional context information
+
+        Returns:
+            Dictionary with enhanced prompt and metadata, or None if no enhancement
+        """
+        try:
+            self.integration_stats["prompts_enhanced"] += 1
+            self.integration_stats["last_activity"] = datetime.now().isoformat()
+
+            # Prepare context for rule engine
+            rule_context = {
+                "prompt": prompt,
+                "user_id": user_id,
+                "prompt_length": len(prompt),
+                "timestamp": datetime.now().isoformat(),
+                **(context or {})
+            }
+
+            # Add memory context if available
+            if self.memory_system:
+                try:
+                    relevant_memories = self.memory_system.recall_memories(
+                        prompt,
+                        max_memories=self.config["max_context_memories"]
+                    )
+                    rule_context["memories"] = [
+                        {
+                            "content": mem.content,
+                            "type": mem.memory_type.value,
+                            "relevance": getattr(mem, 'relevance_score', 0.0),
+                            "source": mem.source
+                        }
+                        for mem in relevant_memories
+                    ]
+                    rule_context["memories_available"] = len(relevant_memories)
+                except Exception as e:
+                    logger.warning(f"Failed to get memory context: {e}")
+                    rule_context["memories"] = []
+                    rule_context["memories_available"] = 0
+
+            # Execute context enhancement rules
+            modifications = self.rule_engine.execute_rules(
+                rule_context,
+                rule_types=[RuleType.CONTEXT_ENHANCEMENT, RuleType.PROMPT_MODIFICATION]
             )
 
-            # Update statistics
-            self.integration_stats["prompts_enhanced"] += 1
-            self.integration_stats["rules_triggered"] += len(rule_modifications.get("executed_rules", []))
+            self.integration_stats["rules_executed"] += 1
+
+            if not modifications:
+                return None
+
+            # Build enhanced prompt
+            enhanced_prompt = prompt
+            added_context = []
+
+            # Apply context additions
+            if "added_context" in modifications:
+                for context_addition in modifications["added_context"]:
+                    if "max_memories" in context_addition:
+                        max_memories = context_addition["max_memories"]
+                        relevant_memories = rule_context.get("memories", [])[:max_memories]
+
+                        if relevant_memories:
+                            context_text = "\n".join([
+                                f"• {mem['content'][:200]}..." if len(mem['content']) > 200
+                                else f"• {mem['content']}"
+                                for mem in relevant_memories
+                            ])
+                            added_context.append(f"Relevant context:\n{context_text}")
+
+            # Apply prompt modifications
+            if "prompt_modifications" in modifications:
+                for modification in modifications["prompt_modifications"]:
+                    if "prefix" in modification:
+                        enhanced_prompt = f"{modification['prefix']} {enhanced_prompt}"
+                    if "suffix" in modification:
+                        enhanced_prompt = f"{enhanced_prompt} {modification['suffix']}"
+
+            # Construct final enhanced prompt
+            if added_context:
+                context_section = "\n\n".join(added_context)
+                enhanced_prompt = f"{context_section}\n\nQuestion: {enhanced_prompt}"
 
             return {
-                "original_prompt": prompt,
                 "enhanced_prompt": enhanced_prompt,
-                "memory_context": memory_context,
-                "rule_modifications": rule_modifications,
-                "context_summary": self._generate_context_summary(memory_context, rule_modifications)
+                "original_prompt": prompt,
+                "context": "\n\n".join(added_context) if added_context else "",
+                "memories_count": rule_context.get("memories_available", 0),
+                "rules_applied": len([r for r in modifications if modifications[r]]),
+                "modifications": modifications
             }
 
         except Exception as e:
             logger.error(f"Error enhancing prompt: {e}")
-            return {
-                "original_prompt": prompt,
-                "enhanced_prompt": prompt,  # Fallback to original
-                "error": str(e)
+            return None
+
+    def learn_from_conversation(self, conversation_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Learn from a complete conversation interaction.
+
+        Args:
+            conversation_data: Dictionary containing prompt, response, feedback, etc.
+
+        Returns:
+            Learning results or None if learning failed
+        """
+        try:
+            if not self.config["auto_learning"]:
+                return None
+
+            self.integration_stats["responses_learned"] += 1
+            self.integration_stats["last_activity"] = datetime.now().isoformat()
+
+            prompt = conversation_data.get("prompt", "")
+            response = conversation_data.get("response", "")
+            feedback = conversation_data.get("feedback")
+            user_id = conversation_data.get("user_id", "default")
+
+            # Prepare context for learning
+            learning_context = {
+                "user_id": user_id,
+                "timestamp": datetime.now().isoformat(),
+                "response_length": len(response),
+                "prompt_length": len(prompt)
             }
 
-    def learn_from_interaction(self, prompt: str, ai_response: str, user_feedback: str = None,
-                             user_id: str = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Learn from a complete AI interaction."""
-        try:
-            # Learn from the response
-            learning_context = context or {}
-            learning_context.update({"user_id": user_id})
-
-            learning_results = self.response_learner.learn_from_response(
-                original_prompt=prompt,
-                ai_response=ai_response,
-                user_feedback=user_feedback,
-                context=learning_context
+            # Process the interaction for learning
+            learning_results = self.response_learner.process_interaction(
+                prompt, response, learning_context,
+                {"score": 0.8} if feedback else None  # Default positive feedback if none provided
             )
 
-            # Update statistics
-            self.integration_stats["responses_learned"] += 1
-            self.integration_stats["memories_created"] += len(learning_results.get("extracted_memories", []))
+            # Update integration statistics
+            self.integration_stats["patterns_discovered"] += len(
+                learning_results.get("patterns_discovered", [])
+            )
 
-            return learning_results
+            # Sync to memory system if available and configured
+            if (self.memory_synchronizer and
+                learning_results.get("patterns_discovered") and
+                len(learning_results["patterns_discovered"]) > 0):
+
+                try:
+                    self.memory_synchronizer.sync_learned_patterns_to_memory(self.response_learner)
+                except Exception as e:
+                    logger.warning(f"Failed to sync patterns to memory: {e}")
+
+            return {
+                "success": True,
+                "learning_results": learning_results,
+                "memory_id": f"learning_{datetime.now().timestamp()}",
+                "patterns_count": len(learning_results.get("patterns_discovered", [])),
+                "rules_updated": len(learning_results.get("patterns_updated", []))
+            }
 
         except Exception as e:
-            logger.error(f"Error learning from interaction: {e}")
-            return {"error": str(e)}
+            logger.error(f"Error learning from conversation: {e}")
+            return None
 
-    def _build_rule_context(self, prompt: str, user_id: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Build context for rule evaluation."""
-        rule_context = {
-            "prompt": prompt,
-            "prompt_length": len(prompt),
-            "user_id": user_id,
-            "timestamp": datetime.now(),
-            "has_identity_memories": False,
-            "has_preference_memories": False,
-            "has_decision_memories": False,
-            "prompt_category": self._categorize_prompt(prompt)
-        }
+    def get_rules_summary(self) -> Dict[str, Any]:
+        """Get summary information about current rules."""
+        try:
+            augment_dir = self.project_root / ".augment"
+            rules_dir = augment_dir / "rules"
 
-        if context:
-            rule_context.update(context)
+            rule_files = []
+            if rules_dir.exists():
+                for rule_file in rules_dir.glob("*.md"):
+                    rule_files.append({
+                        "path": str(rule_file.relative_to(self.project_root)),
+                        "name": rule_file.name,
+                        "last_modified": datetime.fromtimestamp(rule_file.stat().st_mtime).isoformat(),
+                        "size": rule_file.stat().st_size
+                    })
 
-        return rule_context
+            engine_rules = self.rule_engine.get_rule_statistics()
 
-    def _extract_memory_features(self, memory_context: MemoryContext) -> Dict[str, Any]:
-        """Extract features from memory context for rule evaluation."""
-        if not memory_context or not memory_context.memories:
+            return {
+                "files": rule_files,
+                "memory_rules": [
+                    {
+                        "id": rule.id,
+                        "name": rule.name,
+                        "description": rule.description,
+                        "type": rule.rule_type.value,
+                        "enabled": rule.enabled,
+                        "usage_count": rule.execution_count
+                    }
+                    for rule in self.rule_engine.rules.values()
+                ],
+                "active_count": engine_rules["enabled_rules"],
+                "total_count": engine_rules["total_rules"],
+                "statistics": engine_rules
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting rules summary: {e}")
             return {}
 
-        memory_types = [mem.memory_type for mem in memory_context.memories]
-
-        return {
-            "has_identity_memories": MemoryType.IDENTITY in memory_types,
-            "has_preference_memories": MemoryType.PREFERENCE in memory_types,
-            "has_decision_memories": MemoryType.DECISION in memory_types,
-            "has_pattern_memories": MemoryType.PATTERN in memory_types,
-            "has_solution_memories": MemoryType.SOLUTION in memory_types,
-            "has_status_memories": MemoryType.STATUS in memory_types,
-            "memory_count": len(memory_context.memories),
-            "memory_confidence": memory_context.confidence,
-            "recall_strategy": memory_context.strategy_used
-        }
-
-    def _categorize_prompt(self, prompt: str) -> str:
-        """Categorize the prompt for rule matching."""
-        prompt_lower = prompt.lower()
-
-        # Coding-related keywords
-        coding_keywords = ["code", "programming", "function", "class", "debug", "error", "api", "database"]
-        if any(keyword in prompt_lower for keyword in coding_keywords):
-            return "coding"
-
-        # Question keywords
-        question_keywords = ["what", "how", "why", "when", "where", "which", "who"]
-        if any(keyword in prompt_lower for keyword in question_keywords):
-            return "question"
-
-        # Task keywords
-        task_keywords = ["create", "build", "make", "generate", "write", "design"]
-        if any(keyword in prompt_lower for keyword in task_keywords):
-            return "task"
-
-        return "general"
-
-    def _apply_prompt_modifications(self, original_prompt: str, memory_context: MemoryContext,
-                                  rule_modifications: Dict[str, Any]) -> str:
-        """Apply rule modifications to create enhanced prompt."""
-        enhanced_prompt = original_prompt
-
-        try:
-            # Add context from memories
-            if memory_context and memory_context.memories:
-                context_section = self._build_context_section(memory_context, rule_modifications)
-                if context_section:
-                    enhanced_prompt = f"{context_section}\n\n{original_prompt}"
-
-            # Apply prompt modifications from rules
-            prompt_mods = rule_modifications.get("prompt_modifications", {})
-
-            if prompt_mods.get("add_preferences") and memory_context:
-                preference_context = self._extract_preference_context(memory_context)
-                if preference_context:
-                    enhanced_prompt += f"\n\nRelevant preferences: {preference_context}"
-
-            if prompt_mods.get("include_tech_stack") and memory_context:
-                tech_context = self._extract_tech_context(memory_context)
-                if tech_context:
-                    enhanced_prompt += f"\n\nTech stack context: {tech_context}"
-
-            if prompt_mods.get("mention_experience_level") and memory_context:
-                experience_context = self._extract_experience_context(memory_context)
-                if experience_context:
-                    enhanced_prompt += f"\n\nExperience level: {experience_context}"
-
-            return enhanced_prompt
-
-        except Exception as e:
-            logger.error(f"Error applying prompt modifications: {e}")
-            return original_prompt
-
-    def _build_context_section(self, memory_context: MemoryContext,
-                             rule_modifications: Dict[str, Any]) -> str:
-        """Build context section from memories and rule modifications."""
-        if not memory_context or not memory_context.memories:
-            return ""
-
-        context_lines = ["## Relevant Context:"]
-
-        # Add memory-based context
-        for memory in memory_context.memories[:5]:  # Limit to top 5
-            context_lines.append(f"- {memory.content}")
-
-        # Add rule-based context additions
-        for addition in rule_modifications.get("context_additions", []):
-            if isinstance(addition, str):
-                context_lines.append(f"- {addition}")
-
-        return "\n".join(context_lines)
-
-    def _extract_preference_context(self, memory_context: MemoryContext) -> str:
-        """Extract preference information from memory context."""
-        preferences = []
-        for memory in memory_context.memories:
-            if memory.memory_type == MemoryType.PREFERENCE:
-                preferences.append(memory.content)
-
-        return "; ".join(preferences[:3])  # Limit to 3 preferences
-
-    def _extract_tech_context(self, memory_context: MemoryContext) -> str:
-        """Extract technology stack information from memory context."""
-        tech_entities = set()
-        for memory in memory_context.memories:
-            if memory.entities:
-                # Filter for technology-related entities
-                tech_keywords = ["python", "javascript", "react", "django", "postgresql", "docker", "kubernetes"]
-                for entity in memory.entities:
-                    if any(keyword in entity.lower() for keyword in tech_keywords):
-                        tech_entities.add(entity)
-
-        return ", ".join(list(tech_entities)[:5])  # Limit to 5 technologies
-
-    def _extract_experience_context(self, memory_context: MemoryContext) -> str:
-        """Extract experience level information from memory context."""
-        for memory in memory_context.memories:
-            if memory.memory_type == MemoryType.IDENTITY:
-                content_lower = memory.content.lower()
-                if "senior" in content_lower:
-                    return "Senior level"
-                elif "junior" in content_lower:
-                    return "Junior level"
-                elif "lead" in content_lower or "principal" in content_lower:
-                    return "Leadership level"
-
-        return "Experienced"
-
-    def _generate_context_summary(self, memory_context: MemoryContext,
-                                rule_modifications: Dict[str, Any]) -> str:
-        """Generate a summary of the context used."""
-        summary_parts = []
-
-        if memory_context and memory_context.memories:
-            summary_parts.append(f"{len(memory_context.memories)} memories recalled")
-
-            memory_types = [mem.memory_type.value for mem in memory_context.memories]
-            unique_types = list(set(memory_types))
-            summary_parts.append(f"Types: {', '.join(unique_types)}")
-
-        executed_rules = rule_modifications.get("executed_rules", [])
-        if executed_rules:
-            summary_parts.append(f"{len(executed_rules)} rules applied")
-
-        return " | ".join(summary_parts)
-
-    def _handle_learning_event(self, learning_data: Dict[str, Any]):
-        """Handle learning events from the rule engine."""
-        try:
-            # Process learning data and potentially create new memories
-            if self.kuzu_memory and "new_insight" in learning_data:
-                self.kuzu_memory.generate_memories(
-                    content=learning_data["new_insight"],
-                    user_id=learning_data.get("user_id", "system"),
-                    session_id="learning_session",
-                    source="rule_learning",
-                    metadata={"learning_event": True}
-                )
-
-        except Exception as e:
-            logger.error(f"Error handling learning event: {e}")
-
-    def get_integration_statistics(self) -> Dict[str, Any]:
+    def get_integration_stats(self) -> Dict[str, Any]:
         """Get comprehensive integration statistics."""
-        stats = {
-            "integration": self.integration_stats.copy(),
-            "rule_engine": self.rule_engine.get_rule_statistics(),
-            "response_learner": self.response_learner.get_learning_statistics()
+        stats = self.integration_stats.copy()
+
+        # Add component statistics
+        stats["rule_engine"] = self.rule_engine.get_rule_statistics()
+        stats["response_learner"] = self.response_learner.get_learning_statistics()
+
+        # Add synchronization status
+        if self.memory_synchronizer:
+            stats["memory_sync"] = self.memory_synchronizer.get_sync_status()
+
+        # Calculate derived metrics
+        if stats["prompts_enhanced"] > 0:
+            stats["enhancement_rate"] = (stats["rules_executed"] / stats["prompts_enhanced"]) * 100
+        else:
+            stats["enhancement_rate"] = 0.0
+
+        # Add health information
+        stats["health"] = {
+            "rule_engine": "healthy" if self.rule_engine.rules else "inactive",
+            "learning_system": "healthy" if stats["responses_learned"] > 0 else "inactive",
+            "memory_sync": "healthy" if self.memory_synchronizer else "unavailable"
         }
 
         return stats
 
-    def export_rules(self, file_path: str):
-        """Export rules to a JSON file."""
-        try:
-            rules_data = {}
-            for rule_id, rule in self.rule_engine.rules.items():
-                rule_dict = asdict(rule)
-                # Convert datetime objects to strings
-                if rule_dict["created_at"]:
-                    rule_dict["created_at"] = rule_dict["created_at"].isoformat()
-                if rule_dict["last_executed"]:
-                    rule_dict["last_executed"] = rule_dict["last_executed"].isoformat()
-                # Convert enums to strings
-                rule_dict["rule_type"] = rule_dict["rule_type"].value
-                rule_dict["priority"] = rule_dict["priority"].value
+    def update_configuration(self, config_updates: Dict[str, Any]):
+        """Update integration configuration."""
+        self.config.update(config_updates)
+        logger.info(f"Configuration updated: {config_updates}")
 
-                rules_data[rule_id] = rule_dict
+    def get_recommendations(self) -> List[Dict[str, Any]]:
+        """Get recommendations for improving integration effectiveness."""
+        recommendations = []
+
+        try:
+            # Get recommendations from response learner
+            learning_recommendations = self.response_learner.get_recommendations()
+            recommendations.extend(learning_recommendations)
+
+            # Add integration-specific recommendations
+            if self.integration_stats["prompts_enhanced"] == 0:
+                recommendations.append({
+                    "type": "integration_usage",
+                    "message": "No prompts have been enhanced yet. Try using the enhance functionality.",
+                    "priority": "high"
+                })
+
+            if not self.memory_system:
+                recommendations.append({
+                    "type": "memory_system",
+                    "message": "Memory system not connected. Consider initializing memory integration.",
+                    "priority": "medium"
+                })
+
+            # Rule-based recommendations
+            rule_stats = self.rule_engine.get_rule_statistics()
+            if rule_stats["total_executions"] == 0:
+                recommendations.append({
+                    "type": "rule_execution",
+                    "message": "No rules have been executed. Check rule conditions and contexts.",
+                    "priority": "medium"
+                })
+
+        except Exception as e:
+            logger.warning(f"Error generating recommendations: {e}")
+
+        return recommendations
+
+    def export_integration_data(self, file_path: str):
+        """Export all integration data to a file."""
+        try:
+            export_data = {
+                "integration_stats": self.integration_stats,
+                "configuration": self.config,
+                "rules_summary": self.get_rules_summary(),
+                "learning_stats": self.response_learner.get_learning_statistics(),
+                "export_timestamp": datetime.now().isoformat()
+            }
 
             with open(file_path, 'w') as f:
-                json.dump(rules_data, f, indent=2)
+                json.dump(export_data, f, indent=2)
 
-            logger.info(f"Rules exported to {file_path}")
+            logger.info(f"Integration data exported to {file_path}")
 
         except Exception as e:
-            logger.error(f"Error exporting rules: {e}")
+            logger.error(f"Error exporting integration data: {e}")
 
-    def import_rules(self, file_path: str):
-        """Import rules from a JSON file."""
+    def cleanup_old_data(self, days_to_keep: int = 30):
+        """Clean up old integration data."""
         try:
-            with open(file_path, 'r') as f:
-                rules_data = json.load(f)
+            # Clean up rule engine history
+            self.rule_engine.cleanup_old_history(days_to_keep)
 
-            for rule_id, rule_dict in rules_data.items():
-                # Convert strings back to datetime objects
-                if rule_dict["created_at"]:
-                    rule_dict["created_at"] = datetime.fromisoformat(rule_dict["created_at"])
-                if rule_dict["last_executed"]:
-                    rule_dict["last_executed"] = datetime.fromisoformat(rule_dict["last_executed"])
+            # Clean up learning data
+            cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
-                # Convert strings back to enums
-                rule_dict["rule_type"] = RuleType(rule_dict["rule_type"])
-                rule_dict["priority"] = RulePriority(rule_dict["priority"])
+            # Remove old feedback history
+            self.response_learner.feedback_history = [
+                record for record in self.response_learner.feedback_history
+                if datetime.fromisoformat(record["timestamp"]) > cutoff_date
+            ]
 
-                # Create rule object
-                rule = AuggieRule(**rule_dict)
-                self.rule_engine.add_rule(rule)
-
-            logger.info(f"Rules imported from {file_path}")
+            logger.info(f"Cleaned up integration data older than {days_to_keep} days")
 
         except Exception as e:
-            logger.error(f"Error importing rules: {e}")
-
-    def create_custom_rule(self, name: str, description: str, rule_type: str,
-                          conditions: Dict[str, Any], actions: Dict[str, Any],
-                          priority: str = "medium") -> str:
-        """Create a custom rule and add it to the engine."""
-        try:
-            rule_id = f"custom_{hash(name) % 10000}"
-
-            custom_rule = AuggieRule(
-                id=rule_id,
-                name=name,
-                description=description,
-                rule_type=RuleType(rule_type),
-                priority=RulePriority[priority.upper()],
-                conditions=conditions,
-                actions=actions
-            )
-
-            self.rule_engine.add_rule(custom_rule)
-            return rule_id
-
-        except Exception as e:
-            logger.error(f"Error creating custom rule: {e}")
-            return None
+            logger.error(f"Error cleaning up old data: {e}")

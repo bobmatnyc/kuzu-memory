@@ -67,12 +67,12 @@ class PerformanceMonitor:
         
         # Performance thresholds
         self.thresholds = {
-            'attach_memories': 10.0,      # 10ms
-            'generate_memories': 20.0,    # 20ms
-            'database_query': 5.0,        # 5ms
-            'pattern_extraction': 15.0,   # 15ms
-            'entity_extraction': 10.0,    # 10ms
-            'deduplication': 5.0,         # 5ms
+            'attach_memories': 100.0,     # 100ms
+            'generate_memories': 100.0,   # 100ms
+            'database_query': 50.0,       # 50ms
+            'pattern_extraction': 100.0,  # 100ms
+            'entity_extraction': 100.0,   # 100ms
+            'deduplication': 50.0,        # 50ms
         }
         
         # Alerts

@@ -9,6 +9,9 @@ import kuzu
 
 def test_kuzu_basic():
     """Test basic Kuzu functionality."""
+    import pytest
+    pytest.skip("Standalone test file - functionality tested in integration tests")
+
     print("🧪 Testing Basic Kuzu Functionality")
     print("=" * 40)
     

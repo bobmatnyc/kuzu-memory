@@ -13,7 +13,7 @@ from datetime import datetime
 
 from .config import KuzuMemoryConfig
 from .models import MemoryContext, Memory
-from ..storage.kuzu_adapter import KuzuAdapter
+from ..storage.kuzu_adapter import create_kuzu_adapter
 from ..storage.memory_store import MemoryStore
 from ..recall.coordinator import RecallCoordinator
 from ..utils.exceptions import (
@@ -88,9 +88,10 @@ class KuzuMemory:
     def _initialize_components(self) -> None:
         """Initialize internal components."""
         try:
-            # Initialize database adapter
-            self.db_adapter = KuzuAdapter(self.db_path, self.config)
-            self.db_adapter.initialize()
+            # Initialize database adapter (CLI or Python API based on config)
+            self.db_adapter = create_kuzu_adapter(self.db_path, self.config)
+            if hasattr(self.db_adapter, 'initialize'):
+                self.db_adapter.initialize()
             
             # Initialize memory store
             self.memory_store = MemoryStore(self.db_adapter, self.config)
@@ -175,8 +176,9 @@ class KuzuMemory:
             # Check performance requirement
             if execution_time_ms > self.config.performance.max_recall_time_ms:
                 if self.config.performance.enable_performance_monitoring:
-                    raise PerformanceError("attach_memories", execution_time_ms, 
-                                         self.config.performance.max_recall_time_ms)
+                    raise PerformanceError(
+                        f"attach_memories took {execution_time_ms:.1f}ms, exceeding target of {self.config.performance.max_recall_time_ms}ms"
+                    )
                 else:
                     logger.warning(f"attach_memories took {execution_time_ms:.1f}ms (target: {self.config.performance.max_recall_time_ms}ms)")
             
@@ -247,8 +249,9 @@ class KuzuMemory:
             # Check performance requirement
             if execution_time_ms > self.config.performance.max_generation_time_ms:
                 if self.config.performance.enable_performance_monitoring:
-                    raise PerformanceError("generate_memories", execution_time_ms,
-                                         self.config.performance.max_generation_time_ms)
+                    raise PerformanceError(
+                        f"generate_memories took {execution_time_ms:.1f}ms, exceeding target of {self.config.performance.max_generation_time_ms}ms"
+                    )
                 else:
                     logger.warning(f"generate_memories took {execution_time_ms:.1f}ms (target: {self.config.performance.max_generation_time_ms}ms)")
             
@@ -280,7 +283,7 @@ class KuzuMemory:
     def cleanup_expired_memories(self) -> int:
         """
         Clean up expired memories based on retention policies.
-        
+
         Returns:
             Number of memories cleaned up
         """
@@ -289,6 +292,39 @@ class KuzuMemory:
         except Exception as e:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
+
+    def get_recent_memories(self, limit: int = 10, **filters) -> List[Memory]:
+        """
+        Get recent memories, optionally filtered.
+
+        Args:
+            limit: Maximum number of memories to return
+            **filters: Optional filters (e.g., memory_type, user_id)
+
+        Returns:
+            List of recent memories
+        """
+        try:
+            return self.memory_store.get_recent_memories(limit=limit, **filters)
+        except Exception as e:
+            logger.error(f"Failed to get recent memories: {e}")
+            return []
+
+    def get_memory_by_id(self, memory_id: str) -> Optional[Memory]:
+        """
+        Get a specific memory by ID.
+
+        Args:
+            memory_id: Memory ID to retrieve
+
+        Returns:
+            Memory object or None if not found
+        """
+        try:
+            return self.memory_store.get_memory_by_id(memory_id)
+        except Exception as e:
+            logger.error(f"Failed to get memory by ID: {e}")
+            return None
     
     def get_statistics(self) -> Dict[str, Any]:
         """

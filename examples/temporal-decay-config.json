@@ -1,0 +1,157 @@
+{
+  "temporal_decay": {
+    "recency_weight": 0.25,
+    "decay_function": "exponential",
+    "enable_adaptive_decay": true,
+    "boost_recent_threshold_hours": 24,
+    "boost_recent_multiplier": 1.5,
+    "minimum_decay_score": 0.01,
+    "maximum_decay_score": 1.0,
+    
+    "type_decay_params": {
+      "identity": {
+        "half_life_days": 365,
+        "decay_function": "linear",
+        "minimum_score": 0.8,
+        "boost_multiplier": 1.0
+      },
+      "preference": {
+        "half_life_days": 180,
+        "decay_function": "exponential",
+        "minimum_score": 0.6,
+        "boost_multiplier": 1.2
+      },
+      "decision": {
+        "half_life_days": 90,
+        "decay_function": "exponential",
+        "minimum_score": 0.3,
+        "boost_multiplier": 1.3
+      },
+      "pattern": {
+        "half_life_days": 45,
+        "decay_function": "sigmoid",
+        "minimum_score": 0.1,
+        "boost_multiplier": 1.4
+      },
+      "solution": {
+        "half_life_days": 60,
+        "decay_function": "exponential",
+        "minimum_score": 0.2,
+        "boost_multiplier": 1.3
+      },
+      "status": {
+        "half_life_days": 1,
+        "decay_function": "exponential",
+        "minimum_score": 0.01,
+        "boost_multiplier": 2.0
+      },
+      "context": {
+        "half_life_days": 7,
+        "decay_function": "power_law",
+        "minimum_score": 0.05,
+        "boost_multiplier": 1.8
+      }
+    }
+  },
+  
+  "ranking": {
+    "content_similarity_weight": 0.30,
+    "importance_weight": 0.25,
+    "confidence_weight": 0.15,
+    "type_relevance_weight": 0.10,
+    "access_frequency_weight": 0.05
+  },
+  
+  "examples": {
+    "conservative_decay": {
+      "description": "Slower decay, keeps memories relevant longer",
+      "temporal_decay": {
+        "recency_weight": 0.15,
+        "boost_recent_threshold_hours": 48,
+        "type_decay_params": {
+          "pattern": {
+            "half_life_days": 90,
+            "minimum_score": 0.3
+          },
+          "solution": {
+            "half_life_days": 120,
+            "minimum_score": 0.4
+          }
+        }
+      }
+    },
+    
+    "aggressive_decay": {
+      "description": "Faster decay, prioritizes very recent memories",
+      "temporal_decay": {
+        "recency_weight": 0.35,
+        "boost_recent_threshold_hours": 12,
+        "boost_recent_multiplier": 2.0,
+        "type_decay_params": {
+          "pattern": {
+            "half_life_days": 14,
+            "minimum_score": 0.05
+          },
+          "solution": {
+            "half_life_days": 21,
+            "minimum_score": 0.1
+          },
+          "context": {
+            "half_life_days": 3,
+            "minimum_score": 0.01
+          }
+        }
+      }
+    },
+    
+    "recency_focused": {
+      "description": "Heavily weights recent memories",
+      "temporal_decay": {
+        "recency_weight": 0.40,
+        "boost_recent_threshold_hours": 6,
+        "boost_recent_multiplier": 3.0,
+        "decay_function": "power_law"
+      },
+      "ranking": {
+        "content_similarity_weight": 0.25,
+        "importance_weight": 0.20,
+        "confidence_weight": 0.10,
+        "type_relevance_weight": 0.05,
+        "access_frequency_weight": 0.00
+      }
+    },
+    
+    "balanced_decay": {
+      "description": "Balanced approach with moderate decay",
+      "temporal_decay": {
+        "recency_weight": 0.20,
+        "decay_function": "sigmoid",
+        "boost_recent_threshold_hours": 24,
+        "boost_recent_multiplier": 1.3
+      }
+    },
+    
+    "development_mode": {
+      "description": "Fast decay for development and testing",
+      "temporal_decay": {
+        "recency_weight": 0.50,
+        "boost_recent_threshold_hours": 1,
+        "boost_recent_multiplier": 5.0,
+        "type_decay_params": {
+          "pattern": {
+            "half_life_days": 0.1,
+            "minimum_score": 0.01
+          },
+          "solution": {
+            "half_life_days": 0.25,
+            "minimum_score": 0.05
+          },
+          "context": {
+            "half_life_days": 0.04,
+            "minimum_score": 0.001
+          }
+        }
+      }
+    }
+  }
+}

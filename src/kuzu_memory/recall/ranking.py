@@ -12,6 +12,7 @@ from collections import Counter
 import logging
 
 from ..core.models import Memory, MemoryType
+from .temporal_decay import TemporalDecayEngine
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,22 @@ class MemoryRanker:
     def __init__(self, config: Dict[str, Any] = None):
         """
         Initialize memory ranker.
-        
+
         Args:
             config: Optional configuration for ranking parameters
         """
         self.config = config or {}
-        
+
+        # Initialize enhanced temporal decay engine
+        self.temporal_decay_engine = TemporalDecayEngine(self.config.get('temporal_decay', {}))
+
         # Ranking weights (can be configured)
+        # Note: recency weight is now managed by temporal decay engine
         self.weights = {
-            'content_similarity': self.config.get('content_similarity_weight', 0.35),
+            'content_similarity': self.config.get('content_similarity_weight', 0.30),  # Reduced slightly
             'importance': self.config.get('importance_weight', 0.25),
             'confidence': self.config.get('confidence_weight', 0.15),
-            'recency': self.config.get('recency_weight', 0.10),
+            'recency': self.temporal_decay_engine.decay_config['base_weight'],  # Dynamic from decay engine
             'type_relevance': self.config.get('type_relevance_weight', 0.10),
             'access_frequency': self.config.get('access_frequency_weight', 0.05),
         }
@@ -128,8 +133,8 @@ class MemoryRanker:
         # Confidence score (normalized)
         scores['confidence'] = memory.confidence
         
-        # Recency score
-        scores['recency'] = self._calculate_recency_score(memory)
+        # Enhanced temporal decay score
+        scores['recency'] = self.temporal_decay_engine.calculate_temporal_score(memory)
         
         # Type relevance score
         scores['type_relevance'] = self._calculate_type_relevance_score(
@@ -310,7 +315,7 @@ class MemoryRanker:
         )
         scores['importance'] = memory.importance
         scores['confidence'] = memory.confidence
-        scores['recency'] = self._calculate_recency_score(memory)
+        scores['recency'] = self.temporal_decay_engine.calculate_temporal_score(memory)
         scores['type_relevance'] = self._calculate_type_relevance_score(
             memory, context_type
         )
@@ -332,5 +337,6 @@ class MemoryRanker:
             'weights_used': self.weights.copy(),
             'memory_type': memory.memory_type.value,
             'memory_age_days': (datetime.now() - memory.created_at).days,
-            'access_count': memory.access_count
+            'access_count': memory.access_count,
+            'temporal_decay_details': self.temporal_decay_engine.get_decay_explanation(memory)
         }

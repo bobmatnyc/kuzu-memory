@@ -1,0 +1,124 @@
+# KuzuMemory - Pre-commit Configuration
+# Ensures code quality and consistency before commits
+
+repos:
+  # Ruff - Fast Python linter and formatter (replaces flake8, isort, pyupgrade)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        name: ruff-lint
+        description: "Lint Python code with Ruff"
+      - id: ruff-format
+        name: ruff-format
+        description: "Format Python code with Ruff"
+
+  # Black - Python code formatter (backup/alternative to ruff-format)
+  - repo: https://github.com/psf/black
+    rev: 23.12.0
+    hooks:
+      - id: black
+        name: black-format
+        description: "Format Python code with Black"
+        language_version: python3
+
+  # MyPy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        name: mypy-typecheck
+        description: "Static type checking with MyPy"
+        additional_dependencies: [pydantic, click, types-PyYML, types-python-dateutil]
+        args: [--ignore-missing-imports, --strict]
+        files: ^src/
+
+  # Built-in pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: trim-whitespace
+        description: "Remove trailing whitespace"
+      - id: end-of-file-fixer
+        name: fix-eof
+        description: "Ensure files end with newline"
+      - id: check-yaml
+        name: check-yaml
+        description: "Validate YAML syntax"
+      - id: check-toml
+        name: check-toml
+        description: "Validate TOML syntax"
+      - id: check-json
+        name: check-json
+        description: "Validate JSON syntax"
+      - id: check-merge-conflict
+        name: check-merge-conflict
+        description: "Check for merge conflict markers"
+      - id: check-case-conflict
+        name: check-case-conflict
+        description: "Check for case-sensitive filename conflicts"
+      - id: check-added-large-files
+        name: check-large-files
+        description: "Prevent large files from being committed"
+        args: ['--maxkb=1000']
+      - id: mixed-line-ending
+        name: fix-line-endings
+        description: "Fix mixed line endings"
+        args: ['--fix=lf']
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: bandit-security
+        description: "Security vulnerability scanning with Bandit"
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^tests/
+
+  # Documentation checks
+  - repo: https://github.com/pycqa/doc8
+    rev: v1.1.1
+    hooks:
+      - id: doc8
+        name: doc8-docs
+        description: "Style checker for documentation"
+        args: ['--max-line-length=88']
+        files: '\.(md|rst|txt)$'
+
+  # Python import sorting (backup for ruff)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort-imports
+        description: "Sort Python imports"
+        args: ["--profile", "black", "--line-length", "88"]
+
+# Pre-commit configuration
+default_language_version:
+  python: python3.11
+
+default_stages: [commit]
+
+# Fail fast - stop on first failure
+fail_fast: true
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '3.0.0'
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    For more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

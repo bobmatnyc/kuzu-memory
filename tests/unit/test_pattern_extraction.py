@@ -287,12 +287,19 @@ class TestPatternExtractor:
         """Test the pattern testing utility method."""
         test_pattern = r"I work at (.*?)(?:\.|$)"
         test_text = "I work at TechCorp. I also work at DataCorp."
-        
+
         matches = pattern_extractor.test_pattern(test_pattern, test_text)
-        
-        assert len(matches) == 2
+
+        # This pattern should only match "I work at", not "I also work at"
+        assert len(matches) == 1
         assert matches[0]['groups'] == ('TechCorp',)
-        assert matches[1]['groups'] == ('DataCorp',)
+
+        # Test a pattern that would match both
+        test_pattern2 = r"(?:I (?:also )?work at) (.*?)(?:\.|$)"
+        matches2 = pattern_extractor.test_pattern(test_pattern2, test_text)
+        assert len(matches2) == 2
+        assert matches2[0]['groups'] == ('TechCorp',)
+        assert matches2[1]['groups'] == ('DataCorp',)
         
         # Test invalid pattern
         invalid_matches = pattern_extractor.test_pattern("[invalid", test_text)

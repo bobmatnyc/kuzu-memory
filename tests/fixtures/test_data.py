@@ -14,7 +14,7 @@ from kuzu_memory.core.models import Memory, MemoryType
 
 
 @dataclass
-class TestScenario:
+class DataScenario:
     """Represents a complete test scenario with context."""
     name: str
     description: str
@@ -24,7 +24,7 @@ class TestScenario:
     expected_outcomes: Dict[str, Any]
 
 
-class TestDataGenerator:
+class DataGenerator:
     """Generates realistic test data for KuzuMemory testing."""
     
     def __init__(self, seed: int = 42):
@@ -221,7 +221,7 @@ class TestDataGenerator:
         
         return memories
     
-    def generate_test_scenario(self, scenario_name: str) -> TestScenario:
+    def generate_test_scenario(self, scenario_name: str) -> DataScenario:
         """Generate a complete test scenario."""
         scenarios = {
             "software_engineer": self._generate_software_engineer_scenario,
@@ -234,7 +234,7 @@ class TestDataGenerator:
         generator = scenarios.get(scenario_name, self._generate_software_engineer_scenario)
         return generator()
     
-    def _generate_software_engineer_scenario(self) -> TestScenario:
+    def _generate_software_engineer_scenario(self) -> DataScenario:
         """Generate a software engineer test scenario."""
         user_id = "alice-engineer"
         
@@ -299,7 +299,7 @@ class TestDataGenerator:
             }
         ]
         
-        return TestScenario(
+        return DataScenario(
             name="software_engineer",
             description="Complete software engineer profile and work scenario",
             user_id=user_id,
@@ -312,7 +312,7 @@ class TestDataGenerator:
             }
         )
     
-    def _generate_data_scientist_scenario(self) -> TestScenario:
+    def _generate_data_scientist_scenario(self) -> DataScenario:
         """Generate a data scientist test scenario."""
         user_id = "dr-sarah-data"
         
@@ -365,7 +365,7 @@ class TestDataGenerator:
             }
         ]
         
-        return TestScenario(
+        return DataScenario(
             name="data_scientist",
             description="Data scientist with ML focus scenario",
             user_id=user_id,
@@ -378,7 +378,7 @@ class TestDataGenerator:
             }
         )
     
-    def _generate_devops_engineer_scenario(self) -> TestScenario:
+    def _generate_devops_engineer_scenario(self) -> DataScenario:
         """Generate a DevOps engineer test scenario."""
         user_id = "mike-devops"
         
@@ -431,7 +431,7 @@ class TestDataGenerator:
             }
         ]
         
-        return TestScenario(
+        return DataScenario(
             name="devops_engineer",
             description="DevOps engineer with infrastructure focus",
             user_id=user_id,
@@ -444,7 +444,7 @@ class TestDataGenerator:
             }
         )
     
-    def _generate_startup_founder_scenario(self) -> TestScenario:
+    def _generate_startup_founder_scenario(self) -> DataScenario:
         """Generate a startup founder test scenario."""
         user_id = "emma-founder"
         
@@ -490,7 +490,7 @@ class TestDataGenerator:
             }
         ]
         
-        return TestScenario(
+        return DataScenario(
             name="startup_founder",
             description="Startup founder with business and technical responsibilities",
             user_id=user_id,
@@ -503,9 +503,9 @@ class TestDataGenerator:
             }
         )
     
-    def _generate_team_collaboration_scenario(self) -> TestScenario:
+    def _generate_team_collaboration_scenario(self) -> DataScenario:
         """Generate a team collaboration test scenario."""
-        return TestScenario(
+        return DataScenario(
             name="team_collaboration",
             description="Multi-user team collaboration scenario",
             user_id="team-lead",
@@ -516,10 +516,10 @@ class TestDataGenerator:
 
 
 # Global test data generator instance
-test_data_generator = TestDataGenerator()
+test_data_generator = DataGenerator()
 
 
-def get_test_scenario(scenario_name: str) -> TestScenario:
+def get_test_scenario(scenario_name: str) -> DataScenario:
     """Get a predefined test scenario."""
     return test_data_generator.generate_test_scenario(scenario_name)
 

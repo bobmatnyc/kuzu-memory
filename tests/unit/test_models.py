@@ -67,7 +67,7 @@ class TestMemory:
         assert memory.agent_id == "test-agent"
         assert memory.user_id == "test-user"
         assert memory.session_id == "test-session"
-        assert memory.entities == ["entity1", "entity2"]
+        assert set(memory.entities) == {"entity1", "entity2"}  # Order doesn't matter
         assert memory.metadata == {"key": "value"}
         assert memory.created_at == created_at
         assert memory.valid_from == valid_from
@@ -116,8 +116,8 @@ class TestMemory:
         """Test memory validity checking."""
         now = datetime.now()
         
-        # Memory that never expires
-        permanent_memory = Memory(content="Test", valid_to=None)
+        # Memory that never expires (use IDENTITY type which has no retention period)
+        permanent_memory = Memory(content="Test", memory_type=MemoryType.IDENTITY, valid_to=None)
         assert permanent_memory.is_valid()
         assert permanent_memory.is_valid(now + timedelta(days=365))
         
@@ -189,9 +189,9 @@ class TestMemory:
         assert valid_memory.content == "Valid content"
         
         # Empty content should raise error
-        with pytest.raises(ValueError, match="Content cannot be empty"):
+        with pytest.raises(ValueError, match="String should have at least 1 character"):
             Memory(content="")
-        
+
         with pytest.raises(ValueError, match="Content cannot be empty"):
             Memory(content="   ")  # Whitespace only
     
@@ -367,7 +367,7 @@ class TestExtractedMemory:
         assert memory.agent_id == "test-agent"
         assert memory.user_id == "test-user"
         assert memory.session_id == "test-session"
-        assert memory.entities == extracted.entities
+        assert set(memory.entities) == set(extracted.entities)  # Order doesn't matter
         
         # Check that metadata includes extraction info
         assert "pattern_used" in memory.metadata

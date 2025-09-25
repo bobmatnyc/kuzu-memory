@@ -94,11 +94,11 @@ class PatternExtractor:
             (r"I prefer (.*?)(?:\.|$|,|\s+over|\s+to)", 0.95, "i_prefer"),
             (r"I (?:like|love|enjoy) (.*?)(?:\.|$|,)", 0.85, "i_like"),
             (r"I (?:don't|do not|dont) (?:like|want|prefer) (.*?)(?:\.|$|,)", 0.85, "i_dont_like"),
-            (r"[Mm]y favorite (.*?) is (.*?)(?:\.|$|,)", 0.90, "my_favorite"),
+            (r"[Mm]y favorite (?:.*?) is (.*?)(?:\.|$|,)", 0.90, "my_favorite"),  # Capture the second part (the actual favorite thing)
             (r"I usually (?:use|choose|go with) (.*?)(?:\.|$|,)", 0.80, "i_usually"),
             (r"I typically (.*?)(?:\.|$|,)", 0.80, "i_typically"),
-            (r"I always (.*?)(?:\.|$|,)", 0.90, "i_always"),
-            (r"I never (.*?)(?:\.|$|,)", 0.90, "i_never"),
+            (r"I always (.*?)(?:\.|$|,)", 0.95, "i_always_prefer"),  # Higher confidence for personal preferences
+            (r"I never (.*?)(?:\.|$|,)", 0.95, "i_never_prefer"),   # Higher confidence for personal preferences
             (r"(?:Please|please) (?:always |use |make sure to )?(.*?)(?:\.|$|,)", 0.80, "please_always"),
             (r"[Mm]ake sure (?:to |that )?(.*?)(?:\.|$|,)", 0.85, "make_sure"),
         ]
@@ -116,8 +116,8 @@ class PatternExtractor:
         
         # Pattern patterns - code patterns and best practices
         self.PATTERN_PATTERNS = [
-            (r"[Aa]lways (?:use|implement|follow|apply) (.*?)(?:\.|$|,)", 0.90, "always_use"),
-            (r"[Nn]ever (?:use|implement|do) (.*?)(?:\.|$|,)", 0.90, "never_use"),
+            (r"[Aa]lways (?:use|implement|follow|apply|validate|check|test|ensure) (.*?)(?:\.|$|,)", 0.90, "always_use"),
+            (r"[Nn]ever (?:use|implement|do|skip|ignore|forget) (.*?)(?:\.|$|,)", 0.90, "never_use"),
             (r"[Bb]est practice (?:is )?(?:to )?(.*?)(?:\.|$|,)", 0.90, "best_practice"),
             (r"[Ff]ollow (?:the )?pattern (?:of )?(.*?)(?:\.|$|,)", 0.85, "follow_pattern"),
             (r"[Uu]se (?:the )?(?:standard|conventional|typical) (.*?)(?:\.|$|,)", 0.80, "use_standard"),
@@ -127,10 +127,10 @@ class PatternExtractor:
         
         # Solution patterns - problem-solution pairs
         self.SOLUTION_PATTERNS = [
-            (r"[Tt]o (?:fix|solve|resolve) (.*?)[,]? (?:use|do|try|implement) (.*?)(?:\.|$)", 0.90, "to_fix_use"),
-            (r"[Ii]f (.*?)[,]? (?:then |you should |use |do |try )(.*?)(?:\.|$)", 0.85, "if_then"),
-            (r"[Ww]hen (.*?)[,]? (?:use |do |try |implement )(.*?)(?:\.|$)", 0.85, "when_use"),
-            (r"[Ff]or (.*?)[,]? (?:use |try |implement )(.*?)(?:\.|$)", 0.80, "for_use"),
+            (r"[Tt]o (?:fix|solve|resolve) (.*?)[,]? (?:use|do|try|implement|restart|run|execute|check) (.*?)(?:\.|$)", 0.90, "to_fix_use"),
+            (r"[Ii]f (.*?)[,]? (?:then |you should |use |do |try |restart |run )(.*?)(?:\.|$)", 0.85, "if_then"),
+            (r"[Ww]hen (.*?)[,]? (?:use |do |try |implement |restart |run )(.*?)(?:\.|$)", 0.85, "when_use"),
+            (r"[Ff]or (.*?)[,]? (?:use |try |implement |restart |run )(.*?)(?:\.|$)", 0.80, "for_use"),
             (r"[Tt]he solution (?:to |for )?(.*?) (?:is |was )(.*?)(?:\.|$)", 0.90, "solution_is"),
             (r"[Tt]his (?:fixes|solves|resolves) (.*?)(?:\.|$)", 0.85, "this_fixes"),
         ]
@@ -147,26 +147,27 @@ class PatternExtractor:
         
         # Correction patterns - high importance updates
         self.CORRECTION_PATTERNS = [
-            (r"[Aa]ctually[,]?\s*(?:it's |its |it is |that's )?(.*?)(?:\.|$|,)", 0.95, "actually"),
-            (r"[Nn]o[,]?\s*(?:it's |its |it is |that's )?(.*?)(?:\.|$|,)", 0.95, "no_its"),
+            (r"[Aa]ctually[,]?\s*((?:it's |its |it is |that's )?.*?)(?:\.|$|,)", 0.95, "actually"),
+            (r"[Nn]o[,]?\s*((?:it's |its |it is |that's )?.*?)(?:\.|$|,)", 0.95, "no_its"),
             (r"[Cc]orrection[:]?\s*(.*?)(?:\.|$)", 1.0, "correction"),
-            (r"[Ww]ait[,]?\s*(?:it's |its |it is |that's )?(.*?)(?:\.|$|,)", 0.90, "wait"),
-            (r"[Ss]orry[,]?\s*(?:it's |its |it is |that's )?(.*?)(?:\.|$|,)", 0.85, "sorry"),
+            (r"[Ww]ait[,]?\s*((?:it's |its |it is |that's |I meant )?.*?)(?:\.|$|,)", 0.90, "wait"),
+            (r"[Ss]orry[,]?\s*((?:it's |its |it is |that's )?.*?)(?:\.|$|,)", 0.85, "sorry"),
             (r"I meant (.*?)(?:\.|$|,)", 0.90, "i_meant"),
             (r"[Ll]et me correct (?:that[,]?\s*)?(.*?)(?:\.|$)", 0.95, "let_me_correct"),
             (r"[Tt]o clarify[,]?\s*(.*?)(?:\.|$)", 0.90, "to_clarify"),
         ]
         
         # Combine all patterns with their memory types
+        # Order matters: more specific patterns should come first
         self.ALL_PATTERNS = [
-            (self.REMEMBER_PATTERNS, MemoryType.CONTEXT),
+            (self.CORRECTION_PATTERNS, MemoryType.CONTEXT),  # High importance corrections first
             (self.IDENTITY_PATTERNS, MemoryType.IDENTITY),
             (self.PREFERENCE_PATTERNS, MemoryType.PREFERENCE),
             (self.DECISION_PATTERNS, MemoryType.DECISION),
-            (self.PATTERN_PATTERNS, MemoryType.PATTERN),
+            (self.PATTERN_PATTERNS, MemoryType.PATTERN),  # Specific patterns before general ones
             (self.SOLUTION_PATTERNS, MemoryType.SOLUTION),
             (self.STATUS_PATTERNS, MemoryType.STATUS),
-            (self.CORRECTION_PATTERNS, MemoryType.CONTEXT),  # High importance corrections
+            (self.REMEMBER_PATTERNS, MemoryType.CONTEXT),  # General patterns last
         ]
         
         # Add custom patterns if provided
@@ -198,13 +199,16 @@ class PatternExtractor:
     def extract_memories(self, text: str) -> List[ExtractedMemory]:
         """
         Extract all potential memories from text using pattern matching.
-        
+
         Args:
             text: Text to extract memories from
-            
+
         Returns:
             List of extracted memories
         """
+        if text is None:
+            raise TypeError("Text input cannot be None")
+
         if not text or not text.strip():
             return []
         
@@ -322,25 +326,45 @@ class PatternExtractor:
             return []
 
         unique_memories = []
-        seen_content = set()
+        seen_content = {}  # Map from normalized content to memory index
 
-        for memory in memories:
+        for i, memory in enumerate(memories):
             # Normalize content for comparison
             normalized = memory.content.lower().strip()
 
             # Check for exact duplicates
             if normalized in seen_content:
+                # Keep the memory with higher confidence or longer content
+                existing_idx = seen_content[normalized]
+                existing_memory = unique_memories[existing_idx]
+
+                if (memory.confidence > existing_memory.confidence or
+                    (memory.confidence == existing_memory.confidence and
+                     len(memory.content) > len(existing_memory.content))):
+                    unique_memories[existing_idx] = memory
                 continue
 
             # Check for very similar content (simple heuristic)
             is_duplicate = False
-            for existing_content in seen_content:
+            duplicate_key = None
+            for existing_content, existing_idx in seen_content.items():
                 if self._are_contents_similar(normalized, existing_content):
                     is_duplicate = True
+                    duplicate_key = existing_content
+
+                    # Prefer longer, more descriptive content
+                    existing_memory = unique_memories[existing_idx]
+                    if (len(memory.content) > len(existing_memory.content) or
+                        (len(memory.content) == len(existing_memory.content) and
+                         memory.confidence >= existing_memory.confidence)):
+                        # Replace the existing memory with the better one
+                        unique_memories[existing_idx] = memory
+                        seen_content[normalized] = existing_idx
+                        del seen_content[duplicate_key]
                     break
 
             if not is_duplicate:
-                seen_content.add(normalized)
+                seen_content[normalized] = len(unique_memories)
                 unique_memories.append(memory)
 
         return unique_memories
@@ -407,7 +431,23 @@ class PatternExtractor:
         }
 
         normalized = content.lower().strip()
-        return normalized in common_phrases or len(normalized.split()) <= 2
+
+        # Check if it's in common phrases
+        if normalized in common_phrases:
+            return True
+
+        # Don't filter out names or specific terms - only filter very short generic phrases
+        words = normalized.split()
+        if len(words) == 1:
+            # Single words that are too generic
+            generic_single_words = {'ok', 'yes', 'no', 'sure', 'maybe', 'perhaps', 'well', 'so', 'and', 'but'}
+            return normalized in generic_single_words
+        elif len(words) == 2:
+            # Only filter out very generic two-word phrases
+            generic_two_words = {'i see', 'got it', 'i understand', 'thank you', 'see you', 'talk soon'}
+            return normalized in generic_two_words
+
+        return False
 
     def _update_extraction_stats(self, memories: List[ExtractedMemory]) -> None:
         """Update extraction statistics."""

@@ -79,7 +79,10 @@ class EntityExtractor:
 
         # Programming languages (comprehensive)
         self.LANGUAGE_PATTERNS = [
-            (r'\b(Python|JavaScript|TypeScript|Java|C#|C\+\+|Rust|Go|Kotlin|Swift|PHP|Ruby|Scala|Clojure|Haskell|R|MATLAB|Perl|Shell|Bash|PowerShell|Dart|Elixir|Erlang|F#|Groovy|Julia|Lua|Objective-C|Pascal|Prolog|Scheme|Smalltalk|VB\.NET|Visual Basic)\b', 0.95),
+            (r'\b(Python|JavaScript|TypeScript|Java|Rust|Go|Kotlin|Swift|PHP|Ruby|Scala|Clojure|Haskell|R|MATLAB|Perl|Shell|Bash|PowerShell|Dart|Elixir|Erlang|Groovy|Julia|Lua|Objective-C|Pascal|Prolog|Scheme|Smalltalk|Visual Basic)\b', 0.95),
+            (r'(?:^|\s)(C#|F#)(?=\s|$|[,\.])', 0.95),  # Special handling for # symbols
+            (r'\b(VB\.NET)\b', 0.95),  # VB.NET separate pattern
+            (r'(?:^|[^a-zA-Z])(C\+\+)(?:[^a-zA-Z]|$)', 0.95),  # Special handling for C++
         ]
 
         # Technical frameworks and technologies (expanded)
@@ -90,37 +93,50 @@ class EntityExtractor:
             (r'\b(Webpack|Vite|Rollup|Parcel|Babel|ESLint|Prettier|Jest|Cypress|Playwright|Selenium|Storybook|Figma|Sketch|Adobe XD)\b', 0.90),
         ]
 
-        # Multi-word entities (critical missing piece from PRD)
+        # Multi-word entities (conservative patterns)
         self.COMPOUND_ENTITY_PATTERNS = [
-            (r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b(?=\s+(?:is|was|works|said|project|app|system|platform|service|tool|framework|library|database|API|company|team|department))', 0.90),
-            (r'\b([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:project|application|system|platform|service|tool|framework|library|API)', 0.95),
             (r'(?:project|app|system|platform|service|tool|framework|library|API)\s+(?:called|named)\s+([A-Z][a-zA-Z0-9\s]+)', 0.95),
+            (r'\b([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+\s+(?:System|Platform|Service|Module|Dashboard))\b', 0.90),
+            (r'\b([A-Z][a-zA-Z]+\s+(?:Management|Processing|Analytics|Insights)(?:\s+[A-Z][a-zA-Z]+)*)\b', 0.85),
         ]
 
         # Business entities (organizations, companies)
         self.ORGANIZATION_PATTERNS = [
-            (r'\b([A-Z][a-z]+(?:Corp|Inc|LLC|Ltd|Technologies|Systems|Solutions|Consulting|Group|Company|Co\.|Corporation|Incorporated|Limited))\b', 0.95),
+            (r'\b([A-Z][a-z]+\s+(?:Corp|Inc|LLC|Ltd)\.?)\b', 0.98),  # Match "TechCorp Inc" as a whole
+            (r'\b([A-Z][a-z]+(?:Technologies|Systems|Solutions|Consulting|Group|Company|Corporation|Incorporated|Limited))\b', 0.95),
             (r'\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(?:Corp|Inc|LLC|Ltd|Technologies|Systems|Solutions|Consulting|Group|Company)\b', 0.95),
+            (r'\b([A-Z][a-zA-Z]+\s+(?:Technologies|Systems|Solutions|Consulting|Group|Company|Corporation|Services))\b', 0.93),  # "DataSoft Solutions"
+            (r'\b([A-Z][a-zA-Z]+\s+(?:Technologies|Systems|Solutions|Consulting|Group|Company|Corporation|Services))\s+(?:is|was|are|provides|offers)', 0.90),  # "DataSoft Solutions is"
             (r'\b(Google|Microsoft|Apple|Amazon|Meta|Facebook|Netflix|Tesla|Uber|Airbnb|Spotify|Slack|Zoom|Salesforce|Oracle|IBM|Intel|NVIDIA|AMD)\b', 1.0),
         ]
 
-        # Person names (improved patterns)
+        # Person names (improved patterns) - avoid matching system/business names
         self.PERSON_PATTERNS = [
-            (r'\b([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})\b(?=\s+(?:is|was|works|said|told|mentioned|suggested|recommended|created|developed|built))', 0.90),
-            (r'(?:by|from|with|created by|developed by|built by)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', 0.85),
-            (r'(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', 0.95),
+            # Higher confidence for person names with descriptive verbs
+            (r'\b([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+(?:works|is\s+our|is\s+a|is\s+the|said|told|mentioned|suggested|recommended|created|developed|built)', 0.95),
+            (r'(?:by|from|with|created by|developed by|built by|written by)\s+([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})', 0.85),
+            (r'(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)', 0.98),
+            # Names in lists with "and" - extract both names from pattern like "Bob Smith and Carol Davis are"
+            (r'\b([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+and\s+[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\s+(?:are|were)', 0.80),  # First name
+            (r'\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\s+and\s+([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\s+(?:are|were)', 0.80),  # Second name
         ]
 
         # File types (expanded)
         self.FILE_PATTERNS = [
-            (r'\b([\w\-\.]+\.(?:py|js|ts|tsx|jsx|json|yaml|yml|md|txt|csv|sql|html|css|scss|less|xml|pdf|docx|xlsx|pptx|zip|tar|gz|log|config|env|ini|toml|lock|gitignore|dockerfile|makefile))\b', 0.95),
+            (r'\b([\w\-\.]+\.(?:py|js|ts|tsx|jsx|json|yaml|yml|md|txt|csv|sql|html|css|scss|less|xml|pdf|docx|xlsx|pptx|zip|tar|gz|log|config|env|ini|toml|lock|gitignore))\b', 0.95),
             (r'\b(package\.json|requirements\.txt|Cargo\.toml|go\.mod|pom\.xml|build\.gradle|composer\.json|Gemfile|Pipfile)\b', 1.0),
+            (r'\b(Dockerfile|Makefile)\b', 0.98),  # Higher confidence for special files to override technology patterns
+            (r'\b(docker-compose\.ya?ml)\b', 0.98),  # Docker compose files
         ]
 
         # URLs and domains
         self.URL_PATTERNS = [
             (r'(https?://[^\s]+)', 0.95),
-            (r'\b([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\b', 0.80),
+            # GitHub-style URLs with path
+            (r'\b([a-zA-Z0-9]+\.com/[a-zA-Z0-9\-_/]+)', 0.92),  # github.com/user/repo
+            (r'\b([a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z]{2,6})\b', 0.90),  # subdomain.domain.com
+            (r'\b([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*(com|org|net|edu|gov|mil|co\.uk|co\.in|io|dev|tech|app|service)[/\w\-]*)\b', 0.85),
+            (r'\b([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}\b', 0.75),
         ]
 
         # Email addresses
@@ -131,7 +147,8 @@ class EntityExtractor:
         # Version numbers
         self.VERSION_PATTERNS = [
             (r'\b(?:v|version\s*)(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9]+)?)\b', 0.90),
-            (r'\b(\d+\.\d+(?:\.\d+)?)\s+(?:version|release)\b', 0.90),
+            (r'\b(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9]+)?)\s+(?:version|release)\b', 0.90),
+            (r'\b(\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?)\b', 0.85),  # Simple version numbers like 3.9.7
         ]
 
         # Dates and times
@@ -212,6 +229,9 @@ class EntityExtractor:
         Returns:
             List of extracted entities
         """
+        if text is None:
+            raise TypeError("Input text cannot be None")
+
         if not text or not text.strip():
             return []
 
@@ -321,11 +341,11 @@ class EntityExtractor:
         return text
 
     def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:
-        """Remove duplicate entities."""
+        """Remove duplicate entities and handle overlaps."""
         if not entities:
             return []
 
-        # Group entities by normalized text and type
+        # First remove exact duplicates
         entity_groups = {}
         for entity in entities:
             key = (entity.normalized_text, entity.entity_type)
@@ -343,7 +363,47 @@ class EntityExtractor:
                 best_entity = max(group, key=lambda e: e.confidence)
                 unique_entities.append(best_entity)
 
-        return unique_entities
+        # Remove overlapping entities (keep higher confidence ones)
+        final_entities = []
+        for entity in sorted(unique_entities, key=lambda e: e.confidence, reverse=True):
+            # Check if this entity overlaps with any already selected entity
+            overlaps = False
+            for existing in final_entities:
+                # Check if entities have significant text overlap
+                if self._entities_overlap(entity, existing):
+                    overlaps = True
+                    break
+
+            if not overlaps:
+                final_entities.append(entity)
+
+        return final_entities
+
+    def _entities_overlap(self, entity1: Entity, entity2: Entity) -> bool:
+        """Check if two entities overlap significantly."""
+        # If they have the same normalized text, they overlap
+        if entity1.normalized_text == entity2.normalized_text:
+            return True
+
+        # Check if one entity text is contained in the other
+        text1, text2 = entity1.text.lower(), entity2.text.lower()
+        if text1 in text2 or text2 in text1:
+            return True
+
+        # For position-based overlap (if we have position info)
+        if (entity1.start_pos and entity2.start_pos and
+            entity1.end_pos and entity2.end_pos):
+            # Check if they overlap in position
+            overlap_start = max(entity1.start_pos, entity2.start_pos)
+            overlap_end = min(entity1.end_pos, entity2.end_pos)
+            if overlap_start < overlap_end:
+                overlap_length = overlap_end - overlap_start
+                min_length = min(entity1.end_pos - entity1.start_pos,
+                               entity2.end_pos - entity2.start_pos)
+                # If overlap is more than 50% of the smaller entity, consider them overlapping
+                return overlap_length > min_length * 0.5
+
+        return False
 
     def _filter_entities(self, entities: List[Entity]) -> List[Entity]:
         """Filter entities based on quality and relevance."""
@@ -369,6 +429,10 @@ class EntityExtractor:
 
             # Skip common programming keywords that aren't meaningful as entities
             if entity.text.lower() in {'if', 'else', 'for', 'while', 'function', 'class', 'import', 'from', 'return'}:
+                continue
+
+            # Skip common abbreviations that shouldn't be organizations
+            if entity.entity_type == "organization" and entity.text.upper() in {'API', 'URL', 'HTTP', 'HTTPS', 'JSON', 'XML', 'HTML', 'CSS', 'JS'}:
                 continue
 
             filtered.append(entity)

@@ -1,0 +1,50 @@
+debug: false
+extraction:
+  custom_patterns: {}
+  enable_entity_extraction: true
+  enable_pattern_compilation: true
+  max_memory_length: 1000
+  min_memory_length: 5
+  pattern_weights:
+    context: 0.5
+    decision: 0.9
+    identity: 1.0
+    pattern: 0.7
+    preference: 0.9
+    solution: 0.7
+    status: 0.3
+log_level: INFO
+performance:
+  enable_metrics_collection: false
+  enable_performance_monitoring: true
+  log_slow_operations: true
+  max_generation_time_ms: 200.0
+  max_recall_time_ms: 200.0
+recall:
+  cache_size: 1000
+  cache_ttl_seconds: 300
+  default_strategy: auto
+  enable_caching: true
+  max_memories: 10
+  min_confidence_threshold: 0.1
+  strategies:
+  - keyword
+  - entity
+  - temporal
+  strategy_weights:
+    entity: 0.4
+    keyword: 0.4
+    temporal: 0.2
+retention:
+  cleanup_batch_size: 1000
+  cleanup_interval_hours: 24
+  custom_retention: {}
+  enable_auto_cleanup: true
+  max_total_memories: 100000
+storage:
+  auto_compact: true
+  backup_on_corruption: true
+  connection_pool_size: 5
+  max_size_mb: 50.0
+  query_timeout_ms: 5000
+version: '1.0'

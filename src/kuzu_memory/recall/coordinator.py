@@ -13,7 +13,7 @@ import logging
 
 from ..core.models import Memory, MemoryContext, MemoryType
 from ..core.config import KuzuMemoryConfig
-from ..utils.exceptions import RecallError, PerformanceError
+from ..utils.exceptions import RecallError, PerformanceError, PerformanceThresholdError
 from ..utils.validation import validate_text_input
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..storage.cache import MemoryCache
@@ -151,8 +151,11 @@ class RecallCoordinator:
             # Check performance requirement
             if (self.config.performance.enable_performance_monitoring and 
                 context.recall_time_ms > self.config.performance.max_recall_time_ms):
-                raise PerformanceError("attach_memories", context.recall_time_ms, 
-                                     self.config.performance.max_recall_time_ms)
+                raise PerformanceThresholdError(
+                    operation="attach_memories",
+                    actual_time=context.recall_time_ms / 1000.0,  # Convert to seconds
+                    threshold=self.config.performance.max_recall_time_ms / 1000.0
+                )
             
             logger.debug(f"Recalled {len(final_memories)} memories in {context.recall_time_ms:.1f}ms")
             
@@ -161,7 +164,7 @@ class RecallCoordinator:
         except Exception as e:
             if isinstance(e, (RecallError, PerformanceError)):
                 raise
-            raise RecallError(prompt, str(e))
+            raise RecallError(f"Recall failed for prompt '{prompt}': {str(e)}")
     
     def _auto_recall(
         self,

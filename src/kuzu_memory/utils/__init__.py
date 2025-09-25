@@ -11,6 +11,9 @@ from .exceptions import (
     RecallError,
     PerformanceError,
     ValidationError,
+)
+
+from .error_recovery import (
     raise_if_empty_text,
     raise_if_invalid_path,
     raise_if_performance_exceeded,

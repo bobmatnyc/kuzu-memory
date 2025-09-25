@@ -233,6 +233,14 @@ class MemoryCache:
         """Get cached recall result."""
         key = self._generate_recall_key(prompt, strategy, max_memories)
         return self._cache.get(key)
+
+    def get(self, key: str) -> Optional[Any]:
+        """Get item from general cache using raw key."""
+        return self._cache.get(key)
+
+    def put(self, key: str, value: Any) -> None:
+        """Put item in general cache using raw key."""
+        self._cache.put(key, value)
     
     def put_recall_result(self, prompt: str, strategy: str, max_memories: int, context: MemoryContext) -> None:
         """Cache recall result."""

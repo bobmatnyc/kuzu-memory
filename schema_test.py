@@ -9,6 +9,9 @@ import kuzu
 
 def test_schema_creation():
     """Test our schema creation step by step."""
+    import pytest
+    pytest.skip("Standalone test file - schema tested in integration tests")
+
     print("🧪 Testing Schema Creation")
     print("=" * 40)
     

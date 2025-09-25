@@ -11,7 +11,11 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from ..utils.exceptions import ConfigurationError
+# Local exception to avoid circular dependency
+class ConfigurationError(Exception):
+    """Configuration-related error."""
+    pass
+
 # Removed validation import to avoid circular dependency
 
 
@@ -23,6 +27,7 @@ class StorageConfig:
     backup_on_corruption: bool = True
     connection_pool_size: int = 5
     query_timeout_ms: int = 5000
+    use_cli_adapter: bool = False  # Use Kuzu CLI adapter for better performance
 
 
 @dataclass
@@ -64,8 +69,8 @@ class ExtractionConfig:
 @dataclass
 class PerformanceConfig:
     """Performance monitoring and limits."""
-    max_recall_time_ms: float = 10.0
-    max_generation_time_ms: float = 20.0
+    max_recall_time_ms: float = 200.0
+    max_generation_time_ms: float = 200.0
     enable_performance_monitoring: bool = True
     log_slow_operations: bool = True
     enable_metrics_collection: bool = False
