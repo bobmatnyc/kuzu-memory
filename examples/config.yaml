@@ -1,0 +1,67 @@
+# KuzuMemory Configuration Example
+# This file shows all available configuration options with their defaults
+
+version: "1.0"
+debug: false
+log_level: "INFO"
+
+# Storage configuration
+storage:
+  max_size_mb: 50.0                    # Maximum database size in MB
+  auto_compact: true                   # Automatically compact database
+  backup_on_corruption: true          # Backup corrupted databases
+  connection_pool_size: 5              # Number of database connections
+  query_timeout_ms: 5000               # Query timeout in milliseconds
+
+# Memory recall configuration
+recall:
+  max_memories: 10                     # Maximum memories to return
+  default_strategy: "auto"             # Default recall strategy
+  strategies:                          # Enabled recall strategies
+    - "keyword"
+    - "entity"
+    - "temporal"
+  strategy_weights:                    # Weights for auto strategy
+    keyword: 0.4
+    entity: 0.4
+    temporal: 0.2
+  min_confidence_threshold: 0.1        # Minimum confidence to include
+  enable_caching: true                 # Enable result caching
+  cache_size: 1000                     # Cache size (number of items)
+  cache_ttl_seconds: 300               # Cache time-to-live
+
+# Memory extraction configuration
+extraction:
+  min_memory_length: 5                 # Minimum memory content length
+  max_memory_length: 1000              # Maximum memory content length
+  enable_entity_extraction: true      # Enable entity extraction
+  enable_pattern_compilation: true    # Pre-compile regex patterns
+  custom_patterns:                     # Custom extraction patterns
+    # custom_identity: "I am (.*?)(?:\\.|$)"
+    # custom_preference: "I always (.*?)(?:\\.|$)"
+  pattern_weights:                     # Pattern importance weights
+    identity: 1.0
+    preference: 0.9
+    decision: 0.9
+    pattern: 0.7
+    solution: 0.7
+    status: 0.3
+    context: 0.5
+
+# Performance monitoring configuration
+performance:
+  max_recall_time_ms: 10.0             # Maximum time for attach_memories()
+  max_generation_time_ms: 20.0         # Maximum time for generate_memories()
+  enable_performance_monitoring: true  # Enable performance checks
+  log_slow_operations: true            # Log operations that are slow
+  enable_metrics_collection: false    # Enable detailed metrics
+
+# Memory retention configuration
+retention:
+  enable_auto_cleanup: true            # Automatically clean expired memories
+  cleanup_interval_hours: 24           # How often to run cleanup
+  custom_retention:                    # Custom retention periods (days)
+    # status: 1                        # Status memories expire after 1 day
+    # context: 7                       # Context memories expire after 7 days
+  max_total_memories: 100000           # Maximum total memories to store
+  cleanup_batch_size: 1000             # Batch size for cleanup operations

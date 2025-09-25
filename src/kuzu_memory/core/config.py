@@ -1,0 +1,319 @@
+"""
+Configuration management for KuzuMemory.
+
+Provides flexible configuration with defaults, validation, and support
+for both programmatic and file-based configuration.
+"""
+
+import yaml
+from dataclasses import dataclass, field
+from datetime import timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+from ..utils.exceptions import ConfigurationError
+# Removed validation import to avoid circular dependency
+
+
+@dataclass
+class StorageConfig:
+    """Storage-related configuration."""
+    max_size_mb: float = 50.0
+    auto_compact: bool = True
+    backup_on_corruption: bool = True
+    connection_pool_size: int = 5
+    query_timeout_ms: int = 5000
+
+
+@dataclass
+class RecallConfig:
+    """Memory recall configuration."""
+    max_memories: int = 10
+    default_strategy: str = "auto"
+    strategies: List[str] = field(default_factory=lambda: ["keyword", "entity", "temporal"])
+    strategy_weights: Dict[str, float] = field(default_factory=lambda: {
+        "keyword": 0.4,
+        "entity": 0.4, 
+        "temporal": 0.2
+    })
+    min_confidence_threshold: float = 0.1
+    enable_caching: bool = True
+    cache_size: int = 1000
+    cache_ttl_seconds: int = 300
+
+
+@dataclass
+class ExtractionConfig:
+    """Memory extraction configuration."""
+    min_memory_length: int = 5
+    max_memory_length: int = 1000
+    enable_entity_extraction: bool = True
+    enable_pattern_compilation: bool = True
+    custom_patterns: Dict[str, str] = field(default_factory=dict)
+    pattern_weights: Dict[str, float] = field(default_factory=lambda: {
+        "identity": 1.0,
+        "preference": 0.9,
+        "decision": 0.9,
+        "pattern": 0.7,
+        "solution": 0.7,
+        "status": 0.3,
+        "context": 0.5
+    })
+
+
+@dataclass
+class PerformanceConfig:
+    """Performance monitoring and limits."""
+    max_recall_time_ms: float = 10.0
+    max_generation_time_ms: float = 20.0
+    enable_performance_monitoring: bool = True
+    log_slow_operations: bool = True
+    enable_metrics_collection: bool = False
+
+
+@dataclass
+class RetentionConfig:
+    """Memory retention policies."""
+    enable_auto_cleanup: bool = True
+    cleanup_interval_hours: int = 24
+    custom_retention: Dict[str, Optional[int]] = field(default_factory=dict)  # memory_type -> days
+    max_total_memories: int = 100_000
+    cleanup_batch_size: int = 1000
+
+
+@dataclass
+class KuzuMemoryConfig:
+    """
+    Main configuration class for KuzuMemory.
+    
+    Provides comprehensive configuration with sensible defaults,
+    validation, and support for loading from files.
+    """
+    
+    # Sub-configurations
+    storage: StorageConfig = field(default_factory=StorageConfig)
+    recall: RecallConfig = field(default_factory=RecallConfig)
+    extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
+    retention: RetentionConfig = field(default_factory=RetentionConfig)
+    
+    # Global settings
+    version: str = "1.0"
+    debug: bool = False
+    log_level: str = "INFO"
+    
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "KuzuMemoryConfig":
+        """
+        Create configuration from dictionary.
+        
+        Args:
+            config_dict: Configuration dictionary
+            
+        Returns:
+            KuzuMemoryConfig instance
+            
+        Raises:
+            ConfigurationError: If configuration is invalid
+        """
+        try:
+            # Basic validation of the configuration dictionary
+            if not isinstance(config_dict, dict):
+                raise ValueError("Configuration must be a dictionary")
+            validated_config = config_dict
+            
+            # Create sub-configurations
+            storage_config = StorageConfig()
+            if "storage" in validated_config:
+                storage_data = validated_config["storage"]
+                for key, value in storage_data.items():
+                    if hasattr(storage_config, key):
+                        setattr(storage_config, key, value)
+            
+            recall_config = RecallConfig()
+            if "recall" in validated_config:
+                recall_data = validated_config["recall"]
+                for key, value in recall_data.items():
+                    if hasattr(recall_config, key):
+                        setattr(recall_config, key, value)
+            
+            extraction_config = ExtractionConfig()
+            if "extraction" in validated_config:
+                extraction_data = validated_config["extraction"]
+                for key, value in extraction_data.items():
+                    if hasattr(extraction_config, key):
+                        setattr(extraction_config, key, value)
+            
+            performance_config = PerformanceConfig()
+            if "performance" in validated_config:
+                performance_data = validated_config["performance"]
+                for key, value in performance_data.items():
+                    if hasattr(performance_config, key):
+                        setattr(performance_config, key, value)
+            
+            retention_config = RetentionConfig()
+            if "retention" in validated_config:
+                retention_data = validated_config["retention"]
+                for key, value in retention_data.items():
+                    if hasattr(retention_config, key):
+                        setattr(retention_config, key, value)
+            
+            # Create main configuration
+            return cls(
+                storage=storage_config,
+                recall=recall_config,
+                extraction=extraction_config,
+                performance=performance_config,
+                retention=retention_config,
+                version=validated_config.get("version", "1.0"),
+                debug=validated_config.get("debug", False),
+                log_level=validated_config.get("log_level", "INFO")
+            )
+            
+        except Exception as e:
+            raise ConfigurationError(f"Failed to create configuration from dict: {e}")
+    
+    @classmethod
+    def from_file(cls, config_path: Union[str, Path]) -> "KuzuMemoryConfig":
+        """
+        Load configuration from YAML file.
+        
+        Args:
+            config_path: Path to configuration file
+            
+        Returns:
+            KuzuMemoryConfig instance
+            
+        Raises:
+            ConfigurationError: If file cannot be loaded or parsed
+        """
+        try:
+            config_path = Path(config_path)
+            
+            if not config_path.exists():
+                raise ConfigurationError(f"Configuration file not found: {config_path}")
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+            
+            if not isinstance(config_data, dict):
+                raise ConfigurationError("Configuration file must contain a YAML dictionary")
+            
+            return cls.from_dict(config_data)
+            
+        except yaml.YAMLError as e:
+            raise ConfigurationError(f"Failed to parse YAML configuration: {e}")
+        except Exception as e:
+            raise ConfigurationError(f"Failed to load configuration file: {e}")
+    
+    @classmethod
+    def default(cls) -> "KuzuMemoryConfig":
+        """Create configuration with all default values."""
+        return cls()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return {
+            "version": self.version,
+            "debug": self.debug,
+            "log_level": self.log_level,
+            "storage": {
+                "max_size_mb": self.storage.max_size_mb,
+                "auto_compact": self.storage.auto_compact,
+                "backup_on_corruption": self.storage.backup_on_corruption,
+                "connection_pool_size": self.storage.connection_pool_size,
+                "query_timeout_ms": self.storage.query_timeout_ms,
+            },
+            "recall": {
+                "max_memories": self.recall.max_memories,
+                "default_strategy": self.recall.default_strategy,
+                "strategies": self.recall.strategies,
+                "strategy_weights": self.recall.strategy_weights,
+                "min_confidence_threshold": self.recall.min_confidence_threshold,
+                "enable_caching": self.recall.enable_caching,
+                "cache_size": self.recall.cache_size,
+                "cache_ttl_seconds": self.recall.cache_ttl_seconds,
+            },
+            "extraction": {
+                "min_memory_length": self.extraction.min_memory_length,
+                "max_memory_length": self.extraction.max_memory_length,
+                "enable_entity_extraction": self.extraction.enable_entity_extraction,
+                "enable_pattern_compilation": self.extraction.enable_pattern_compilation,
+                "custom_patterns": self.extraction.custom_patterns,
+                "pattern_weights": self.extraction.pattern_weights,
+            },
+            "performance": {
+                "max_recall_time_ms": self.performance.max_recall_time_ms,
+                "max_generation_time_ms": self.performance.max_generation_time_ms,
+                "enable_performance_monitoring": self.performance.enable_performance_monitoring,
+                "log_slow_operations": self.performance.log_slow_operations,
+                "enable_metrics_collection": self.performance.enable_metrics_collection,
+            },
+            "retention": {
+                "enable_auto_cleanup": self.retention.enable_auto_cleanup,
+                "cleanup_interval_hours": self.retention.cleanup_interval_hours,
+                "custom_retention": self.retention.custom_retention,
+                "max_total_memories": self.retention.max_total_memories,
+                "cleanup_batch_size": self.retention.cleanup_batch_size,
+            }
+        }
+    
+    def save_to_file(self, config_path: Union[str, Path]) -> None:
+        """
+        Save configuration to YAML file.
+        
+        Args:
+            config_path: Path where to save the configuration
+            
+        Raises:
+            ConfigurationError: If file cannot be written
+        """
+        try:
+            config_path = Path(config_path)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(self.to_dict(), f, default_flow_style=False, indent=2)
+                
+        except Exception as e:
+            raise ConfigurationError(f"Failed to save configuration file: {e}")
+    
+    def validate(self) -> None:
+        """
+        Validate configuration values.
+        
+        Raises:
+            ConfigurationError: If configuration is invalid
+        """
+        # Validate storage config
+        if self.storage.max_size_mb <= 0:
+            raise ConfigurationError("storage.max_size_mb must be positive")
+        
+        if self.storage.connection_pool_size <= 0:
+            raise ConfigurationError("storage.connection_pool_size must be positive")
+        
+        # Validate recall config
+        if self.recall.max_memories <= 0:
+            raise ConfigurationError("recall.max_memories must be positive")
+        
+        if not self.recall.strategies:
+            raise ConfigurationError("recall.strategies cannot be empty")
+        
+        valid_strategies = {"keyword", "entity", "temporal", "auto"}
+        for strategy in self.recall.strategies:
+            if strategy not in valid_strategies:
+                raise ConfigurationError(f"Invalid recall strategy: {strategy}")
+        
+        # Validate extraction config
+        if self.extraction.min_memory_length <= 0:
+            raise ConfigurationError("extraction.min_memory_length must be positive")
+        
+        if self.extraction.max_memory_length <= self.extraction.min_memory_length:
+            raise ConfigurationError("extraction.max_memory_length must be greater than min_memory_length")
+        
+        # Validate performance config
+        if self.performance.max_recall_time_ms <= 0:
+            raise ConfigurationError("performance.max_recall_time_ms must be positive")
+        
+        if self.performance.max_generation_time_ms <= 0:
+            raise ConfigurationError("performance.max_generation_time_ms must be positive")
