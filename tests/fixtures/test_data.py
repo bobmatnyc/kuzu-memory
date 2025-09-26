@@ -64,8 +64,8 @@ class DataGenerator:
             "Frontend Developer", "System Architect", "Engineering Manager", "CTO"
         ]
     
-    def generate_identity_memory(self, user_id: str = None) -> Dict[str, Any]:
-        """Generate an identity-related memory."""
+    def generate_semantic_memory(self, user_id: str = None) -> Dict[str, Any]:
+        """Generate a semantic memory (facts and general knowledge)."""
         name = random.choice(self.names)
         company = random.choice(self.companies)
         role = random.choice(self.roles)
@@ -80,9 +80,9 @@ class DataGenerator:
         return {
             "content": random.choice(templates),
             "user_id": user_id or f"user-{hash(name) % 1000}",
-            "session_id": "identity-session",
+            "session_id": "semantic-session",
             "source": "profile",
-            "memory_type": MemoryType.IDENTITY,
+            "memory_type": MemoryType.SEMANTIC,  # Facts and general knowledge
             "entities": [name, company, role]
         }
     
@@ -109,8 +109,8 @@ class DataGenerator:
             "entities": [tech1, tech2]
         }
     
-    def generate_decision_memory(self, user_id: str = None) -> Dict[str, Any]:
-        """Generate a decision-related memory."""
+    def generate_episodic_memory(self, user_id: str = None) -> Dict[str, Any]:
+        """Generate an episodic memory (personal experiences and events)."""
         tech = random.choice(self.technologies)
         project = random.choice(self.projects)
         
@@ -124,15 +124,15 @@ class DataGenerator:
         
         return {
             "content": random.choice(templates),
-            "user_id": user_id or "decision-user",
-            "session_id": "decision-session",
+            "user_id": user_id or "episodic-user",
+            "session_id": "episodic-session",
             "source": "meeting",
-            "memory_type": MemoryType.DECISION,
+            "memory_type": MemoryType.EPISODIC,  # Personal experiences and events
             "entities": [tech, project]
         }
     
-    def generate_status_memory(self, user_id: str = None) -> Dict[str, Any]:
-        """Generate a status-related memory."""
+    def generate_working_memory(self, user_id: str = None) -> Dict[str, Any]:
+        """Generate a working memory (tasks and current focus)."""
         project = random.choice(self.projects)
         tech = random.choice(self.technologies)
         
@@ -146,15 +146,15 @@ class DataGenerator:
         
         return {
             "content": random.choice(templates),
-            "user_id": user_id or "status-user",
-            "session_id": "status-session",
+            "user_id": user_id or "working-user",
+            "session_id": "working-session",
             "source": "status_update",
-            "memory_type": MemoryType.STATUS,
+            "memory_type": MemoryType.WORKING,  # Tasks and current focus
             "entities": [project, tech]
         }
     
-    def generate_pattern_memory(self, user_id: str = None) -> Dict[str, Any]:
-        """Generate a pattern/best practice memory."""
+    def generate_procedural_memory(self, user_id: str = None) -> Dict[str, Any]:
+        """Generate a procedural memory (instructions and how-to content)."""
         templates = [
             "Always validate input data before processing.",
             "Never use global variables in production code.",
@@ -168,31 +168,31 @@ class DataGenerator:
         
         return {
             "content": random.choice(templates),
-            "user_id": user_id or "pattern-user",
+            "user_id": user_id or "procedural-user",
             "session_id": "best-practices",
             "source": "guidelines",
-            "memory_type": MemoryType.PATTERN,
+            "memory_type": MemoryType.PROCEDURAL,  # Instructions and how-to content
             "entities": []
         }
     
-    def generate_solution_memory(self, user_id: str = None) -> Dict[str, Any]:
-        """Generate a solution-related memory."""
+    def generate_sensory_memory(self, user_id: str = None) -> Dict[str, Any]:
+        """Generate a sensory memory (sensory descriptions)."""
         tech = random.choice(self.technologies)
         
         templates = [
-            f"To fix the performance issue, we optimized the {tech} queries.",
-            f"The bug was caused by incorrect {tech} configuration - fixed by updating settings.",
-            f"Resolved the deployment issue by updating the {tech} version.",
-            f"Fixed the memory leak by properly closing {tech} connections.",
-            f"The authentication problem was solved by updating {tech} middleware.",
+            f"The {tech} dashboard shows high CPU usage during peak hours.",
+            f"The UI feels sluggish when loading {tech} data.",
+            f"Noticed a visual glitch in the {tech} interface.",
+            f"The {tech} system sounds an alert when errors occur.",
+            f"The {tech} logs show unusual patterns in the evening.",
         ]
         
         return {
             "content": random.choice(templates),
-            "user_id": user_id or "solution-user",
-            "session_id": "problem-solving",
-            "source": "troubleshooting",
-            "memory_type": MemoryType.SOLUTION,
+            "user_id": user_id or "sensory-user",
+            "session_id": "observation",
+            "source": "monitoring",
+            "memory_type": MemoryType.SENSORY,  # Sensory descriptions
             "entities": [tech]
         }
     
@@ -203,12 +203,12 @@ class DataGenerator:
             memory_types = list(MemoryType)
         
         generators = {
-            MemoryType.IDENTITY: self.generate_identity_memory,
+            MemoryType.SEMANTIC: self.generate_semantic_memory,  # Facts and general knowledge
             MemoryType.PREFERENCE: self.generate_preference_memory,
-            MemoryType.DECISION: self.generate_decision_memory,
-            MemoryType.STATUS: self.generate_status_memory,
-            MemoryType.PATTERN: self.generate_pattern_memory,
-            MemoryType.SOLUTION: self.generate_solution_memory,
+            MemoryType.EPISODIC: self.generate_episodic_memory,  # Personal experiences and events
+            MemoryType.WORKING: self.generate_working_memory,  # Tasks and current focus
+            MemoryType.PROCEDURAL: self.generate_procedural_memory,  # Instructions and how-to content
+            MemoryType.SENSORY: self.generate_sensory_memory,  # Sensory descriptions
         }
         
         memories = []
@@ -244,7 +244,7 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "profile",
                 "source": "introduction",
-                "memory_type": MemoryType.IDENTITY
+                "memory_type": MemoryType.SEMANTIC  # Facts and general knowledge
             },
             {
                 "content": "I prefer Python for backend development and React for frontend applications.",
@@ -258,21 +258,21 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "architecture-meeting",
                 "source": "meeting",
-                "memory_type": MemoryType.DECISION
+                "memory_type": MemoryType.EPISODIC  # Personal experiences and events
             },
             {
                 "content": "Currently working on the user authentication microservice using FastAPI.",
                 "user_id": user_id,
                 "session_id": "daily-standup",
                 "source": "status_update",
-                "memory_type": MemoryType.STATUS
+                "memory_type": MemoryType.WORKING  # Tasks and current focus
             },
             {
                 "content": "Always write comprehensive unit tests before deploying to production.",
                 "user_id": user_id,
                 "session_id": "best-practices",
                 "source": "guidelines",
-                "memory_type": MemoryType.PATTERN
+                "memory_type": MemoryType.PROCEDURAL  # Instructions and how-to content
             }
         ]
         
@@ -322,7 +322,7 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "profile",
                 "source": "introduction",
-                "memory_type": MemoryType.IDENTITY
+                "memory_type": MemoryType.SEMANTIC  # Facts and general knowledge
             },
             {
                 "content": "I prefer Python with scikit-learn and TensorFlow for machine learning projects.",
@@ -336,14 +336,14 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "architecture-review",
                 "source": "meeting",
-                "memory_type": MemoryType.DECISION
+                "memory_type": MemoryType.EPISODIC  # Personal experiences and events
             },
             {
                 "content": "Currently training a sentiment analysis model on customer feedback data.",
                 "user_id": user_id,
                 "session_id": "project-update",
                 "source": "status_update",
-                "memory_type": MemoryType.STATUS
+                "memory_type": MemoryType.WORKING  # Tasks and current focus
             }
         ]
         
@@ -388,7 +388,7 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "profile",
                 "source": "introduction",
-                "memory_type": MemoryType.IDENTITY
+                "memory_type": MemoryType.SEMANTIC  # Facts and general knowledge
             },
             {
                 "content": "I prefer Infrastructure as Code using Terraform and Ansible for automation.",
@@ -402,14 +402,14 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "migration-planning",
                 "source": "meeting",
-                "memory_type": MemoryType.DECISION
+                "memory_type": MemoryType.EPISODIC  # Personal experiences and events
             },
             {
                 "content": "Currently setting up monitoring with Prometheus and Grafana.",
                 "user_id": user_id,
                 "session_id": "monitoring-setup",
                 "source": "status_update",
-                "memory_type": MemoryType.STATUS
+                "memory_type": MemoryType.WORKING  # Tasks and current focus
             }
         ]
         
@@ -454,21 +454,21 @@ class DataGenerator:
                 "user_id": user_id,
                 "session_id": "profile",
                 "source": "introduction",
-                "memory_type": MemoryType.IDENTITY
+                "memory_type": MemoryType.SEMANTIC  # Facts and general knowledge
             },
             {
                 "content": "We decided to build our platform using microservices with Node.js and MongoDB.",
                 "user_id": user_id,
                 "session_id": "tech-stack-decision",
                 "source": "meeting",
-                "memory_type": MemoryType.DECISION
+                "memory_type": MemoryType.EPISODIC  # Personal experiences and events
             },
             {
                 "content": "Currently raising Series A funding and expanding the engineering team.",
                 "user_id": user_id,
                 "session_id": "business-update",
                 "source": "status_update",
-                "memory_type": MemoryType.STATUS
+                "memory_type": MemoryType.WORKING  # Tasks and current focus
             }
         ]
         

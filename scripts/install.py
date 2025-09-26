@@ -4,11 +4,16 @@ KuzuMemory 3-Minute Installation Script
 
 This script provides a complete installation and setup experience
 that gets users productive with KuzuMemory in under 3 minutes.
+
+Now with Claude Code MCP integration support!
 """
 
 import subprocess
 import sys
 import time
+import json
+import os
+import platform
 from pathlib import Path
 
 def print_banner():
@@ -92,33 +97,138 @@ def install_kuzu_memory():
     
     return success
 
+def detect_claude_installation():
+    """Detect Claude Code or Claude Desktop installation."""
+    system = platform.system()
+    claude_configs = []
+
+    if system == "Darwin":  # macOS
+        claude_configs = [
+            Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        ]
+    elif system == "Linux":
+        claude_configs = [
+            Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+        ]
+    elif system == "Windows":
+        app_data = os.environ.get("APPDATA", "")
+        if app_data:
+            claude_configs = [
+                Path(app_data) / "Claude" / "claude_desktop_config.json"
+            ]
+
+    for config_path in claude_configs:
+        if config_path.exists():
+            return config_path
+
+    return None
+
+def setup_claude_code_integration():
+    """Setup MCP integration for Claude Code."""
+    print("🤖 Setting up Claude Code integration...")
+
+    claude_config_path = detect_claude_installation()
+
+    if not claude_config_path:
+        print("⚠️  Claude Code/Desktop not detected, skipping MCP setup")
+        return True
+
+    print(f"✅ Found Claude configuration at: {claude_config_path}")
+
+    # Create MCP server configuration
+    config_dir = Path.home() / ".config" / "kuzu-memory"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    mcp_config = {
+        "mcpServers": {
+            "kuzu-memory": {
+                "command": str(Path.home() / ".local" / "bin" / "kuzu-memory-mcp"),
+                "args": [],
+                "env": {
+                    "KUZU_MEMORY_HOME": str(Path.home() / ".local" / "kuzu-memory")
+                }
+            }
+        }
+    }
+
+    mcp_config_path = config_dir / "mcp_server_config.json"
+    with open(mcp_config_path, 'w') as f:
+        json.dump(mcp_config, f, indent=2)
+
+    print(f"✅ MCP configuration saved to: {mcp_config_path}")
+
+    # Try to merge with existing Claude config
+    try:
+        # Backup existing config
+        backup_path = claude_config_path.with_suffix(f'.backup-{int(time.time())}.json')
+        if claude_config_path.exists():
+            import shutil
+            shutil.copy2(claude_config_path, backup_path)
+            print(f"✅ Backed up existing config to: {backup_path}")
+
+            # Load existing config
+            with open(claude_config_path, 'r') as f:
+                existing_config = json.load(f)
+
+            # Merge configurations
+            if 'mcpServers' not in existing_config:
+                existing_config['mcpServers'] = {}
+
+            existing_config['mcpServers']['kuzu-memory'] = mcp_config['mcpServers']['kuzu-memory']
+
+            # Write merged config
+            with open(claude_config_path, 'w') as f:
+                json.dump(existing_config, f, indent=2)
+
+            print("✅ Claude Code configuration updated with MCP server")
+        else:
+            # Create new config
+            with open(claude_config_path, 'w') as f:
+                json.dump(mcp_config, f, indent=2)
+            print("✅ Created new Claude Code configuration")
+
+        print("⚠️  Please restart Claude Code to load the new MCP server")
+        return True
+
+    except Exception as e:
+        print(f"❌ Failed to update Claude configuration: {e}")
+        print(f"   Please manually add the MCP configuration from: {mcp_config_path}")
+        return False
+
 def test_installation():
     """Test the installation."""
     print("🧪 Testing installation...")
-    
+
     try:
         # Test basic import
         import kuzu_memory
         print("✅ KuzuMemory imports successfully")
-        
+
         # Test CLI
         from kuzu_memory.cli.commands import cli
         print("✅ CLI available")
-        
+
         # Test core functionality
         from kuzu_memory.core.memory import KuzuMemory
         from kuzu_memory.core.config import KuzuMemoryConfig
         print("✅ Core components available")
-        
+
+        # Test MCP server
+        try:
+            from kuzu_memory.mcp import MCPServer
+            print("✅ MCP server available for Claude Code")
+        except ImportError:
+            print("⚠️  MCP server not available (optional)")
+
         # Test Auggie integration
         try:
             from kuzu_memory.integrations.auggie import AuggieIntegration
             print("✅ Auggie AI integration available")
         except ImportError:
             print("⚠️  Auggie integration not available (optional)")
-        
+
         return True
-        
+
     except ImportError as e:
         print(f"❌ Installation test failed: {e}")
         return False
@@ -173,34 +283,37 @@ Ready to build intelligent AI applications! 🧠✨
 def main():
     """Main installation process."""
     start_time = time.time()
-    
+
     print_banner()
     print("Starting 3-minute installation process...\n")
-    
+
     # Step 1: Check Python version
     if not check_python_version():
         sys.exit(1)
-    
+
     # Step 2: Install dependencies
     if not install_dependencies():
         print("❌ Dependency installation failed")
         sys.exit(1)
-    
+
     # Step 3: Install KuzuMemory
     if not install_kuzu_memory():
         print("❌ KuzuMemory installation failed")
         sys.exit(1)
-    
+
     # Step 4: Test installation
     if not test_installation():
         print("❌ Installation test failed")
         sys.exit(1)
-    
-    # Step 5: Run demo
+
+    # Step 5: Setup Claude Code integration if available
+    setup_claude_code_integration()
+
+    # Step 6: Run demo
     print("\n" + "="*60)
     print("🎮 RUNNING DEMO")
     print("="*60)
-    
+
     if not run_demo():
         print("⚠️  Demo failed, but installation is complete")
     

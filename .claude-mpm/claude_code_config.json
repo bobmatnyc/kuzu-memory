@@ -1,0 +1,248 @@
+{
+  "name": "kuzu-memory",
+  "version": "1.0.0",
+  "description": "KuzuMemory MCP Server for Claude Code - Intelligent AI Memory System",
+  "mcp": {
+    "servers": {
+      "kuzu-memory": {
+        "command": "${HOME}/.local/bin/kuzu-memory-mcp",
+        "args": [],
+        "env": {
+          "KUZU_MEMORY_HOME": "${HOME}/.local/kuzu-memory",
+          "KUZU_MEMORY_PROJECT": "${PROJECT_ROOT}"
+        },
+        "capabilities": {
+          "tools": true,
+          "resources": false,
+          "prompts": false
+        },
+        "description": "Provides intelligent memory operations for AI assistants"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "enhance",
+      "description": "Enhance prompts with relevant project context",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "The prompt to enhance with context"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["plain", "json", "markdown"],
+            "default": "plain",
+            "description": "Output format for the enhanced prompt"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 20,
+            "description": "Maximum number of memories to include"
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "learn",
+      "description": "Store a learning asynchronously (non-blocking)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content to learn and store"
+          },
+          "source": {
+            "type": "string",
+            "default": "claude-code",
+            "description": "Source of the learning"
+          },
+          "quiet": {
+            "type": "boolean",
+            "default": true,
+            "description": "Run quietly without output"
+          }
+        },
+        "required": ["content"]
+      }
+    },
+    {
+      "name": "recall",
+      "description": "Query memories for relevant information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query for memories"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum number of results"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["json", "plain", "markdown"],
+            "default": "json",
+            "description": "Output format"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "remember",
+      "description": "Store a direct memory",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content to remember"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["general", "decision", "pattern", "preference", "identity"],
+            "default": "general",
+            "description": "Type of memory"
+          },
+          "priority": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Priority level (1-10)"
+          }
+        },
+        "required": ["content"]
+      }
+    },
+    {
+      "name": "stats",
+      "description": "Get memory system statistics",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "detailed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show detailed statistics"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["json", "plain", "table"],
+            "default": "json",
+            "description": "Output format"
+          }
+        }
+      }
+    },
+    {
+      "name": "recent",
+      "description": "Get recent memories",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of recent memories to retrieve"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["json", "list", "table"],
+            "default": "json",
+            "description": "Output format"
+          }
+        }
+      }
+    },
+    {
+      "name": "cleanup",
+      "description": "Clean up expired memories",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "boolean",
+            "default": false,
+            "description": "Force cleanup without confirmation"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show what would be cleaned without actually cleaning"
+          }
+        }
+      }
+    },
+    {
+      "name": "project",
+      "description": "Get project information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "verbose": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show detailed project information"
+          }
+        }
+      }
+    },
+    {
+      "name": "init",
+      "description": "Initialize a new project memory store",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Project path (current directory if not specified)"
+          },
+          "force": {
+            "type": "boolean",
+            "default": false,
+            "description": "Force initialization even if already initialized"
+          }
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "performance": {
+      "max_response_time_ms": 100,
+      "async_learning": true,
+      "connection_pooling": true,
+      "cache_enabled": true
+    },
+    "memory": {
+      "default_retention_days": {
+        "identity": -1,
+        "preference": -1,
+        "decision": 90,
+        "pattern": 30,
+        "context": 7,
+        "general": 30
+      },
+      "max_memories_per_query": 10,
+      "relevance_threshold": 0.5
+    },
+    "storage": {
+      "database_path": "kuzu-memories",
+      "backup_enabled": true,
+      "git_integration": true
+    }
+  }
+}

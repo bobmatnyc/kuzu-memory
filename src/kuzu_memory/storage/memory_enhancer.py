@@ -17,6 +17,13 @@ from ..utils.deduplication import DeduplicationEngine
 from ..utils.exceptions import ExtractionError, ValidationError
 from ..utils.validation import validate_text_input
 
+# Import NLP classifier if available
+try:
+    from ..nlp.classifier import MemoryClassifier
+    NLP_AVAILABLE = True
+except ImportError:
+    NLP_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +57,15 @@ class MemoryEnhancer:
             semantic_threshold=0.85,
             enable_update_detection=True
         )
+
+        # Initialize NLP classifier if available
+        self.nlp_classifier = None
+        if NLP_AVAILABLE and config.extraction.enable_nlp_classification:
+            try:
+                self.nlp_classifier = MemoryClassifier(auto_download=False)
+                logger.info("NLP classifier initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize NLP classifier: {e}")
 
         # Enhancement statistics
         self.enhancement_stats = {
@@ -98,6 +114,11 @@ class MemoryEnhancer:
                         entities=extraction.entities,
                         metadata=updated_metadata
                     )
+
+                    # Enhance with NLP classification if available
+                    if self.nlp_classifier:
+                        memory = self.enhance_extracted_memory_with_nlp(memory)
+
                     memories.append(memory)
                 except Exception as e:
                     logger.warning(f"Error creating ExtractedMemory: {e}")
@@ -323,7 +344,144 @@ class MemoryEnhancer:
 
         except Exception as e:
             logger.warning(f"Error calculating entity relevance: {e}")
-            return 0.5  # Default relevance
+            return 0.5
+
+    def classify_memory(self, content: str) -> Dict[str, Any]:
+        """
+        Classify memory content using NLP if available.
+
+        Args:
+            content: Memory content to classify
+
+        Returns:
+            Classification result with type, confidence, entities, etc.
+        """
+        result = {
+            'memory_type': MemoryType.EPISODIC,
+            'confidence': 0.5,
+            'entities': [],
+            'keywords': [],
+            'intent': None,
+            'metadata': {}
+        }
+
+        if not self.nlp_classifier:
+            return result
+
+        try:
+            # Use NLP classifier for automatic classification
+            classification = self.nlp_classifier.classify(content)
+
+            result.update({
+                'memory_type': classification.memory_type,
+                'confidence': classification.confidence,
+                'entities': classification.entities,
+                'keywords': classification.keywords,
+                'intent': classification.intent,
+                'metadata': classification.metadata or {}
+            })
+
+            # Calculate importance score
+            importance = self.nlp_classifier.calculate_importance(
+                content, classification.memory_type
+            )
+            result['importance'] = importance
+
+            logger.debug(f"NLP classified memory as {classification.memory_type} "
+                        f"with confidence {classification.confidence:.2f}")
+
+        except Exception as e:
+            logger.warning(f"NLP classification failed: {e}")
+
+        return result
+
+    def enhance_extracted_memory_with_nlp(
+        self,
+        extracted_memory: ExtractedMemory
+    ) -> ExtractedMemory:
+        """
+        Enhance an extracted memory with NLP classification.
+
+        Args:
+            extracted_memory: Memory to enhance
+
+        Returns:
+            Enhanced memory with NLP metadata
+        """
+        if not self.nlp_classifier:
+            return extracted_memory
+
+        try:
+            # Get NLP classification
+            classification_result = self.classify_memory(extracted_memory.content)
+
+            # Update memory type if NLP has higher confidence
+            nlp_confidence = classification_result.get('confidence', 0)
+            if nlp_confidence > extracted_memory.confidence:
+                extracted_memory.memory_type = classification_result['memory_type']
+                extracted_memory.confidence = nlp_confidence
+
+            # Add entities from NLP
+            nlp_entities = classification_result.get('entities', [])
+            if nlp_entities:
+                # Convert NLP entities (strings) to proper entity dictionaries
+                # Ensure extracted_memory.entities is a list of dicts
+                if not hasattr(extracted_memory, 'entities'):
+                    extracted_memory.entities = []
+
+                # Create a set of existing entity names for deduplication
+                existing_entity_names = set()
+                for entity in extracted_memory.entities:
+                    if isinstance(entity, dict) and 'name' in entity:
+                        existing_entity_names.add(entity['name'].lower())
+                    elif isinstance(entity, str):
+                        # Handle legacy string entities
+                        existing_entity_names.add(entity.lower())
+
+                # Add NLP entities as properly formatted dictionaries
+                for nlp_entity in nlp_entities:
+                    if isinstance(nlp_entity, str):
+                        # Convert string entity to dictionary format
+                        entity_name = nlp_entity.strip()
+                        if entity_name.lower() not in existing_entity_names:
+                            entity_dict = {
+                                'name': entity_name,
+                                'type': 'nlp_extracted',  # Default type for NLP entities
+                                'confidence': nlp_confidence,
+                                'extraction_method': 'nlp'
+                            }
+                            extracted_memory.entities.append(entity_dict)
+                            existing_entity_names.add(entity_name.lower())
+                    elif isinstance(nlp_entity, dict):
+                        # NLP entity is already a dict, ensure it has required fields
+                        entity_name = nlp_entity.get('name', str(nlp_entity))
+                        if entity_name.lower() not in existing_entity_names:
+                            nlp_entity.setdefault('type', 'nlp_extracted')
+                            nlp_entity.setdefault('confidence', nlp_confidence)
+                            nlp_entity.setdefault('extraction_method', 'nlp')
+                            extracted_memory.entities.append(nlp_entity)
+                            existing_entity_names.add(entity_name.lower())
+
+            # Update metadata with NLP results
+            if not extracted_memory.metadata:
+                extracted_memory.metadata = {}
+
+            extracted_memory.metadata.update({
+                'nlp_classification': {
+                    'type': classification_result['memory_type'].value,
+                    'confidence': nlp_confidence,
+                    'keywords': classification_result.get('keywords', []),
+                    'intent': classification_result.get('intent'),
+                    'importance': classification_result.get('importance', 0.5)
+                }
+            })
+
+            self.enhancement_stats['memories_enhanced'] += 1
+
+        except Exception as e:
+            logger.warning(f"NLP enhancement failed: {e}")
+
+        return extracted_memory  # Default relevance
 
     def _update_existing_memory(
         self,
@@ -364,14 +522,33 @@ class MemoryEnhancer:
                 if not hasattr(existing_memory, 'entities'):
                     existing_memory.entities = []
 
-                # Merge entities (avoid duplicates)
-                existing_entity_names = {
-                    entity['name'].lower() for entity in existing_memory.entities
-                }
+                # Merge entities (avoid duplicates) - handle both dict and string formats
+                existing_entity_names = set()
+                # First collect existing entity names
+                for entity in existing_memory.entities:
+                    if isinstance(entity, dict) and 'name' in entity:
+                        existing_entity_names.add(entity['name'].lower())
+                    elif isinstance(entity, str):
+                        existing_entity_names.add(entity.lower())
 
+                # Add new entities that aren't duplicates
                 for new_entity in extracted_memory.entities:
-                    if new_entity['name'].lower() not in existing_entity_names:
-                        existing_memory.entities.append(new_entity)
+                    if isinstance(new_entity, dict):
+                        entity_name = new_entity.get('name', '')
+                        if entity_name and entity_name.lower() not in existing_entity_names:
+                            existing_memory.entities.append(new_entity)
+                            existing_entity_names.add(entity_name.lower())
+                    elif isinstance(new_entity, str) and new_entity:
+                        if new_entity.lower() not in existing_entity_names:
+                            # Convert string to dict format
+                            entity_dict = {
+                                'name': new_entity,
+                                'type': 'extracted',
+                                'confidence': 0.8,
+                                'extraction_method': 'pattern'
+                            }
+                            existing_memory.entities.append(entity_dict)
+                            existing_entity_names.add(new_entity.lower())
 
             logger.debug(f"Updated existing memory: {existing_memory.id}")
             return existing_memory.id

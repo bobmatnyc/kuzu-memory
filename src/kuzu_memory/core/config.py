@@ -54,6 +54,7 @@ class ExtractionConfig:
     max_memory_length: int = 1000
     enable_entity_extraction: bool = True
     enable_pattern_compilation: bool = True
+    enable_nlp_classification: bool = True  # Enable NLP-based classification
     custom_patterns: Dict[str, str] = field(default_factory=dict)
     pattern_weights: Dict[str, float] = field(default_factory=lambda: {
         "identity": 1.0,
@@ -70,7 +71,7 @@ class ExtractionConfig:
 class PerformanceConfig:
     """Performance monitoring and limits."""
     max_recall_time_ms: float = 200.0
-    max_generation_time_ms: float = 200.0
+    max_generation_time_ms: float = 1000.0  # Increased to 1 second for async operations
     enable_performance_monitoring: bool = True
     log_slow_operations: bool = True
     enable_metrics_collection: bool = False

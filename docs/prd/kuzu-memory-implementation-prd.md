@@ -220,7 +220,7 @@ class Memory(BaseModel):
     valid_to: Optional[datetime] = None  # None = currently valid
     
     # Classification
-    memory_type: MemoryType = MemoryType.CONTEXT
+    memory_type: MemoryType = MemoryType.EPISODIC
     importance: float = Field(ge=0.0, le=1.0, default=0.5)
     confidence: float = Field(ge=0.0, le=1.0, default=1.0)
     
@@ -324,11 +324,11 @@ class PatternExtractor:
         
         # Check each pattern type
         pattern_sets = [
-            (self.REMEMBER_PATTERNS, MemoryType.CONTEXT),
+            (self.REMEMBER_PATTERNS, MemoryType.EPISODIC),
             (self.IDENTITY_PATTERNS, MemoryType.IDENTITY),
             (self.PREFERENCE_PATTERNS, MemoryType.PREFERENCE),
             (self.DECISION_PATTERNS, MemoryType.DECISION),
-            (self.CORRECTION_PATTERNS, MemoryType.CONTEXT),  # High importance
+            (self.CORRECTION_PATTERNS, MemoryType.EPISODIC),  # High importance
         ]
         
         for patterns, memory_type in pattern_sets:

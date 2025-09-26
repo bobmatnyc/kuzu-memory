@@ -1,338 +1,313 @@
-# Auggie Integration for KuzuMemory
+# 🌉 Auggie-KuzuMemory Integration Guide
 
-The Auggie integration brings intelligent, rule-based memory enhancement to KuzuMemory, enabling dynamic prompt modification and response learning for AI applications.
+This guide shows how to connect this Auggie instance to your project's KuzuMemory for persistent context and learning.
 
-## 🌟 Key Features
+## 🎯 **What This Enables**
 
-### 🚀 **Intelligent Prompt Enhancement**
-- **Memory-Driven Context**: Automatically adds relevant user context from stored memories
-- **Rule-Based Modification**: Applies intelligent rules to customize prompts based on user preferences
-- **Dynamic Personalization**: Adapts responses based on user's experience level, tech stack, and preferences
+### **Project Memory**
+- Remember project context across sessions
+- Build up knowledge about architecture, decisions, and patterns
+- Share context with all team members
 
-### 🧠 **Response Learning System**
-- **Automatic Learning**: Extracts new memories from AI responses
-- **Correction Detection**: Identifies and learns from user corrections
-- **Quality Assessment**: Evaluates response quality and adjusts future interactions
+### **Intelligent Context Injection**
+- Automatically enhance prompts with relevant project memories
+- Provide project-specific responses based on history
+- Maintain conversation continuity
 
-### ⚙️ **Flexible Rule Engine**
-- **Pre-built Rules**: Comes with intelligent default rules for common scenarios
-- **Custom Rules**: Create domain-specific rules for your use case
-- **Rule Prioritization**: Hierarchical rule execution with priority levels
-- **Performance Monitoring**: Track rule effectiveness and success rates
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User Prompt   │───▶│ Auggie Integration│───▶│ Enhanced Prompt │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │    Rule Engine       │
-                    │ ┌──────────────────┐ │
-                    │ │ Context Rules    │ │
-                    │ │ Prompt Rules     │ │
-                    │ │ Learning Rules   │ │
-                    │ │ Priority Rules   │ │
-                    │ └──────────────────┘ │
-                    └──────────────────────┘
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │   KuzuMemory         │
-                    │ ┌──────────────────┐ │
-                    │ │ Memory Recall    │ │
-                    │ │ Entity Extract   │ │
-                    │ │ Pattern Match    │ │
-                    │ │ Deduplication    │ │
-                    │ └──────────────────┘ │
-                    └──────────────────────┘
-```
-
-## 🚀 Quick Start
-
-### Basic Usage
-
-```python
-from kuzu_memory import KuzuMemory
-from kuzu_memory.integrations.auggie import AuggieIntegration
-
-# Initialize KuzuMemory with Auggie
-with KuzuMemory(db_path="memories.db") as memory:
-    auggie = AuggieIntegration(memory)
-    
-    # Store user context
-    memory.generate_memories(
-        "I'm Sarah, a Senior Python Developer at TechCorp. I prefer FastAPI and PostgreSQL.",
-        user_id="sarah"
-    )
-    
-    # Enhance a prompt
-    enhancement = auggie.enhance_prompt(
-        prompt="How do I build a REST API?",
-        user_id="sarah"
-    )
-    
-    print("Enhanced:", enhancement["enhanced_prompt"])
-    # Output includes Sarah's preferences and experience level
-    
-    # Learn from AI interaction
-    learning_result = auggie.learn_from_interaction(
-        prompt="What database should I use?",
-        ai_response="I recommend PostgreSQL for your project.",
-        user_feedback="Perfect! That's exactly what I use.",
-        user_id="sarah"
-    )
-```
-
-### CLI Usage
-
-```bash
-# Enhance a prompt
-kuzu-memory auggie enhance "How do I write a Python function?" --user-id sarah
-
-# Learn from interaction
-kuzu-memory auggie learn "What framework?" "Use Django" --feedback "I prefer FastAPI" --user-id sarah
-
-# List rules
-kuzu-memory auggie rules --verbose
-
-# Show statistics
-kuzu-memory auggie stats
-```
-
-## 🔧 Rule Types
-
-### 1. Context Enhancement Rules
-Add relevant context from memories to prompts.
-
-```python
-AuggieRule(
-    name="Add Tech Stack Context",
-    rule_type=RuleType.CONTEXT_ENHANCEMENT,
-    conditions={"prompt_category": "coding", "has_preference_memories": True},
-    actions={"add_context": "Include user's tech stack", "memory_types": ["preference"]}
-)
-```
-
-### 2. Prompt Modification Rules
-Modify prompts based on user characteristics.
-
-```python
-AuggieRule(
-    name="Adjust for Experience Level",
-    rule_type=RuleType.PROMPT_MODIFICATION,
-    conditions={"has_identity_memories": True},
-    actions={"modify_prompt": {"adjust_complexity": True, "include_examples": True}}
-)
-```
-
-### 3. Learning Trigger Rules
-Trigger learning from specific patterns in responses.
-
-```python
-AuggieRule(
-    name="Learn from Corrections",
-    rule_type=RuleType.LEARNING_TRIGGER,
-    conditions={"user_feedback": True, "response_contains": {"contains": "actually"}},
-    actions={"learn_from_response": {"extract_correction": True, "confidence_boost": 0.9}}
-)
-```
-
-## 📊 Real-World Example
-
-### Software Development Assistant
-
-```python
-class DevAssistant:
-    def __init__(self, db_path):
-        self.memory = KuzuMemory(db_path=db_path)
-        self.auggie = AuggieIntegration(self.memory, config={
-            "max_context_memories": 10,
-            "enable_learning": True
-        })
-    
-    async def process_query(self, query: str, user_id: str) -> str:
-        # 1. Enhance prompt with user context
-        enhancement = self.auggie.enhance_prompt(query, user_id)
-        enhanced_prompt = enhancement["enhanced_prompt"]
-        
-        # 2. Get AI response (your AI model here)
-        ai_response = await your_ai_model(enhanced_prompt)
-        
-        # 3. Learn from the interaction
-        self.auggie.learn_from_interaction(
-            prompt=query,
-            ai_response=ai_response,
-            user_id=user_id
-        )
-        
-        return ai_response
-    
-    def handle_feedback(self, feedback: str, user_id: str):
-        # Learn from user feedback
-        last_interaction = self.get_last_interaction(user_id)
-        self.auggie.learn_from_interaction(
-            prompt=last_interaction["prompt"],
-            ai_response=last_interaction["response"],
-            user_feedback=feedback,
-            user_id=user_id
-        )
-
-# Usage
-assistant = DevAssistant("dev_memories.db")
-
-# User introduces themselves
-await assistant.process_query(
-    "Hi, I'm Alex, a senior Python developer at StartupCorp. I use FastAPI and PostgreSQL.",
-    user_id="alex"
-)
-
-# Later queries are automatically enhanced
-response = await assistant.process_query(
-    "How do I optimize database queries?",
-    user_id="alex"
-)
-# Response will be tailored to Alex's PostgreSQL experience
-
-# Handle corrections
-assistant.handle_feedback(
-    "Actually, I prefer SQLAlchemy ORM over raw SQL",
-    user_id="alex"
-)
-```
-
-## 🎯 Advanced Features
-
-### Custom Rule Creation
-
-```python
-# Create domain-specific rules
-custom_rule_id = auggie.create_custom_rule(
-    name="Healthcare Context Enhancement",
-    description="Add medical context for healthcare queries",
-    rule_type="context_enhancement",
-    conditions={
-        "user_domain": "healthcare",
-        "prompt_category": "medical"
-    },
-    actions={
-        "add_context": "Include relevant medical guidelines and protocols",
-        "memory_types": ["pattern", "solution"],
-        "compliance_check": True
-    },
-    priority="high"
-)
-```
-
-### Rule Import/Export
-
-```python
-# Export rules for sharing
-auggie.export_rules("my_custom_rules.json")
-
-# Import rules from team
-auggie.import_rules("team_rules.json")
-```
-
-### Performance Monitoring
-
-```python
-# Get detailed statistics
-stats = auggie.get_integration_statistics()
-
-print(f"Prompts enhanced: {stats['integration']['prompts_enhanced']}")
-print(f"Learning events: {stats['response_learner']['total_learning_events']}")
-print(f"Rule success rate: {stats['rule_engine']['average_success_rate']:.1%}")
-
-# Monitor rule performance
-for rule_id, performance in stats['rule_engine']['rule_performance'].items():
-    print(f"{performance['name']}: {performance['execution_count']} executions")
-```
-
-## 🔍 Best Practices
-
-### 1. **Rule Design**
-- Keep conditions specific but not overly restrictive
-- Use meaningful action descriptions
-- Test rules with diverse scenarios
-- Monitor rule performance regularly
-
-### 2. **Memory Management**
-- Store structured user information early
-- Use consistent user IDs across sessions
-- Regularly review and clean up memories
-- Balance memory retention with performance
-
-### 3. **Learning Optimization**
-- Encourage user feedback on responses
-- Set appropriate quality thresholds
-- Review learning patterns periodically
-- Adjust rules based on user behavior
-
-### 4. **Performance Tuning**
-- Limit context memories for faster processing
-- Use rule priorities effectively
-- Monitor rule execution times
-- Cache frequently used contexts
-
-## 🚨 Common Pitfalls
-
-### ❌ **Over-Enhancement**
-```python
-# Don't add too much context
-enhancement = auggie.enhance_prompt(prompt, user_id, max_memories=20)  # Too many!
-```
-
-### ✅ **Balanced Enhancement**
-```python
-# Keep context focused and relevant
-enhancement = auggie.enhance_prompt(prompt, user_id, max_memories=8)  # Just right
-```
-
-### ❌ **Ignoring User Feedback**
-```python
-# Don't forget to learn from corrections
-ai_response = get_ai_response(enhanced_prompt)
-return ai_response  # Missing learning step!
-```
-
-### ✅ **Continuous Learning**
-```python
-# Always learn from interactions
-ai_response = get_ai_response(enhanced_prompt)
-auggie.learn_from_interaction(prompt, ai_response, user_feedback, user_id)
-return ai_response
-```
-
-## 📈 Performance Metrics
-
-The Auggie integration tracks several key metrics:
-
-- **Enhancement Rate**: Percentage of prompts that receive meaningful enhancement
-- **Learning Accuracy**: Quality of extracted memories and corrections
-- **Rule Effectiveness**: Success rate and execution frequency of rules
-- **Response Quality**: User satisfaction and correction rates
-
-## 🔮 Future Enhancements
-
-- **Multi-modal Rules**: Support for image and audio context
-- **Collaborative Learning**: Share insights across users (with privacy controls)
-- **Advanced Analytics**: ML-driven rule optimization
-- **Integration Templates**: Pre-built configurations for common domains
-
-## 🤝 Contributing
-
-We welcome contributions to the Auggie integration! Areas of interest:
-
-- New rule types and patterns
-- Domain-specific rule templates
-- Performance optimizations
-- Integration examples
-
-See our [Contributing Guide](../CONTRIBUTING.md) for details.
+### **Team Learning**
+- Learn from corrections and feedback
+- Adapt responses based on project conventions
+- Improve over time through team interaction
 
 ---
 
-**Ready to make your AI assistant truly intelligent?** Start with the Auggie integration and watch your AI learn and adapt to each user's unique needs! 🚀
+## 🚀 **Quick Start (5 minutes)**
+
+### **Step 1: Initialize Project Memories**
+```bash
+# In your project directory
+kuzu-memory init
+
+# This creates kuzu-memories/ directory with database and docs
+```
+
+### **Step 2: Start the Bridge Server**
+```bash
+# Start the bridge server
+kuzu-memory bridge
+
+# Server starts on http://localhost:8765
+```
+
+### **Step 3: Test the Connection**
+```bash
+# Test the API
+curl http://localhost:8765/health
+
+# Should return: {"status": "healthy", ...}
+```
+
+### **Step 4: Use the Integration**
+```python
+# In this conversation, I can now:
+from auggie_client import initialize_memory_client, enhance_with_memory
+
+# Initialize connection
+initialize_memory_client()
+
+# Enhance prompts with project context
+enhanced_prompt = enhance_with_memory("How do I code this?")
+# Result: Adds project patterns, decisions, etc.
+```
+
+---
+
+## 🔧 **Integration Architecture**
+
+```
+┌─────────────────┐    HTTP API    ┌─────────────────┐    Graph DB    ┌─────────────────┐
+│  This Auggie    │◄──────────────►│  Bridge Server  │◄──────────────►│   KuzuMemory    │
+│   Instance      │                │   (FastAPI)     │                │   Database      │
+└─────────────────┘                └─────────────────┘                └─────────────────┘
+        │                                   │                                   │
+        │                                   │                                   │
+   ┌────▼────┐                         ┌────▼────┐                         ┌────▼────┐
+   │ Context │                         │ Session │                         │ Memory  │
+   │Injection│                         │ Manager │                         │ Store   │
+   └─────────┘                         └─────────┘                         └─────────┘
+```
+
+### **Components:**
+- **Auggie Client**: Connects this instance to KuzuMemory
+- **Bridge Server**: FastAPI server providing REST endpoints
+- **KuzuMemory**: Graph database storing memories and context
+- **Session Manager**: Tracks conversations and learning
+
+---
+
+## 💡 **Usage Examples**
+
+### **Basic Context Enhancement**
+```python
+# Before integration
+user_message = "How do I build an API?"
+# AI gets no project context
+
+# After integration
+enhanced_prompt = enhance_with_memory("How do I build an API?")
+# Result: "## Relevant Context:\n1. Project uses FastAPI framework\n2. Database is PostgreSQL\n\n## User Message:\nHow do I build an API?"
+```
+
+### **Learning from Corrections**
+```python
+# Store conversation with feedback
+store_conversation_turn(
+    user_message="What framework should I use?",
+    ai_response="I recommend Django for web development",
+    user_feedback="Actually, this project uses FastAPI"
+)
+# KuzuMemory learns: Project uses FastAPI framework
+```
+
+### **Session Tracking**
+```python
+# Get conversation statistics
+stats = get_memory_stats()
+# Returns: {
+#   "total_turns": 15,
+#   "memories_used": 42,
+#   "corrections_received": 3,
+#   "duration_minutes": 23.5
+# }
+```
+
+---
+
+## 🎮 **Demo & Testing**
+
+### **Run the Complete Demo**
+```bash
+python demo_auggie_integration.py
+```
+
+This demo shows:
+- ✅ Bridge server startup
+- ✅ Connection establishment  
+- ✅ Context injection in action
+- ✅ Learning from feedback
+- ✅ Memory persistence across sessions
+
+### **Manual Testing**
+```bash
+# 1. Start bridge server
+./kuzu-memory.sh bridge
+
+# 2. Test API endpoints
+curl -X POST http://localhost:8765/enhance-prompt \
+  -H "Content-Type: application/json" \
+  -d '{"user_message": "How do I code?", "user_id": "test"}'
+
+# 3. Store a conversation
+curl -X POST http://localhost:8765/store-conversation \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_message": "I love Python",
+    "ai_response": "Great choice!",
+    "user_id": "test"
+  }'
+```
+
+---
+
+## 🔧 **Configuration Options**
+
+### **Bridge Server Settings**
+```bash
+# Custom host and port
+kuzu-memory bridge --host 0.0.0.0 --port 9000
+
+# Different user ID
+kuzu-memory bridge --user-id team-lead
+
+# Custom database location
+kuzu-memory bridge --db-path /path/to/memories.db
+```
+
+### **Client Configuration**
+```python
+# Custom server location
+client = AuggieMemoryClient(
+    base_url="http://localhost:9000",
+    user_id="your-name"
+)
+
+# Different session ID
+client.session_id = "project-alpha-session"
+```
+
+---
+
+## 🚀 **Advanced Integration**
+
+### **Real-Time Context Streaming**
+```python
+def enhanced_conversation_loop():
+    """Example of real-time integration."""
+    while True:
+        user_input = input("You: ")
+        
+        # Enhance with memory context
+        enhanced_prompt = enhance_with_memory(user_input)
+        
+        # Generate AI response (this would be the actual AI system)
+        ai_response = generate_response(enhanced_prompt)
+        
+        # Store for learning
+        store_conversation_turn(user_input, ai_response)
+        
+        print(f"AI: {ai_response}")
+```
+
+### **Custom Learning Rules**
+```python
+# Add custom learning patterns
+bridge.auggie.create_custom_rule(
+    name="Prefer FastAPI for APIs",
+    conditions={"prompt": {"contains": "api"}},
+    actions={"add_context": "User prefers FastAPI for API development"}
+)
+```
+
+---
+
+## 📊 **Monitoring & Analytics**
+
+### **Session Statistics**
+- Total conversation turns
+- Memories used for context
+- Learning events triggered
+- User corrections received
+- Session duration
+
+### **Performance Metrics**
+- Context injection time (target: <50ms)
+- Memory storage time (target: <100ms)
+- API response times
+- Memory database size
+
+### **Health Monitoring**
+```bash
+# Check system health
+curl http://localhost:8765/health
+
+# Get session summary
+curl http://localhost:8765/session-summary
+```
+
+---
+
+## 🆘 **Troubleshooting**
+
+### **Connection Issues**
+```bash
+# Check if bridge server is running
+curl http://localhost:8765/health
+
+# Restart bridge server
+./kuzu-memory.sh bridge
+
+# Check logs
+./kuzu-memory.sh bridge --debug
+```
+
+### **Memory Issues**
+```bash
+# Check memory database
+./kuzu-memory.sh stats
+
+# Reset session
+curl -X POST http://localhost:8765/reset-session
+```
+
+### **Performance Issues**
+```bash
+# Enable CLI adapter for better performance
+./kuzu-memory.sh optimize --enable-cli
+
+# Monitor performance
+./kuzu-memory.sh stats --verbose
+```
+
+---
+
+## 🎉 **Benefits Summary**
+
+### **For Users:**
+- ✅ **Persistent Context**: Never repeat yourself
+- ✅ **Personalized Responses**: AI knows your preferences
+- ✅ **Continuous Learning**: Gets better over time
+- ✅ **Session Continuity**: Pick up where you left off
+
+### **For AI Systems:**
+- ✅ **Rich Context**: Enhanced prompts with relevant history
+- ✅ **Learning Feedback**: Improve from user corrections
+- ✅ **Performance Tracking**: Monitor conversation quality
+- ✅ **Easy Integration**: Simple REST API
+
+### **For Developers:**
+- ✅ **Local Control**: Your data stays on your machine
+- ✅ **Fast Performance**: Sub-50ms context injection
+- ✅ **Flexible Architecture**: Easy to customize and extend
+- ✅ **Rich Analytics**: Detailed conversation insights
+
+---
+
+## 🔗 **Next Steps**
+
+1. **Start the bridge**: `./kuzu-memory.sh bridge`
+2. **Run the demo**: `python demo_auggie_integration.py`
+3. **Test integration**: Use the client in conversations
+4. **Customize learning**: Add your own rules and patterns
+5. **Monitor performance**: Track conversation quality
+
+**Ready to give this Auggie instance persistent memory?** 🧠✨

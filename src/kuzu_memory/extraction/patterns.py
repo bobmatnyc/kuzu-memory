@@ -160,14 +160,14 @@ class PatternExtractor:
         # Combine all patterns with their memory types
         # Order matters: more specific patterns should come first
         self.ALL_PATTERNS = [
-            (self.CORRECTION_PATTERNS, MemoryType.CONTEXT),  # High importance corrections first
-            (self.IDENTITY_PATTERNS, MemoryType.IDENTITY),
+            (self.CORRECTION_PATTERNS, MemoryType.EPISODIC),  # High importance corrections first
+            (self.IDENTITY_PATTERNS, MemoryType.SEMANTIC),  # Identity info is semantic knowledge
             (self.PREFERENCE_PATTERNS, MemoryType.PREFERENCE),
-            (self.DECISION_PATTERNS, MemoryType.DECISION),
-            (self.PATTERN_PATTERNS, MemoryType.PATTERN),  # Specific patterns before general ones
-            (self.SOLUTION_PATTERNS, MemoryType.SOLUTION),
-            (self.STATUS_PATTERNS, MemoryType.STATUS),
-            (self.REMEMBER_PATTERNS, MemoryType.CONTEXT),  # General patterns last
+            (self.DECISION_PATTERNS, MemoryType.EPISODIC),  # Decisions are episodic events
+            (self.PATTERN_PATTERNS, MemoryType.PROCEDURAL),  # Patterns are procedural knowledge
+            (self.SOLUTION_PATTERNS, MemoryType.PROCEDURAL),  # Solutions are procedural instructions
+            (self.STATUS_PATTERNS, MemoryType.WORKING),  # Status is working memory
+            (self.REMEMBER_PATTERNS, MemoryType.EPISODIC),  # General patterns last
         ]
         
         # Add custom patterns if provided
@@ -175,7 +175,7 @@ class PatternExtractor:
             for pattern_name, pattern_regex in self.custom_patterns.items():
                 # Add custom patterns as CONTEXT type by default
                 custom_pattern = [(pattern_regex, 0.80, pattern_name)]
-                self.ALL_PATTERNS.append((custom_pattern, MemoryType.CONTEXT))
+                self.ALL_PATTERNS.append((custom_pattern, MemoryType.EPISODIC))
     
     def _compile_patterns(self) -> None:
         """Pre-compile all regex patterns for performance."""

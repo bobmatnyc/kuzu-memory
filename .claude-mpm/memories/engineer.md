@@ -30,7 +30,7 @@ MemoryType.DECISION     # 90 days (architectural decisions)
 MemoryType.PATTERN      # 30 days (code patterns)
 MemoryType.SOLUTION     # 60 days (problem solutions)
 MemoryType.STATUS       # 6 hours (current state)
-MemoryType.CONTEXT      # 1 day (session context)
+MemoryType.EPISODIC     # 1 day (session context/events)
 ```
 
 ## Implementation Best Practices

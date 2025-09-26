@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "kuzu-memory": {
+      "command": "python",
+      "args": [
+        "-m",
+        "kuzu_memory.integrations.mcp_server"
+      ],
+      "env": {
+        "KUZU_MEMORY_PROJECT": "/Users/masa/Projects/managed/kuzu-memory",
+        "KUZU_MEMORY_MODE": "mcp"
+      }
+    }
+  }
+}

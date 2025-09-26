@@ -1,0 +1,363 @@
+{
+  "summary": {
+    "total_tests": 6,
+    "successful_tests": 6,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "overall_success": true
+  },
+  "individual_results": [
+    {
+      "test_name": "nlp_classifier_availability",
+      "success": true,
+      "details": {
+        "direct_classification": {
+          "memory_type": "preference",
+          "confidence": 1.0,
+          "keywords": [
+            "React",
+            "Vue"
+          ],
+          "entities": [
+            "frontend",
+            "prefer",
+            "Vue",
+            "Vue for",
+            "React over"
+          ]
+        },
+        "sentiment_analysis": {
+          "dominant": "neutral",
+          "compound": 0.0,
+          "positive": 0.0
+        },
+        "importance": 1.0
+      }
+    },
+    {
+      "test_name": "async_memory_with_nlp",
+      "success": true,
+      "details": {
+        "tasks_submitted": 5,
+        "completed_tasks": 5,
+        "failed_tasks": 0,
+        "nlp_enhanced_memories": 1,
+        "total_memories_found": 1,
+        "example_metadata": {
+          "test_id": "1",
+          "test_type": "nlp_integration",
+          "pattern_used": "we_decided",
+          "extraction_metadata": "{'start_pos': 0, 'end_pos': 64, 'original_match': 'We decided to use PostgreSQL instead of MongoDB f..."
+        }
+      }
+    },
+    {
+      "test_name": "batch_processing_performance",
+      "success": true,
+      "details": {
+        "batch_classification": {
+          "items_processed": 60,
+          "processing_time_ms": 30.817031860351562,
+          "avg_time_per_item_ms": 0.513617197672526
+        },
+        "batch_submission": {
+          "items_submitted": 60,
+          "submission_time_ms": 1.0607242584228516,
+          "avg_submission_time_ms": 0.01767873764038086
+        },
+        "sample_completion": {
+          "sample_size": 5,
+          "completed": 5,
+          "completion_rate": 100.0
+        },
+        "performance_check": {
+          "batch_classification_under_5s": true,
+          "avg_classification_under_50ms": true,
+          "avg_submission_under_10ms": true
+        }
+      }
+    },
+    {
+      "test_name": "sentiment_analysis_integration",
+      "success": true,
+      "details": {
+        "sentiment_tests": [
+          {
+            "content": "I love this new feature! It makes development so m...",
+            "expected": "positive",
+            "detected": "positive",
+            "compound_score": 0.821,
+            "task_completed": true,
+            "correct_detection": true
+          },
+          {
+            "content": "This bug is really frustrating and blocking our pr...",
+            "expected": "negative",
+            "detected": "negative",
+            "compound_score": -0.5034,
+            "task_completed": true,
+            "correct_detection": true
+          },
+          {
+            "content": "The database schema has been updated to include us...",
+            "expected": "neutral",
+            "detected": "neutral",
+            "compound_score": 0.0,
+            "task_completed": true,
+            "correct_detection": true
+          },
+          {
+            "content": "Excellent work on the API design - very clean and ...",
+            "expected": "positive",
+            "detected": "positive",
+            "compound_score": 0.7897,
+            "task_completed": true,
+            "correct_detection": true
+          },
+          {
+            "content": "Critical security vulnerability found in authentic...",
+            "expected": "negative",
+            "detected": "negative",
+            "compound_score": -0.2714,
+            "task_completed": true,
+            "correct_detection": true
+          }
+        ],
+        "accuracy": {
+          "sentiment_accuracy": 100.0,
+          "task_completion_rate": 100.0
+        },
+        "memories_with_sentiment": 2
+      }
+    },
+    {
+      "test_name": "memory_enhancement_features",
+      "success": true,
+      "details": {
+        "nlp_analysis": {
+          "memory_type": "decision",
+          "confidence": 0.85,
+          "keywords": [
+            "Django",
+            "Sarah",
+            "The",
+            "Connor",
+            "Friday",
+            "This",
+            "John",
+            "Smith",
+            "We",
+            "Redis"
+          ],
+          "entities": {
+            "people": [
+              "This decision",
+              "work on",
+              "reviewing performance",
+              "from MySQL",
+              "abstraction and",
+              "is scheduled",
+              "to migrate",
+              "to PostgreSQL",
+              "was made",
+              "The development",
+              "Redis for",
+              "Connor will",
+              "team including",
+              "Django ORM",
+              "The migration",
+              "JSON support",
+              "for next",
+              "and Sarah",
+              "re using",
+              "done by",
+              "We decided",
+              "for better",
+              "John Smith",
+              "CTO and",
+              "the DevOps",
+              "for database",
+              "will be",
+              "after consulting",
+              "with the",
+              "Friday and"
+            ],
+            "technologies": [
+              "PostgreSQL",
+              "Redis",
+              "MySQL",
+              "Django"
+            ],
+            "organizations": [
+              "The development team",
+              "The migration is scheduled for next Friday and will be done by the DevOps team"
+            ],
+            "all_entities": [
+              "migrate",
+              "support",
+              "This decision",
+              "performance",
+              "Django",
+              "work on",
+              "using",
+              "database",
+              "reviewing performance",
+              "from MySQL"
+            ]
+          },
+          "importance": 1.0
+        },
+        "async_processing": {
+          "task_completed": true,
+          "task_details": {
+            "task_id": "5bd01f31-b7d4-4313-865c-59658b8299ed",
+            "status": "completed",
+            "task_type": "learn",
+            "content": "\n        We decided to migrate from MySQL to PostgreSQL for better JSON support.\n        The develop...",
+            "source": "enhancement-test",
+            "created_at": "2025-09-25T22:50:55.419868",
+            "age_seconds": 0.101545,
+            "started_at": "2025-09-25T22:50:55.419924",
+            "completed_at": "2025-09-25T22:50:55.510203",
+            "duration_ms": 90.279,
+            "result": {
+              "memory_ids": [],
+              "memories_count": 0,
+              "processing_time_ms": 62.31498718261719,
+              "source": "enhancement-test"
+            }
+          }
+        },
+        "stored_memory_analysis": {
+          "has_metadata": true,
+          "memory_type": "preference",
+          "content_length": 56
+        },
+        "enhancement_metadata": {
+          "has_nlp_classification": true,
+          "extraction_method": "pattern_matching",
+          "keys_present": [
+            "start_pos",
+            "end_pos",
+            "original_match",
+            "original_content",
+            "extraction_method",
+            "extracted_at",
+            "nlp_classification",
+            "entity_count",
+            "entities_enhanced"
+          ]
+        },
+        "success_criteria": {
+          "good_classification_confidence": true,
+          "entities_extracted": true,
+          "async_processing_completed": true,
+          "reasonable_importance_score": true
+        }
+      }
+    },
+    {
+      "test_name": "queue_status_and_monitoring",
+      "success": true,
+      "details": {
+        "initial_queue_status": {
+          "queue_stats": {
+            "tasks_queued": 71,
+            "tasks_completed": 71,
+            "tasks_failed": 0,
+            "total_processing_time_ms": 8695.269,
+            "queue_size": 0,
+            "active_tasks": 0,
+            "total_tasks": 71,
+            "avg_processing_time_ms": 122.46857746478874
+          },
+          "learning_stats": {
+            "memories_learned": 0,
+            "learning_failures": 0,
+            "total_learning_time_ms": 6818.441152572632,
+            "last_learning_time": "2025-09-25 22:50:55.482245",
+            "queue_stats": {
+              "tasks_queued": 71,
+              "tasks_completed": 71,
+              "tasks_failed": 0,
+              "total_processing_time_ms": 8695.269,
+              "queue_size": 0,
+              "active_tasks": 0,
+              "total_tasks": 71,
+              "avg_processing_time_ms": 122.46857746478874
+            },
+            "avg_learning_time_ms": 6818.441152572632
+          },
+          "status_summary": {
+            "queue_size": 0,
+            "tasks_completed": 71,
+            "tasks_failed": 0,
+            "memories_learned": 0,
+            "avg_processing_time_ms": 122.46857746478874
+          }
+        },
+        "test_tasks_submitted": 3,
+        "individual_task_statuses": [
+          {
+            "task_id": "00eeb2eb...",
+            "status": "processing",
+            "task_type": "learn"
+          },
+          {
+            "task_id": "ad2652d8...",
+            "status": "processing",
+            "task_type": "learn"
+          },
+          {
+            "task_id": "b24a4cd0...",
+            "status": "queued",
+            "task_type": "learn"
+          }
+        ],
+        "final_queue_status": {
+          "queue_stats": {
+            "tasks_queued": 74,
+            "tasks_completed": 74,
+            "tasks_failed": 0,
+            "total_processing_time_ms": 9055.286999999998,
+            "queue_size": 0,
+            "active_tasks": 0,
+            "total_tasks": 74,
+            "avg_processing_time_ms": 122.36874324324322
+          },
+          "learning_stats": {
+            "memories_learned": 0,
+            "learning_failures": 0,
+            "total_learning_time_ms": 7098.780155181885,
+            "last_learning_time": "2025-09-25 22:50:55.756289",
+            "queue_stats": {
+              "tasks_queued": 74,
+              "tasks_completed": 74,
+              "tasks_failed": 0,
+              "total_processing_time_ms": 9055.286999999998,
+              "queue_size": 0,
+              "active_tasks": 0,
+              "total_tasks": 74,
+              "avg_processing_time_ms": 122.36874324324322
+            },
+            "avg_learning_time_ms": 7098.780155181885
+          },
+          "status_summary": {
+            "queue_size": 0,
+            "tasks_completed": 74,
+            "tasks_failed": 0,
+            "memories_learned": 0,
+            "avg_processing_time_ms": 122.36874324324322
+          }
+        },
+        "status_comparison": {
+          "tasks_completed_increase": 3,
+          "memories_learned_increase": 0
+        }
+      }
+    }
+  ],
+  "recommendations": [
+    "All tests passed - integration working correctly!"
+  ]
+}

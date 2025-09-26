@@ -38,7 +38,7 @@ class InternalMemory:
     access_count: int = 0
 
     # Classification
-    memory_type: MemoryType = MemoryType.CONTEXT
+    memory_type: MemoryType = MemoryType.EPISODIC
     importance: float = 0.5
     confidence: float = 1.0
 
@@ -238,7 +238,7 @@ class InternalExtractedMemory:
 
     content: str = ""
     confidence: float = 0.0
-    memory_type: MemoryType = MemoryType.CONTEXT
+    memory_type: MemoryType = MemoryType.EPISODIC
     pattern_used: str = ""
     entities: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)

@@ -268,13 +268,12 @@ class RecallCoordinator:
         
         # Boost score for memory type relevance
         type_boosts = {
-            MemoryType.IDENTITY: 0.9,
+            MemoryType.SEMANTIC: 0.9,  # Facts/knowledge (was IDENTITY)
             MemoryType.PREFERENCE: 0.8,
-            MemoryType.DECISION: 0.7,
-            MemoryType.PATTERN: 0.6,
-            MemoryType.SOLUTION: 0.8,
-            MemoryType.STATUS: 0.3,
-            MemoryType.CONTEXT: 0.5,
+            MemoryType.EPISODIC: 0.7,  # Events/experiences (was DECISION)
+            MemoryType.PROCEDURAL: 0.8,  # Instructions/how-to (was PATTERN/SOLUTION)
+            MemoryType.WORKING: 0.3,  # Current tasks (was STATUS)
+            MemoryType.SENSORY: 0.4,  # Sensory descriptions
         }
         score += type_boosts.get(memory.memory_type, 0.5) * 0.2
         
@@ -337,13 +336,12 @@ class RecallCoordinator:
         
         # Prioritize memory types
         type_priority = [
-            MemoryType.IDENTITY,
+            MemoryType.SEMANTIC,  # Facts/knowledge (was IDENTITY)
             MemoryType.PREFERENCE,
-            MemoryType.DECISION,
-            MemoryType.SOLUTION,
-            MemoryType.PATTERN,
-            MemoryType.CONTEXT,
-            MemoryType.STATUS,
+            MemoryType.EPISODIC,  # Events/experiences (was DECISION/CONTEXT)
+            MemoryType.PROCEDURAL,  # Instructions/how-to (was PATTERN/SOLUTION)
+            MemoryType.WORKING,  # Current tasks (was STATUS)
+            MemoryType.SENSORY,  # Sensory descriptions
         ]
         
         for memory_type in type_priority:

@@ -23,6 +23,8 @@ from .memory_commands import enhance, learn, remember, recall, recent
 from .project_commands import init, project, stats, cleanup, create_config
 from .utility_commands import optimize, setup, tips, examples, temporal_analysis
 from .auggie_commands import auggie
+from .claude_commands import claude_group
+from .mcp_commands import mcp
 
 # Import install commands
 from .install_commands_simple import install_group, uninstall, status, list_installers
@@ -298,6 +300,12 @@ cli.add_command(temporal_analysis, name='temporal-analysis')
 
 # Auggie integration
 cli.add_command(auggie)
+
+# Claude integration
+cli.add_command(claude_group, name='claude')
+
+# MCP server commands
+cli.add_command(mcp)
 
 # Install commands
 cli.add_command(install_group)

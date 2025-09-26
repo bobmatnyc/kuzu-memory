@@ -86,7 +86,7 @@ def enhance(ctx, prompt, max_memories, output_format):
                         {
                             'id': mem.id,
                             'content': mem.content,
-                            'source': mem.source,
+                            'source': getattr(mem, 'source_type', 'unknown'),
                             'created_at': mem.created_at.isoformat(),
                             'relevance': getattr(mem, 'relevance_score', 0.0)
                         } for mem in memories
@@ -122,16 +122,27 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
     Stores new information in memory for future recall. By default,
     learning happens asynchronously to avoid blocking AI workflows.
 
+    NOTE: Content must match specific patterns to be stored as memories:
+    - "Remember that..." - Explicit memory instructions
+    - "My name is..." - Identity information
+    - "I prefer..." - User preferences
+    - "We decided..." - Project decisions
+    - "Always/Never..." - Patterns and rules
+    - "To fix X, use Y" - Problem-solution pairs
+
     \b
     🎮 EXAMPLES:
       # Quick learning (async, non-blocking)
-      kuzu-memory learn "User prefers TypeScript over JavaScript" --quiet
+      kuzu-memory learn "Remember that the API rate limit is 1000/hour" --quiet
 
-      # Learning from conversation
-      kuzu-memory learn "Fixed auth bug by updating JWT validation"
+      # User preference
+      kuzu-memory learn "I prefer TypeScript over JavaScript for type safety"
 
-      # Learning with metadata
-      kuzu-memory learn "API rate limit is 1000/hour" --metadata '{"priority": "high"}'
+      # Project decision
+      kuzu-memory learn "We decided to use PostgreSQL for our database"
+
+      # Pattern/rule
+      kuzu-memory learn "Always validate user input before processing"
 
       # Synchronous learning (for testing)
       kuzu-memory learn "Test content" --sync
@@ -157,11 +168,12 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
             db_path = get_project_db_path(ctx.obj.get('project_root'))
 
             with KuzuMemory(db_path=db_path) as memory:
-                memory_obj = memory.remember(content, source=source, metadata=parsed_metadata)
+                memory_id = memory.remember(content, source=source, metadata=parsed_metadata)
 
                 if not quiet:
                     rich_print(f"✅ Learned synchronously: {content[:100]}{'...' if len(content) > 100 else ''}", style="green")
-                    rich_print(f"   Memory ID: {memory_obj.id[:8]}...", style="dim")
+                    if memory_id:
+                        rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
         else:
             # Asynchronous learning (non-blocking, default)
             try:
@@ -169,16 +181,16 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
                 async_cli = get_async_cli()
 
                 # Queue the learning operation
-                queue_id = async_cli.queue_learning(
+                result = async_cli.learn_async(
                     content=content,
                     source=source,
                     metadata=parsed_metadata,
-                    project_root=ctx.obj.get('project_root')
+                    quiet=quiet
                 )
 
-                if not quiet:
-                    rich_print(f"✅ Learning queued (async): {content[:100]}{'...' if len(content) > 100 else ''}", style="green")
-                    rich_print(f"   Queue ID: {queue_id[:8]}...", style="dim")
+                # Check if the operation was successful
+                if result.get('status') == 'failed' and not quiet:
+                    rich_print(f"❌ {result.get('message', 'Learning failed')}", style="red")
 
             except ImportError as e:
                 if not quiet:
@@ -188,11 +200,12 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
                 db_path = get_project_db_path(ctx.obj.get('project_root'))
 
                 with KuzuMemory(db_path=db_path) as memory:
-                    memory_obj = memory.remember(content, source=source, metadata=parsed_metadata)
+                    memory_id = memory.remember(content, source=source, metadata=parsed_metadata)
 
                     if not quiet:
                         rich_print(f"✅ Learned (fallback sync): {content[:100]}{'...' if len(content) > 100 else ''}", style="green")
-                        rich_print(f"   Memory ID: {memory_obj.id[:8]}...", style="dim")
+                        if memory_id:
+                            rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
 
     except Exception as e:
         if ctx.obj.get('debug'):
@@ -249,10 +262,17 @@ def remember(ctx, content, source, session_id, agent_id, metadata):
         })
 
         with KuzuMemory(db_path=db_path) as memory:
-            memory_obj = memory.remember(content, source=source, metadata=parsed_metadata)
+            memory_id = memory.remember(
+                content=content,
+                source=source,
+                session_id=session_id,
+                agent_id=agent_id,
+                metadata=parsed_metadata
+            )
 
             rich_print(f"✅ Stored memory: {content[:100]}{'...' if len(content) > 100 else ''}", style="green")
-            rich_print(f"   Memory ID: {memory_obj.id[:8]}...", style="dim")
+            if memory_id:
+                rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
             rich_print(f"   Source: {source}", style="dim")
             if session_id:
                 rich_print(f"   Session: {session_id}", style="dim")
@@ -334,7 +354,7 @@ def recall(ctx, prompt, max_memories, strategy, session_id, agent_id, output_for
                         {
                             'id': mem.id,
                             'content': mem.content,
-                            'source': mem.source,
+                            'source': getattr(mem, 'source_type', 'unknown'),
                             'created_at': mem.created_at.isoformat(),
                             'memory_type': mem.memory_type,
                             'relevance': getattr(mem, 'relevance_score', 0.0)
@@ -349,10 +369,10 @@ def recall(ctx, prompt, max_memories, strategy, session_id, agent_id, output_for
                 rich_print(f"Found {len(memories)} memories for: {prompt}\n")
                 for i, mem in enumerate(memories, 1):
                     rich_print(f"{i}. {mem.content}")
-                    rich_print(f"   Source: {mem.source} | Created: {mem.created_at.strftime('%Y-%m-%d %H:%M')}")
+                    rich_print(f"   Source: {getattr(mem, 'source_type', 'unknown')} | Created: {mem.created_at.strftime('%Y-%m-%d %H:%M')}")
                     if hasattr(mem, 'relevance_score'):
                         rich_print(f"   Relevance: {mem.relevance_score:.3f}")
-                    rich_print()
+                    rich_print("")  # Empty line
             else:
                 # Enhanced format (default)
                 rich_panel(f"Found {len(memories)} memories for: '{prompt}'", title="🔍 Recall Results", style="blue")
@@ -366,7 +386,7 @@ def recall(ctx, prompt, max_memories, strategy, session_id, agent_id, output_for
                     # Show metadata
                     metadata_parts = [
                         f"ID: {mem.id[:8]}...",
-                        f"Source: {mem.source}",
+                        f"Source: {getattr(mem, 'source_type', 'unknown')}",
                         f"Type: {mem.memory_type}",
                         f"Created: {mem.created_at.strftime('%Y-%m-%d %H:%M')}"
                     ]
@@ -380,7 +400,7 @@ def recall(ctx, prompt, max_memories, strategy, session_id, agent_id, output_for
                     if explain_ranking and hasattr(mem, 'ranking_explanation'):
                         rich_print(f"   🎯 Ranking: {mem.ranking_explanation}", style="cyan")
 
-                    rich_print()
+                    rich_print("")  # Empty line
 
     except Exception as e:
         if ctx.obj.get('debug'):
@@ -433,7 +453,7 @@ def recent(ctx, recent, output_format):
                         {
                             'id': mem.id,
                             'content': mem.content,
-                            'source': mem.source,
+                            'source': getattr(mem, 'source_type', 'unknown'),
                             'memory_type': mem.memory_type,
                             'created_at': mem.created_at.isoformat()
                         } for mem in memories
@@ -444,15 +464,15 @@ def recent(ctx, recent, output_format):
                 rich_print(f"Recent {len(memories)} memories:\n")
                 for i, mem in enumerate(memories, 1):
                     rich_print(f"{i}. {mem.content}")
-                    rich_print(f"   {mem.source} | {mem.created_at.strftime('%Y-%m-%d %H:%M')}")
-                    rich_print()
+                    rich_print(f"   {getattr(mem, 'source_type', 'unknown')} | {mem.created_at.strftime('%Y-%m-%d %H:%M')}")
+                    rich_print("")  # Empty line
             else:
                 # Table format (default)
                 rows = [
                     [
                         mem.id[:8] + "...",
                         mem.content[:80] + ("..." if len(mem.content) > 80 else ""),
-                        mem.source,
+                        getattr(mem, 'source_type', 'unknown'),
                         mem.memory_type,
                         mem.created_at.strftime('%m/%d %H:%M')
                     ]

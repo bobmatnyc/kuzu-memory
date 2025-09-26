@@ -50,26 +50,25 @@ class MemoryRanker:
         
         # Memory type relevance scores for different contexts
         self.type_relevance_scores = {
-            MemoryType.IDENTITY: {
-                'personal': 1.0, 'identity': 1.0, 'profile': 0.9, 'general': 0.7
+            MemoryType.SEMANTIC: {
+                'personal': 1.0, 'identity': 1.0, 'profile': 0.9, 'general': 0.7,
+                'decision': 1.0, 'planning': 0.9, 'architecture': 0.9
             },
             MemoryType.PREFERENCE: {
                 'preference': 1.0, 'settings': 0.9, 'personal': 0.8, 'general': 0.6
             },
-            MemoryType.DECISION: {
-                'decision': 1.0, 'planning': 0.9, 'architecture': 0.9, 'general': 0.7
+            MemoryType.PROCEDURAL: {
+                'code': 1.0, 'pattern': 1.0, 'development': 0.9, 'general': 0.6,
+                'problem': 1.0, 'solution': 1.0, 'troubleshooting': 0.9
             },
-            MemoryType.PATTERN: {
-                'code': 1.0, 'pattern': 1.0, 'development': 0.9, 'general': 0.6
-            },
-            MemoryType.SOLUTION: {
-                'problem': 1.0, 'solution': 1.0, 'troubleshooting': 0.9, 'general': 0.7
-            },
-            MemoryType.STATUS: {
+            MemoryType.WORKING: {
                 'status': 1.0, 'current': 0.9, 'progress': 0.8, 'general': 0.3
             },
-            MemoryType.CONTEXT: {
+            MemoryType.EPISODIC: {
                 'context': 0.8, 'general': 0.5, 'background': 0.6, 'session': 0.7
+            },
+            MemoryType.SENSORY: {
+                'ui': 0.8, 'visual': 0.7, 'feedback': 0.6, 'general': 0.3
             },
         }
     
@@ -237,13 +236,12 @@ class MemoryRanker:
         
         # Different decay rates for different memory types
         decay_rates = {
-            MemoryType.STATUS: 1,      # Very fast decay (hours)
-            MemoryType.CONTEXT: 7,     # Fast decay (days)
-            MemoryType.SOLUTION: 30,   # Medium decay (weeks)
-            MemoryType.PATTERN: 90,    # Slow decay (months)
-            MemoryType.DECISION: 180,  # Very slow decay
-            MemoryType.PREFERENCE: 365, # Almost no decay
-            MemoryType.IDENTITY: 365,  # Almost no decay
+            MemoryType.SENSORY: 0.25,      # Very fast decay (6 hours)
+            MemoryType.WORKING: 1,         # Fast decay (1 day)
+            MemoryType.EPISODIC: 30,       # Medium decay (30 days)
+            MemoryType.PROCEDURAL: 365,    # Slow decay (no expiry but age matters)
+            MemoryType.SEMANTIC: 365,      # Almost no decay
+            MemoryType.PREFERENCE: 365,    # Almost no decay
         }
         
         decay_period = decay_rates.get(memory.memory_type, 30)

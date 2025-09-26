@@ -648,7 +648,7 @@ class AuggieIntegration:
             "has_identity_memories": MemoryType.IDENTITY in memory_types,
             "has_preference_memories": MemoryType.PREFERENCE in memory_types,
             "has_decision_memories": MemoryType.DECISION in memory_types,
-            "has_pattern_memories": MemoryType.PATTERN in memory_types,
+            "has_procedural_memories": MemoryType.PROCEDURAL in memory_types,
             "has_solution_memories": MemoryType.SOLUTION in memory_types,
             "has_status_memories": MemoryType.STATUS in memory_types,
             "memory_count": len(memory_context.memories),

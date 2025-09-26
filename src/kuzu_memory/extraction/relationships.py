@@ -212,7 +212,7 @@ class RelationshipDetector:
         
         # Check for topic similarity based on memory types
         if (new_memory.memory_type == existing_memory.memory_type and
-            new_memory.memory_type in [MemoryType.DECISION, MemoryType.PATTERN, MemoryType.SOLUTION]):
+            new_memory.memory_type in [MemoryType.SEMANTIC, MemoryType.PROCEDURAL]):
             
             # Same type memories in specific categories are likely related
             relationship = Relationship(
@@ -237,19 +237,21 @@ class RelationshipDetector:
         # Check if memories are from the same session
         if (new_memory.session_id and existing_memory.session_id and
             new_memory.session_id == existing_memory.session_id):
-            
-            time_diff = abs((new_memory.created_at - existing_memory.created_at).total_seconds())
-            
-            # If memories are within 5 minutes of each other in the same session
-            if time_diff < 300:  # 5 minutes
-                relationship = Relationship(
-                    source_id=new_memory.id,
-                    target_id=existing_memory.id,
-                    relationship_type='same_session',
-                    confidence=0.8,
-                    context=f"Same session, {time_diff:.0f}s apart"
-                )
-                relationships.append(relationship)
+
+            # Check that both memories have created_at timestamps
+            if new_memory.created_at and existing_memory.created_at:
+                time_diff = abs((new_memory.created_at - existing_memory.created_at).total_seconds())
+
+                # If memories are within 5 minutes of each other in the same session
+                if time_diff < 300:  # 5 minutes
+                    relationship = Relationship(
+                        source_id=new_memory.id,
+                        target_id=existing_memory.id,
+                        relationship_type='same_session',
+                        confidence=0.8,
+                        context=f"Same session, {time_diff:.0f}s apart"
+                    )
+                    relationships.append(relationship)
         
         return relationships
     

@@ -10,11 +10,13 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 
 ## ✨ Key Features
 
+- **🧠 Cognitive Memory Model** - Based on human memory psychology (SEMANTIC, PROCEDURAL, EPISODIC, etc.)
 - **🚀 No LLM Dependencies** - Operates using pattern matching and local NER only
 - **⚡ Fast Performance** - <10ms memory recall, <20ms memory generation
 - **💾 Embedded Database** - Single-file Kuzu graph database
 - **🔄 Git-Friendly** - Database files <10MB, perfect for version control
 - **🔌 Simple API** - Just two methods: `attach_memories()` and `generate_memories()`
+- **🌐 Cross-Platform** - Standardized cognitive types shared with TypeScript implementation
 - **📱 Offline First** - Works completely without internet connection
 
 ## 🚀 Quick Start
@@ -22,8 +24,32 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 ### Installation
 
 ```bash
+# Install via pipx (recommended for CLI usage)
+pipx install kuzu-memory
+
+# Or install via pip
 pip install kuzu-memory
 ```
+
+### Claude Desktop Integration
+
+KuzuMemory can be integrated with Claude Desktop via MCP (Model Context Protocol) for seamless memory operations:
+
+```bash
+# Automatic setup with pipx detection
+python scripts/install-claude-desktop.py
+
+# Or with custom options
+python scripts/install-claude-desktop.py --memory-db ~/custom-path/memorydb
+```
+
+The installer automatically:
+- Detects your pipx installation
+- Configures Claude Desktop MCP settings
+- Creates backup of existing configuration
+- Validates the installation
+
+See [Claude Desktop Setup Guide](docs/CLAUDE_DESKTOP_SETUP.md) for detailed instructions.
 
 ### Basic Usage
 
@@ -64,29 +90,36 @@ kuzu-memory stats
 
 ## 📖 Core Concepts
 
-### Memory Types
+### Cognitive Memory Types
 
-KuzuMemory automatically categorizes memories:
+KuzuMemory uses a cognitive memory model inspired by human memory systems:
 
-- **Identity** - Personal information (never expires)
-- **Preference** - User preferences and settings
-- **Decision** - Project decisions and agreements
-- **Pattern** - Code patterns and best practices
-- **Solution** - Problem-solution pairs
-- **Status** - Current state information (expires quickly)
-- **Context** - Session context (expires daily)
+- **SEMANTIC** - Facts and general knowledge (never expires)
+- **PROCEDURAL** - Instructions and how-to content (never expires)
+- **PREFERENCE** - User/team preferences (never expires)
+- **EPISODIC** - Personal experiences and events (30 days)
+- **WORKING** - Current tasks and immediate focus (1 day)
+- **SENSORY** - Sensory observations and descriptions (6 hours)
+
+### Cognitive Classification
+
+KuzuMemory automatically classifies memories into cognitive types based on content patterns, providing intuitive categorization that mirrors human memory systems. This standardized model ensures compatibility across Python and TypeScript implementations.
 
 ### Pattern-Based Extraction
 
-No LLM required! KuzuMemory uses regex patterns to identify:
+No LLM required! KuzuMemory uses regex patterns to identify and store memories automatically:
 
 ```python
 # Automatically detected patterns
-"Remember that we use Python for backend"     # → Decision memory
-"My name is Alice"                            # → Identity memory  
-"I prefer dark mode"                          # → Preference memory
-"Always use type hints"                       # → Pattern memory
+"Remember that we use Python for backend"     # → EPISODIC memory
+"My name is Alice"                            # → SEMANTIC memory
+"I prefer dark mode"                          # → PREFERENCE memory
+"Always use type hints"                       # → PROCEDURAL memory
+"Currently debugging the API"                 # → WORKING memory
+"The interface feels slow"                    # → SENSORY memory
 ```
+
+**Important**: For pattern matching to work effectively, content should include clear subject-verb-object structures. Memories with specific entities, actions, or preferences are extracted more reliably than abstract statements.
 
 ## 🏗️ Architecture
 

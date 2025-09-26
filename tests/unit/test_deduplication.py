@@ -46,7 +46,7 @@ class TestDeduplicationEngine:
         return [
             Memory(
                 content="My name is Alice Johnson and I work at TechCorp.",
-                memory_type=MemoryType.IDENTITY,
+                memory_type=MemoryType.SEMANTIC,  # Identity info is facts/knowledge
                 created_at=datetime.now() - timedelta(days=1)
             ),
             Memory(
@@ -56,12 +56,12 @@ class TestDeduplicationEngine:
             ),
             Memory(
                 content="We decided to use PostgreSQL as our database.",
-                memory_type=MemoryType.DECISION,
+                memory_type=MemoryType.EPISODIC,  # Decisions are events/experiences
                 created_at=datetime.now() - timedelta(hours=6)
             ),
             Memory(
                 content="Currently working on the authentication module.",
-                memory_type=MemoryType.STATUS,
+                memory_type=MemoryType.WORKING,  # Status is current work/tasks
                 created_at=datetime.now() - timedelta(hours=1)
             ),
         ]
@@ -263,22 +263,22 @@ class TestDeduplicationEngine:
         """Test that deduplication can filter by memory type."""
         content = "My name is Alice Johnson and I work at TechCorp."
         
-        # Filter by identity type
+        # Filter by semantic type (facts/knowledge)
         duplicates = dedup_engine.find_duplicates(
-            content, sample_memories, MemoryType.IDENTITY
+            content, sample_memories, MemoryType.SEMANTIC
         )
-        
-        # Should only find identity memories
+
+        # Should only find semantic memories
         for memory, score, match_type in duplicates:
-            assert memory.memory_type == MemoryType.IDENTITY
+            assert memory.memory_type == MemoryType.SEMANTIC
     
     def test_memory_type_filtering_no_matches(self, dedup_engine, sample_memories):
         """Test memory type filtering with no matches."""
         content = "My name is Alice Johnson and I work at TechCorp."
         
-        # Filter by status type (shouldn't match identity content)
+        # Filter by working type (shouldn't match semantic content)
         duplicates = dedup_engine.find_duplicates(
-            content, sample_memories, MemoryType.STATUS
+            content, sample_memories, MemoryType.WORKING
         )
         
         # Should find no matches in status memories

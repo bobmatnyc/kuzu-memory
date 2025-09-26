@@ -55,7 +55,7 @@ class TestDataIntegrityRegression:
                 "user_id": "sarah-chen",
                 "session_id": "profile-session",
                 "source": "profile",
-                "expected_type": MemoryType.IDENTITY,
+                "expected_type": MemoryType.SEMANTIC,  # Identity info is facts/knowledge
                 "expected_entities": ["Sarah Chen", "DataTech Solutions", "Chief Data Scientist"]
             },
             {
@@ -71,7 +71,7 @@ class TestDataIntegrityRegression:
                 "user_id": "sarah-chen",
                 "session_id": "decision-session", 
                 "source": "architecture",
-                "expected_type": MemoryType.DECISION,
+                "expected_type": MemoryType.EPISODIC,  # Decisions are events/experiences
                 "expected_entities": ["MySQL", "PostgreSQL"]
             },
             {
@@ -79,7 +79,7 @@ class TestDataIntegrityRegression:
                 "user_id": "sarah-chen",
                 "session_id": "best-practices",
                 "source": "guidelines",
-                "expected_type": MemoryType.PATTERN,
+                "expected_type": MemoryType.PROCEDURAL,  # Patterns are procedures/instructions
                 "expected_entities": []
             },
             {
@@ -87,7 +87,7 @@ class TestDataIntegrityRegression:
                 "user_id": "sarah-chen",
                 "session_id": "current-work",
                 "source": "status",
-                "expected_type": MemoryType.STATUS,
+                "expected_type": MemoryType.WORKING,  # Status is current work/tasks
                 "expected_entities": ["CustomerInsights", "Mike Johnson"]
             }
         ]

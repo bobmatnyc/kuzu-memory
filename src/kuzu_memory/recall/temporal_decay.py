@@ -54,8 +54,8 @@ class TemporalDecayEngine:
         
         # Memory type-specific decay parameters
         self.type_decay_params = {
-            MemoryType.IDENTITY: {
-                'half_life_days': 365,      # Very slow decay
+            MemoryType.SEMANTIC: {
+                'half_life_days': 365,      # Very slow decay (facts, identity)
                 'decay_function': DecayFunction.LINEAR,
                 'minimum_score': 0.8,       # Never goes below 80%
                 'boost_multiplier': 1.0,    # No recency boost needed
@@ -66,35 +66,29 @@ class TemporalDecayEngine:
                 'minimum_score': 0.6,       # Never goes below 60%
                 'boost_multiplier': 1.2,    # Slight recency boost
             },
-            MemoryType.DECISION: {
-                'half_life_days': 90,       # Medium decay
-                'decay_function': DecayFunction.EXPONENTIAL,
-                'minimum_score': 0.3,       # Can decay to 30%
-                'boost_multiplier': 1.3,    # Recent decisions important
-            },
-            MemoryType.PATTERN: {
-                'half_life_days': 45,       # Medium-fast decay
+            MemoryType.PROCEDURAL: {
+                'half_life_days': 90,       # Medium decay (patterns, solutions)
                 'decay_function': DecayFunction.SIGMOID,
-                'minimum_score': 0.1,       # Can decay significantly
-                'boost_multiplier': 1.4,    # Recent patterns very important
+                'minimum_score': 0.3,       # Can decay to 30%
+                'boost_multiplier': 1.3,    # Recent procedures important
             },
-            MemoryType.SOLUTION: {
-                'half_life_days': 60,       # Medium decay
-                'decay_function': DecayFunction.EXPONENTIAL,
-                'minimum_score': 0.2,       # Can decay to 20%
-                'boost_multiplier': 1.3,    # Recent solutions important
-            },
-            MemoryType.STATUS: {
-                'half_life_days': 1,        # Very fast decay
+            MemoryType.WORKING: {
+                'half_life_days': 1,        # Very fast decay (current tasks)
                 'decay_function': DecayFunction.EXPONENTIAL,
                 'minimum_score': 0.01,      # Can decay almost completely
                 'boost_multiplier': 2.0,    # Recent status very important
             },
-            MemoryType.CONTEXT: {
-                'half_life_days': 7,        # Fast decay
+            MemoryType.EPISODIC: {
+                'half_life_days': 30,       # Medium decay (experiences)
                 'decay_function': DecayFunction.POWER_LAW,
                 'minimum_score': 0.05,      # Can decay significantly
-                'boost_multiplier': 1.8,    # Recent context very important
+                'boost_multiplier': 1.5,    # Recent events important
+            },
+            MemoryType.SENSORY: {
+                'half_life_days': 0.25,     # Very fast decay (6 hours)
+                'decay_function': DecayFunction.EXPONENTIAL,
+                'minimum_score': 0.01,      # Can decay almost completely
+                'boost_multiplier': 2.5,    # Very recent sensory data important
             },
         }
         
@@ -123,7 +117,7 @@ class TemporalDecayEngine:
             current_time = datetime.now()
         
         # Get memory type parameters
-        params = self.type_decay_params.get(memory.memory_type, self.type_decay_params[MemoryType.PATTERN])
+        params = self.type_decay_params.get(memory.memory_type, self.type_decay_params[MemoryType.PROCEDURAL])
         
         # Calculate age (handle None created_at gracefully)
         if memory.created_at is None:
@@ -224,7 +218,7 @@ class TemporalDecayEngine:
         if current_time is None:
             current_time = datetime.now()
         
-        params = self.type_decay_params.get(memory.memory_type, self.type_decay_params[MemoryType.PATTERN])
+        params = self.type_decay_params.get(memory.memory_type, self.type_decay_params[MemoryType.PROCEDURAL])
         age = current_time - memory.created_at
         age_days = age.total_seconds() / (24 * 3600)
         age_hours = age.total_seconds() / 3600

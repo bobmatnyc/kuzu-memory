@@ -25,8 +25,8 @@ class TestMemory:
         assert memory.content == "Test memory content"
         assert memory.id is not None
         assert memory.content_hash is not None
-        assert memory.memory_type == MemoryType.CONTEXT
-        assert memory.importance == 0.5  # Default for CONTEXT type
+        assert memory.memory_type == MemoryType.EPISODIC
+        assert memory.importance == 0.7  # Default for EPISODIC type
         assert memory.confidence == 1.0
         assert memory.created_at is not None
         assert memory.valid_from is not None
@@ -43,7 +43,7 @@ class TestMemory:
         memory = Memory(
             id="test-memory-id",
             content="Test memory content",
-            memory_type=MemoryType.IDENTITY,
+            memory_type=MemoryType.SEMANTIC,
             importance=0.9,
             confidence=0.8,
             source_type="test",
@@ -60,7 +60,7 @@ class TestMemory:
         
         assert memory.id == "test-memory-id"
         assert memory.content == "Test memory content"
-        assert memory.memory_type == MemoryType.IDENTITY
+        assert memory.memory_type == MemoryType.SEMANTIC
         assert memory.importance == 0.9
         assert memory.confidence == 0.8
         assert memory.source_type == "test"
@@ -76,26 +76,26 @@ class TestMemory:
     
     def test_memory_type_default_importance(self):
         """Test that memory types get correct default importance scores."""
-        identity_memory = Memory(content="Test", memory_type=MemoryType.IDENTITY)
-        assert identity_memory.importance == 1.0
+        semantic_memory = Memory(content="Test", memory_type=MemoryType.SEMANTIC)
+        assert semantic_memory.importance == 1.0
         
         preference_memory = Memory(content="Test", memory_type=MemoryType.PREFERENCE)
         assert preference_memory.importance == 0.9
         
-        status_memory = Memory(content="Test", memory_type=MemoryType.STATUS)
-        assert status_memory.importance == 0.3
+        working_memory = Memory(content="Test", memory_type=MemoryType.WORKING)
+        assert working_memory.importance == 0.5
     
     def test_memory_type_default_retention(self):
         """Test that memory types get correct default retention periods."""
-        # Identity memories never expire
-        identity_memory = Memory(content="Test", memory_type=MemoryType.IDENTITY)
-        assert identity_memory.valid_to is None
+        # Semantic memories never expire
+        semantic_memory = Memory(content="Test", memory_type=MemoryType.SEMANTIC)
+        assert semantic_memory.valid_to is None
         
-        # Status memories expire quickly
-        status_memory = Memory(content="Test", memory_type=MemoryType.STATUS)
-        assert status_memory.valid_to is not None
-        expected_expiry = status_memory.valid_from + timedelta(hours=6)
-        assert abs((status_memory.valid_to - expected_expiry).total_seconds()) < 1
+        # Working memories expire quickly
+        working_memory = Memory(content="Test", memory_type=MemoryType.WORKING)
+        assert working_memory.valid_to is not None
+        expected_expiry = working_memory.valid_from + timedelta(days=1)
+        assert abs((working_memory.valid_to - expected_expiry).total_seconds()) < 1
     
     def test_content_hash_generation(self):
         """Test that content hash is generated correctly."""
@@ -116,8 +116,8 @@ class TestMemory:
         """Test memory validity checking."""
         now = datetime.now()
         
-        # Memory that never expires (use IDENTITY type which has no retention period)
-        permanent_memory = Memory(content="Test", memory_type=MemoryType.IDENTITY, valid_to=None)
+        # Memory that never expires (use SEMANTIC type which has no retention period)
+        permanent_memory = Memory(content="Test", memory_type=MemoryType.SEMANTIC, valid_to=None)
         assert permanent_memory.is_valid()
         assert permanent_memory.is_valid(now + timedelta(days=365))
         
@@ -299,9 +299,9 @@ class TestMemoryContext:
     def test_memory_context_summary(self):
         """Test memory summary generation."""
         memories = [
-            Memory(content="Memory 1", memory_type=MemoryType.IDENTITY, importance=0.9, confidence=0.8, entities=["Alice"]),
+            Memory(content="Memory 1", memory_type=MemoryType.SEMANTIC, importance=0.9, confidence=0.8, entities=["Alice"]),
             Memory(content="Memory 2", memory_type=MemoryType.PREFERENCE, importance=0.7, confidence=0.9, entities=["Python", "coding"]),
-            Memory(content="Memory 3", memory_type=MemoryType.IDENTITY, importance=0.8, confidence=0.7, entities=["Alice"])
+            Memory(content="Memory 3", memory_type=MemoryType.SEMANTIC, importance=0.8, confidence=0.7, entities=["Alice"])
         ]
         
         context = MemoryContext(
@@ -313,7 +313,7 @@ class TestMemoryContext:
         summary = context.get_memory_summary()
         
         assert summary["count"] == 3
-        assert summary["types"]["identity"] == 2
+        assert summary["types"]["semantic"] == 2
         assert summary["types"]["preference"] == 1
         assert abs(summary["avg_importance"] - 0.8) < 0.01
         assert abs(summary["avg_confidence"] - 0.8) < 0.01
@@ -346,7 +346,7 @@ class TestExtractedMemory:
         extracted = ExtractedMemory(
             content="Test content",
             confidence=0.8,
-            memory_type=MemoryType.DECISION,
+            memory_type=MemoryType.EPISODIC,
             pattern_used="decision_pattern",
             entities=["project", "decision"],
             metadata={"context": "meeting"}

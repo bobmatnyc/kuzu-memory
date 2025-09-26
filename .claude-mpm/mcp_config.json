@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kuzu-memory": {
+      "command": "python",
+      "args": ["-m", "kuzu_memory.mcp.run_server"],
+      "env": {
+        "PYTHONPATH": "src"
+      }
+    }
+  }
+}

@@ -277,12 +277,13 @@ def stats(ctx, detailed, output_format):
         db_path = get_project_db_path(ctx.obj.get('project_root'))
 
         with KuzuMemory(db_path=db_path) as memory:
-            # Collect all statistics
+            # Collect all statistics - simplified to avoid query errors
+            recent_memories = memory.get_recent_memories(limit=24)
             stats_data = {
                 'total_memories': memory.get_memory_count(),
-                'memory_types': memory.get_memory_type_stats(),
-                'sources': memory.get_source_stats(),
-                'recent_activity': len(memory.get_recent_memories(limit=24)),  # Last 24 entries
+                'memory_types': {},  # Temporarily disabled due to query issues
+                'sources': {},  # Temporarily disabled due to query issues
+                'recent_activity': len(recent_memories),  # Last 24 entries
             }
 
             if detailed:

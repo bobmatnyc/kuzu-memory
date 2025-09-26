@@ -289,8 +289,15 @@ class MemoryStore:
             Total memory count
         """
         try:
-            stats = self.query_builder.get_memory_statistics()
-            return stats.get('total_memories', 0)
+            # Direct query to avoid the statistics method issues
+            query = """
+                MATCH (m:Memory)
+                WHERE m.valid_to IS NULL OR m.valid_to > $now
+                RETURN count(m) as count
+            """
+            params = {'now': datetime.now()}
+            results = self.query_builder.db_adapter.execute_query(query, params)
+            return results[0]['count'] if results else 0
 
         except Exception as e:
             logger.error(f"Error getting memory count: {e}")
@@ -497,3 +504,109 @@ class MemoryStore:
         if self.cache:
             return self.cache.get_stats()
         return {'cache_enabled': False}
+
+    def batch_store_memories(self, memories: List[Memory]) -> List[str]:
+        """
+        Store multiple memories in a single batch operation.
+
+        This method provides efficient batch storage by delegating to the
+        QueryBuilder's batch implementation, reducing database round-trips.
+
+        Args:
+            memories: List of Memory objects to store
+
+        Returns:
+            List of memory IDs that were successfully stored
+
+        Raises:
+            DatabaseError: If batch storage fails
+            ValidationError: If memories list is invalid
+        """
+        try:
+            if not memories:
+                return []
+
+            # Validate memories
+            for memory in memories:
+                if not isinstance(memory, Memory):
+                    raise ValidationError(
+                        "memories",
+                        type(memory).__name__,
+                        "All items must be Memory objects"
+                    )
+
+            # Delegate to query builder for batch storage
+            stored_ids = self.query_builder.batch_store_memories(memories)
+
+            # Update statistics
+            self._storage_stats['memories_stored'] += len(stored_ids)
+
+            # Clear cache if caching is enabled
+            if self.cache:
+                self.cache.clear_all()
+
+            logger.info(f"Batch stored {len(stored_ids)} memories")
+            return stored_ids
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._storage_stats['storage_errors'] += 1
+            logger.error(f"Error batch storing memories: {e}")
+            raise DatabaseError(f"Failed to batch store memories: {e}")
+
+    def batch_get_memories_by_ids(self, memory_ids: List[str]) -> List[Memory]:
+        """
+        Retrieve multiple memories by their IDs in a single batch operation.
+
+        This method provides efficient batch retrieval by checking the cache
+        first, then fetching any missing memories from the database in a
+        single query.
+
+        Args:
+            memory_ids: List of memory IDs to retrieve
+
+        Returns:
+            List of Memory objects (may be fewer than requested if some IDs don't exist)
+
+        Raises:
+            DatabaseError: If batch retrieval fails
+        """
+        try:
+            if not memory_ids:
+                return []
+
+            memories_to_fetch = []
+            cached_memories = []
+
+            # Check cache first if enabled
+            if self.cache:
+                for memory_id in memory_ids:
+                    cached = self.cache.get(f"memory:{memory_id}")
+                    if cached is not None:
+                        cached_memories.append(cached)
+                    else:
+                        memories_to_fetch.append(memory_id)
+            else:
+                memories_to_fetch = memory_ids
+
+            # Fetch missing memories from database
+            if memories_to_fetch:
+                db_memories = self.query_builder.batch_get_memories_by_ids(memories_to_fetch)
+
+                # Cache the fetched memories
+                if self.cache:
+                    for memory in db_memories:
+                        self.cache.put(f"memory:{memory.id}", memory)
+
+                # Combine cached and fetched memories
+                all_memories = cached_memories + db_memories
+            else:
+                all_memories = cached_memories
+
+            logger.debug(f"Batch retrieved {len(all_memories)} memories (cached: {len(cached_memories)}, fetched: {len(memories_to_fetch)})")
+            return all_memories
+
+        except Exception as e:
+            logger.error(f"Error batch retrieving memories: {e}")
+            raise DatabaseError(f"Failed to batch get memories: {e}")

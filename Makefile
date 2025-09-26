@@ -1,7 +1,7 @@
 # KuzuMemory - Single Path Workflows
 # ONE way to do ANYTHING - Agentic Coder Optimizer compliance
 
-.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test
+.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release
 
 # Default target
 all: quality test build
@@ -26,6 +26,13 @@ help:
 	@echo "  make build      Build package for distribution"
 	@echo "  make publish    Publish to PyPI"
 	@echo "  make clean      Clean build artifacts"
+	@echo ""
+	@echo "🏷️  VERSION MANAGEMENT:"
+	@echo "  make version-patch   Bump patch version (1.0.1 -> 1.0.2)"
+	@echo "  make version-minor   Bump minor version (1.0.1 -> 1.1.0)"
+	@echo "  make version-major   Bump major version (1.0.1 -> 2.0.0)"
+	@echo "  make changelog       Update changelog with current changes"
+	@echo "  make release         Full release workflow (quality -> test -> version -> build -> tag)"
 	@echo ""
 	@echo "📚 UTILITIES:"
 	@echo "  make docs       Build documentation"
@@ -88,9 +95,37 @@ quality: format lint typecheck
 	python -m mypy src/kuzu_memory --strict --ignore-missing-imports
 	@echo "✅ All quality checks passed"
 
+# Version management targets
+version-patch:
+	@echo "🏷️  Bumping patch version..."
+	@python scripts/version.py bump --type patch
+	@echo "✅ Patch version bumped"
+
+version-minor:
+	@echo "🏷️  Bumping minor version..."
+	@python scripts/version.py bump --type minor
+	@echo "✅ Minor version bumped"
+
+version-major:
+	@echo "🏷️  Bumping major version..."
+	@python scripts/version.py bump --type major
+	@echo "✅ Major version bumped"
+
+changelog:
+	@echo "📝 Updating changelog..."
+	@python scripts/version.py build-info
+	@echo "✅ Changelog updated"
+
+release: quality test
+	@echo "🚀 Starting release workflow..."
+	@python scripts/version.py bump --type patch
+	@$(MAKE) build
+	@echo "✅ Release complete"
+
 # Build and deployment targets
 build: quality
 	@echo "🔨 Building package..."
+	@python scripts/version.py build-info
 	python -m build
 	@echo "✅ Package built successfully"
 

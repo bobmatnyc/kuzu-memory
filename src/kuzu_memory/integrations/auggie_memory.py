@@ -516,7 +516,7 @@ class MemorySynchronizer:
                     memory = Memory(
                         content=memory_content,
                         source="auggie_learning",
-                        memory_type=MemoryType.PATTERN,
+                        memory_type=MemoryType.PROCEDURAL,
                         metadata={
                             "pattern_id": pattern.pattern_id,
                             "confidence": pattern.confidence,

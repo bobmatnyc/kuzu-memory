@@ -323,6 +323,9 @@ class KuzuAdapter:
             with self._pool.get_connection() as conn:
                 # Execute query
                 if parameters:
+                    # Debug logging for parameter issues
+                    if 'week_ago' in query and 'week_ago' not in parameters:
+                        logger.warning(f"Query contains $week_ago but parameter not provided. Params: {parameters.keys()}")
                     result = conn.execute(query, parameters)
                 else:
                     result = conn.execute(query)

@@ -107,10 +107,10 @@ class TestKuzuMemoryIntegration:
             memory_types = {mem.memory_type for mem in memories}
             assert len(memory_types) > 1
             
-            # Identity memories should have high importance
-            identity_memories = [mem for mem in memories if mem.memory_type == MemoryType.IDENTITY]
-            if identity_memories:
-                assert all(mem.importance >= 0.9 for mem in identity_memories)
+            # Semantic memories (facts and general knowledge) should have high importance
+            semantic_memories = [mem for mem in memories if mem.memory_type == MemoryType.SEMANTIC]
+            if semantic_memories:
+                assert all(mem.importance >= 0.9 for mem in semantic_memories)
     
     @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_duplicate_memory_handling(self, temp_db_path, test_config):

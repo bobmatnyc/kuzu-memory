@@ -188,37 +188,44 @@ class KeywordRecallStrategy(RecallStrategy):
             query += " AND m.agent_id = $agent_id"
             parameters['agent_id'] = agent_id
         
-        # Add keyword conditions
+        # Add keyword conditions with case-insensitive matching
         keyword_conditions = []
         for i, keyword in enumerate(keywords[:5]):  # Limit to top 5 keywords
             param_name = f'keyword_{i}'
-            keyword_conditions.append(f"m.content CONTAINS ${param_name}")
+            # Use LOWER() for case-insensitive matching
+            keyword_conditions.append(f"LOWER(m.content) CONTAINS LOWER(${param_name})")
             parameters[param_name] = keyword
         
         if keyword_conditions:
             query += f" AND ({' OR '.join(keyword_conditions)})"
         
-        # Order by importance and recency
+        # Order by a combination of recency and importance
+        # Balance recency with importance - recent memories should be prioritized
+        # but still consider importance for relevance
         query += """
             RETURN m
-            ORDER BY m.importance DESC, m.created_at DESC
+            ORDER BY m.created_at DESC, m.importance DESC
             LIMIT $limit
         """
         
         # Execute query
         results = self.db_adapter.execute_query(query, parameters)
         
-        # Convert results to Memory objects
+        # Convert results to Memory objects using QueryBuilder
         memories = []
+        from ..storage.query_builder import QueryBuilder
+        query_builder = QueryBuilder(self.db_adapter)
+
         for result in results:
             try:
                 memory_data = result['m']
-                memory = Memory.from_dict(memory_data)
-                memories.append(memory)
+                memory = query_builder._convert_db_result_to_memory(memory_data)
+                if memory:
+                    memories.append(memory)
             except Exception as e:
                 logger.warning(f"Failed to parse memory from database: {e}")
                 continue
-        
+
         return memories
     
     def _extract_keywords(self, text: str) -> List[str]:
@@ -316,17 +323,21 @@ class EntityRecallStrategy(RecallStrategy):
         # Execute query
         results = self.db_adapter.execute_query(query, parameters)
         
-        # Convert results to Memory objects
+        # Convert results to Memory objects using QueryBuilder
         memories = []
+        from ..storage.query_builder import QueryBuilder
+        query_builder = QueryBuilder(self.db_adapter)
+
         for result in results:
             try:
                 memory_data = result['m']
-                memory = Memory.from_dict(memory_data)
-                memories.append(memory)
+                memory = query_builder._convert_db_result_to_memory(memory_data)
+                if memory:
+                    memories.append(memory)
             except Exception as e:
                 logger.warning(f"Failed to parse memory from database: {e}")
                 continue
-        
+
         return memories
 
 
@@ -409,17 +420,21 @@ class TemporalRecallStrategy(RecallStrategy):
         # Execute query
         results = self.db_adapter.execute_query(query, parameters)
         
-        # Convert results to Memory objects
+        # Convert results to Memory objects using QueryBuilder
         memories = []
+        from ..storage.query_builder import QueryBuilder
+        query_builder = QueryBuilder(self.db_adapter)
+
         for result in results:
             try:
                 memory_data = result['m']
-                memory = Memory.from_dict(memory_data)
-                memories.append(memory)
+                memory = query_builder._convert_db_result_to_memory(memory_data)
+                if memory:
+                    memories.append(memory)
             except Exception as e:
                 logger.warning(f"Failed to parse memory from database: {e}")
                 continue
-        
+
         return memories
     
     def _detect_time_range(self, prompt: str) -> Optional[timedelta]:

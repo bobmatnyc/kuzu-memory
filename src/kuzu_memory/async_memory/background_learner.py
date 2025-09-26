@@ -91,7 +91,7 @@ class BackgroundLearner:
     def store_async(
         self,
         content: str,
-        memory_type: MemoryType = MemoryType.PATTERN,
+        memory_type: MemoryType = MemoryType.PROCEDURAL,  # Patterns are procedures
         source: str = "async-storage",
         metadata: Optional[Dict[str, Any]] = None,
         priority: int = 3
@@ -203,8 +203,8 @@ class BackgroundLearner:
         start_time = time.time()
         
         try:
-            # Get memory type from metadata
-            memory_type_str = task.metadata.get('memory_type', 'pattern')
+            # Get memory type from metadata (default to PROCEDURAL, which replaced the old PATTERN type)
+            memory_type_str = task.metadata.get('memory_type', 'PROCEDURAL')
             memory_type = MemoryType(memory_type_str)
             
             # Open KuzuMemory connection
@@ -275,7 +275,7 @@ def learn_async(
 
 def store_async(
     content: str,
-    memory_type: MemoryType = MemoryType.PATTERN,
+    memory_type: MemoryType = MemoryType.PROCEDURAL,
     source: str = "async-storage",
     metadata: Optional[Dict[str, Any]] = None,
     db_path: Optional[Path] = None

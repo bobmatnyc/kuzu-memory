@@ -83,16 +83,16 @@ class TestPatternExtractor:
             ("I work at DataCorp as a developer.", "DataCorp"),
             ("I am a Senior Python Developer.", "Senior Python Developer"),
         ]
-        
+
         for text, expected_content in test_cases:
             memories = pattern_extractor.extract_memories(text)
-            identity_memories = [m for m in memories if m.memory_type == MemoryType.IDENTITY]
-            
-            assert len(identity_memories) > 0, f"No identity memory found for: {text}"
-            
+            semantic_memories = [m for m in memories if m.memory_type == MemoryType.SEMANTIC]  # Facts and general knowledge
+
+            assert len(semantic_memories) > 0, f"No semantic memory found for: {text}"
+
             # Check that expected content is captured
-            found_content = any(expected_content.lower() in m.content.lower() 
-                              for m in identity_memories)
+            found_content = any(expected_content.lower() in m.content.lower()
+                              for m in semantic_memories)
             assert found_content, f"Expected '{expected_content}' not found in extracted memories"
     
     def test_preference_pattern_extraction(self, pattern_extractor):
@@ -127,15 +127,15 @@ class TestPatternExtractor:
             ("The decision is to implement OAuth authentication.", "implement OAuth authentication"),
             ("After discussion we chose React for the frontend.", "chose React for the frontend"),
         ]
-        
+
         for text, expected_content in test_cases:
             memories = pattern_extractor.extract_memories(text)
-            decision_memories = [m for m in memories if m.memory_type == MemoryType.DECISION]
-            
-            assert len(decision_memories) > 0, f"No decision memory found for: {text}"
-            
-            found_content = any(expected_content.lower() in m.content.lower() 
-                              for m in decision_memories)
+            episodic_memories = [m for m in memories if m.memory_type == MemoryType.EPISODIC]  # Personal experiences and events
+
+            assert len(episodic_memories) > 0, f"No episodic memory found for: {text}"
+
+            found_content = any(expected_content.lower() in m.content.lower()
+                              for m in episodic_memories)
             assert found_content, f"Expected '{expected_content}' not found"
     
     def test_correction_pattern_extraction(self, pattern_extractor):
@@ -183,11 +183,11 @@ class TestPatternExtractor:
         # Should still extract memories without errors
         assert len(memories) > 0
         
-        # Should find identity and preference memories
-        identity_memories = [m for m in memories if m.memory_type == MemoryType.IDENTITY]
+        # Should find semantic (facts/knowledge) and preference memories
+        semantic_memories = [m for m in memories if m.memory_type == MemoryType.SEMANTIC]
         preference_memories = [m for m in memories if m.memory_type == MemoryType.PREFERENCE]
-        
-        assert len(identity_memories) > 0
+
+        assert len(semantic_memories) > 0
         assert len(preference_memories) > 0
     
     def test_special_characters_handling(self, pattern_extractor):
@@ -310,13 +310,13 @@ class TestPatternExtractor:
     def test_memory_type_assignment_accuracy(self, pattern_extractor):
         """Test that extracted memories get correct memory types."""
         test_cases = [
-            ("My name is Alice.", MemoryType.IDENTITY),
+            ("My name is Alice.", MemoryType.SEMANTIC),  # Facts and general knowledge
             ("I prefer Python programming.", MemoryType.PREFERENCE),
-            ("We decided to use PostgreSQL.", MemoryType.DECISION),
-            ("Always validate user input.", MemoryType.PATTERN),
-            ("To fix this bug, restart the service.", MemoryType.SOLUTION),
-            ("Currently working on authentication.", MemoryType.STATUS),
-            ("Actually, I work at NewCorp.", MemoryType.CONTEXT),  # Correction
+            ("We decided to use PostgreSQL.", MemoryType.EPISODIC),  # Personal experiences and events
+            ("Always validate user input.", MemoryType.PROCEDURAL),  # Instructions and how-to content
+            ("To fix this bug, restart the service.", MemoryType.PROCEDURAL),  # Instructions and how-to content
+            ("Currently working on authentication.", MemoryType.WORKING),  # Tasks and current focus
+            ("Actually, I work at NewCorp.", MemoryType.EPISODIC),  # Correction (event)
         ]
         
         for text, expected_type in test_cases:

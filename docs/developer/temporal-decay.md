@@ -67,7 +67,7 @@ retention_map = {
     MemoryType.PATTERN: timedelta(days=30),       # 30 days
     MemoryType.SOLUTION: timedelta(days=60),      # 60 days
     MemoryType.STATUS: timedelta(hours=6),        # 6 hours
-    MemoryType.CONTEXT: timedelta(days=1),        # 1 day
+    MemoryType.EPISODIC: timedelta(days=1),       # 1 day
 }
 ```
 

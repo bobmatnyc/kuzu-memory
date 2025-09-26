@@ -11,6 +11,7 @@ import logging
 from .base import BaseInstaller
 from .auggie import AuggieInstaller
 from .universal import UniversalInstaller
+from .claude_hooks import ClaudeHooksInstaller
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,8 @@ class InstallerRegistry:
     def _register_builtin_installers(self):
         """Register built-in installers."""
         self.register('auggie', AuggieInstaller)
-        self.register('claude', AuggieInstaller)  # Alias for Auggie
+        self.register('claude', ClaudeHooksInstaller)  # Claude Code with MCP
+        self.register('claude-mcp', ClaudeHooksInstaller)  # Explicit MCP version
         self.register('universal', UniversalInstaller)
         self.register('generic', UniversalInstaller)  # Alias for Universal
     

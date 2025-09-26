@@ -122,9 +122,11 @@ class AsyncMemoryCLI:
                 'status': 'queued',
                 'message': 'Learning task submitted for background processing'
             }
-            
+
             if not quiet:
-                print(f"✅ Learning task {task_id} queued")
+                print(f"✅ Learning task queued (ID: {task_id[:8]}...)")
+                print(f"   Processing: {content[:60]}{'...' if len(content) > 60 else ''}")
+                print(f"   Note: Memories are extracted from pattern-matching phrases")
             
             return result
         
@@ -144,21 +146,21 @@ class AsyncMemoryCLI:
     def store_async(
         self,
         content: str,
-        memory_type: str = "pattern",
+        memory_type: str = "procedural",
         source: str = "async-cli",
         metadata: Optional[Dict[str, Any]] = None,
         quiet: bool = True
     ) -> Dict[str, Any]:
         """
         Asynchronous storage (non-blocking).
-        
+
         Args:
             content: Content to store
-            memory_type: Type of memory (pattern, preference, etc.)
+            memory_type: Type of memory (procedural, semantic, episodic, etc.)
             source: Source of the memory
             metadata: Additional metadata
             quiet: Whether to suppress output
-            
+
         Returns:
             Dict with task information
         """

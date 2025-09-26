@@ -10,7 +10,7 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -21,36 +21,33 @@ from pydantic import constr, confloat
 
 class MemoryType(str, Enum):
     """
-    Types of memories with different retention policies and importance levels.
-    
-    Each type has implicit retention and importance characteristics:
-    - IDENTITY: Never expires, highest importance
-    - PREFERENCE: Never expires, high importance  
-    - DECISION: 90 days retention, high importance
-    - PATTERN: 30 days retention, medium importance
-    - SOLUTION: 60 days retention, medium importance
-    - STATUS: 6 hours retention, low importance
-    - CONTEXT: 1 day retention, low importance
+    Cognitive memory types based on human memory systems.
+
+    Each type represents a different category of information storage:
+    - EPISODIC: Personal experiences and events (30 days retention)
+    - SEMANTIC: Facts and general knowledge (never expires)
+    - PROCEDURAL: Instructions and how-to content (never expires)
+    - WORKING: Tasks and current focus (1 day retention)
+    - SENSORY: Sensory descriptions (6 hours retention)
+    - PREFERENCE: User/team preferences (never expires)
     """
-    IDENTITY = "identity"        # User/system facts (never expire)
-    PREFERENCE = "preference"    # Settings and preferences
-    DECISION = "decision"        # Architectural decisions
-    PATTERN = "pattern"         # Code patterns
-    SOLUTION = "solution"       # Problem-solution pairs
-    STATUS = "status"          # Current state (expire quickly)
-    CONTEXT = "context"        # Session context (expire daily)
+    EPISODIC = "episodic"        # Personal experiences and events
+    SEMANTIC = "semantic"        # Facts and general knowledge
+    PROCEDURAL = "procedural"    # Instructions and how-to content
+    WORKING = "working"          # Tasks and current focus
+    SENSORY = "sensory"          # Sensory descriptions
+    PREFERENCE = "preference"    # User/team preferences
 
     @classmethod
     def get_default_retention(cls, memory_type: "MemoryType") -> Optional[timedelta]:
         """Get default retention period for memory type."""
         retention_map = {
-            cls.IDENTITY: None,                    # Never expire
-            cls.PREFERENCE: None,                  # Never expire
-            cls.DECISION: timedelta(days=90),      # 90 days
-            cls.PATTERN: timedelta(days=30),       # 30 days
-            cls.SOLUTION: timedelta(days=60),      # 60 days
-            cls.STATUS: timedelta(hours=6),        # 6 hours
-            cls.CONTEXT: timedelta(days=1),        # 1 day
+            cls.EPISODIC: timedelta(days=30),      # Personal experiences fade
+            cls.SEMANTIC: None,                    # Facts don't expire
+            cls.PROCEDURAL: None,                  # Instructions don't expire
+            cls.WORKING: timedelta(days=1),        # Tasks are short-lived
+            cls.SENSORY: timedelta(hours=6),       # Sensory memories fade quickly
+            cls.PREFERENCE: None,                  # Preferences persist
         }
         return retention_map.get(memory_type)
 
@@ -58,15 +55,28 @@ class MemoryType(str, Enum):
     def get_default_importance(cls, memory_type: "MemoryType") -> float:
         """Get default importance score for memory type."""
         importance_map = {
-            cls.IDENTITY: 1.0,      # Highest importance
-            cls.PREFERENCE: 0.9,    # High importance
-            cls.DECISION: 0.9,      # High importance
-            cls.PATTERN: 0.7,       # Medium importance
-            cls.SOLUTION: 0.7,      # Medium importance
-            cls.STATUS: 0.3,        # Low importance
-            cls.CONTEXT: 0.5,       # Medium-low importance
+            cls.EPISODIC: 0.7,      # Medium-high importance
+            cls.SEMANTIC: 1.0,      # Highest importance (facts)
+            cls.PROCEDURAL: 0.9,    # High importance (instructions)
+            cls.WORKING: 0.5,       # Medium importance (temporary)
+            cls.SENSORY: 0.3,       # Low importance (ephemeral)
+            cls.PREFERENCE: 0.9,    # High importance (user preferences)
         }
         return importance_map.get(memory_type, 0.5)
+
+    @classmethod
+    def from_legacy_type(cls, legacy_type: str) -> "MemoryType":
+        """Convert legacy memory type to cognitive type."""
+        migration_map = {
+            "identity": cls.SEMANTIC,      # Facts about identity
+            "preference": cls.PREFERENCE,  # Unchanged
+            "decision": cls.EPISODIC,     # Decisions are events
+            "pattern": cls.PROCEDURAL,    # Patterns are procedures
+            "solution": cls.PROCEDURAL,   # Solutions are instructions
+            "status": cls.WORKING,        # Status is current work
+            "context": cls.EPISODIC,      # Context is experiential
+        }
+        return migration_map.get(legacy_type.lower(), cls.EPISODIC)
 
 
 class Memory(BaseModel):
@@ -90,7 +100,7 @@ class Memory(BaseModel):
     access_count: int = Field(default=0, ge=0, description="Number of times accessed")
     
     # Classification
-    memory_type: MemoryType = Field(default=MemoryType.CONTEXT, description="Type of memory")
+    memory_type: MemoryType = Field(default=MemoryType.EPISODIC, description="Type of memory")
     importance: confloat(ge=0.0, le=1.0) = Field(default=0.5, description="Importance score (0-1)")
     confidence: confloat(ge=0.0, le=1.0) = Field(default=1.0, description="Confidence score (0-1)")
     
@@ -102,7 +112,7 @@ class Memory(BaseModel):
     
     # Metadata and relationships
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-    entities: List[str] = Field(default_factory=list, description="Extracted entities")
+    entities: List[Union[str, Dict[str, Any]]] = Field(default_factory=list, description="Extracted entities")
     
     class Config:
         """Pydantic configuration."""
@@ -144,12 +154,12 @@ class Memory(BaseModel):
         """Set default values and generate content hash."""
         # Set default importance based on memory type
         if 'importance' not in values or values['importance'] == 0.5:
-            memory_type = values.get('memory_type', MemoryType.CONTEXT)
+            memory_type = values.get('memory_type', MemoryType.EPISODIC)
             values['importance'] = MemoryType.get_default_importance(memory_type)
-        
+
         # Set default expiration based on memory type
         if 'valid_to' not in values or values['valid_to'] is None:
-            memory_type = values.get('memory_type', MemoryType.CONTEXT)
+            memory_type = values.get('memory_type', MemoryType.EPISODIC)
             retention = MemoryType.get_default_retention(memory_type)
             if retention:
                 valid_from = values.get('valid_from', datetime.now())
@@ -175,11 +185,11 @@ class Memory(BaseModel):
             True if memory is valid at the specified time
         """
         check_time = at_time or datetime.now()
-        
+
         # Check if memory has started being valid
-        if check_time < self.valid_from:
+        if self.valid_from and check_time < self.valid_from:
             return False
-        
+
         # Check if memory has expired
         if self.valid_to and check_time > self.valid_to:
             return False
@@ -385,7 +395,7 @@ class ExtractedMemory(BaseModel):
     confidence: confloat(ge=0.0, le=1.0) = Field(..., description="Extraction confidence")
     memory_type: MemoryType = Field(..., description="Detected memory type")
     pattern_used: str = Field(..., description="Pattern that matched this memory")
-    entities: List[str] = Field(default_factory=list, description="Extracted entities")
+    entities: List[Union[str, Dict[str, Any]]] = Field(default_factory=list, description="Extracted entities")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Extraction metadata")
 
     @field_validator('content')
