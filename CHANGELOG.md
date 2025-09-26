@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-09-26
+
 ### Added
 - Claude Desktop MCP installer with automatic pipx detection and configuration
 - Semantic versioning and build tracking system
@@ -60,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kuzu-memory/kuzu-memory/releases/tag/v1.0.0

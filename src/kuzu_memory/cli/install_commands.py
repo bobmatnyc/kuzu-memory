@@ -99,12 +99,12 @@ def install(ctx, ai_system, force, project, language, ai_name):
                     existing_files.append(str(file_path))
             
             if existing_files:
-                rich_print("f"[yellow]\n⚠️  Existing files found:[/yellow]")
+                rich_print(f"[yellow]\n⚠️  Existing files found:[/yellow]")
                 for file_path in existing_files:
-                    rich_print("f"[yellow]  • {file_path}[/yellow]")
+                    rich_print(f"[yellow]  • {file_path}[/yellow]")
                 
                 if not click.confirm("Continue with installation? (will create backups)"):
-                    rich_print("[yellow]"Installation cancelled.[/yellow]")
+                    rich_print("[yellow]Installation cancelled.[/yellow]")
                     sys.exit(0)
         
         # Perform installation
@@ -112,46 +112,46 @@ def install(ctx, ai_system, force, project, language, ai_name):
         
         # Show results
         if result.success:
-            rich_print("f"[green]\n✅ {result.message}[/green]")
+            rich_print(f"[green]\n✅ {result.message}[/green]")
             
             # Show created files
             if result.files_created:
-                rich_print("f"[green]\n📄 Files created:[/green]")
+                rich_print(f"[green]\n📄 Files created:[/green]")
                 for file_path in result.files_created:
-                    rich_print("f"[green]  • {file_path}[/green]")
+                    rich_print(f"[green]  • {file_path}[/green]")
             
             # Show modified files
             if result.files_modified:
-                rich_print("f"[yellow]\n📝 Files modified:[/yellow]")
+                rich_print(f"[yellow]\n📝 Files modified:[/yellow]")
                 for file_path in result.files_modified:
-                    rich_print("f"[yellow]  • {file_path}[/yellow]")
+                    rich_print(f"[yellow]  • {file_path}[/yellow]")
             
             # Show backup files
             if result.backup_files:
-                rich_print("f"[blue]\n💾 Backup files created:[/blue]")
+                rich_print(f"[blue]\n💾 Backup files created:[/blue]")
                 for file_path in result.backup_files:
-                    rich_print("f"[blue]  • {file_path}[/blue]")
+                    rich_print(f"[blue]  • {file_path}[/blue]")
             
             # Show warnings
             if result.warnings:
-                rich_print("f"[yellow]\n⚠️  Warnings:[/yellow]")
+                rich_print(f"[yellow]\n⚠️  Warnings:[/yellow]")
                 for warning in result.warnings:
-                    rich_print("f"[yellow]  • {warning}[/yellow]")
+                    rich_print(f"[yellow]  • {warning}[/yellow]")
             
             # Show next steps
             _show_next_steps(ai_system, project_root)
             
         else:
-            rich_print("f"[red]\n❌ {result.message}[/red]")
+            rich_print(f"[red]\n❌ {result.message}[/red]")
             if result.warnings:
                 for warning in result.warnings:
-                    rich_print("f"[red]  • {warning}[/red]")
+                    rich_print(f"[red]  • {warning}[/red]")
             sys.exit(1)
     
     except Exception as e:
         if ctx.obj.get('debug'):
             raise
-        rich_print("f"[red]❌ Installation failed: {e}[/red]")
+        rich_print(f"[red]❌ Installation failed: {e}[/red]")
         sys.exit(1)
 
 
@@ -184,30 +184,30 @@ def uninstall(ctx, ai_system, project, confirm):
         
         # Check if installer exists
         if not has_installer(ai_system):
-            rich_print("f"[red]❌ Unknown AI system: {ai_system}[/red]")
+            rich_print(f"[red]❌ Unknown AI system: {ai_system}[/red]")
             sys.exit(1)
         
         # Get installer
         installer = get_installer(ai_system, project_root)
         if not installer:
-            rich_print("f"[red]❌ Failed to create installer for {ai_system}[/red]")
+            rich_print(f"[red]❌ Failed to create installer for {ai_system}[/red]")
             sys.exit(1)
         
         # Check installation status
         status = installer.get_status()
         if not status['installed']:
-            rich_print("f"[blue]ℹ️  {installer.ai_system_name} integration is not installed.[/blue]")
+            rich_print(f"[blue]ℹ️  {installer.ai_system_name} integration is not installed.[/blue]")
             sys.exit(0)
         
         # Show uninstallation info
-        rich_print("f"[blue]🗑️  Uninstalling {installer.ai_system_name} integration...[/blue]")
-        rich_print("f"[dim]📁 Project: {project_root}[/dim]")
+        rich_print(f"[blue]🗑️  Uninstalling {installer.ai_system_name} integration...[/blue]")
+        rich_print(f"[dim]📁 Project: {project_root}[/dim]")
         
         # Show files that will be removed
         if status['files_present']:
-            rich_print("f"[yellow]\n📄 Files to be removed:[/yellow]")
+            rich_print(f"[yellow]\n📄 Files to be removed:[/yellow]")
             for file_path in status['files_present']:
-                rich_print("f"[yellow]  • {file_path}[/yellow]")
+                rich_print(f"[yellow]  • {file_path}[/yellow]")
         
         # Confirm uninstallation
         if not confirm:
@@ -220,24 +220,24 @@ def uninstall(ctx, ai_system, project, confirm):
         
         # Show results
         if result.success:
-            rich_print("f"[green]\n✅ {result.message}[/green]")
+            rich_print(f"[green]\n✅ {result.message}[/green]")
             
             # Show restored files
             if result.files_modified:
-                rich_print("f"[green]\n🔄 Files restored from backup:[/green]")
+                rich_print(f"[green]\n🔄 Files restored from backup:[/green]")
                 for file_path in result.files_modified:
-                    rich_print("f"[green]  • {file_path}[/green]")
+                    rich_print(f"[green]  • {file_path}[/green]")
         else:
-            rich_print("f"[red]\n❌ {result.message}[/red]")
+            rich_print(f"[red]\n❌ {result.message}[/red]")
             if result.warnings:
                 for warning in result.warnings:
-                    rich_print("f"[red]  • {warning}[/red]")
+                    rich_print(f"[red]  • {warning}[/red]")
             sys.exit(1)
     
     except Exception as e:
         if ctx.obj.get('debug'):
             raise
-        rich_print("f"[red]❌ Uninstallation failed: {e}[/red]")
+        rich_print(f"[red]❌ Uninstallation failed: {e}[/red]")
         sys.exit(1)
 
 
@@ -266,7 +266,7 @@ def status(ctx, project):
                 rich_print("[red]"❌ Could not find project root. Use --project to specify.[/red]")
                 sys.exit(1)
         
-        rich_print("f"[blue]📊 Installation Status for {project_root}[/blue]")
+        rich_print(f"[blue]📊 Installation Status for {project_root}[/blue]")
         
         # Create status table
         table = Table(title="AI System Integration Status")
@@ -301,7 +301,7 @@ def status(ctx, project):
     except Exception as e:
         if ctx.obj.get('debug'):
             raise
-        rich_print("f"[red]❌ Status check failed: {e}[/red]")
+        rich_print(f"[red]❌ Status check failed: {e}[/red]")
         sys.exit(1)
 
 
