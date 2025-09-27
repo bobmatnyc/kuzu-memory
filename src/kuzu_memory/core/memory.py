@@ -138,7 +138,7 @@ class KuzuMemory:
         Initialize KuzuMemory.
 
         Args:
-            db_path: Path to database file (default: .kuzu_memory/memories.db)
+            db_path: Path to database file (default: ~/.kuzu-memory/memories.db)
             config: Optional configuration dict or KuzuMemoryConfig object
             container: Optional dependency container for testing/customization
 
@@ -148,7 +148,7 @@ class KuzuMemory:
         """
         try:
             # Set up database path
-            db_path_resolved = db_path or Path(".kuzu_memory/memories.db")
+            db_path_resolved = db_path or (Path.home() / ".kuzu-memory" / "memories.db")
             if isinstance(db_path_resolved, str):
                 db_path_resolved = Path(db_path_resolved)
             self.db_path = db_path_resolved

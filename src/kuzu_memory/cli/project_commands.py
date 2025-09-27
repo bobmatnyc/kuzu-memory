@@ -78,10 +78,12 @@ def init(ctx, force, config_path):
             # Store initial project context
             project_context = get_project_context_summary(project_root)
             if project_context:
+                # Convert dict to string for memory content
+                context_str = f"Project {project_context['project_name']} initialized at {project_context['project_root']}"
                 memory.remember(
-                    project_context,
+                    context_str,
                     source="project-initialization",
-                    metadata={"type": "project-context", "auto-generated": True},
+                    metadata={"type": "project-context", "auto-generated": True, **project_context},
                 )
 
         rich_print(f"✅ Initialized database: {db_path}")

@@ -32,11 +32,12 @@ class ConfigLoader:
 
         # Default configuration search paths
         self.default_config_paths = [
-            Path(".kuzu_memory/config.yaml"),
-            Path(".kuzu_memory/config.yml"),
+            Path.home() / ".kuzu-memory" / "config.yaml",
+            Path.home() / ".kuzu-memory" / "config.yml",
             Path("kuzu_memory_config.yaml"),
             Path("kuzu_memory_config.yml"),
-            Path.home() / ".kuzu_memory" / "config.yaml",
+            # Legacy location for backward compatibility
+            Path(".kuzu_memory/config.yaml"),
             Path("/etc/kuzu_memory/config.yaml"),
         ]
 

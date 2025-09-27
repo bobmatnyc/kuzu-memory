@@ -108,7 +108,7 @@ def get_database_path(custom_path: Path | None = None) -> Path:
     if custom_path:
         db_path = Path(custom_path)
     else:
-        db_path = Path(".kuzu_memory/memories.db")
+        db_path = Path.home() / ".kuzu-memory" / "memories.db"
 
     # Ensure parent directory exists
     db_path.parent.mkdir(parents=True, exist_ok=True)
