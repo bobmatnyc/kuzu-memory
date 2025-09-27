@@ -5,16 +5,15 @@ Provides seamless integration with Claude Desktop through MCP (Model Context Pro
 and project-specific hooks for intelligent memory enhancement.
 """
 
-import os
 import json
+import logging
 import platform
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-import logging
+from typing import Any
 
-from .base import BaseInstaller, InstallationResult, InstallationError
+from .base import BaseInstaller, InstallationError, InstallationResult
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,11 @@ class ClaudeHooksInstaller(BaseInstaller):
         """Initialize Claude hooks installer."""
         super().__init__(project_root)
         self.claude_config_dir = self._get_claude_config_dir()
-        self.mcp_config_path = self.claude_config_dir / "claude_desktop_config.json" if self.claude_config_dir else None
+        self.mcp_config_path = (
+            self.claude_config_dir / "claude_desktop_config.json"
+            if self.claude_config_dir
+            else None
+        )
 
     @property
     def ai_system_name(self) -> str:
@@ -42,7 +45,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         return "claude"
 
     @property
-    def required_files(self) -> List[str]:
+    def required_files(self) -> list[str]:
         """List of files that will be created/modified."""
         files = [
             "CLAUDE.md",
@@ -56,7 +59,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         """Description of what this installer does."""
         return "Installs Claude Code hooks with MCP server integration for intelligent memory enhancement"
 
-    def _get_claude_config_dir(self) -> Optional[Path]:
+    def _get_claude_config_dir(self) -> Path | None:
         """
         Get Claude Desktop configuration directory based on platform.
 
@@ -89,20 +92,17 @@ class ClaudeHooksInstaller(BaseInstaller):
             if loc.exists():
                 return loc
 
-        logger.debug(f"Claude config directory not found in any location")
+        logger.debug("Claude config directory not found in any location")
         return None
 
-    def check_prerequisites(self) -> List[str]:
+    def check_prerequisites(self) -> list[str]:
         """Check if prerequisites are met for installation."""
         errors = super().check_prerequisites()
 
         # Check for kuzu-memory installation
         try:
             result = subprocess.run(
-                ["kuzu-memory", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["kuzu-memory", "--version"], capture_output=True, text=True, timeout=5
             )
             if result.returncode != 0:
                 errors.append("kuzu-memory CLI is not properly installed")
@@ -111,11 +111,13 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         # Warn about Claude Desktop (but don't fail)
         if not self.claude_config_dir:
-            logger.info("Claude Desktop not detected - will create local configuration only")
+            logger.info(
+                "Claude Desktop not detected - will create local configuration only"
+            )
 
         return errors
 
-    def _create_mcp_server_config(self) -> Dict[str, Any]:
+    def _create_mcp_server_config(self) -> dict[str, Any]:
         """
         Create MCP server configuration for kuzu-memory.
 
@@ -126,14 +128,11 @@ class ClaudeHooksInstaller(BaseInstaller):
             "mcpServers": {
                 "kuzu-memory": {
                     "command": "python",
-                    "args": [
-                        "-m",
-                        "kuzu_memory.integrations.mcp_server"
-                    ],
+                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
                     "env": {
                         "KUZU_MEMORY_PROJECT": str(self.project_root),
-                        "KUZU_MEMORY_MODE": "mcp"
-                    }
+                        "KUZU_MEMORY_MODE": "mcp",
+                    },
                 }
             }
         }
@@ -198,7 +197,7 @@ When interacting with Claude Desktop, the following MCP tools are available:
 """
         return content
 
-    def _analyze_project(self) -> Dict[str, Any]:
+    def _analyze_project(self) -> dict[str, Any]:
         """
         Analyze project to generate initial context.
 
@@ -206,81 +205,85 @@ When interacting with Claude Desktop, the following MCP tools are available:
             Project analysis dictionary
         """
         info = {
-            'language': 'Unknown',
-            'framework': 'Unknown',
-            'technologies': [],
-            'guidelines': [],
-            'description': ''
+            "language": "Unknown",
+            "framework": "Unknown",
+            "technologies": [],
+            "guidelines": [],
+            "description": "",
         }
 
         # Detect Python project
         if (self.project_root / "pyproject.toml").exists():
-            info['language'] = 'Python'
-            info['technologies'].append('Python')
+            info["language"] = "Python"
+            info["technologies"].append("Python")
 
             # Try to parse pyproject.toml
             try:
                 import tomllib
-                with open(self.project_root / "pyproject.toml", 'rb') as f:
+
+                with open(self.project_root / "pyproject.toml", "rb") as f:
                     pyproject = tomllib.load(f)
-                    if 'project' in pyproject:
-                        proj = pyproject['project']
-                        info['description'] = proj.get('description', '')
-                        deps = proj.get('dependencies', [])
+                    if "project" in pyproject:
+                        proj = pyproject["project"]
+                        info["description"] = proj.get("description", "")
+                        deps = proj.get("dependencies", [])
                         # Detect frameworks
                         for dep in deps:
-                            if 'fastapi' in dep.lower():
-                                info['framework'] = 'FastAPI'
-                                info['technologies'].append('FastAPI')
-                            elif 'django' in dep.lower():
-                                info['framework'] = 'Django'
-                                info['technologies'].append('Django')
-                            elif 'flask' in dep.lower():
-                                info['framework'] = 'Flask'
-                                info['technologies'].append('Flask')
+                            if "fastapi" in dep.lower():
+                                info["framework"] = "FastAPI"
+                                info["technologies"].append("FastAPI")
+                            elif "django" in dep.lower():
+                                info["framework"] = "Django"
+                                info["technologies"].append("Django")
+                            elif "flask" in dep.lower():
+                                info["framework"] = "Flask"
+                                info["technologies"].append("Flask")
             except Exception as e:
                 logger.debug(f"Failed to parse pyproject.toml: {e}")
 
         # Detect JavaScript/TypeScript project
         elif (self.project_root / "package.json").exists():
-            info['language'] = 'JavaScript/TypeScript'
-            info['technologies'].append('Node.js')
+            info["language"] = "JavaScript/TypeScript"
+            info["technologies"].append("Node.js")
 
             try:
                 with open(self.project_root / "package.json") as f:
                     package = json.load(f)
-                    info['description'] = package.get('description', '')
-                    deps = {**package.get('dependencies', {}), **package.get('devDependencies', {})}
+                    info["description"] = package.get("description", "")
+                    deps = {
+                        **package.get("dependencies", {}),
+                        **package.get("devDependencies", {}),
+                    }
 
-                    if 'react' in deps:
-                        info['framework'] = 'React'
-                        info['technologies'].append('React')
-                    elif 'vue' in deps:
-                        info['framework'] = 'Vue'
-                        info['technologies'].append('Vue')
-                    elif 'express' in deps:
-                        info['framework'] = 'Express'
-                        info['technologies'].append('Express')
+                    if "react" in deps:
+                        info["framework"] = "React"
+                        info["technologies"].append("React")
+                    elif "vue" in deps:
+                        info["framework"] = "Vue"
+                        info["technologies"].append("Vue")
+                    elif "express" in deps:
+                        info["framework"] = "Express"
+                        info["technologies"].append("Express")
             except Exception as e:
                 logger.debug(f"Failed to parse package.json: {e}")
 
         # Add common guidelines
-        info['guidelines'] = [
-            'Use kuzu-memory enhance for all AI interactions',
-            'Store important decisions with kuzu-memory learn',
-            'Query context with kuzu-memory recall when needed',
-            'Keep memories project-specific and relevant'
+        info["guidelines"] = [
+            "Use kuzu-memory enhance for all AI interactions",
+            "Store important decisions with kuzu-memory learn",
+            "Query context with kuzu-memory recall when needed",
+            "Keep memories project-specific and relevant",
         ]
 
         return info
 
-    def _format_list(self, items: List[str]) -> str:
+    def _format_list(self, items: list[str]) -> str:
         """Format a list for markdown."""
         if not items:
             return "- No items specified"
         return "\n".join(f"- {item}" for item in items)
 
-    def _create_mpm_config(self) -> Dict[str, Any]:
+    def _create_mpm_config(self) -> dict[str, Any]:
         """
         Create MPM (Model Package Manager) configuration.
 
@@ -293,17 +296,17 @@ When interacting with Claude Desktop, the following MCP tools are available:
                 "provider": "kuzu-memory",
                 "auto_enhance": True,
                 "async_learning": True,
-                "project_root": str(self.project_root)
+                "project_root": str(self.project_root),
             },
             "hooks": {
                 "pre_response": ["kuzu-memory enhance"],
-                "post_response": ["kuzu-memory learn --quiet"]
+                "post_response": ["kuzu-memory learn --quiet"],
             },
             "settings": {
                 "max_context_size": 5,
                 "similarity_threshold": 0.7,
-                "temporal_decay": True
-            }
+                "temporal_decay": True,
+            },
         }
 
     def _create_shell_wrapper(self) -> str:
@@ -344,8 +347,12 @@ exec kuzu-memory "$@"
             # Create CLAUDE.md only if it doesn't exist (or force is True)
             claude_md_path = self.project_root / "CLAUDE.md"
             if claude_md_path.exists() and not force:
-                logger.info(f"CLAUDE.md already exists at {claude_md_path}, skipping creation")
-                self.warnings.append("CLAUDE.md already exists, preserved existing file (use --force to overwrite)")
+                logger.info(
+                    f"CLAUDE.md already exists at {claude_md_path}, skipping creation"
+                )
+                self.warnings.append(
+                    "CLAUDE.md already exists, preserved existing file (use --force to overwrite)"
+                )
             else:
                 if claude_md_path.exists() and force:
                     backup_path = self.create_backup(claude_md_path)
@@ -371,7 +378,7 @@ exec kuzu-memory "$@"
             else:
                 self.files_created.append(mpm_config_path)
 
-            with open(mpm_config_path, 'w') as f:
+            with open(mpm_config_path, "w") as f:
                 json.dump(self._create_mpm_config(), f, indent=2)
             logger.info(f"Created MPM config at {mpm_config_path}")
 
@@ -380,7 +387,7 @@ exec kuzu-memory "$@"
             claude_dir.mkdir(exist_ok=True)
 
             local_mcp_config = claude_dir / "kuzu-memory-mcp.json"
-            with open(local_mcp_config, 'w') as f:
+            with open(local_mcp_config, "w") as f:
                 json.dump(self._create_mcp_server_config(), f, indent=2)
             self.files_created.append(local_mcp_config)
             logger.info(f"Created local MCP config at {local_mcp_config}")
@@ -394,8 +401,12 @@ exec kuzu-memory "$@"
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only
             if self.mcp_config_path and self.mcp_config_path.exists():
-                logger.debug("Claude Desktop MCP server registration skipped (not supported)")
-                self.warnings.append("Claude Desktop MCP integration not supported - using Claude Code hooks only")
+                logger.debug(
+                    "Claude Desktop MCP server registration skipped (not supported)"
+                )
+                self.warnings.append(
+                    "Claude Desktop MCP integration not supported - using Claude Code hooks only"
+                )
 
             # Initialize kuzu-memory if not already done
             db_path = self.project_root / "kuzu-memories" / "kuzu_memory.db"
@@ -406,7 +417,7 @@ exec kuzu-memory "$@"
                         cwd=self.project_root,
                         capture_output=True,
                         text=True,
-                        timeout=10
+                        timeout=10,
                     )
                     logger.info("Initialized kuzu-memory database")
                 except subprocess.SubprocessError as e:
@@ -424,14 +435,14 @@ exec kuzu-memory "$@"
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message="Claude Code hooks installed successfully",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
 
         except Exception as e:
             logger.error(f"Installation failed: {e}")
             raise InstallationError(f"Failed to install Claude hooks: {e}")
 
-    def _test_installation(self) -> List[str]:
+    def _test_installation(self) -> list[str]:
         """
         Test the installation to ensure everything works.
 
@@ -447,7 +458,7 @@ exec kuzu-memory "$@"
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode != 0:
                 warnings.append("kuzu-memory stats command failed")
@@ -491,7 +502,9 @@ exec kuzu-memory "$@"
 
             # Claude Desktop MCP server registration not supported, nothing to remove
             if self.mcp_config_path and self.mcp_config_path.exists():
-                logger.debug("Claude Desktop MCP server removal skipped (not supported)")
+                logger.debug(
+                    "Claude Desktop MCP server removal skipped (not supported)"
+                )
 
             return InstallationResult(
                 success=True,
@@ -500,14 +513,14 @@ exec kuzu-memory "$@"
                 files_modified=self.files_modified,
                 backup_files=[],
                 message="Claude Code hooks uninstalled successfully",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
 
         except Exception as e:
             logger.error(f"Uninstallation failed: {e}")
             raise InstallationError(f"Failed to uninstall Claude hooks: {e}")
 
-    def status(self) -> Dict[str, Any]:
+    def status(self) -> dict[str, Any]:
         """
         Check the status of Claude hooks installation.
 
@@ -515,28 +528,27 @@ exec kuzu-memory "$@"
             Status information dictionary
         """
         status = {
-            'installed': False,
-            'claude_desktop_detected': self.claude_config_dir is not None,
-            'files': {},
-            'mcp_configured': False,
-            'kuzu_initialized': False
+            "installed": False,
+            "claude_desktop_detected": self.claude_config_dir is not None,
+            "files": {},
+            "mcp_configured": False,
+            "kuzu_initialized": False,
         }
 
         # Check files
         claude_md = self.project_root / "CLAUDE.md"
-        status['files']['CLAUDE.md'] = claude_md.exists()
+        status["files"]["CLAUDE.md"] = claude_md.exists()
 
         mpm_config = self.project_root / ".claude-mpm" / "config.json"
-        status['files']['mpm_config'] = mpm_config.exists()
+        status["files"]["mpm_config"] = mpm_config.exists()
 
         local_mcp = self.project_root / ".claude" / "kuzu-memory-mcp.json"
-        status['files']['local_mcp'] = local_mcp.exists()
+        status["files"]["local_mcp"] = local_mcp.exists()
 
         # Check if installed
-        status['installed'] = all([
-            status['files']['CLAUDE.md'],
-            status['files']['mpm_config']
-        ])
+        status["installed"] = all(
+            [status["files"]["CLAUDE.md"], status["files"]["mpm_config"]]
+        )
 
         # Check MCP configuration
         if self.mcp_config_path and self.mcp_config_path.exists():
@@ -544,12 +556,14 @@ exec kuzu-memory "$@"
                 with open(self.mcp_config_path) as f:
                     global_config = json.load(f)
                 project_key = f"kuzu-memory-{self.project_root.name}"
-                status['mcp_configured'] = project_key in global_config.get('mcpServers', {})
+                status["mcp_configured"] = project_key in global_config.get(
+                    "mcpServers", {}
+                )
             except Exception:
                 pass
 
         # Check kuzu initialization
         db_path = self.project_root / "kuzu-memories" / "kuzu_memory.db"
-        status['kuzu_initialized'] = db_path.exists()
+        status["kuzu_initialized"] = db_path.exists()
 
         return status

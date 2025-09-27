@@ -10,11 +10,16 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from pydantic import constr, confloat
+from pydantic import (
+    BaseModel,
+    Field,
+    confloat,
+    field_validator,
+    model_validator,
+)
 
 # Removed circular import - using inline validation
 
@@ -31,23 +36,24 @@ class MemoryType(str, Enum):
     - SENSORY: Sensory descriptions (6 hours retention)
     - PREFERENCE: User/team preferences (never expires)
     """
-    EPISODIC = "episodic"        # Personal experiences and events
-    SEMANTIC = "semantic"        # Facts and general knowledge
-    PROCEDURAL = "procedural"    # Instructions and how-to content
-    WORKING = "working"          # Tasks and current focus
-    SENSORY = "sensory"          # Sensory descriptions
-    PREFERENCE = "preference"    # User/team preferences
+
+    EPISODIC = "episodic"  # Personal experiences and events
+    SEMANTIC = "semantic"  # Facts and general knowledge
+    PROCEDURAL = "procedural"  # Instructions and how-to content
+    WORKING = "working"  # Tasks and current focus
+    SENSORY = "sensory"  # Sensory descriptions
+    PREFERENCE = "preference"  # User/team preferences
 
     @classmethod
-    def get_default_retention(cls, memory_type: "MemoryType") -> Optional[timedelta]:
+    def get_default_retention(cls, memory_type: "MemoryType") -> timedelta | None:
         """Get default retention period for memory type."""
         retention_map = {
-            cls.EPISODIC: timedelta(days=30),      # Personal experiences fade
-            cls.SEMANTIC: None,                    # Facts don't expire
-            cls.PROCEDURAL: None,                  # Instructions don't expire
-            cls.WORKING: timedelta(days=1),        # Tasks are short-lived
-            cls.SENSORY: timedelta(hours=6),       # Sensory memories fade quickly
-            cls.PREFERENCE: None,                  # Preferences persist
+            cls.EPISODIC: timedelta(days=30),  # Personal experiences fade
+            cls.SEMANTIC: None,  # Facts don't expire
+            cls.PROCEDURAL: None,  # Instructions don't expire
+            cls.WORKING: timedelta(days=1),  # Tasks are short-lived
+            cls.SENSORY: timedelta(hours=6),  # Sensory memories fade quickly
+            cls.PREFERENCE: None,  # Preferences persist
         }
         return retention_map.get(memory_type)
 
@@ -55,12 +61,12 @@ class MemoryType(str, Enum):
     def get_default_importance(cls, memory_type: "MemoryType") -> float:
         """Get default importance score for memory type."""
         importance_map = {
-            cls.EPISODIC: 0.7,      # Medium-high importance
-            cls.SEMANTIC: 1.0,      # Highest importance (facts)
-            cls.PROCEDURAL: 0.9,    # High importance (instructions)
-            cls.WORKING: 0.5,       # Medium importance (temporary)
-            cls.SENSORY: 0.3,       # Low importance (ephemeral)
-            cls.PREFERENCE: 0.9,    # High importance (user preferences)
+            cls.EPISODIC: 0.7,  # Medium-high importance
+            cls.SEMANTIC: 1.0,  # Highest importance (facts)
+            cls.PROCEDURAL: 0.9,  # High importance (instructions)
+            cls.WORKING: 0.5,  # Medium importance (temporary)
+            cls.SENSORY: 0.3,  # Low importance (ephemeral)
+            cls.PREFERENCE: 0.9,  # High importance (user preferences)
         }
         return importance_map.get(memory_type, 0.5)
 
@@ -68,13 +74,13 @@ class MemoryType(str, Enum):
     def from_legacy_type(cls, legacy_type: str) -> "MemoryType":
         """Convert legacy memory type to cognitive type."""
         migration_map = {
-            "identity": cls.SEMANTIC,      # Facts about identity
+            "identity": cls.SEMANTIC,  # Facts about identity
             "preference": cls.PREFERENCE,  # Unchanged
-            "decision": cls.EPISODIC,     # Decisions are events
-            "pattern": cls.PROCEDURAL,    # Patterns are procedures
-            "solution": cls.PROCEDURAL,   # Solutions are instructions
-            "status": cls.WORKING,        # Status is current work
-            "context": cls.EPISODIC,      # Context is experiential
+            "decision": cls.EPISODIC,  # Decisions are events
+            "pattern": cls.PROCEDURAL,  # Patterns are procedures
+            "solution": cls.PROCEDURAL,  # Solutions are instructions
+            "status": cls.WORKING,  # Status is current work
+            "context": cls.EPISODIC,  # Context is experiential
         }
         return migration_map.get(legacy_type.lower(), cls.EPISODIC)
 
@@ -82,40 +88,65 @@ class MemoryType(str, Enum):
 class Memory(BaseModel):
     """
     Core memory model representing a single piece of stored information.
-    
+
     Includes temporal validity, classification, source tracking, and metadata
     with automatic hash generation for deduplication.
     """
-    
+
     # Core content
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique memory identifier")
-    content: str = Field(..., min_length=1, max_length=100_000, description="Memory content text")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique memory identifier"
+    )
+    content: str = Field(
+        ..., min_length=1, max_length=100_000, description="Memory content text"
+    )
     content_hash: str = Field(default="", description="SHA256 hash for deduplication")
-    
+
     # Temporal information
-    created_at: datetime = Field(default_factory=datetime.now, description="When memory was created")
-    valid_from: Optional[datetime] = Field(default_factory=datetime.now, description="When memory becomes valid")
-    valid_to: Optional[datetime] = Field(None, description="When memory expires (None = never)")
-    accessed_at: Optional[datetime] = Field(default_factory=datetime.now, description="Last access time")
+    created_at: datetime = Field(
+        default_factory=datetime.now, description="When memory was created"
+    )
+    valid_from: datetime | None = Field(
+        default_factory=datetime.now, description="When memory becomes valid"
+    )
+    valid_to: datetime | None = Field(
+        None, description="When memory expires (None = never)"
+    )
+    accessed_at: datetime | None = Field(
+        default_factory=datetime.now, description="Last access time"
+    )
     access_count: int = Field(default=0, ge=0, description="Number of times accessed")
-    
+
     # Classification
-    memory_type: MemoryType = Field(default=MemoryType.EPISODIC, description="Type of memory")
-    importance: confloat(ge=0.0, le=1.0) = Field(default=0.5, description="Importance score (0-1)")
-    confidence: confloat(ge=0.0, le=1.0) = Field(default=1.0, description="Confidence score (0-1)")
-    
+    memory_type: MemoryType = Field(
+        default=MemoryType.EPISODIC, description="Type of memory"
+    )
+    importance: confloat(ge=0.0, le=1.0) = Field(
+        default=0.5, description="Importance score (0-1)"
+    )
+    confidence: confloat(ge=0.0, le=1.0) = Field(
+        default=1.0, description="Confidence score (0-1)"
+    )
+
     # Source tracking
     source_type: str = Field(default="conversation", description="Source of the memory")
-    agent_id: str = Field(default="default", description="Agent that created the memory")
-    user_id: Optional[str] = Field(None, description="Associated user ID")
-    session_id: Optional[str] = Field(None, description="Associated session ID")
-    
+    agent_id: str = Field(
+        default="default", description="Agent that created the memory"
+    )
+    user_id: str | None = Field(None, description="Associated user ID")
+    session_id: str | None = Field(None, description="Associated session ID")
+
     # Metadata and relationships
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-    entities: List[Union[str, Dict[str, Any]]] = Field(default_factory=list, description="Extracted entities")
-    
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
+    entities: list[str | dict[str, Any]] = Field(
+        default_factory=list, description="Extracted entities"
+    )
+
     class Config:
         """Pydantic configuration."""
+
         json_encoders = {
             datetime: lambda v: v.isoformat(),
         }
@@ -125,11 +156,11 @@ class Memory(BaseModel):
                 "memory_type": "preference",
                 "importance": 0.9,
                 "entities": ["Python", "backend"],
-                "metadata": {"extracted_by": "pattern_matcher"}
+                "metadata": {"extracted_by": "pattern_matcher"},
             }
         }
 
-    @field_validator('content')
+    @field_validator("content")
     @classmethod
     def validate_content(cls, v):
         """Validate and sanitize content."""
@@ -139,7 +170,7 @@ class Memory(BaseModel):
             raise ValueError("Content exceeds maximum length")
         return v.strip()
 
-    @field_validator('entities')
+    @field_validator("entities")
     @classmethod
     def validate_entities(cls, v):
         """Validate entity list."""
@@ -148,39 +179,41 @@ class Memory(BaseModel):
         # Remove duplicates and empty strings
         return list(set(entity.strip() for entity in v if entity and entity.strip()))
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_defaults_and_hash(cls, values):
         """Set default values and generate content hash."""
         # Set default importance based on memory type
-        if 'importance' not in values or values['importance'] == 0.5:
-            memory_type = values.get('memory_type', MemoryType.EPISODIC)
-            values['importance'] = MemoryType.get_default_importance(memory_type)
+        if "importance" not in values or values["importance"] == 0.5:
+            memory_type = values.get("memory_type", MemoryType.EPISODIC)
+            values["importance"] = MemoryType.get_default_importance(memory_type)
 
         # Set default expiration based on memory type
-        if 'valid_to' not in values or values['valid_to'] is None:
-            memory_type = values.get('memory_type', MemoryType.EPISODIC)
+        if "valid_to" not in values or values["valid_to"] is None:
+            memory_type = values.get("memory_type", MemoryType.EPISODIC)
             retention = MemoryType.get_default_retention(memory_type)
             if retention:
-                valid_from = values.get('valid_from', datetime.now())
-                values['valid_to'] = valid_from + retention
-        
+                valid_from = values.get("valid_from", datetime.now())
+                values["valid_to"] = valid_from + retention
+
         # Generate content hash for deduplication
-        content = values.get('content', '')
-        if content and not values.get('content_hash'):
+        content = values.get("content", "")
+        if content and not values.get("content_hash"):
             # Normalize content for hashing (lowercase, stripped)
             normalized = content.lower().strip()
-            values['content_hash'] = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
-        
+            values["content_hash"] = hashlib.sha256(
+                normalized.encode("utf-8")
+            ).hexdigest()
+
         return values
 
-    def is_valid(self, at_time: Optional[datetime] = None) -> bool:
+    def is_valid(self, at_time: datetime | None = None) -> bool:
         """
         Check if memory is currently valid.
-        
+
         Args:
             at_time: Time to check validity at (default: now)
-            
+
         Returns:
             True if memory is valid at the specified time
         """
@@ -193,10 +226,10 @@ class Memory(BaseModel):
         # Check if memory has expired
         if self.valid_to and check_time > self.valid_to:
             return False
-        
+
         return True
 
-    def is_expired(self, at_time: Optional[datetime] = None) -> bool:
+    def is_expired(self, at_time: datetime | None = None) -> bool:
         """Check if memory has expired."""
         return not self.is_valid(at_time)
 
@@ -205,7 +238,7 @@ class Memory(BaseModel):
         self.accessed_at = datetime.now()
         self.access_count += 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for database storage."""
         return {
             "id": self.id,
@@ -213,7 +246,7 @@ class Memory(BaseModel):
             "content_hash": self.content_hash,
             "created_at": self.created_at,  # Keep as datetime for Kuzu
             "valid_from": self.valid_from,  # Keep as datetime for Kuzu
-            "valid_to": self.valid_to,      # Keep as datetime for Kuzu
+            "valid_to": self.valid_to,  # Keep as datetime for Kuzu
             "accessed_at": self.accessed_at,  # Keep as datetime for Kuzu
             "access_count": self.access_count,
             "memory_type": self.memory_type.value,
@@ -228,24 +261,24 @@ class Memory(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Memory":
+    def from_dict(cls, data: dict[str, Any]) -> "Memory":
         """Create Memory from dictionary (e.g., from database)."""
         # Parse datetime fields
         for field in ["created_at", "valid_from", "valid_to", "accessed_at"]:
             if data.get(field):
                 if isinstance(data[field], str):
                     data[field] = datetime.fromisoformat(data[field])
-        
+
         # Parse JSON fields
         if isinstance(data.get("metadata"), str):
             data["metadata"] = json.loads(data["metadata"])
         if isinstance(data.get("entities"), str):
             data["entities"] = json.loads(data["entities"])
-        
+
         # Convert memory_type string to enum
         if isinstance(data.get("memory_type"), str):
             data["memory_type"] = MemoryType(data["memory_type"])
-        
+
         return cls(**data)
 
 
@@ -258,20 +291,35 @@ class MemoryContext(BaseModel):
     # Core content
     original_prompt: str = Field(..., description="Original user prompt")
     enhanced_prompt: str = Field(..., description="Prompt enhanced with memory context")
-    memories: List[Memory] = Field(default_factory=list, description="Retrieved memories")
+    memories: list[Memory] = Field(
+        default_factory=list, description="Retrieved memories"
+    )
 
     # Metadata
-    confidence: confloat(ge=0.0, le=1.0) = Field(default=0.0, description="Overall confidence score")
-    token_count: int = Field(default=0, ge=0, description="Estimated token count of enhanced prompt")
-    strategy_used: str = Field(default="auto", description="Recall strategy that was used")
-    recall_time_ms: float = Field(default=0.0, ge=0.0, description="Time taken for recall in milliseconds")
+    confidence: confloat(ge=0.0, le=1.0) = Field(
+        default=0.0, description="Overall confidence score"
+    )
+    token_count: int = Field(
+        default=0, ge=0, description="Estimated token count of enhanced prompt"
+    )
+    strategy_used: str = Field(
+        default="auto", description="Recall strategy that was used"
+    )
+    recall_time_ms: float = Field(
+        default=0.0, ge=0.0, description="Time taken for recall in milliseconds"
+    )
 
     # Statistics
-    total_memories_found: int = Field(default=0, ge=0, description="Total memories found before filtering")
-    memories_filtered: int = Field(default=0, ge=0, description="Number of memories filtered out")
+    total_memories_found: int = Field(
+        default=0, ge=0, description="Total memories found before filtering"
+    )
+    memories_filtered: int = Field(
+        default=0, ge=0, description="Number of memories filtered out"
+    )
 
     class Config:
         """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "original_prompt": "What's my name?",
@@ -279,11 +327,11 @@ class MemoryContext(BaseModel):
                 "memories": [],
                 "confidence": 0.95,
                 "strategy_used": "entity",
-                "recall_time_ms": 3.2
+                "recall_time_ms": 3.2,
             }
         }
 
-    @field_validator('memories')
+    @field_validator("memories")
     @classmethod
     def validate_memories(cls, v):
         """Validate memories list."""
@@ -291,7 +339,7 @@ class MemoryContext(BaseModel):
             raise ValueError("Memories must be a list")
         return v
 
-    @field_validator('enhanced_prompt')
+    @field_validator("enhanced_prompt")
     @classmethod
     def validate_enhanced_prompt(cls, v):
         """Validate enhanced prompt."""
@@ -299,20 +347,20 @@ class MemoryContext(BaseModel):
             raise ValueError("Enhanced prompt cannot be empty")
         return v.strip()
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def calculate_derived_fields(cls, values):
         """Calculate derived fields from memories."""
-        memories = values.get('memories', [])
+        memories = values.get("memories", [])
 
         # Calculate token count (rough estimate: 1 token ≈ 4 characters)
-        enhanced_prompt = values.get('enhanced_prompt', '')
-        values['token_count'] = len(enhanced_prompt) // 4
+        enhanced_prompt = values.get("enhanced_prompt", "")
+        values["token_count"] = len(enhanced_prompt) // 4
 
         # Calculate average confidence from memories
         if memories:
             avg_confidence = sum(mem.confidence for mem in memories) / len(memories)
-            values['confidence'] = min(avg_confidence, values.get('confidence', 1.0))
+            values["confidence"] = min(avg_confidence, values.get("confidence", 1.0))
 
         return values
 
@@ -342,16 +390,18 @@ class MemoryContext(BaseModel):
             return f"{context}\nUser query: {self.original_prompt}"
 
         elif format_style == "json":
-            return json.dumps({
-                "context": [mem.content for mem in self.memories],
-                "query": self.original_prompt,
-                "confidence": self.confidence
-            })
+            return json.dumps(
+                {
+                    "context": [mem.content for mem in self.memories],
+                    "query": self.original_prompt,
+                    "confidence": self.confidence,
+                }
+            )
 
         else:
             raise ValueError(f"Unknown format_style: {format_style}")
 
-    def get_memory_summary(self) -> Dict[str, Any]:
+    def get_memory_summary(self) -> dict[str, Any]:
         """Get summary statistics about retrieved memories."""
         if not self.memories:
             return {
@@ -359,17 +409,23 @@ class MemoryContext(BaseModel):
                 "types": {},
                 "avg_importance": 0.0,
                 "avg_confidence": 0.0,
-                "entities": []
+                "entities": [],
             }
 
         # Count by type
         type_counts = {}
         for mem in self.memories:
-            type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
+            type_counts[mem.memory_type.value] = (
+                type_counts.get(mem.memory_type.value, 0) + 1
+            )
 
         # Calculate averages
-        avg_importance = sum(mem.importance for mem in self.memories) / len(self.memories)
-        avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
+        avg_importance = sum(mem.importance for mem in self.memories) / len(
+            self.memories
+        )
+        avg_confidence = sum(mem.confidence for mem in self.memories) / len(
+            self.memories
+        )
 
         # Collect unique entities
         all_entities = set()
@@ -381,7 +437,7 @@ class MemoryContext(BaseModel):
             "types": type_counts,
             "avg_importance": round(avg_importance, 3),
             "avg_confidence": round(avg_confidence, 3),
-            "entities": sorted(list(all_entities))
+            "entities": sorted(list(all_entities)),
         }
 
 
@@ -392,13 +448,19 @@ class ExtractedMemory(BaseModel):
     """
 
     content: str = Field(..., description="Extracted memory content")
-    confidence: confloat(ge=0.0, le=1.0) = Field(..., description="Extraction confidence")
+    confidence: confloat(ge=0.0, le=1.0) = Field(
+        ..., description="Extraction confidence"
+    )
     memory_type: MemoryType = Field(..., description="Detected memory type")
     pattern_used: str = Field(..., description="Pattern that matched this memory")
-    entities: List[Union[str, Dict[str, Any]]] = Field(default_factory=list, description="Extracted entities")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Extraction metadata")
+    entities: list[str | dict[str, Any]] = Field(
+        default_factory=list, description="Extracted entities"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Extraction metadata"
+    )
 
-    @field_validator('content')
+    @field_validator("content")
     @classmethod
     def validate_content(cls, v):
         """Validate content."""
@@ -410,8 +472,8 @@ class ExtractedMemory(BaseModel):
         self,
         source_type: str = "extraction",
         agent_id: str = "default",
-        user_id: Optional[str] = None,
-        session_id: Optional[str] = None
+        user_id: str | None = None,
+        session_id: str | None = None,
     ) -> Memory:
         """
         Convert to a full Memory object.
@@ -438,6 +500,6 @@ class ExtractedMemory(BaseModel):
             metadata={
                 **self.metadata,
                 "pattern_used": self.pattern_used,
-                "extraction_confidence": self.confidence
-            }
+                "extraction_confidence": self.confidence,
+            },
         )

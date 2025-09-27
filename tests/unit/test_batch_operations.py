@@ -5,14 +5,15 @@ Tests the batch_store_memories and batch_get_memories_by_ids methods
 to ensure efficient bulk operations work correctly.
 """
 
-import pytest
+import uuid
 from datetime import datetime
 from pathlib import Path
-import uuid
 from typing import List
 
+import pytest
+
 from kuzu_memory import KuzuMemory, Memory, MemoryType
-from kuzu_memory.utils.exceptions import ValidationError, DatabaseError
+from kuzu_memory.utils.exceptions import DatabaseError, ValidationError
 
 
 class TestBatchOperations:
@@ -27,7 +28,7 @@ class TestBatchOperations:
         km.close()
 
     @pytest.fixture
-    def sample_memories(self) -> List[Memory]:
+    def sample_memories(self) -> list[Memory]:
         """Create sample Memory objects for testing."""
         return [
             Memory(
@@ -38,7 +39,7 @@ class TestBatchOperations:
                 importance=min(0.5 + (i * 0.05), 1.0),  # Cap at 1.0
                 confidence=0.9,
                 created_at=datetime.now(),
-                metadata={"index": i, "batch_test": True}
+                metadata={"index": i, "batch_test": True},
             )
             for i in range(10)
         ]
@@ -53,7 +54,7 @@ class TestBatchOperations:
         assert all(isinstance(id, str) for id in stored_ids)
 
         # Verify each memory can be retrieved
-        for memory, stored_id in zip(sample_memories, stored_ids):
+        for memory, stored_id in zip(sample_memories, stored_ids, strict=False):
             retrieved = kuzu_memory.get_memory_by_id(stored_id)
             assert retrieved is not None
             assert retrieved.content == memory.content
@@ -128,7 +129,7 @@ class TestBatchOperations:
         assert len(retrieved2) == 3
 
         # Verify content is identical
-        for m1, m2 in zip(retrieved1, retrieved2):
+        for m1, m2 in zip(retrieved1, retrieved2, strict=False):
             assert m1.id == m2.id
             assert m1.content == m2.content
 
@@ -142,7 +143,7 @@ class TestBatchOperations:
             content="Original content",
             memory_type=MemoryType.SEMANTIC,
             source_type="test",
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         memory2 = Memory(
@@ -150,7 +151,7 @@ class TestBatchOperations:
             content="Updated content",
             memory_type=MemoryType.SEMANTIC,
             source_type="test",
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         # Store first batch
@@ -170,8 +171,10 @@ class TestBatchOperations:
         """Test that batch operations update performance statistics correctly."""
         # Get initial stats
         initial_stats = kuzu_memory.get_statistics()
-        initial_generated = initial_stats['performance_stats']['total_memories_generated']
-        initial_recalled = initial_stats['performance_stats']['total_memories_recalled']
+        initial_generated = initial_stats["performance_stats"][
+            "total_memories_generated"
+        ]
+        initial_recalled = initial_stats["performance_stats"]["total_memories_recalled"]
 
         # Store memories
         stored_ids = kuzu_memory.batch_store_memories(sample_memories)
@@ -181,8 +184,8 @@ class TestBatchOperations:
 
         # Get updated stats
         final_stats = kuzu_memory.get_statistics()
-        final_generated = final_stats['performance_stats']['total_memories_generated']
-        final_recalled = final_stats['performance_stats']['total_memories_recalled']
+        final_generated = final_stats["performance_stats"]["total_memories_generated"]
+        final_recalled = final_stats["performance_stats"]["total_memories_recalled"]
 
         # Verify stats were updated
         assert final_generated == initial_generated + len(sample_memories)

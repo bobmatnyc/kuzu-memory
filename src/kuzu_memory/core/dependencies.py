@@ -4,11 +4,10 @@ Dependency injection container and interfaces for KuzuMemory.
 Provides clean separation of concerns and improved testability.
 """
 
-from typing import Protocol, Optional, Dict, Any, List, runtime_checkable
 from abc import abstractmethod
-from datetime import datetime
+from typing import Any, Protocol, runtime_checkable
 
-from .models import Memory, MemoryType, MemoryContext
+from .models import Memory, MemoryType
 
 
 @runtime_checkable
@@ -21,12 +20,12 @@ class MemoryStoreProtocol(Protocol):
         ...
 
     @abstractmethod
-    def get_memory_by_id(self, memory_id: str) -> Optional[Memory]:
+    def get_memory_by_id(self, memory_id: str) -> Memory | None:
         """Retrieve a memory by its ID."""
         ...
 
     @abstractmethod
-    def get_recent_memories(self, limit: int = 10, **filters) -> List[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
         """Get recent memories with optional filtering."""
         ...
 
@@ -47,11 +46,8 @@ class RecallCoordinatorProtocol(Protocol):
 
     @abstractmethod
     def recall_memories(
-        self,
-        query: str,
-        limit: int = 10,
-        filters: Optional[Dict[str, Any]] = None
-    ) -> List[Memory]:
+        self, query: str, limit: int = 10, filters: dict[str, Any] | None = None
+    ) -> list[Memory]:
         """Recall memories matching a query."""
         ...
 
@@ -66,7 +62,7 @@ class NLPClassifierProtocol(Protocol):
         ...
 
     @abstractmethod
-    def extract_entities(self, content: str) -> List[str]:
+    def extract_entities(self, content: str) -> list[str]:
         """Extract entities from content."""
         ...
 
@@ -76,7 +72,7 @@ class DatabaseAdapterProtocol(Protocol):
     """Protocol defining the interface for database operations."""
 
     @abstractmethod
-    def execute_query(self, query: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def execute_query(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
         """Execute a database query with parameters."""
         ...
 
@@ -101,8 +97,8 @@ class DependencyContainer:
 
     def __init__(self):
         """Initialize empty dependency container."""
-        self._services: Dict[str, Any] = {}
-        self._factories: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
+        self._factories: dict[str, Any] = {}
 
     def register(self, name: str, service: Any, singleton: bool = True) -> None:
         """
@@ -150,19 +146,19 @@ class DependencyContainer:
 
     def get_memory_store(self) -> MemoryStoreProtocol:
         """Get the memory store service."""
-        return self.get('memory_store')
+        return self.get("memory_store")
 
     def get_recall_coordinator(self) -> RecallCoordinatorProtocol:
         """Get the recall coordinator service."""
-        return self.get('recall_coordinator')
+        return self.get("recall_coordinator")
 
-    def get_nlp_classifier(self) -> Optional[NLPClassifierProtocol]:
+    def get_nlp_classifier(self) -> NLPClassifierProtocol | None:
         """Get the NLP classifier service if available."""
-        return self.get('nlp_classifier') if self.has('nlp_classifier') else None
+        return self.get("nlp_classifier") if self.has("nlp_classifier") else None
 
     def get_database_adapter(self) -> DatabaseAdapterProtocol:
         """Get the database adapter service."""
-        return self.get('database_adapter')
+        return self.get("database_adapter")
 
 
 # Global container instance

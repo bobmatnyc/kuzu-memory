@@ -6,9 +6,10 @@ in semantic similarity calculations.
 """
 
 import hashlib
-import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any
+
+import numpy as np
 
 from ..interfaces.cache import ICache
 from .lru_cache import LRUCache
@@ -29,8 +30,8 @@ class EmbeddingsCache(ICache):
         self,
         max_embeddings: int = 10000,
         max_similarity_results: int = 5000,
-        embedding_ttl: Optional[timedelta] = timedelta(hours=24),
-        similarity_ttl: Optional[timedelta] = timedelta(hours=1)
+        embedding_ttl: timedelta | None = timedelta(hours=24),
+        similarity_ttl: timedelta | None = timedelta(hours=1),
     ):
         """
         Initialize embeddings cache.
@@ -46,22 +47,17 @@ class EmbeddingsCache(ICache):
 
         # Separate caches for embeddings and similarity results
         self._embedding_cache = LRUCache(
-            max_size=max_embeddings,
-            default_ttl=embedding_ttl
+            max_size=max_embeddings, default_ttl=embedding_ttl
         )
         self._similarity_cache = LRUCache(
-            max_size=max_similarity_results,
-            default_ttl=similarity_ttl
+            max_size=max_similarity_results, default_ttl=similarity_ttl
         )
 
         # Content to embedding key mapping
-        self._content_to_key: Dict[str, str] = {}
+        self._content_to_key: dict[str, str] = {}
 
     async def cache_embedding(
-        self,
-        content: str,
-        embedding: np.ndarray,
-        ttl: Optional[timedelta] = None
+        self, content: str, embedding: np.ndarray, ttl: timedelta | None = None
     ) -> str:
         """
         Cache an embedding vector for content.
@@ -82,7 +78,7 @@ class EmbeddingsCache(ICache):
             content=content,
             embedding=embedding.copy(),  # Copy to avoid external modifications
             content_hash=hashlib.sha256(content.encode()).hexdigest(),
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         await self._embedding_cache.set(content_key, embedding_data, ttl)
@@ -90,7 +86,7 @@ class EmbeddingsCache(ICache):
 
         return content_key
 
-    async def get_embedding(self, content: str) -> Optional[np.ndarray]:
+    async def get_embedding(self, content: str) -> np.ndarray | None:
         """
         Get cached embedding for content.
 
@@ -110,7 +106,7 @@ class EmbeddingsCache(ICache):
 
         return None
 
-    async def get_embedding_by_key(self, content_key: str) -> Optional[np.ndarray]:
+    async def get_embedding_by_key(self, content_key: str) -> np.ndarray | None:
         """Get embedding by cache key."""
         embedding_data = await self._embedding_cache.get(content_key)
         if embedding_data and isinstance(embedding_data, EmbeddingData):
@@ -120,9 +116,9 @@ class EmbeddingsCache(ICache):
     async def cache_similarity_result(
         self,
         query_embedding: np.ndarray,
-        candidate_embeddings: List[Tuple[str, np.ndarray]],
-        similarities: List[float],
-        ttl: Optional[timedelta] = None
+        candidate_embeddings: list[tuple[str, np.ndarray]],
+        similarities: list[float],
+        ttl: timedelta | None = None,
     ) -> str:
         """
         Cache similarity calculation results.
@@ -138,7 +134,9 @@ class EmbeddingsCache(ICache):
         """
         # Create key based on query and candidate embeddings
         query_hash = self._hash_embedding(query_embedding)
-        candidate_hashes = [self._hash_embedding(emb) for _, emb in candidate_embeddings]
+        candidate_hashes = [
+            self._hash_embedding(emb) for _, emb in candidate_embeddings
+        ]
 
         similarity_key = f"sim_{query_hash}_{hash(tuple(candidate_hashes))}"
 
@@ -147,17 +145,15 @@ class EmbeddingsCache(ICache):
             query_hash=query_hash,
             candidate_keys=[key for key, _ in candidate_embeddings],
             similarities=similarities.copy(),
-            calculated_at=datetime.now()
+            calculated_at=datetime.now(),
         )
 
         await self._similarity_cache.set(similarity_key, result, ttl)
         return similarity_key
 
     async def get_similarity_result(
-        self,
-        query_embedding: np.ndarray,
-        candidate_keys: List[str]
-    ) -> Optional[List[float]]:
+        self, query_embedding: np.ndarray, candidate_keys: list[str]
+    ) -> list[float] | None:
         """
         Get cached similarity results.
 
@@ -177,10 +173,7 @@ class EmbeddingsCache(ICache):
 
         return None
 
-    async def batch_get_embeddings(
-        self,
-        contents: List[str]
-    ) -> Dict[str, np.ndarray]:
+    async def batch_get_embeddings(self, contents: list[str]) -> dict[str, np.ndarray]:
         """
         Get multiple embeddings in batch.
 
@@ -224,11 +217,11 @@ class EmbeddingsCache(ICache):
     def _hash_embedding(self, embedding: np.ndarray) -> str:
         """Create a hash of an embedding vector."""
         # Use a subset of the embedding for hashing to balance speed and uniqueness
-        subset = embedding[::max(1, len(embedding) // 100)]  # Every ~1% of values
+        subset = embedding[:: max(1, len(embedding) // 100)]  # Every ~1% of values
         return hashlib.md5(subset.tobytes()).hexdigest()[:16]
 
     # ICache interface implementation
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Generic get from appropriate cache."""
         # Try embedding cache first
         result = await self._embedding_cache.get(key)
@@ -238,12 +231,7 @@ class EmbeddingsCache(ICache):
         # Try similarity cache
         return await self._similarity_cache.get(key)
 
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """Generic set to appropriate cache."""
         if isinstance(value, EmbeddingData):
             await self._embedding_cache.set(key, value, ttl)
@@ -261,10 +249,9 @@ class EmbeddingsCache(ICache):
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in either cache."""
-        return (
-            await self._embedding_cache.exists(key) or
-            await self._similarity_cache.exists(key)
-        )
+        return await self._embedding_cache.exists(
+            key
+        ) or await self._similarity_cache.exists(key)
 
     async def clear(self) -> None:
         """Clear both caches."""
@@ -272,7 +259,7 @@ class EmbeddingsCache(ICache):
         await self._similarity_cache.clear()
         self._content_to_key.clear()
 
-    async def get_multi(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_multi(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values."""
         result = await self._embedding_cache.get_multi(keys)
         similarity_result = await self._similarity_cache.get_multi(keys)
@@ -280,21 +267,19 @@ class EmbeddingsCache(ICache):
         return result
 
     async def set_multi(
-        self,
-        items: Dict[str, Any],
-        ttl: Optional[timedelta] = None
+        self, items: dict[str, Any], ttl: timedelta | None = None
     ) -> None:
         """Set multiple values."""
         for key, value in items.items():
             await self.set(key, value, ttl)
 
-    async def delete_multi(self, keys: List[str]) -> int:
+    async def delete_multi(self, keys: list[str]) -> int:
         """Delete multiple values."""
         embedding_deleted = await self._embedding_cache.delete_multi(keys)
         similarity_deleted = await self._similarity_cache.delete_multi(keys)
         return embedding_deleted + similarity_deleted
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         embedding_stats = await self._embedding_cache.get_stats()
         similarity_stats = await self._similarity_cache.get_stats()
@@ -310,10 +295,15 @@ class EmbeddingsCache(ICache):
             "estimated_memory_mb": round(estimated_memory_mb, 2),
             "total_size": embedding_stats["size"] + similarity_stats["size"],
             "combined_hit_rate": (
-                (embedding_stats["hits"] + similarity_stats["hits"]) /
-                max(1, embedding_stats["hits"] + embedding_stats["misses"] +
-                    similarity_stats["hits"] + similarity_stats["misses"])
-            )
+                (embedding_stats["hits"] + similarity_stats["hits"])
+                / max(
+                    1,
+                    embedding_stats["hits"]
+                    + embedding_stats["misses"]
+                    + similarity_stats["hits"]
+                    + similarity_stats["misses"],
+                )
+            ),
         }
 
     async def cleanup_expired(self) -> int:
@@ -337,7 +327,7 @@ class EmbeddingData:
         content: str,
         embedding: np.ndarray,
         content_hash: str,
-        created_at: datetime
+        created_at: datetime,
     ):
         self.content = content
         self.embedding = embedding
@@ -354,9 +344,9 @@ class SimilarityResult:
     def __init__(
         self,
         query_hash: str,
-        candidate_keys: List[str],
-        similarities: List[float],
-        calculated_at: datetime
+        candidate_keys: list[str],
+        similarities: list[float],
+        calculated_at: datetime,
     ):
         self.query_hash = query_hash
         self.candidate_keys = candidate_keys

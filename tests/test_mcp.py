@@ -9,6 +9,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+
 async def test_mcp_tools():
     """Test MCP tool definitions."""
     from kuzu_memory.integrations.mcp_server import KuzuMemoryMCPServer
@@ -33,8 +34,10 @@ async def test_mcp_tools():
     except Exception as e:
         print(f"✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_mcp_tools())

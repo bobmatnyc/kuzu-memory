@@ -6,12 +6,12 @@ classification, entity extraction, and intent detection.
 """
 
 import re
-from typing import Dict, List, Any
+from typing import Any
+
 from ..core.models import MemoryType
 
-
 # Memory type indicator patterns (regex)
-MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
+MEMORY_TYPE_PATTERNS: dict[MemoryType, list[str]] = {
     MemoryType.EPISODIC: [
         r"\byesterday\b",
         r"\blast week\b",
@@ -24,7 +24,7 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\bmentioned\b",
         r"\bsaid\b",
         r"\bdecided to\b",
-        r"\bevent\b"
+        r"\bevent\b",
     ],
     MemoryType.SEMANTIC: [
         r"\bis a\b",
@@ -37,7 +37,7 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\bmy name is\b",
         r"\bproject name is\b",
         r"\bcompany is\b",
-        r"\bthe system\b.*\bis\b"
+        r"\bthe system\b.*\bis\b",
     ],
     MemoryType.PROCEDURAL: [
         r"\bhow to\b",
@@ -50,7 +50,7 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\brecipe\b",
         r"\balgorithm\b",
         r"\bworkflow\b",
-        r"\bsolution is\b"
+        r"\bsolution is\b",
     ],
     MemoryType.WORKING: [
         r"\bneed to\b",
@@ -63,7 +63,7 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\bdeadline\b",
         r"\bfinish\b",
         r"\bcomplete\b",
-        r"\bright now\b"
+        r"\bright now\b",
     ],
     MemoryType.SENSORY: [
         r"\bsmells?\b",
@@ -84,7 +84,7 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\bfeel(ing)?\b",
         r"\btouch\b",
         r"\bhear(ing)?\b",
-        r"\bsee(ing)?\b"
+        r"\bsee(ing)?\b",
     ],
     MemoryType.PREFERENCE: [
         r"\bprefer(s|red)?\b",
@@ -99,116 +99,238 @@ MEMORY_TYPE_PATTERNS: Dict[MemoryType, List[str]] = {
         r"\bbetter than\b",
         r"\binstead of\b",
         r"\brather than\b",
-        r"\bcan't stand\b"
-    ]
+        r"\bcan't stand\b",
+    ],
 }
 
 
 # Simple keyword indicators for memory types
-def get_memory_type_indicators() -> Dict[MemoryType, List[str]]:
+def get_memory_type_indicators() -> dict[MemoryType, list[str]]:
     """Get simple keyword indicators for each memory type."""
     return {
         MemoryType.EPISODIC: [
-            "yesterday", "last week", "remember", "happened", "went",
-            "experienced", "event", "discussed", "mentioned", "said",
-            "decided", "that time", "once", "when I", "we did"
+            "yesterday",
+            "last week",
+            "remember",
+            "happened",
+            "went",
+            "experienced",
+            "event",
+            "discussed",
+            "mentioned",
+            "said",
+            "decided",
+            "that time",
+            "once",
+            "when I",
+            "we did",
         ],
         MemoryType.SEMANTIC: [
-            "is a", "are", "fact", "defined", "means", "equals",
-            "capital", "my name", "project is", "company is",
-            "system is", "truth", "always", "never", "definition"
+            "is a",
+            "are",
+            "fact",
+            "defined",
+            "means",
+            "equals",
+            "capital",
+            "my name",
+            "project is",
+            "company is",
+            "system is",
+            "truth",
+            "always",
+            "never",
+            "definition",
         ],
         MemoryType.PROCEDURAL: [
-            "how to", "steps", "process", "method", "procedure",
-            "first", "then", "instruction", "recipe", "algorithm",
-            "workflow", "template", "pattern", "solution", "fix"
+            "how to",
+            "steps",
+            "process",
+            "method",
+            "procedure",
+            "first",
+            "then",
+            "instruction",
+            "recipe",
+            "algorithm",
+            "workflow",
+            "template",
+            "pattern",
+            "solution",
+            "fix",
         ],
         MemoryType.WORKING: [
-            "need to", "todo", "task", "currently", "working on",
-            "in progress", "deadline", "finish", "complete", "right now",
-            "pending", "ongoing", "active", "urgent", "priority"
+            "need to",
+            "todo",
+            "task",
+            "currently",
+            "working on",
+            "in progress",
+            "deadline",
+            "finish",
+            "complete",
+            "right now",
+            "pending",
+            "ongoing",
+            "active",
+            "urgent",
+            "priority",
         ],
         MemoryType.SENSORY: [
-            "smells", "tastes", "sounds", "looks", "feels",
-            "texture", "color", "bright", "soft", "loud",
-            "sweet", "rough", "smooth", "warm", "cold"
+            "smells",
+            "tastes",
+            "sounds",
+            "looks",
+            "feels",
+            "texture",
+            "color",
+            "bright",
+            "soft",
+            "loud",
+            "sweet",
+            "rough",
+            "smooth",
+            "warm",
+            "cold",
         ],
         MemoryType.PREFERENCE: [
-            "prefer", "like", "don't like", "favorite", "love", "hate",
-            "choose", "ideal", "always use", "better", "instead of",
-            "rather than", "enjoy", "want", "dislike", "avoid", "opt for"
-        ]
+            "prefer",
+            "like",
+            "don't like",
+            "favorite",
+            "love",
+            "hate",
+            "choose",
+            "ideal",
+            "always use",
+            "better",
+            "instead of",
+            "rather than",
+            "enjoy",
+            "want",
+            "dislike",
+            "avoid",
+            "opt for",
+        ],
     }
 
 
 # Entity extraction patterns
-ENTITY_PATTERNS: Dict[str, List[str]] = {
-    'person': [
-        r'\b([A-Z][a-z]+ [A-Z][a-z]+)\b',  # Full names
-        r'\b(Dr\.|Mr\.|Mrs\.|Ms\.) ([A-Z][a-z]+)\b',  # Titles
+ENTITY_PATTERNS: dict[str, list[str]] = {
+    "person": [
+        r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b",  # Full names
+        r"\b(Dr\.|Mr\.|Mrs\.|Ms\.) ([A-Z][a-z]+)\b",  # Titles
     ],
-    'organization': [
-        r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Inc|LLC|Ltd|Corp|Company|Team|Department))\b',
-        r'\b(Google|Microsoft|Amazon|Apple|Facebook|Meta|OpenAI|Anthropic)\b',
+    "organization": [
+        r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Inc|LLC|Ltd|Corp|Company|Team|Department))\b",
+        r"\b(Google|Microsoft|Amazon|Apple|Facebook|Meta|OpenAI|Anthropic)\b",
     ],
-    'location': [
-        r'\b([A-Z][a-z]+,\s+[A-Z]{2})\b',  # City, State
-        r'\b(New York|San Francisco|London|Tokyo|Berlin|Paris)\b',
+    "location": [
+        r"\b([A-Z][a-z]+,\s+[A-Z]{2})\b",  # City, State
+        r"\b(New York|San Francisco|London|Tokyo|Berlin|Paris)\b",
     ],
-    'technology': [
-        r'\b(Python|JavaScript|TypeScript|Java|C\+\+|C#|Go|Rust|Swift|Kotlin)\b',
-        r'\b(React|Vue|Angular|Django|Flask|FastAPI|Spring|Node\.js|Express)\b',
-        r'\b(PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|SQLite|DynamoDB)\b',
-        r'\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|GitHub|GitLab)\b',
-        r'\b(TensorFlow|PyTorch|scikit-learn|Pandas|NumPy|NLTK|spaCy)\b',
+    "technology": [
+        r"\b(Python|JavaScript|TypeScript|Java|C\+\+|C#|Go|Rust|Swift|Kotlin)\b",
+        r"\b(React|Vue|Angular|Django|Flask|FastAPI|Spring|Node\.js|Express)\b",
+        r"\b(PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|SQLite|DynamoDB)\b",
+        r"\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|GitHub|GitLab)\b",
+        r"\b(TensorFlow|PyTorch|scikit-learn|Pandas|NumPy|NLTK|spaCy)\b",
     ],
-    'project': [
-        r'\b([A-Z][a-z]+[A-Z][a-z]+)\b',  # CamelCase
-        r'\b([A-Z][a-z]+-[A-Z][a-z]+)\b',  # Hyphenated
+    "project": [
+        r"\b([A-Z][a-z]+[A-Z][a-z]+)\b",  # CamelCase
+        r"\b([A-Z][a-z]+-[A-Z][a-z]+)\b",  # Hyphenated
     ],
-    'date': [
-        r'\b(\d{1,2}/\d{1,2}/\d{2,4})\b',
-        r'\b(\d{4}-\d{2}-\d{2})\b',
-        r'\b(yesterday|today|tomorrow|last week|next month)\b',
-    ]
+    "date": [
+        r"\b(\d{1,2}/\d{1,2}/\d{2,4})\b",
+        r"\b(\d{4}-\d{2}-\d{2})\b",
+        r"\b(yesterday|today|tomorrow|last week|next month)\b",
+    ],
 }
 
 
 # Intent keywords for classification
-INTENT_KEYWORDS: Dict[str, List[str]] = {
-    'decision': [
-        'decide', 'choose', 'select', 'pick', 'opt for',
-        'go with', 'settle on', 'determine', 'conclude'
+INTENT_KEYWORDS: dict[str, list[str]] = {
+    "decision": [
+        "decide",
+        "choose",
+        "select",
+        "pick",
+        "opt for",
+        "go with",
+        "settle on",
+        "determine",
+        "conclude",
     ],
-    'preference': [
-        'prefer', 'like', 'favor', 'enjoy', 'love',
-        'want', 'wish', 'desire', 'would rather'
+    "preference": [
+        "prefer",
+        "like",
+        "favor",
+        "enjoy",
+        "love",
+        "want",
+        "wish",
+        "desire",
+        "would rather",
     ],
-    'solution': [
-        'solve', 'fix', 'resolve', 'address', 'handle',
-        'workaround', 'remedy', 'correct', 'repair'
+    "solution": [
+        "solve",
+        "fix",
+        "resolve",
+        "address",
+        "handle",
+        "workaround",
+        "remedy",
+        "correct",
+        "repair",
     ],
-    'pattern': [
-        'how to', 'steps', 'process', 'method', 'way to',
-        'procedure', 'technique', 'approach', 'recipe'
+    "pattern": [
+        "how to",
+        "steps",
+        "process",
+        "method",
+        "way to",
+        "procedure",
+        "technique",
+        "approach",
+        "recipe",
     ],
-    'fact': [
-        'is', 'are', 'was', 'were', 'fact',
-        'truth', 'actually', 'really', 'indeed'
+    "fact": [
+        "is",
+        "are",
+        "was",
+        "were",
+        "fact",
+        "truth",
+        "actually",
+        "really",
+        "indeed",
     ],
-    'observation': [
-        'notice', 'observe', 'see', 'find', 'discover',
-        'realize', 'recognize', 'detect', 'spot'
+    "observation": [
+        "notice",
+        "observe",
+        "see",
+        "find",
+        "discover",
+        "realize",
+        "recognize",
+        "detect",
+        "spot",
     ],
-    'status': [
-        'currently', 'now', 'at present', 'ongoing',
-        'in progress', 'working on', 'active', 'pending'
-    ]
+    "status": [
+        "currently",
+        "now",
+        "at present",
+        "ongoing",
+        "in progress",
+        "working on",
+        "active",
+        "pending",
+    ],
 }
 
 
 # Training data for ML classifier (146 examples total)
-def get_training_data() -> List[Dict[str, Any]]:
+def get_training_data() -> list[dict[str, Any]]:
     """Get training examples for memory type classification.
 
     Returns 146 training examples across 6 cognitive memory types:
@@ -244,7 +366,6 @@ def get_training_data() -> List[Dict[str, Any]]:
         {"text": "I attended the conference last Thursday", "type": "episodic"},
         {"text": "The team went for lunch together today", "type": "episodic"},
         {"text": "We discovered the bug during testing yesterday", "type": "episodic"},
-
         # Semantic examples (23 - facts and knowledge)
         {"text": "Paris is the capital of France", "type": "semantic"},
         {"text": "Python is a programming language", "type": "semantic"},
@@ -269,32 +390,72 @@ def get_training_data() -> List[Dict[str, Any]]:
         {"text": "Python was created by Guido van Rossum", "type": "semantic"},
         {"text": "The server has 16GB of RAM", "type": "semantic"},
         {"text": "JSON stands for JavaScript Object Notation", "type": "semantic"},
-
         # Procedural examples (23 - instructions and how-to)
-        {"text": "To make coffee, first boil water then add coffee grounds", "type": "procedural"},
-        {"text": "How to connect to the database: use connection pooling", "type": "procedural"},
+        {
+            "text": "To make coffee, first boil water then add coffee grounds",
+            "type": "procedural",
+        },
+        {
+            "text": "How to connect to the database: use connection pooling",
+            "type": "procedural",
+        },
         {"text": "Steps to deploy: 1. Build 2. Test 3. Deploy", "type": "procedural"},
-        {"text": "The process for code review involves PR approval", "type": "procedural"},
-        {"text": "Method for handling errors: try-catch with logging", "type": "procedural"},
-        {"text": "First install dependencies, then run the build script", "type": "procedural"},
-        {"text": "Recipe: Mix flour and eggs, then bake for 30 minutes", "type": "procedural"},
-        {"text": "Instructions: Press the button then wait 5 seconds", "type": "procedural"},
+        {
+            "text": "The process for code review involves PR approval",
+            "type": "procedural",
+        },
+        {
+            "text": "Method for handling errors: try-catch with logging",
+            "type": "procedural",
+        },
+        {
+            "text": "First install dependencies, then run the build script",
+            "type": "procedural",
+        },
+        {
+            "text": "Recipe: Mix flour and eggs, then bake for 30 minutes",
+            "type": "procedural",
+        },
+        {
+            "text": "Instructions: Press the button then wait 5 seconds",
+            "type": "procedural",
+        },
         {"text": "The solution is to use async operations", "type": "procedural"},
         {"text": "To fix the bug, clear the cache and restart", "type": "procedural"},
-        {"text": "How to set up authentication: configure JWT tokens", "type": "procedural"},
+        {
+            "text": "How to set up authentication: configure JWT tokens",
+            "type": "procedural",
+        },
         {"text": "Algorithm: Sort the array then binary search", "type": "procedural"},
-        {"text": "Workflow: Design, implement, test, deploy, monitor", "type": "procedural"},
+        {
+            "text": "Workflow: Design, implement, test, deploy, monitor",
+            "type": "procedural",
+        },
         {"text": "To optimize queries, add proper indexes", "type": "procedural"},
-        {"text": "Pattern for error handling: log, notify, recover", "type": "procedural"},
+        {
+            "text": "Pattern for error handling: log, notify, recover",
+            "type": "procedural",
+        },
         {"text": "How to debug: reproduce, isolate, fix, verify", "type": "procedural"},
-        {"text": "Template for API endpoints: validate, process, respond", "type": "procedural"},
-        {"text": "Steps for migration: backup, migrate, validate", "type": "procedural"},
+        {
+            "text": "Template for API endpoints: validate, process, respond",
+            "type": "procedural",
+        },
+        {
+            "text": "Steps for migration: backup, migrate, validate",
+            "type": "procedural",
+        },
         {"text": "To improve performance, use caching and CDN", "type": "procedural"},
-        {"text": "Method to scale: horizontal scaling with load balancer", "type": "procedural"},
+        {
+            "text": "Method to scale: horizontal scaling with load balancer",
+            "type": "procedural",
+        },
         {"text": "How to write tests: arrange, act, assert", "type": "procedural"},
-        {"text": "Process for releases: branch, test, merge, tag", "type": "procedural"},
+        {
+            "text": "Process for releases: branch, test, merge, tag",
+            "type": "procedural",
+        },
         {"text": "To secure the API, implement rate limiting", "type": "procedural"},
-
         # Working examples (24 - tasks and current focus)
         {"text": "Need to finish the report by tomorrow", "type": "working"},
         {"text": "Currently working on the authentication module", "type": "working"},
@@ -320,7 +481,6 @@ def get_training_data() -> List[Dict[str, Any]]:
         {"text": "In the middle of debugging the race condition", "type": "working"},
         {"text": "TODO: update all package dependencies", "type": "working"},
         {"text": "Pending task: configure monitoring alerts", "type": "working"},
-
         # Sensory examples (23 - sensory descriptions)
         {"text": "The coffee smells like fresh roasted beans", "type": "sensory"},
         {"text": "The interface looks bright and colorful", "type": "sensory"},
@@ -345,7 +505,6 @@ def get_training_data() -> List[Dict[str, Any]]:
         {"text": "The buttons feel responsive and tactile", "type": "sensory"},
         {"text": "The background music sounds relaxing", "type": "sensory"},
         {"text": "The design looks clean and minimalist", "type": "sensory"},
-
         # Preference examples (30 - preferences and choices)
         {"text": "I prefer Python over JavaScript for backend", "type": "preference"},
         {"text": "The user likes dark mode interfaces", "type": "preference"},
@@ -382,18 +541,37 @@ def get_training_data() -> List[Dict[str, Any]]:
 
 # Confidence adjustment rules
 CONFIDENCE_RULES = {
-    'high_confidence_indicators': [
-        'definitely', 'certainly', 'absolutely', 'always',
-        'never', 'must', 'required', 'critical', 'essential'
+    "high_confidence_indicators": [
+        "definitely",
+        "certainly",
+        "absolutely",
+        "always",
+        "never",
+        "must",
+        "required",
+        "critical",
+        "essential",
     ],
-    'medium_confidence_indicators': [
-        'usually', 'typically', 'generally', 'often',
-        'commonly', 'frequently', 'normally', 'mostly'
+    "medium_confidence_indicators": [
+        "usually",
+        "typically",
+        "generally",
+        "often",
+        "commonly",
+        "frequently",
+        "normally",
+        "mostly",
     ],
-    'low_confidence_indicators': [
-        'maybe', 'perhaps', 'possibly', 'might',
-        'could', 'sometimes', 'occasionally', 'rarely'
-    ]
+    "low_confidence_indicators": [
+        "maybe",
+        "perhaps",
+        "possibly",
+        "might",
+        "could",
+        "sometimes",
+        "occasionally",
+        "rarely",
+    ],
 }
 
 
@@ -411,12 +589,12 @@ def adjust_confidence_by_indicators(content: str, base_confidence: float) -> flo
     content_lower = content.lower()
 
     # Check for high confidence indicators
-    for indicator in CONFIDENCE_RULES['high_confidence_indicators']:
+    for indicator in CONFIDENCE_RULES["high_confidence_indicators"]:
         if indicator in content_lower:
             return min(1.0, base_confidence + 0.2)
 
     # Check for low confidence indicators
-    for indicator in CONFIDENCE_RULES['low_confidence_indicators']:
+    for indicator in CONFIDENCE_RULES["low_confidence_indicators"]:
         if indicator in content_lower:
             return max(0.3, base_confidence - 0.2)
 
@@ -426,18 +604,18 @@ def adjust_confidence_by_indicators(content: str, base_confidence: float) -> flo
 
 # Memory importance weights by category
 IMPORTANCE_WEIGHTS = {
-    'contains_code': 0.1,
-    'contains_url': 0.05,
-    'contains_numbers': 0.05,
-    'is_question': -0.1,
-    'is_command': 0.15,
-    'has_entities': 0.1,
-    'is_long': 0.05,
-    'is_technical': 0.1
+    "contains_code": 0.1,
+    "contains_url": 0.05,
+    "contains_numbers": 0.05,
+    "is_question": -0.1,
+    "is_command": 0.15,
+    "has_entities": 0.1,
+    "is_long": 0.05,
+    "is_technical": 0.1,
 }
 
 
-def calculate_content_importance(content: str) -> Dict[str, bool]:
+def calculate_content_importance(content: str) -> dict[str, bool]:
     """
     Calculate importance factors from content.
 
@@ -450,41 +628,49 @@ def calculate_content_importance(content: str) -> Dict[str, bool]:
     factors = {}
 
     # Check for code blocks or snippets
-    factors['contains_code'] = bool(
-        re.search(r'```|def |class |function |import |from |return ', content)
+    factors["contains_code"] = bool(
+        re.search(r"```|def |class |function |import |from |return ", content)
     )
 
     # Check for URLs
-    factors['contains_url'] = bool(
-        re.search(r'https?://[^\s]+', content)
-    )
+    factors["contains_url"] = bool(re.search(r"https?://[^\s]+", content))
 
     # Check for numbers/metrics
-    factors['contains_numbers'] = bool(
-        re.search(r'\b\d+\.?\d*\b', content)
-    )
+    factors["contains_numbers"] = bool(re.search(r"\b\d+\.?\d*\b", content))
 
     # Check if it's a question
-    factors['is_question'] = '?' in content
+    factors["is_question"] = "?" in content
 
     # Check if it's a command/instruction
-    factors['is_command'] = bool(
-        re.search(r'^(do |make |create |update |delete |run |execute )', content.lower())
+    factors["is_command"] = bool(
+        re.search(
+            r"^(do |make |create |update |delete |run |execute )", content.lower()
+        )
     )
 
     # Check for named entities (simplified)
-    factors['has_entities'] = bool(
-        re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', content)
+    factors["has_entities"] = bool(
+        re.search(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", content)
     )
 
     # Check if it's long content
-    factors['is_long'] = len(content.split()) > 50
+    factors["is_long"] = len(content.split()) > 50
 
     # Check if it's technical
     tech_terms = [
-        'api', 'database', 'server', 'client', 'backend', 'frontend',
-        'algorithm', 'function', 'method', 'class', 'module', 'package'
+        "api",
+        "database",
+        "server",
+        "client",
+        "backend",
+        "frontend",
+        "algorithm",
+        "function",
+        "method",
+        "class",
+        "module",
+        "package",
     ]
-    factors['is_technical'] = any(term in content.lower() for term in tech_terms)
+    factors["is_technical"] = any(term in content.lower() for term in tech_terms)
 
     return factors

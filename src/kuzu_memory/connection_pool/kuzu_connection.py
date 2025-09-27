@@ -8,13 +8,14 @@ resource management and error handling.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ..interfaces.connection_pool import IConnection
 
 # Handle Kuzu import gracefully
 try:
     import kuzu
+
     KUZU_AVAILABLE = True
 except ImportError:
     KUZU_AVAILABLE = False
@@ -40,16 +41,14 @@ class KuzuConnection(IConnection):
             num_threads: Number of threads for Kuzu operations
         """
         if not KUZU_AVAILABLE:
-            raise ImportError(
-                "Kuzu is not available. Install with: pip install kuzu"
-            )
+            raise ImportError("Kuzu is not available. Install with: pip install kuzu")
 
         self.database_path = database_path
         self.num_threads = num_threads
 
         # Connection objects (initialized lazily)
-        self._db: Optional[kuzu.Database] = None
-        self._conn: Optional[kuzu.Connection] = None
+        self._db: kuzu.Database | None = None
+        self._conn: kuzu.Connection | None = None
 
         # Connection state
         self._is_connected = False
@@ -87,7 +86,7 @@ class KuzuConnection(IConnection):
             self._is_connected = False
             raise
 
-    async def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Execute a query on this connection.
 
@@ -128,9 +127,8 @@ class KuzuConnection(IConnection):
                 raise
 
     async def execute_many(
-        self,
-        queries: List[Tuple[str, Optional[Dict[str, Any]]]]
-    ) -> List[Any]:
+        self, queries: list[tuple[str, dict[str, Any] | None]]
+    ) -> list[Any]:
         """
         Execute multiple queries on this connection.
 
@@ -215,7 +213,7 @@ class KuzuConnection(IConnection):
             return None
 
         # Handle different result types
-        if hasattr(result, 'getNext'):
+        if hasattr(result, "getNext"):
             # Result is a query result with rows
             rows = []
             while result.hasNext():
@@ -223,9 +221,9 @@ class KuzuConnection(IConnection):
                 # Convert row data to dictionary format
                 if isinstance(row_data, list):
                     # Get column names if available
-                    column_names = getattr(result, 'getColumnNames', lambda: [])()
+                    column_names = getattr(result, "getColumnNames", lambda: [])()
                     if column_names:
-                        row_dict = dict(zip(column_names, row_data))
+                        row_dict = dict(zip(column_names, row_data, strict=False))
                         rows.append(row_dict)
                     else:
                         rows.append(row_data)
@@ -237,7 +235,7 @@ class KuzuConnection(IConnection):
         return result
 
     @property
-    def connection_info(self) -> Dict[str, Any]:
+    def connection_info(self) -> dict[str, Any]:
         """Get connection information."""
         return {
             "database_path": self.database_path,
@@ -247,7 +245,7 @@ class KuzuConnection(IConnection):
             "created_at": self._created_at.isoformat(),
             "last_used": self._last_used.isoformat(),
             "query_count": self._query_count,
-            "age_seconds": (datetime.now() - self._created_at).total_seconds()
+            "age_seconds": (datetime.now() - self._created_at).total_seconds(),
         }
 
     def __repr__(self) -> str:

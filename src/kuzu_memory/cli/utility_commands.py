@@ -4,27 +4,35 @@ Utility CLI commands for KuzuMemory.
 Contains commands for optimize, setup, examples, tips, temporal_analysis operations.
 """
 
-import sys
 import json
-from pathlib import Path
-from typing import Optional, Dict, Any
-import click
 import logging
+import sys
 
-from .cli_utils import rich_print, rich_panel, rich_table, rich_confirm, rich_prompt, console, RICH_AVAILABLE
+import click
+
 from ..core.memory import KuzuMemory
-from ..core.config import KuzuMemoryConfig
-from ..utils.config_loader import get_config_loader
-from ..utils.exceptions import KuzuMemoryError
-from ..utils.project_setup import get_project_db_path, find_project_root
 from ..integrations.auggie import AuggieIntegration
+from ..utils.project_setup import find_project_root, get_project_db_path
+from .cli_utils import (
+    RICH_AVAILABLE,
+    console,
+    rich_confirm,
+    rich_panel,
+    rich_print,
+    rich_prompt,
+    rich_table,
+)
 
 logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option('--enable-cli', is_flag=True, help='Enable Kuzu CLI adapter for better performance')
-@click.option('--disable-cli', is_flag=True, help='Disable Kuzu CLI adapter (use Python API)')
+@click.option(
+    "--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance"
+)
+@click.option(
+    "--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)"
+)
 @click.pass_context
 def optimize(ctx, enable_cli, disable_cli):
     """
@@ -45,15 +53,16 @@ def optimize(ctx, enable_cli, disable_cli):
       kuzu-memory optimize
     """
     try:
-        from ..core.config import KuzuMemoryConfig
         from ..utils.config_loader import get_config_loader
 
-        project_root = ctx.obj.get('project_root') or find_project_root()
+        project_root = ctx.obj.get("project_root") or find_project_root()
         config_loader = get_config_loader()
         current_config = config_loader.load_config(project_root)
 
         if enable_cli and disable_cli:
-            rich_print("❌ Cannot enable and disable CLI adapter at the same time", style="red")
+            rich_print(
+                "❌ Cannot enable and disable CLI adapter at the same time", style="red"
+            )
             sys.exit(1)
 
         changes_made = []
@@ -70,45 +79,63 @@ def optimize(ctx, enable_cli, disable_cli):
             # Interactive optimization
             rich_print("⚡ KuzuMemory Performance Optimization")
             rich_print("Current settings:")
-            rich_print(f"  CLI Adapter: {'✅ Enabled' if current_config.storage.use_cli_adapter else '❌ Disabled'}")
-            rich_print(f"  Connection Pool Size: {current_config.storage.connection_pool_size}")
+            rich_print(
+                f"  CLI Adapter: {'✅ Enabled' if current_config.storage.use_cli_adapter else '❌ Disabled'}"
+            )
+            rich_print(
+                f"  Connection Pool Size: {current_config.storage.connection_pool_size}"
+            )
             rich_print(f"  Cache TTL: {current_config.caching.ttl_seconds}s")
 
             # CLI Adapter optimization
-            if rich_confirm("Enable Kuzu CLI adapter for better performance?",
-                          default=not current_config.storage.use_cli_adapter):
+            if rich_confirm(
+                "Enable Kuzu CLI adapter for better performance?",
+                default=not current_config.storage.use_cli_adapter,
+            ):
                 if not current_config.storage.use_cli_adapter:
                     current_config.storage.use_cli_adapter = True
                     changes_made.append("✅ Enabled Kuzu CLI adapter")
 
             # Connection pool optimization
             if rich_confirm("Optimize connection pool size?", default=True):
-                new_pool_size = rich_prompt("Connection pool size", default=str(current_config.storage.connection_pool_size))
+                new_pool_size = rich_prompt(
+                    "Connection pool size",
+                    default=str(current_config.storage.connection_pool_size),
+                )
                 try:
                     new_pool_size = int(new_pool_size)
                     if new_pool_size != current_config.storage.connection_pool_size:
                         current_config.storage.connection_pool_size = new_pool_size
-                        changes_made.append(f"🔧 Set connection pool size to {new_pool_size}")
+                        changes_made.append(
+                            f"🔧 Set connection pool size to {new_pool_size}"
+                        )
                 except ValueError:
-                    rich_print("⚠️  Invalid pool size, keeping current value", style="yellow")
+                    rich_print(
+                        "⚠️  Invalid pool size, keeping current value", style="yellow"
+                    )
 
             # Cache optimization
             if rich_confirm("Optimize caching settings?", default=True):
-                new_ttl = rich_prompt("Cache TTL (seconds)", default=str(current_config.caching.ttl_seconds))
+                new_ttl = rich_prompt(
+                    "Cache TTL (seconds)",
+                    default=str(current_config.caching.ttl_seconds),
+                )
                 try:
                     new_ttl = int(new_ttl)
                     if new_ttl != current_config.caching.ttl_seconds:
                         current_config.caching.ttl_seconds = new_ttl
                         changes_made.append(f"⏱️  Set cache TTL to {new_ttl}s")
                 except ValueError:
-                    rich_print("⚠️  Invalid TTL value, keeping current value", style="yellow")
+                    rich_print(
+                        "⚠️  Invalid TTL value, keeping current value", style="yellow"
+                    )
 
         if changes_made:
             # Save configuration
             config_path = project_root / ".kuzu-memory" / "config.json"
             config_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with config_path.open('w') as f:
+            with config_path.open("w") as f:
                 json.dump(current_config.to_dict(), f, indent=2)
 
             rich_print("\n⚡ Optimization Complete:")
@@ -124,6 +151,7 @@ def optimize(ctx, enable_cli, disable_cli):
                     db_path = get_project_db_path(project_root)
                     with KuzuMemory(db_path=db_path, config=current_config) as memory:
                         import time
+
                         start_time = time.time()
                         test_memories = memory.get_recent_memories(limit=5)
                         end_time = time.time()
@@ -145,14 +173,14 @@ def optimize(ctx, enable_cli, disable_cli):
             rich_print("ℹ️  No changes made", style="blue")
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Optimization failed: {e}", style="red")
         sys.exit(1)
 
 
 @click.command()
-@click.option('--advanced', is_flag=True, help='Show advanced configuration options')
+@click.option("--advanced", is_flag=True, help="Show advanced configuration options")
 @click.pass_context
 def setup(ctx, advanced):
     """
@@ -170,7 +198,6 @@ def setup(ctx, advanced):
       kuzu-memory setup --advanced
     """
     try:
-        from ..core.memory import KuzuMemory
         from ..core.config import KuzuMemoryConfig
 
         rich_panel(
@@ -178,10 +205,10 @@ def setup(ctx, advanced):
             "This guide will help you configure KuzuMemory for optimal performance\n"
             "in your project environment.",
             title="🔧 Setup Guide",
-            style="blue"
+            style="blue",
         )
 
-        project_root = ctx.obj.get('project_root') or find_project_root()
+        project_root = ctx.obj.get("project_root") or find_project_root()
         db_path = get_project_db_path(project_root)
 
         # Check initialization status
@@ -190,6 +217,7 @@ def setup(ctx, advanced):
             if rich_confirm("Initialize KuzuMemory for this project?", default=True):
                 # Call init command logic
                 from .project_commands import init
+
                 ctx.invoke(init)
             else:
                 rich_print("Setup cancelled. Run 'kuzu-memory init' first.")
@@ -246,7 +274,9 @@ def setup(ctx, advanced):
                             auggie.setup_project_integration()
                             rich_print("   ✅ Auggie integration configured")
                         except Exception as e:
-                            rich_print(f"   ⚠️  Auggie setup failed: {e}", style="yellow")
+                            rich_print(
+                                f"   ⚠️  Auggie setup failed: {e}", style="yellow"
+                            )
             except ImportError:
                 rich_print("   ℹ️  Auggie integration not available")
 
@@ -254,7 +284,7 @@ def setup(ctx, advanced):
         config_path = project_root / ".kuzu-memory" / "config.json"
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with config_path.open('w') as f:
+        with config_path.open("w") as f:
             json.dump(config.to_dict(), f, indent=2)
 
         rich_panel(
@@ -265,11 +295,11 @@ def setup(ctx, advanced):
             f"• Store a memory: kuzu-memory remember 'Setup completed'\n"
             f"• Try enhancement: kuzu-memory enhance 'How do I use this?'\n",
             title="✅ Setup Complete",
-            style="green"
+            style="green",
         )
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Setup failed: {e}", style="red")
         sys.exit(1)
@@ -302,8 +332,8 @@ def tips(ctx):
             "   • Enhance prompts before sending to AI models",
             "",
             "📚 **Memory Best Practices**",
-            "   • Be specific: \"Use PostgreSQL with asyncpg driver\" vs \"Use database\"",
-            "   • Include context: \"Authentication uses JWT tokens with 24h expiry\"",
+            '   • Be specific: "Use PostgreSQL with asyncpg driver" vs "Use database"',
+            '   • Include context: "Authentication uses JWT tokens with 24h expiry"',
             "   • Group related memories with --session-id",
             "",
             "🔧 **Configuration**",
@@ -322,11 +352,20 @@ def tips(ctx):
             "   • Filter by source: --agent-id or --session-id",
         ]
 
-        rich_panel("\n".join(tips_content), title="💡 KuzuMemory Tips & Best Practices", style="blue")
+        rich_panel(
+            "\n".join(tips_content),
+            title="💡 KuzuMemory Tips & Best Practices",
+            style="blue",
+        )
 
         # Interactive help
-        if rich_confirm("\nWould you like specific help with any topic?", default=False):
-            topic = rich_prompt("Enter topic (getting-started, performance, ai-integration, config)", default="")
+        if rich_confirm(
+            "\nWould you like specific help with any topic?", default=False
+        ):
+            topic = rich_prompt(
+                "Enter topic (getting-started, performance, ai-integration, config)",
+                default="",
+            )
 
             topic_help = {
                 "getting-started": [
@@ -334,44 +373,47 @@ def tips(ctx):
                     "1. Initialize: kuzu-memory init",
                     "2. Store info: kuzu-memory remember 'Your project details'",
                     "3. Test recall: kuzu-memory recall 'your question'",
-                    "4. Try enhancement: kuzu-memory enhance 'your prompt'"
+                    "4. Try enhancement: kuzu-memory enhance 'your prompt'",
                 ],
                 "performance": [
                     "⚡ Performance Optimization:",
                     "1. Enable CLI adapter: kuzu-memory optimize --enable-cli",
                     "2. Limit recalls: --max-memories 5",
                     "3. Use async learning: --quiet flag",
-                    "4. Monitor response times: kuzu-memory stats"
+                    "4. Monitor response times: kuzu-memory stats",
                 ],
                 "ai-integration": [
                     "🤖 AI Integration Pattern:",
                     "result = subprocess.run(['kuzu-memory', 'enhance', prompt, '--format', 'plain'])",
                     "subprocess.run(['kuzu-memory', 'learn', content, '--quiet'])",
-                    "Always use subprocess calls, never direct imports!"
+                    "Always use subprocess calls, never direct imports!",
                 ],
                 "config": [
                     "⚙️  Configuration Tips:",
                     "1. Save config: kuzu-memory create-config ./config.json",
                     "2. Enable features: CLI adapter, caching, temporal decay",
                     "3. Set memory limits: max_memories_per_query",
-                    "4. Configure retention: temporal decay policies"
-                ]
+                    "4. Configure retention: temporal decay policies",
+                ],
             }
 
             if topic in topic_help:
                 rich_print("\n" + "\n".join(topic_help[topic]))
             else:
-                rich_print("ℹ️  Topic not found. Available: getting-started, performance, ai-integration, config", style="blue")
+                rich_print(
+                    "ℹ️  Topic not found. Available: getting-started, performance, ai-integration, config",
+                    style="blue",
+                )
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Tips display failed: {e}", style="red")
         sys.exit(1)
 
 
 @click.command()
-@click.argument('topic', required=False)
+@click.argument("topic", required=False)
 @click.pass_context
 def examples(ctx, topic):
     """
@@ -406,7 +448,7 @@ def examples(ctx, topic):
                     "# Enhance prompts",
                     "kuzu-memory enhance 'How do I structure the API?'",
                     "kuzu-memory enhance 'Performance tips' --format plain",
-                ]
+                ],
             },
             "ai": {
                 "title": "🤖 AI Integration Examples",
@@ -429,14 +471,14 @@ def examples(ctx, topic):
                     "enhanced = enhance_prompt('How do I authenticate users?')",
                     "ai_response = your_ai_model(enhanced)",
                     "learn_async(f'User asked about auth: {ai_response}')",
-                ]
+                ],
             },
             "advanced": {
                 "title": "🚀 Advanced Usage Examples",
                 "examples": [
                     "# Learning with metadata",
                     "kuzu-memory learn 'API rate limit is 1000/hour' \\",
-                    "  --metadata '{\"priority\": \"high\", \"category\": \"limits\"}'",
+                    '  --metadata \'{"priority": "high", "category": "limits"}\'',
                     "",
                     "# Session-based memories",
                     "kuzu-memory remember 'Bug in auth module' --session-id bug-123",
@@ -453,8 +495,8 @@ def examples(ctx, topic):
                     "",
                     "# Batch operations",
                     "for info in project_info:",
-                    "    kuzu-memory learn \"$info\" --quiet --source batch-import",
-                ]
+                    '    kuzu-memory learn "$info" --quiet --source batch-import',
+                ],
             },
             "performance": {
                 "title": "⚡ Performance Examples",
@@ -474,37 +516,49 @@ def examples(ctx, topic):
                     "",
                     "# Cleanup for performance",
                     "kuzu-memory cleanup --force",
-                ]
-            }
+                ],
+            },
         }
 
         if topic:
             if topic in all_examples:
                 example_set = all_examples[topic]
-                rich_panel("\n".join(example_set["examples"]), title=example_set["title"], style="green")
+                rich_panel(
+                    "\n".join(example_set["examples"]),
+                    title=example_set["title"],
+                    style="green",
+                )
             else:
                 rich_print(f"❌ Unknown topic: {topic}", style="red")
                 rich_print(f"Available topics: {', '.join(all_examples.keys())}")
         else:
             # Show all examples
             for topic_name, example_set in all_examples.items():
-                rich_panel("\n".join(example_set["examples"]), title=example_set["title"], style="green")
+                rich_panel(
+                    "\n".join(example_set["examples"]),
+                    title=example_set["title"],
+                    style="green",
+                )
                 rich_print()  # Add spacing
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Examples display failed: {e}", style="red")
         sys.exit(1)
 
 
 @click.command()
-@click.option('--memory-id', help='Analyze specific memory by ID')
-@click.option('--memory-type', help='Analyze all memories of specific type')
-@click.option('--limit', default=10, help='Number of memories to analyze')
-@click.option('--format', 'output_format', default='table',
-              type=click.Choice(['table', 'json', 'detailed']),
-              help='Output format')
+@click.option("--memory-id", help="Analyze specific memory by ID")
+@click.option("--memory-type", help="Analyze all memories of specific type")
+@click.option("--limit", default=10, help="Number of memories to analyze")
+@click.option(
+    "--format",
+    "output_format",
+    default="table",
+    type=click.Choice(["table", "json", "detailed"]),
+    help="Output format",
+)
 @click.pass_context
 def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
     """
@@ -526,7 +580,8 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
     """
     try:
         from ..utils.project_setup import get_project_db_path
-        db_path = get_project_db_path(ctx.obj.get('project_root'))
+
+        db_path = get_project_db_path(ctx.obj.get("project_root"))
 
         with KuzuMemory(db_path=db_path) as memory:
             from ..recall.temporal_decay import TemporalDecayEngine
@@ -545,7 +600,7 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
                 # Get recent memories, optionally filtered by type
                 filters = {}
                 if memory_type:
-                    filters['memory_type'] = memory_type
+                    filters["memory_type"] = memory_type
 
                 memories = memory.get_recent_memories(limit=limit, **filters)
 
@@ -560,24 +615,32 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
                 analyses.append(analysis)
 
             # Display results
-            if output_format == 'json':
+            if output_format == "json":
                 rich_print(json.dumps(analyses, indent=2, default=str))
-            elif output_format == 'detailed':
+            elif output_format == "detailed":
                 for analysis in analyses:
-                    rich_print(f"\n🧠 Memory Analysis: {analysis['memory_id'][:8]}...", style="blue")
+                    rich_print(
+                        f"\n🧠 Memory Analysis: {analysis['memory_id'][:8]}...",
+                        style="blue",
+                    )
                     rich_print(f"  Type: {analysis['memory_type']}")
-                    rich_print(f"  Age: {analysis['age_days']} days ({analysis['age_hours']} hours)")
+                    rich_print(
+                        f"  Age: {analysis['age_days']} days ({analysis['age_hours']} hours)"
+                    )
                     rich_print(f"  Decay Function: {analysis['decay_function']}")
                     rich_print(f"  Half-life: {analysis['half_life_days']} days")
                     rich_print(f"  Base Score: {analysis['base_decay_score']}")
                     rich_print(f"  Final Score: {analysis['final_temporal_score']}")
-                    rich_print(f"  Recent Boost: {'✅ Applied' if analysis['recent_boost_applied'] else '❌ Not Applied'}")
+                    rich_print(
+                        f"  Recent Boost: {'✅ Applied' if analysis['recent_boost_applied'] else '❌ Not Applied'}"
+                    )
                     rich_print(f"  Minimum Score: {analysis['minimum_score']}")
                     rich_print(f"  Boost Multiplier: {analysis['boost_multiplier']}")
             else:
                 # Table format
                 if RICH_AVAILABLE and console:
                     from rich.table import Table
+
                     table = Table(title="🕒 Temporal Decay Analysis")
                     table.add_column("Memory ID", style="cyan")
                     table.add_column("Type", style="green")
@@ -588,47 +651,63 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
                     table.add_column("Recent Boost", style="green")
 
                     for analysis in analyses:
-                        boost_icon = "✅" if analysis['recent_boost_applied'] else "❌"
+                        boost_icon = "✅" if analysis["recent_boost_applied"] else "❌"
                         table.add_row(
-                            analysis['memory_id'][:8] + "...",
-                            analysis['memory_type'],
+                            analysis["memory_id"][:8] + "...",
+                            analysis["memory_type"],
                             f"{analysis['age_days']:.1f}",
-                            analysis['decay_function'],
+                            analysis["decay_function"],
                             f"{analysis['base_decay_score']:.3f}",
                             f"{analysis['final_temporal_score']:.3f}",
-                            boost_icon
+                            boost_icon,
                         )
 
                     console.print(table)
                 else:
                     # Fallback table format
-                    headers = ["ID", "Type", "Age", "Function", "Base", "Final", "Boost"]
+                    headers = [
+                        "ID",
+                        "Type",
+                        "Age",
+                        "Function",
+                        "Base",
+                        "Final",
+                        "Boost",
+                    ]
                     rows = []
                     for analysis in analyses:
-                        boost_icon = "✅" if analysis['recent_boost_applied'] else "❌"
-                        rows.append([
-                            analysis['memory_id'][:8] + "...",
-                            analysis['memory_type'],
-                            f"{analysis['age_days']:.1f}d",
-                            analysis['decay_function'],
-                            f"{analysis['base_decay_score']:.3f}",
-                            f"{analysis['final_temporal_score']:.3f}",
-                            boost_icon
-                        ])
+                        boost_icon = "✅" if analysis["recent_boost_applied"] else "❌"
+                        rows.append(
+                            [
+                                analysis["memory_id"][:8] + "...",
+                                analysis["memory_type"],
+                                f"{analysis['age_days']:.1f}d",
+                                analysis["decay_function"],
+                                f"{analysis['base_decay_score']:.3f}",
+                                f"{analysis['final_temporal_score']:.3f}",
+                                boost_icon,
+                            ]
+                        )
                     rich_table(headers, rows, title="🕒 Temporal Decay Analysis")
 
                 # Summary statistics
-                avg_age = sum(a['age_days'] for a in analyses) / len(analyses)
-                avg_score = sum(a['final_temporal_score'] for a in analyses) / len(analyses)
-                recent_boost_count = sum(1 for a in analyses if a['recent_boost_applied'])
+                avg_age = sum(a["age_days"] for a in analyses) / len(analyses)
+                avg_score = sum(a["final_temporal_score"] for a in analyses) / len(
+                    analyses
+                )
+                recent_boost_count = sum(
+                    1 for a in analyses if a["recent_boost_applied"]
+                )
 
-                rich_print(f"\n📊 Summary:")
+                rich_print("\n📊 Summary:")
                 rich_print(f"  Average Age: {avg_age:.1f} days")
                 rich_print(f"  Average Temporal Score: {avg_score:.3f}")
-                rich_print(f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories")
+                rich_print(
+                    f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories"
+                )
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Temporal analysis failed: {e}", style="red")
         sys.exit(1)

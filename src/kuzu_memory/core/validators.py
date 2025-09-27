@@ -4,25 +4,25 @@ Input validation schemas for KuzuMemory using Pydantic.
 Provides validated models for API inputs and configurations.
 """
 
-from typing import Optional, Dict, Any, List
-from datetime import datetime
-from pydantic import BaseModel, Field, validator, conint, confloat
+from typing import Any
 
-from .models import MemoryType
+from pydantic import BaseModel, Field, confloat, conint, validator
+
 from .constants import (
-    MAX_CONTENT_LENGTH,
-    MAX_ID_LENGTH,
-    MIN_IMPORTANCE,
-    MAX_IMPORTANCE,
-    MIN_CONFIDENCE,
-    MAX_CONFIDENCE,
-    DEFAULT_MEMORY_LIMIT,
-    MAX_MEMORY_LIMIT,
-    MIN_DECAY_FACTOR,
-    MAX_DECAY_FACTOR,
     DEFAULT_AGENT_ID,
+    DEFAULT_MEMORY_LIMIT,
     DEFAULT_RECALL_STRATEGY,
+    MAX_CONFIDENCE,
+    MAX_CONTENT_LENGTH,
+    MAX_DECAY_FACTOR,
+    MAX_ID_LENGTH,
+    MAX_IMPORTANCE,
+    MAX_MEMORY_LIMIT,
+    MIN_CONFIDENCE,
+    MIN_DECAY_FACTOR,
+    MIN_IMPORTANCE,
 )
+from .models import MemoryType
 
 
 class AttachMemoriesRequest(BaseModel):
@@ -30,12 +30,14 @@ class AttachMemoriesRequest(BaseModel):
 
     prompt: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     max_memories: conint(ge=1, le=MAX_MEMORY_LIMIT) = DEFAULT_MEMORY_LIMIT
-    strategy: str = Field(DEFAULT_RECALL_STRATEGY, regex="^(auto|keyword|entity|temporal)$")
-    user_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
-    session_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
+    strategy: str = Field(
+        DEFAULT_RECALL_STRATEGY, regex="^(auto|keyword|entity|temporal)$"
+    )
+    user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
+    session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
 
-    @validator('prompt')
+    @validator("prompt")
     def validate_prompt(cls, v):
         """Ensure prompt is not just whitespace."""
         if not v.strip():
@@ -48,23 +50,24 @@ class GenerateMemoriesRequest(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     source_type: str = Field("conversation", max_length=50)
-    user_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
-    session_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
+    user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
+    session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
-    metadata: Optional[Dict[str, Any]] = Field(None)
+    metadata: dict[str, Any] | None = Field(None)
 
-    @validator('content')
+    @validator("content")
     def validate_content(cls, v):
         """Ensure content is not just whitespace."""
         if not v.strip():
             raise ValueError("Content cannot be empty or just whitespace")
         return v
 
-    @validator('metadata')
+    @validator("metadata")
     def validate_metadata(cls, v):
         """Ensure metadata is serializable and not too large."""
         if v is not None:
             import json
+
             try:
                 serialized = json.dumps(v)
                 if len(serialized) > 5000:  # 5KB limit
@@ -82,13 +85,13 @@ class MemoryCreationRequest(BaseModel):
     importance: confloat(ge=MIN_IMPORTANCE, le=MAX_IMPORTANCE) = 0.5
     confidence: confloat(ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE) = 1.0
     source_type: str = Field("manual", max_length=50)
-    user_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
-    session_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
+    user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
+    session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
-    metadata: Optional[Dict[str, Any]] = None
-    entities: Optional[List[str]] = None
+    metadata: dict[str, Any] | None = None
+    entities: list[str] | None = None
 
-    @validator('entities')
+    @validator("entities")
     def validate_entities(cls, v):
         """Ensure entities are valid strings."""
         if v is not None:
@@ -106,12 +109,12 @@ class RecallRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     limit: conint(ge=1, le=MAX_MEMORY_LIMIT) = DEFAULT_MEMORY_LIMIT
     decay_factor: confloat(ge=MIN_DECAY_FACTOR, le=MAX_DECAY_FACTOR) = 0.9
-    user_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
-    session_id: Optional[str] = Field(None, max_length=MAX_ID_LENGTH)
-    memory_types: Optional[List[MemoryType]] = None
-    time_range_days: Optional[conint(ge=1, le=365)] = None
+    user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
+    session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
+    memory_types: list[MemoryType] | None = None
+    time_range_days: conint(ge=1, le=365) | None = None
 
-    @validator('query')
+    @validator("query")
     def validate_query(cls, v):
         """Ensure query is not just whitespace."""
         if not v.strip():
@@ -122,15 +125,16 @@ class RecallRequest(BaseModel):
 class BatchMemoryRequest(BaseModel):
     """Validated input for batch memory operations."""
 
-    memories: List[MemoryCreationRequest] = Field(..., min_items=1, max_items=1000)
+    memories: list[MemoryCreationRequest] = Field(..., min_items=1, max_items=1000)
     deduplicate: bool = Field(True, description="Whether to check for duplicates")
     merge_similar: bool = Field(False, description="Whether to merge similar memories")
 
-    @validator('memories')
+    @validator("memories")
     def validate_batch_size(cls, v):
         """Ensure batch size is reasonable."""
         if len(v) > 100:
             import logging
+
             logging.getLogger(__name__).warning(
                 f"Large batch size ({len(v)} memories) may impact performance"
             )
@@ -158,7 +162,10 @@ def validate_memory_id(memory_id: str) -> str:
 
     # Basic format validation (alphanumeric with hyphens/underscores)
     import re
-    if not re.match(r'^[a-zA-Z0-9_-]+$', memory_id):
-        raise ValueError("Memory ID must contain only alphanumeric characters, hyphens, and underscores")
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", memory_id):
+        raise ValueError(
+            "Memory ID must contain only alphanumeric characters, hyphens, and underscores"
+        )
 
     return memory_id

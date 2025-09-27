@@ -4,81 +4,80 @@ Project setup utilities for KuzuMemory.
 Handles creation of project-specific memory directories and git integration.
 """
 
-import os
+import logging
 import shutil
 from pathlib import Path
-from typing import Optional, Dict, Any
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def find_project_root(start_path: Optional[Path] = None) -> Optional[Path]:
+def find_project_root(start_path: Path | None = None) -> Path | None:
     """
     Find the project root by looking for common project indicators.
-    
+
     Args:
         start_path: Starting directory (default: current directory)
-        
+
     Returns:
         Path to project root or None if not found
     """
     if start_path is None:
         start_path = Path.cwd()
-    
+
     current = Path(start_path).resolve()
-    
+
     # Look for common project root indicators
     project_indicators = [
-        '.git',
-        'pyproject.toml',
-        'package.json',
-        'Cargo.toml',
-        'go.mod',
-        'pom.xml',
-        'build.gradle',
-        'composer.json',
-        'Gemfile',
-        'requirements.txt',
-        'setup.py',
-        'CMakeLists.txt',
-        'Makefile'
+        ".git",
+        "pyproject.toml",
+        "package.json",
+        "Cargo.toml",
+        "go.mod",
+        "pom.xml",
+        "build.gradle",
+        "composer.json",
+        "Gemfile",
+        "requirements.txt",
+        "setup.py",
+        "CMakeLists.txt",
+        "Makefile",
     ]
-    
+
     # Walk up the directory tree
     for parent in [current] + list(current.parents):
         for indicator in project_indicators:
             if (parent / indicator).exists():
                 logger.debug(f"Found project root at {parent} (indicator: {indicator})")
                 return parent
-    
+
     logger.debug("No project root found, using current directory")
     return current
 
 
-def get_project_memories_dir(project_root: Optional[Path] = None) -> Path:
+def get_project_memories_dir(project_root: Path | None = None) -> Path:
     """
     Get the project memories directory path.
-    
+
     Args:
         project_root: Project root directory (auto-detected if None)
-        
+
     Returns:
         Path to kuzu-memories directory
     """
     if project_root is None:
         project_root = find_project_root()
-    
+
     return project_root / "kuzu-memories"
 
 
-def get_project_db_path(project_root: Optional[Path] = None) -> Path:
+def get_project_db_path(project_root: Path | None = None) -> Path:
     """
     Get the project memory database path.
-    
+
     Args:
         project_root: Project root directory (auto-detected if None)
-        
+
     Returns:
         Path to memories.db file
     """
@@ -86,32 +85,34 @@ def get_project_db_path(project_root: Optional[Path] = None) -> Path:
     return memories_dir / "memories.db"
 
 
-def create_project_memories_structure(project_root: Optional[Path] = None, force: bool = False) -> Dict[str, Any]:
+def create_project_memories_structure(
+    project_root: Path | None = None, force: bool = False
+) -> dict[str, Any]:
     """
     Create the kuzu-memories directory structure for a project.
-    
+
     Args:
         project_root: Project root directory (auto-detected if None)
         force: Overwrite existing structure
-        
+
     Returns:
         Dictionary with creation results
     """
     if project_root is None:
         project_root = find_project_root()
-    
+
     memories_dir = get_project_memories_dir(project_root)
     db_path = get_project_db_path(project_root)
-    
+
     result = {
         "project_root": str(project_root),
         "memories_dir": str(memories_dir),
         "db_path": str(db_path),
         "created": False,
         "existed": False,
-        "files_created": []
+        "files_created": [],
     }
-    
+
     # Check if directory already exists
     if memories_dir.exists():
         if not force:
@@ -120,18 +121,18 @@ def create_project_memories_structure(project_root: Optional[Path] = None, force
         else:
             # Remove existing directory
             shutil.rmtree(memories_dir)
-    
+
     try:
         # Create memories directory
         memories_dir.mkdir(parents=True, exist_ok=True)
         result["files_created"].append(str(memories_dir))
-        
+
         # Create README.md
         readme_content = create_memories_readme(project_root)
         readme_path = memories_dir / "README.md"
         readme_path.write_text(readme_content)
         result["files_created"].append(str(readme_path))
-        
+
         # Create .gitignore (initially empty - we want to commit the DB)
         gitignore_path = memories_dir / ".gitignore"
         gitignore_content = """# KuzuMemory temporary files
@@ -141,27 +142,27 @@ def create_project_memories_structure(project_root: Optional[Path] = None, force
 """
         gitignore_path.write_text(gitignore_content)
         result["files_created"].append(str(gitignore_path))
-        
+
         # Create project_info.md template
         project_info_path = memories_dir / "project_info.md"
         project_info_content = create_project_info_template(project_root)
         project_info_path.write_text(project_info_content)
         result["files_created"].append(str(project_info_path))
-        
+
         result["created"] = True
         logger.info(f"Created project memories structure at {memories_dir}")
-        
+
     except Exception as e:
         logger.error(f"Failed to create project memories structure: {e}")
         result["error"] = str(e)
-    
+
     return result
 
 
 def create_memories_readme(project_root: Path) -> str:
     """Create README content for the kuzu-memories directory."""
     project_name = project_root.name
-    
+
     return f"""# 🧠 Project Memories - {project_name}
 
 This directory contains the KuzuMemory database for the **{project_name}** project.
@@ -266,7 +267,7 @@ Generated on: {project_root.stat().st_mtime}
 def create_project_info_template(project_root: Path) -> str:
     """Create project info template."""
     project_name = project_root.name
-    
+
     return f"""# 📋 Project Information - {project_name}
 
 This file contains structured information about the project that helps KuzuMemory provide better context.
@@ -360,14 +361,14 @@ def should_commit_memories(project_root: Path) -> bool:
     return is_git_repository(project_root)
 
 
-def get_project_context_summary(project_root: Optional[Path] = None) -> Dict[str, Any]:
+def get_project_context_summary(project_root: Path | None = None) -> dict[str, Any]:
     """Get a summary of the project context."""
     if project_root is None:
         project_root = find_project_root()
-    
+
     memories_dir = get_project_memories_dir(project_root)
     db_path = get_project_db_path(project_root)
-    
+
     return {
         "project_name": project_root.name,
         "project_root": str(project_root),
@@ -377,5 +378,5 @@ def get_project_context_summary(project_root: Optional[Path] = None) -> Dict[str
         "db_exists": db_path.exists(),
         "is_git_repo": is_git_repository(project_root),
         "should_commit": should_commit_memories(project_root),
-        "db_size_mb": db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0
+        "db_size_mb": db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0,
     }

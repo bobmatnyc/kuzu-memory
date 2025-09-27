@@ -4,14 +4,15 @@ Tests for cognitive memory type migration.
 Tests the migration from domain-specific memory types to cognitive types.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 
-from kuzu_memory.core.models import MemoryType, Memory
+import pytest
+
+from kuzu_memory.core.models import Memory, MemoryType
 from kuzu_memory.migrations.cognitive_types import (
     CognitiveTypesMigration,
-    migrate_memory_type
+    migrate_memory_type,
 )
 
 
@@ -31,7 +32,7 @@ class TestCognitiveTypesMigration:
             memory_type=MemoryType.SEMANTIC,  # Using new type initially
             created_at=datetime.now(),
             importance=0.7,
-            confidence=0.8
+            confidence=0.8,
         )
 
     def test_migrate_legacy_identity_to_semantic(self, migration):
@@ -72,7 +73,14 @@ class TestCognitiveTypesMigration:
     def test_migrate_already_cognitive_type(self, migration):
         """Test that cognitive types are not migrated."""
         # Test all cognitive types
-        for type_name in ["episodic", "semantic", "procedural", "working", "sensory", "preference"]:
+        for type_name in [
+            "episodic",
+            "semantic",
+            "procedural",
+            "working",
+            "sensory",
+            "preference",
+        ]:
             new_type = migration.migrate_memory_type(type_name)
             assert new_type == MemoryType(type_name)
 
@@ -87,7 +95,7 @@ class TestCognitiveTypesMigration:
         memory = Memory(
             content="Test decision memory",
             memory_type=MemoryType.EPISODIC,  # We'll pretend this was "decision"
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         # Mock the original type for testing
@@ -96,14 +104,16 @@ class TestCognitiveTypesMigration:
 
         # Check migration
         assert memory.memory_type == MemoryType.EPISODIC
-        assert memory.importance == MemoryType.get_default_importance(MemoryType.EPISODIC)
+        assert memory.importance == MemoryType.get_default_importance(
+            MemoryType.EPISODIC
+        )
 
     def test_migrate_memory_updates_retention(self, migration):
         """Test that migration updates retention periods."""
         memory = Memory(
             content="Test working memory",
             memory_type=MemoryType.WORKING,
-            valid_from=datetime.now()
+            valid_from=datetime.now(),
         )
 
         # Get expected retention
@@ -132,7 +142,7 @@ class TestCognitiveTypesMigration:
             sample_memory.metadata = {
                 "migrated_from": original_type,
                 "migrated_to": MemoryType.SEMANTIC.value,
-                "migration_date": datetime.now().isoformat()
+                "migration_date": datetime.now().isoformat(),
             }
 
         assert "migrated_from" in sample_memory.metadata

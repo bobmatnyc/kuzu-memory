@@ -6,18 +6,20 @@ and monitoring system health throughout KuzuMemory.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List, Callable
-from datetime import datetime, timedelta
+from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any
 
 
 class MetricType(str, Enum):
     """Types of metrics that can be tracked."""
-    COUNTER = "counter"          # Incrementing values
-    GAUGE = "gauge"             # Point-in-time values
-    HISTOGRAM = "histogram"     # Distribution of values
-    TIMER = "timer"            # Time-based measurements
+
+    COUNTER = "counter"  # Incrementing values
+    GAUGE = "gauge"  # Point-in-time values
+    HISTOGRAM = "histogram"  # Distribution of values
+    TIMER = "timer"  # Time-based measurements
 
 
 class IPerformanceMonitor(ABC):
@@ -34,8 +36,8 @@ class IPerformanceMonitor(ABC):
         name: str,
         value: float,
         metric_type: MetricType = MetricType.COUNTER,
-        tags: Optional[Dict[str, str]] = None,
-        timestamp: Optional[datetime] = None
+        tags: dict[str, str] | None = None,
+        timestamp: datetime | None = None,
     ) -> None:
         """
         Record a performance metric.
@@ -51,10 +53,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     async def increment_counter(
-        self,
-        name: str,
-        value: float = 1.0,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float = 1.0, tags: dict[str, str] | None = None
     ) -> None:
         """
         Increment a counter metric.
@@ -68,10 +67,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     async def set_gauge(
-        self,
-        name: str,
-        value: float,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float, tags: dict[str, str] | None = None
     ) -> None:
         """
         Set a gauge metric value.
@@ -85,10 +81,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     async def record_timing(
-        self,
-        name: str,
-        duration_ms: float,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, duration_ms: float, tags: dict[str, str] | None = None
     ) -> None:
         """
         Record a timing measurement.
@@ -102,11 +95,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def time_async_operation(
-        self,
-        name: str,
-        tags: Optional[Dict[str, str]] = None
-    ):
+    async def time_async_operation(self, name: str, tags: dict[str, str] | None = None):
         """
         Time an async operation using context manager.
 
@@ -122,11 +111,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     @contextmanager
-    def time_operation(
-        self,
-        name: str,
-        tags: Optional[Dict[str, str]] = None
-    ):
+    def time_operation(self, name: str, tags: dict[str, str] | None = None):
         """
         Time a synchronous operation using context manager.
 
@@ -142,9 +127,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     def time_function(
-        self,
-        name: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str | None = None, tags: dict[str, str] | None = None
     ) -> Callable:
         """
         Decorator to time function execution.
@@ -163,11 +146,11 @@ class IPerformanceMonitor(ABC):
     @abstractmethod
     async def get_metrics(
         self,
-        names: Optional[List[str]] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        tags: Optional[Dict[str, str]] = None
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        names: list[str] | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         Retrieve recorded metrics.
 
@@ -184,9 +167,8 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     async def get_summary(
-        self,
-        period: timedelta = timedelta(hours=1)
-    ) -> Dict[str, Any]:
+        self, period: timedelta = timedelta(hours=1)
+    ) -> dict[str, Any]:
         """
         Get summary statistics for recent metrics.
 
@@ -199,7 +181,7 @@ class IPerformanceMonitor(ABC):
         pass
 
     @abstractmethod
-    async def check_performance_thresholds(self) -> Dict[str, Any]:
+    async def check_performance_thresholds(self) -> dict[str, Any]:
         """
         Check if any performance thresholds are being violated.
 
@@ -210,9 +192,7 @@ class IPerformanceMonitor(ABC):
 
     @abstractmethod
     async def reset_metrics(
-        self,
-        names: Optional[List[str]] = None,
-        older_than: Optional[datetime] = None
+        self, names: list[str] | None = None, older_than: datetime | None = None
     ) -> int:
         """
         Reset/clear metrics.
@@ -230,8 +210,8 @@ class IPerformanceMonitor(ABC):
     async def export_metrics(
         self,
         format: str = "json",
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> str:
         """
         Export metrics in the specified format.

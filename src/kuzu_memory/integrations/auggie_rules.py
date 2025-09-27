@@ -6,16 +6,18 @@ Handles rule management, execution, and statistics for Auggie integration.
 
 import json
 import logging
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Callable, Tuple
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class RuleType(Enum):
     """Types of Auggie rules for memory integration."""
+
     CONTEXT_ENHANCEMENT = "context_enhancement"
     PROMPT_MODIFICATION = "prompt_modification"
     RESPONSE_FILTERING = "response_filtering"
@@ -25,6 +27,7 @@ class RuleType(Enum):
 
 class RulePriority(Enum):
     """Priority levels for rule execution."""
+
     CRITICAL = 1
     HIGH = 2
     MEDIUM = 3
@@ -34,13 +37,14 @@ class RulePriority(Enum):
 @dataclass
 class AuggieRule:
     """Represents an Auggie rule for memory integration."""
+
     id: str
     name: str
     description: str
     rule_type: RuleType
     priority: RulePriority
-    conditions: Dict[str, Any]
-    actions: Dict[str, Any]
+    conditions: dict[str, Any]
+    actions: dict[str, Any]
     enabled: bool = True
     created_at: datetime = None
     last_executed: datetime = None
@@ -51,7 +55,7 @@ class AuggieRule:
         if self.created_at is None:
             self.created_at = datetime.now()
 
-    def matches_conditions(self, context: Dict[str, Any]) -> bool:
+    def matches_conditions(self, context: dict[str, Any]) -> bool:
         """Check if rule conditions match the given context."""
         try:
             for condition_key, condition_value in self.conditions.items():
@@ -63,13 +67,18 @@ class AuggieRule:
                 # Handle different condition types
                 if isinstance(condition_value, dict):
                     if "contains" in condition_value:
-                        if condition_value["contains"].lower() not in str(context_value).lower():
+                        if (
+                            condition_value["contains"].lower()
+                            not in str(context_value).lower()
+                        ):
                             return False
                     elif "equals" in condition_value:
                         if context_value != condition_value["equals"]:
                             return False
                     elif "greater_than" in condition_value:
-                        if float(context_value) <= float(condition_value["greater_than"]):
+                        if float(context_value) <= float(
+                            condition_value["greater_than"]
+                        ):
                             return False
                     elif "less_than" in condition_value:
                         if float(context_value) >= float(condition_value["less_than"]):
@@ -86,7 +95,7 @@ class AuggieRule:
             logger.warning(f"Error evaluating rule conditions for {self.id}: {e}")
             return False
 
-    def execute_actions(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_actions(self, context: dict[str, Any]) -> dict[str, Any]:
         """Execute rule actions and return modifications."""
         try:
             self.last_executed = datetime.now()
@@ -96,29 +105,36 @@ class AuggieRule:
 
             for action_type, action_config in self.actions.items():
                 if action_type == "add_context":
-                    modifications["added_context"] = modifications.get("added_context", [])
+                    modifications["added_context"] = modifications.get(
+                        "added_context", []
+                    )
                     modifications["added_context"].append(action_config)
 
                 elif action_type == "modify_prompt":
-                    modifications["prompt_modifications"] = modifications.get("prompt_modifications", [])
+                    modifications["prompt_modifications"] = modifications.get(
+                        "prompt_modifications", []
+                    )
                     modifications["prompt_modifications"].append(action_config)
 
                 elif action_type == "set_priority":
                     modifications["memory_priority"] = action_config
 
                 elif action_type == "filter_memories":
-                    modifications["memory_filters"] = modifications.get("memory_filters", [])
+                    modifications["memory_filters"] = modifications.get(
+                        "memory_filters", []
+                    )
                     modifications["memory_filters"].append(action_config)
 
                 elif action_type == "learn_pattern":
-                    modifications["learning_triggers"] = modifications.get("learning_triggers", [])
+                    modifications["learning_triggers"] = modifications.get(
+                        "learning_triggers", []
+                    )
                     modifications["learning_triggers"].append(action_config)
 
             # Update success rate based on execution success
             self.success_rate = (
-                (self.success_rate * (self.execution_count - 1) + 1.0) /
-                self.execution_count
-            )
+                self.success_rate * (self.execution_count - 1) + 1.0
+            ) / self.execution_count
 
             return modifications
 
@@ -127,9 +143,8 @@ class AuggieRule:
             # Update success rate based on failure
             if self.execution_count > 0:
                 self.success_rate = (
-                    (self.success_rate * (self.execution_count - 1) + 0.0) /
-                    self.execution_count
-                )
+                    self.success_rate * (self.execution_count - 1) + 0.0
+                ) / self.execution_count
             return {}
 
 
@@ -137,9 +152,9 @@ class AuggieRuleEngine:
     """Engine for managing and executing Auggie rules."""
 
     def __init__(self):
-        self.rules: Dict[str, AuggieRule] = {}
-        self.execution_history: List[Dict[str, Any]] = []
-        self.rule_callbacks: Dict[RuleType, List[Callable]] = {}
+        self.rules: dict[str, AuggieRule] = {}
+        self.execution_history: list[dict[str, Any]] = []
+        self.rule_callbacks: dict[RuleType, list[Callable]] = {}
 
         # Initialize default rules
         self._initialize_default_rules()
@@ -160,14 +175,11 @@ class AuggieRuleEngine:
                 priority=RulePriority.HIGH,
                 conditions={
                     "prompt_length": {"greater_than": 10},
-                    "memories_available": {"greater_than": 0}
+                    "memories_available": {"greater_than": 0},
                 },
                 actions={
-                    "add_context": {
-                        "max_memories": 5,
-                        "relevance_threshold": 0.7
-                    }
-                }
+                    "add_context": {"max_memories": 5, "relevance_threshold": 0.7}
+                },
             ),
             AuggieRule(
                 id="conversation_learning",
@@ -177,14 +189,14 @@ class AuggieRuleEngine:
                 priority=RulePriority.MEDIUM,
                 conditions={
                     "response_quality": {"greater_than": 0.8},
-                    "conversation_complete": {"equals": True}
+                    "conversation_complete": {"equals": True},
                 },
                 actions={
                     "learn_pattern": {
                         "pattern_type": "conversation_success",
-                        "confidence": 0.9
+                        "confidence": 0.9,
                     }
-                }
+                },
             ),
             AuggieRule(
                 id="technical_context_priority",
@@ -194,15 +206,19 @@ class AuggieRuleEngine:
                 priority=RulePriority.HIGH,
                 conditions={
                     "prompt": {"contains": "code"},
-                    "memory_type": {"equals": "technical"}
+                    "memory_type": {"equals": "technical"},
                 },
                 actions={
                     "set_priority": {
                         "boost_factor": 1.5,
-                        "memory_types": ["code_pattern", "technical_decision", "bug_fix"]
+                        "memory_types": [
+                            "code_pattern",
+                            "technical_decision",
+                            "bug_fix",
+                        ],
                     }
-                }
-            )
+                },
+            ),
         ]
 
         for rule in default_rules:
@@ -235,18 +251,24 @@ class AuggieRuleEngine:
             return True
         return False
 
-    def execute_rules(self, context: Dict[str, Any],
-                     rule_types: Optional[List[RuleType]] = None) -> Dict[str, Any]:
+    def execute_rules(
+        self, context: dict[str, Any], rule_types: list[RuleType] | None = None
+    ) -> dict[str, Any]:
         """Execute all matching rules and return aggregated modifications."""
         try:
             self.total_executions += 1
 
             # Filter rules by type if specified
             if rule_types:
-                applicable_rules = [rule for rule in self.rules.values()
-                                  if rule.rule_type in rule_types and rule.enabled]
+                applicable_rules = [
+                    rule
+                    for rule in self.rules.values()
+                    if rule.rule_type in rule_types and rule.enabled
+                ]
             else:
-                applicable_rules = [rule for rule in self.rules.values() if rule.enabled]
+                applicable_rules = [
+                    rule for rule in self.rules.values() if rule.enabled
+                ]
 
             # Sort rules by priority
             applicable_rules.sort(key=lambda r: r.priority.value)
@@ -269,19 +291,21 @@ class AuggieRuleEngine:
                         else:
                             all_modifications[mod_type].append(mod_value)
 
-                    executed_rules.append({
-                        "rule_id": rule.id,
-                        "rule_name": rule.name,
-                        "modifications": modifications,
-                        "executed_at": datetime.now()
-                    })
+                    executed_rules.append(
+                        {
+                            "rule_id": rule.id,
+                            "rule_name": rule.name,
+                            "modifications": modifications,
+                            "executed_at": datetime.now(),
+                        }
+                    )
 
             # Record execution
             execution_record = {
                 "context": context,
                 "executed_rules": executed_rules,
                 "total_modifications": all_modifications,
-                "executed_at": datetime.now()
+                "executed_at": datetime.now(),
             }
 
             self.execution_history.append(execution_record)
@@ -299,7 +323,7 @@ class AuggieRuleEngine:
             logger.error(f"Error executing rules: {e}")
             return {}
 
-    def get_rule_statistics(self) -> Dict[str, Any]:
+    def get_rule_statistics(self) -> dict[str, Any]:
         """Get comprehensive rule statistics."""
         stats = {
             "total_rules": len(self.rules),
@@ -307,11 +331,12 @@ class AuggieRuleEngine:
             "disabled_rules": len([r for r in self.rules.values() if not r.enabled]),
             "total_executions": self.total_executions,
             "successful_executions": self.successful_executions,
-            "success_rate": (self.successful_executions / max(self.total_executions, 1)) * 100,
+            "success_rate": (self.successful_executions / max(self.total_executions, 1))
+            * 100,
             "rules_by_type": {},
             "rules_by_priority": {},
             "top_executed_rules": [],
-            "recent_executions": len(self.execution_history)
+            "recent_executions": len(self.execution_history),
         }
 
         # Rules by type
@@ -330,9 +355,7 @@ class AuggieRuleEngine:
 
         # Top executed rules
         sorted_rules = sorted(
-            self.rules.values(),
-            key=lambda r: r.execution_count,
-            reverse=True
+            self.rules.values(), key=lambda r: r.execution_count, reverse=True
         )
 
         stats["top_executed_rules"] = [
@@ -340,22 +363,22 @@ class AuggieRuleEngine:
                 "id": rule.id,
                 "name": rule.name,
                 "executions": rule.execution_count,
-                "success_rate": rule.success_rate
+                "success_rate": rule.success_rate,
             }
             for rule in sorted_rules[:10]
         ]
 
         return stats
 
-    def get_rule_by_id(self, rule_id: str) -> Optional[AuggieRule]:
+    def get_rule_by_id(self, rule_id: str) -> AuggieRule | None:
         """Get a rule by its ID."""
         return self.rules.get(rule_id)
 
-    def get_rules_by_type(self, rule_type: RuleType) -> List[AuggieRule]:
+    def get_rules_by_type(self, rule_type: RuleType) -> list[AuggieRule]:
         """Get all rules of a specific type."""
         return [rule for rule in self.rules.values() if rule.rule_type == rule_type]
 
-    def get_recent_executions(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_recent_executions(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent rule executions."""
         return self.execution_history[-limit:]
 
@@ -364,7 +387,8 @@ class AuggieRuleEngine:
         cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
         self.execution_history = [
-            record for record in self.execution_history
+            record
+            for record in self.execution_history
             if record["executed_at"] > cutoff_date
         ]
 
@@ -388,7 +412,7 @@ class AuggieRuleEngine:
 
                 rules_data[rule_id] = rule_dict
 
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 json.dump(rules_data, f, indent=2)
 
             logger.info(f"Rules exported to {file_path}")
@@ -399,15 +423,19 @@ class AuggieRuleEngine:
     def import_rules(self, file_path: str):
         """Import rules from a JSON file."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 rules_data = json.load(f)
 
             for rule_id, rule_dict in rules_data.items():
                 # Convert strings back to datetime objects
                 if rule_dict["created_at"]:
-                    rule_dict["created_at"] = datetime.fromisoformat(rule_dict["created_at"])
+                    rule_dict["created_at"] = datetime.fromisoformat(
+                        rule_dict["created_at"]
+                    )
                 if rule_dict["last_executed"]:
-                    rule_dict["last_executed"] = datetime.fromisoformat(rule_dict["last_executed"])
+                    rule_dict["last_executed"] = datetime.fromisoformat(
+                        rule_dict["last_executed"]
+                    )
 
                 # Convert strings back to enums
                 rule_dict["rule_type"] = RuleType(rule_dict["rule_type"])
@@ -422,9 +450,15 @@ class AuggieRuleEngine:
         except Exception as e:
             logger.error(f"Error importing rules: {e}")
 
-    def create_custom_rule(self, name: str, description: str, rule_type: str,
-                          conditions: Dict[str, Any], actions: Dict[str, Any],
-                          priority: str = "medium") -> Optional[str]:
+    def create_custom_rule(
+        self,
+        name: str,
+        description: str,
+        rule_type: str,
+        conditions: dict[str, Any],
+        actions: dict[str, Any],
+        priority: str = "medium",
+    ) -> str | None:
         """Create a custom rule and add it to the engine."""
         try:
             rule_id = f"custom_{hash(name) % 10000}"
@@ -436,7 +470,7 @@ class AuggieRuleEngine:
                 rule_type=RuleType(rule_type),
                 priority=RulePriority[priority.upper()],
                 conditions=conditions,
-                actions=actions
+                actions=actions,
             )
 
             self.add_rule(custom_rule)

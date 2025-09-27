@@ -3,12 +3,12 @@
 Test script for KuzuMemory MCP Server.
 """
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 # Add src to path for development testing
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from kuzu_memory.mcp import create_mcp_server
 
@@ -34,7 +34,7 @@ def test_mcp_server():
     # Test enhance
     result = server.enhance("How do I build an API?", format="plain", limit=3)
     print(f"1. Enhance test: {'✅ Success' if result.get('success') else '❌ Failed'}")
-    if not result.get('success'):
+    if not result.get("success"):
         print(f"   Error: {result.get('error', 'Unknown')}")
 
     # Test learn (async, should always succeed)
@@ -56,7 +56,7 @@ def test_mcp_server():
     print("\n✨ MCP server test complete!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         test_mcp_server()
     except Exception as e:

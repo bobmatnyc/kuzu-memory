@@ -3,6 +3,7 @@
 
 from datetime import datetime, timedelta
 from pathlib import Path
+
 import kuzu
 
 # Find the database
@@ -18,18 +19,25 @@ conn = kuzu.Connection(db)
 # Test parameter formats
 test_queries = [
     # Format 1: $param
-    ("""
+    (
+        """
         MATCH (m:Memory)
         WHERE m.created_at >= $week_ago
         RETURN count(m) as count
-    """, {'week_ago': datetime.now() - timedelta(days=7)}, "$ format"),
-
+    """,
+        {"week_ago": datetime.now() - timedelta(days=7)},
+        "$ format",
+    ),
     # Format 2: :param (Neo4j style)
-    ("""
+    (
+        """
         MATCH (m:Memory)
         WHERE m.created_at >= :week_ago
         RETURN count(m) as count
-    """, {'week_ago': datetime.now() - timedelta(days=7)}, ": format"),
+    """,
+        {"week_ago": datetime.now() - timedelta(days=7)},
+        ": format",
+    ),
 ]
 
 for query, params, desc in test_queries:
@@ -40,7 +48,7 @@ for query, params, desc in test_queries:
             row = result.get_next()
             print(f"  Success! Count: {row[0]}")
         else:
-            print(f"  No results")
+            print("  No results")
     except Exception as e:
         print(f"  Error: {e}")
 

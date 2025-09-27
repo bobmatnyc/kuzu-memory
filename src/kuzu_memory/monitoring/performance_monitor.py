@@ -10,9 +10,10 @@ import functools
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from ..core.internal_models import PerformanceMetric
 from ..interfaces.performance_monitor import IPerformanceMonitor, MetricType
@@ -36,7 +37,7 @@ class PerformanceMonitor(IPerformanceMonitor):
         self,
         max_metrics_per_type: int = 10000,
         retention_period: timedelta = timedelta(hours=24),
-        threshold_checks_enabled: bool = True
+        threshold_checks_enabled: bool = True,
     ):
         """
         Initialize performance monitor.
@@ -51,28 +52,28 @@ class PerformanceMonitor(IPerformanceMonitor):
         self.threshold_checks_enabled = threshold_checks_enabled
 
         # Metric storage using deques for efficient rotation
-        self._metrics: Dict[str, deque[PerformanceMetric]] = defaultdict(
+        self._metrics: dict[str, deque[PerformanceMetric]] = defaultdict(
             lambda: deque(maxlen=max_metrics_per_type)
         )
 
         # Aggregated statistics cache
-        self._stats_cache: Dict[str, Dict[str, Any]] = {}
-        self._stats_cache_ttl: Dict[str, datetime] = {}
+        self._stats_cache: dict[str, dict[str, Any]] = {}
+        self._stats_cache_ttl: dict[str, datetime] = {}
 
         # Performance thresholds
         self._thresholds = {
-            "recall_time_ms": 100.0,      # <100ms recall target
+            "recall_time_ms": 100.0,  # <100ms recall target
             "generation_time_ms": 200.0,  # <200ms generation target
-            "db_query_time_ms": 50.0,     # <50ms database queries
-            "cache_hit_rate": 0.8,        # >80% cache hit rate
-            "error_rate": 0.01             # <1% error rate
+            "db_query_time_ms": 50.0,  # <50ms database queries
+            "cache_hit_rate": 0.8,  # >80% cache hit rate
+            "error_rate": 0.01,  # <1% error rate
         }
 
         # Thread safety
         self._lock = asyncio.Lock()
 
         # Background cleanup
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._last_cleanup = time.time()
 
     async def record_metric(
@@ -80,8 +81,8 @@ class PerformanceMonitor(IPerformanceMonitor):
         name: str,
         value: float,
         metric_type: MetricType = MetricType.COUNTER,
-        tags: Optional[Dict[str, str]] = None,
-        timestamp: Optional[datetime] = None
+        tags: dict[str, str] | None = None,
+        timestamp: datetime | None = None,
     ) -> None:
         """Record a performance metric."""
         metric = PerformanceMetric(
@@ -89,7 +90,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             value=value,
             metric_type=metric_type.value,
             timestamp=timestamp or datetime.now(),
-            tags=tags or {}
+            tags=tags or {},
         )
 
         async with self._lock:
@@ -103,28 +104,19 @@ class PerformanceMonitor(IPerformanceMonitor):
         await self._maybe_cleanup()
 
     async def increment_counter(
-        self,
-        name: str,
-        value: float = 1.0,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float = 1.0, tags: dict[str, str] | None = None
     ) -> None:
         """Increment a counter metric."""
         await self.record_metric(name, value, MetricType.COUNTER, tags)
 
     async def set_gauge(
-        self,
-        name: str,
-        value: float,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float, tags: dict[str, str] | None = None
     ) -> None:
         """Set a gauge metric value."""
         await self.record_metric(name, value, MetricType.GAUGE, tags)
 
     async def record_timing(
-        self,
-        name: str,
-        duration_ms: float,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str, duration_ms: float, tags: dict[str, str] | None = None
     ) -> None:
         """Record a timing measurement."""
         await self.record_metric(name, duration_ms, MetricType.TIMER, tags)
@@ -138,11 +130,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                 )
 
     @asynccontextmanager
-    async def time_async_operation(
-        self,
-        name: str,
-        tags: Optional[Dict[str, str]] = None
-    ):
+    async def time_async_operation(self, name: str, tags: dict[str, str] | None = None):
         """Time an async operation using context manager."""
         start_time = time.perf_counter()
         try:
@@ -152,11 +140,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             await self.record_timing(name, duration_ms, tags)
 
     @contextmanager
-    def time_operation(
-        self,
-        name: str,
-        tags: Optional[Dict[str, str]] = None
-    ):
+    def time_operation(self, name: str, tags: dict[str, str] | None = None):
         """Time a synchronous operation using context manager."""
         start_time = time.perf_counter()
         try:
@@ -172,36 +156,39 @@ class PerformanceMonitor(IPerformanceMonitor):
                 asyncio.run(self.record_timing(name, duration_ms, tags))
 
     def time_function(
-        self,
-        name: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None
+        self, name: str | None = None, tags: dict[str, str] | None = None
     ) -> Callable:
         """Decorator to time function execution."""
+
         def decorator(func: Callable) -> Callable:
             metric_name = name or f"{func.__module__}.{func.__name__}"
 
             if asyncio.iscoroutinefunction(func):
+
                 @functools.wraps(func)
                 async def async_wrapper(*args, **kwargs):
                     async with self.time_async_operation(metric_name, tags):
                         return await func(*args, **kwargs)
+
                 return async_wrapper
             else:
+
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     with self.time_operation(metric_name, tags):
                         return func(*args, **kwargs)
+
                 return sync_wrapper
 
         return decorator
 
     async def get_metrics(
         self,
-        names: Optional[List[str]] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        tags: Optional[Dict[str, str]] = None
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        names: list[str] | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
         """Retrieve recorded metrics."""
         async with self._lock:
             result = {}
@@ -231,9 +218,8 @@ class PerformanceMonitor(IPerformanceMonitor):
             return result
 
     async def get_summary(
-        self,
-        period: timedelta = timedelta(hours=1)
-    ) -> Dict[str, Any]:
+        self, period: timedelta = timedelta(hours=1)
+    ) -> dict[str, Any]:
         """Get summary statistics for recent metrics."""
         cutoff_time = datetime.now() - period
         metrics = await self.get_metrics(start_time=cutoff_time)
@@ -242,7 +228,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             "period_hours": period.total_seconds() / 3600,
             "metrics": {},
             "system_health": {},
-            "threshold_violations": []
+            "threshold_violations": [],
         }
 
         # Calculate statistics for each metric
@@ -256,28 +242,32 @@ class PerformanceMonitor(IPerformanceMonitor):
             stats = {
                 "count": len(values),
                 "type": metric_type,
-                "latest": values[-1] if values else 0
+                "latest": values[-1] if values else 0,
             }
 
             if metric_type in [MetricType.TIMER.value, MetricType.GAUGE.value]:
-                stats.update({
-                    "min": min(values),
-                    "max": max(values),
-                    "avg": sum(values) / len(values),
-                    "p95": self._percentile(values, 95),
-                    "p99": self._percentile(values, 99)
-                })
+                stats.update(
+                    {
+                        "min": min(values),
+                        "max": max(values),
+                        "avg": sum(values) / len(values),
+                        "p95": self._percentile(values, 95),
+                        "p99": self._percentile(values, 99),
+                    }
+                )
             elif metric_type == MetricType.COUNTER.value:
                 stats["total"] = sum(values)
 
             summary["metrics"][name] = stats
 
         # Check system health
-        summary["system_health"] = await self._calculate_system_health(summary["metrics"])
+        summary["system_health"] = await self._calculate_system_health(
+            summary["metrics"]
+        )
 
         return summary
 
-    async def check_performance_thresholds(self) -> Dict[str, Any]:
+    async def check_performance_thresholds(self) -> dict[str, Any]:
         """Check if any performance thresholds are being violated."""
         violations = []
         recommendations = []
@@ -294,41 +284,57 @@ class PerformanceMonitor(IPerformanceMonitor):
 
             if threshold_name.endswith("_rate") and current_value < threshold_value:
                 # Rate thresholds (higher is better)
-                violations.append({
-                    "metric": threshold_name,
-                    "current": current_value,
-                    "threshold": threshold_value,
-                    "severity": "warning" if current_value > threshold_value * 0.8 else "critical"
-                })
-            elif not threshold_name.endswith("_rate") and current_value > threshold_value:
+                violations.append(
+                    {
+                        "metric": threshold_name,
+                        "current": current_value,
+                        "threshold": threshold_value,
+                        "severity": (
+                            "warning"
+                            if current_value > threshold_value * 0.8
+                            else "critical"
+                        ),
+                    }
+                )
+            elif (
+                not threshold_name.endswith("_rate") and current_value > threshold_value
+            ):
                 # Time thresholds (lower is better)
-                violations.append({
-                    "metric": threshold_name,
-                    "current": current_value,
-                    "threshold": threshold_value,
-                    "severity": "warning" if current_value < threshold_value * 1.5 else "critical"
-                })
+                violations.append(
+                    {
+                        "metric": threshold_name,
+                        "current": current_value,
+                        "threshold": threshold_value,
+                        "severity": (
+                            "warning"
+                            if current_value < threshold_value * 1.5
+                            else "critical"
+                        ),
+                    }
+                )
 
         # Generate recommendations based on violations
         for violation in violations:
             metric_name = violation["metric"]
             if "recall_time" in metric_name:
-                recommendations.append("Consider enabling caching or optimizing recall strategies")
+                recommendations.append(
+                    "Consider enabling caching or optimizing recall strategies"
+                )
             elif "db_query" in metric_name:
-                recommendations.append("Consider connection pooling or query optimization")
+                recommendations.append(
+                    "Consider connection pooling or query optimization"
+                )
             elif "cache_hit" in metric_name:
                 recommendations.append("Increase cache size or adjust TTL settings")
 
         return {
             "violations": violations,
             "recommendations": list(set(recommendations)),
-            "overall_health": "good" if not violations else "degraded"
+            "overall_health": "good" if not violations else "degraded",
         }
 
     async def reset_metrics(
-        self,
-        names: Optional[List[str]] = None,
-        older_than: Optional[datetime] = None
+        self, names: list[str] | None = None, older_than: datetime | None = None
     ) -> int:
         """Reset/clear metrics."""
         reset_count = 0
@@ -344,7 +350,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                         original_len = len(metrics)
                         self._metrics[name] = deque(
                             (m for m in metrics if m.timestamp >= older_than),
-                            maxlen=self.max_metrics_per_type
+                            maxlen=self.max_metrics_per_type,
                         )
                         reset_count += original_len - len(self._metrics[name])
                     else:
@@ -361,14 +367,15 @@ class PerformanceMonitor(IPerformanceMonitor):
     async def export_metrics(
         self,
         format: str = "json",
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> str:
         """Export metrics in the specified format."""
         metrics = await self.get_metrics(start_time=start_time, end_time=end_time)
 
         if format == "json":
             import json
+
             return json.dumps(metrics, default=str, indent=2)
 
         elif format == "csv":
@@ -384,13 +391,15 @@ class PerformanceMonitor(IPerformanceMonitor):
             # Write data
             for name, metric_list in metrics.items():
                 for metric in metric_list:
-                    writer.writerow([
-                        name,
-                        metric["timestamp"],
-                        metric["value"],
-                        metric["metric_type"],
-                        str(metric["tags"])
-                    ])
+                    writer.writerow(
+                        [
+                            name,
+                            metric["timestamp"],
+                            metric["value"],
+                            metric["metric_type"],
+                            str(metric["tags"]),
+                        ]
+                    )
 
             return output.getvalue()
 
@@ -409,7 +418,7 @@ class PerformanceMonitor(IPerformanceMonitor):
         else:
             raise ValueError(f"Unsupported export format: {format}")
 
-    def _percentile(self, values: List[float], percentile: int) -> float:
+    def _percentile(self, values: list[float], percentile: int) -> float:
         """Calculate percentile of values."""
         if not values:
             return 0.0
@@ -418,12 +427,9 @@ class PerformanceMonitor(IPerformanceMonitor):
         index = int(percentile / 100 * len(sorted_values))
         return sorted_values[min(index, len(sorted_values) - 1)]
 
-    async def _calculate_system_health(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+    async def _calculate_system_health(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Calculate overall system health metrics."""
-        health = {
-            "status": "healthy",
-            "issues": []
-        }
+        health = {"status": "healthy", "issues": []}
 
         # Check recall performance
         recall_stats = metrics.get("recall_time_ms")
@@ -435,7 +441,9 @@ class PerformanceMonitor(IPerformanceMonitor):
         error_stats = metrics.get("error_count")
         success_stats = metrics.get("success_count")
         if error_stats and success_stats:
-            error_rate = error_stats.get("total", 0) / max(1, success_stats.get("total", 1))
+            error_rate = error_stats.get("total", 0) / max(
+                1, success_stats.get("total", 1)
+            )
             if error_rate > 0.05:  # >5% error rate
                 health["issues"].append("High error rate detected")
                 health["status"] = "unhealthy"
@@ -462,7 +470,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                 # Keep only non-expired metrics
                 self._metrics[name] = deque(
                     (m for m in metrics if m.timestamp >= cutoff_time),
-                    maxlen=self.max_metrics_per_type
+                    maxlen=self.max_metrics_per_type,
                 )
 
                 removed_count += original_len - len(self._metrics[name])
@@ -473,7 +481,8 @@ class PerformanceMonitor(IPerformanceMonitor):
 
             # Clear expired cache entries
             expired_cache_keys = [
-                key for key, expiry in self._stats_cache_ttl.items()
+                key
+                for key, expiry in self._stats_cache_ttl.items()
                 if expiry < datetime.now()
             ]
             for key in expired_cache_keys:

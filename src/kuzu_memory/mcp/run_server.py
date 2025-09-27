@@ -6,26 +6,26 @@ This script is called by the MCP integration to provide memory operations.
 Implements JSON-RPC 2.0 protocol for communication with Claude Code.
 """
 
-import sys
-import json
 import asyncio
+import json
 import logging
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-from .server import MCPServer
 from .protocol import (
-    JSONRPCProtocol,
-    JSONRPCMessage,
+    BatchRequestHandler,
     JSONRPCError,
     JSONRPCErrorCode,
-    BatchRequestHandler
+    JSONRPCMessage,
+    JSONRPCProtocol,
 )
+from .server import MCPServer
 
 # Set up logging
 logging.basicConfig(
     level=logging.WARNING,  # Only show warnings and errors
-    format='%(levelname)s: %(message)s'
+    format="%(levelname)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -39,18 +39,17 @@ class MCPProtocolHandler:
         self.protocol = JSONRPCProtocol()
         self.running = True
 
-    async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
-        if 'error' in request and 'method' not in request:
+        if "error" in request and "method" not in request:
             return JSONRPCMessage.create_response(
-                request.get('id'),
-                error=request['error']
+                request.get("id"), error=request["error"]
             )
 
-        request_id = request.get('id')
-        method = request.get('method', '')
-        params = request.get('params', {})
+        request_id = request.get("id")
+        method = request.get("method", "")
+        params = request.get("params", {})
 
         # Check if it's a notification (no response needed)
         is_notification = JSONRPCMessage.is_notification(request)
@@ -58,56 +57,49 @@ class MCPProtocolHandler:
         try:
 
             # Handle different MCP methods
-            if method == 'initialize':
+            if method == "initialize":
                 # Initialize handshake
                 result = {
-                    'protocolVersion': '2024-11-05',  # MCP protocol version
-                    'capabilities': {
-                        'tools': {},
-                        'prompts': None,
-                        'resources': None
-                    },
-                    'serverInfo': {
-                        'name': 'kuzu-memory-mcp',
-                        'version': '1.0.0'
-                    }
+                    "protocolVersion": "2024-11-05",  # MCP protocol version
+                    "capabilities": {"tools": {}, "prompts": None, "resources": None},
+                    "serverInfo": {"name": "kuzu-memory-mcp", "version": "1.0.0"},
                 }
                 return JSONRPCMessage.create_response(request_id, result)
 
-            elif method == 'tools/list':
+            elif method == "tools/list":
                 # Return list of available tools
                 tools = self._format_tools_for_mcp()
-                result = {'tools': tools}
+                result = {"tools": tools}
                 return JSONRPCMessage.create_response(request_id, result)
 
-            elif method == 'tools/call':
+            elif method == "tools/call":
                 # Call a specific tool
-                tool_name = params.get('name')
-                tool_args = params.get('arguments', {})
+                tool_name = params.get("name")
+                tool_args = params.get("arguments", {})
 
                 if not tool_name:
                     raise JSONRPCError(
                         JSONRPCErrorCode.INVALID_PARAMS,
-                        "Missing 'name' in tool call parameters"
+                        "Missing 'name' in tool call parameters",
                     )
 
                 # Execute tool and format response
                 result = await self._execute_tool(tool_name, tool_args)
                 return JSONRPCMessage.create_response(request_id, result)
 
-            elif method == 'notifications/initialized':
+            elif method == "notifications/initialized":
                 # Client has been initialized (notification)
                 logger.info("Client initialized")
                 return None  # No response for notifications
 
-            elif method == 'shutdown':
+            elif method == "shutdown":
                 # Shutdown the server
                 self.running = False
                 return JSONRPCMessage.create_response(request_id, {})
 
-            elif method == 'ping':
+            elif method == "ping":
                 # Health check
-                return JSONRPCMessage.create_response(request_id, {'pong': True})
+                return JSONRPCMessage.create_response(request_id, {"pong": True})
 
             else:
                 # Unknown method
@@ -116,8 +108,7 @@ class MCPProtocolHandler:
                     return None
                 else:
                     raise JSONRPCError(
-                        JSONRPCErrorCode.METHOD_NOT_FOUND,
-                        f"Method not found: {method}"
+                        JSONRPCErrorCode.METHOD_NOT_FOUND, f"Method not found: {method}"
                     )
 
         except JSONRPCError as e:
@@ -133,18 +124,18 @@ class MCPProtocolHandler:
             return JSONRPCMessage.create_response(
                 request_id,
                 error=JSONRPCError(
-                    JSONRPCErrorCode.INTERNAL_ERROR,
-                    f"Internal error: {str(e)}"
-                )
+                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
+                ),
             )
 
-    async def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_tool(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
         # Map tool names to server methods
         if not hasattr(self.server, tool_name):
             raise JSONRPCError(
-                JSONRPCErrorCode.METHOD_NOT_FOUND,
-                f"Tool not found: {tool_name}"
+                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
             )
 
         try:
@@ -155,267 +146,264 @@ class MCPProtocolHandler:
             result = tool_method(**arguments)
 
             # Format response according to MCP spec
-            if isinstance(result, dict) and 'success' in result:
-                if result['success']:
+            if isinstance(result, dict) and "success" in result:
+                if result["success"]:
                     # Success response - format as MCP content
                     content = []
 
                     # Determine the main content based on tool type
-                    if tool_name == 'enhance':
-                        text = result.get('enhanced_prompt', '')
-                    elif tool_name in ['recall', 'recent']:
-                        memories = result.get('memories', [])
+                    if tool_name == "enhance":
+                        text = result.get("enhanced_prompt", "")
+                    elif tool_name in ["recall", "recent"]:
+                        memories = result.get("memories", [])
                         if isinstance(memories, list):
                             text = json.dumps(memories, indent=2)
                         else:
                             text = str(memories)
-                    elif tool_name == 'stats':
-                        stats = result.get('stats', {})
+                    elif tool_name == "stats":
+                        stats = result.get("stats", {})
                         if isinstance(stats, dict):
                             text = json.dumps(stats, indent=2)
                         else:
                             text = str(stats)
-                    elif tool_name == 'project':
-                        text = result.get('project_info', '')
+                    elif tool_name == "project":
+                        text = result.get("project_info", "")
                     else:
-                        text = result.get('message', result.get('output', str(result)))
+                        text = result.get("message", result.get("output", str(result)))
 
-                    content.append({
-                        'type': 'text',
-                        'text': text
-                    })
+                    content.append({"type": "text", "text": text})
 
-                    return {'content': content}
+                    return {"content": content}
                 else:
                     # Error in tool execution
-                    error_msg = result.get('error', 'Tool execution failed')
-                    raise JSONRPCError(
-                        JSONRPCErrorCode.TOOL_EXECUTION_ERROR,
-                        error_msg
-                    )
+                    error_msg = result.get("error", "Tool execution failed")
+                    raise JSONRPCError(JSONRPCErrorCode.TOOL_EXECUTION_ERROR, error_msg)
             else:
                 # Unexpected result format - convert to text
                 return {
-                    'content': [{
-                        'type': 'text',
-                        'text': json.dumps(result) if isinstance(result, (dict, list)) else str(result)
-                    }]
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                json.dumps(result)
+                                if isinstance(result, (dict, list))
+                                else str(result)
+                            ),
+                        }
+                    ]
                 }
 
         except TypeError as e:
             raise JSONRPCError(
                 JSONRPCErrorCode.INVALID_PARAMS,
-                f"Invalid parameters for tool '{tool_name}': {str(e)}"
+                f"Invalid parameters for tool '{tool_name}': {e!s}",
             )
         except Exception as e:
             raise JSONRPCError(
                 JSONRPCErrorCode.TOOL_EXECUTION_ERROR,
-                f"Error executing tool '{tool_name}': {str(e)}"
+                f"Error executing tool '{tool_name}': {e!s}",
             )
 
-    def _format_tools_for_mcp(self) -> List[Dict[str, Any]]:
+    def _format_tools_for_mcp(self) -> list[dict[str, Any]]:
         """Format tools for MCP protocol."""
         tools = []
 
         # Define tools with MCP-compatible schema
         tool_definitions = [
             {
-                'name': 'enhance',
-                'description': 'Enhance prompts with relevant project context from memory',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'prompt': {
-                            'type': 'string',
-                            'description': 'The prompt to enhance with context'
+                "name": "enhance",
+                "description": "Enhance prompts with relevant project context from memory",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "The prompt to enhance with context",
                         },
-                        'format': {
-                            'type': 'string',
-                            'enum': ['plain', 'json', 'markdown'],
-                            'default': 'plain',
-                            'description': 'Output format'
+                        "format": {
+                            "type": "string",
+                            "enum": ["plain", "json", "markdown"],
+                            "default": "plain",
+                            "description": "Output format",
                         },
-                        'limit': {
-                            'type': 'integer',
-                            'minimum': 1,
-                            'maximum': 20,
-                            'default': 5,
-                            'description': 'Maximum number of memories to include'
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 20,
+                            "default": 5,
+                            "description": "Maximum number of memories to include",
+                        },
+                    },
+                    "required": ["prompt"],
+                },
+            },
+            {
+                "name": "learn",
+                "description": "Store a learning asynchronously (non-blocking)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string",
+                            "description": "Content to learn",
+                        },
+                        "source": {
+                            "type": "string",
+                            "default": "mcp",
+                            "description": "Source of the learning",
+                        },
+                        "quiet": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Run quietly without output",
+                        },
+                    },
+                    "required": ["content"],
+                },
+            },
+            {
+                "name": "recall",
+                "description": "Query memories for relevant information",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"},
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 5,
+                            "description": "Maximum number of results",
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["json", "plain", "markdown"],
+                            "default": "json",
+                            "description": "Output format",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "remember",
+                "description": "Store a direct memory",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string",
+                            "description": "Content to remember",
+                        },
+                        "type": {
+                            "type": "string",
+                            "default": "general",
+                            "description": "Memory type",
+                        },
+                        "priority": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 10,
+                            "default": 5,
+                            "description": "Priority level",
+                        },
+                    },
+                    "required": ["content"],
+                },
+            },
+            {
+                "name": "stats",
+                "description": "Get memory system statistics",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "detailed": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Show detailed statistics",
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["json", "plain"],
+                            "default": "json",
+                            "description": "Output format",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "recent",
+                "description": "Get recent memories",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 10,
+                            "description": "Number of recent memories to retrieve",
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["json", "plain", "list"],
+                            "default": "json",
+                            "description": "Output format",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "cleanup",
+                "description": "Clean up expired memories",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "force": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Force cleanup without confirmation",
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Preview what would be cleaned",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "project",
+                "description": "Get project information and memory status",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "verbose": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Show detailed project information",
                         }
                     },
-                    'required': ['prompt']
-                }
+                },
             },
             {
-                'name': 'learn',
-                'description': 'Store a learning asynchronously (non-blocking)',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'content': {
-                            'type': 'string',
-                            'description': 'Content to learn'
+                "name": "init",
+                "description": "Initialize memory system for a new project",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Project path (current directory if not specified)",
                         },
-                        'source': {
-                            'type': 'string',
-                            'default': 'mcp',
-                            'description': 'Source of the learning'
+                        "force": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Force initialization even if already initialized",
                         },
-                        'quiet': {
-                            'type': 'boolean',
-                            'default': True,
-                            'description': 'Run quietly without output'
-                        }
                     },
-                    'required': ['content']
-                }
+                },
             },
-            {
-                'name': 'recall',
-                'description': 'Query memories for relevant information',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'query': {
-                            'type': 'string',
-                            'description': 'Search query'
-                        },
-                        'limit': {
-                            'type': 'integer',
-                            'minimum': 1,
-                            'maximum': 50,
-                            'default': 5,
-                            'description': 'Maximum number of results'
-                        },
-                        'format': {
-                            'type': 'string',
-                            'enum': ['json', 'plain', 'markdown'],
-                            'default': 'json',
-                            'description': 'Output format'
-                        }
-                    },
-                    'required': ['query']
-                }
-            },
-            {
-                'name': 'remember',
-                'description': 'Store a direct memory',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'content': {
-                            'type': 'string',
-                            'description': 'Content to remember'
-                        },
-                        'type': {
-                            'type': 'string',
-                            'default': 'general',
-                            'description': 'Memory type'
-                        },
-                        'priority': {
-                            'type': 'integer',
-                            'minimum': 1,
-                            'maximum': 10,
-                            'default': 5,
-                            'description': 'Priority level'
-                        }
-                    },
-                    'required': ['content']
-                }
-            },
-            {
-                'name': 'stats',
-                'description': 'Get memory system statistics',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'detailed': {
-                            'type': 'boolean',
-                            'default': False,
-                            'description': 'Show detailed statistics'
-                        },
-                        'format': {
-                            'type': 'string',
-                            'enum': ['json', 'plain'],
-                            'default': 'json',
-                            'description': 'Output format'
-                        }
-                    }
-                }
-            },
-            {
-                'name': 'recent',
-                'description': 'Get recent memories',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'limit': {
-                            'type': 'integer',
-                            'minimum': 1,
-                            'maximum': 100,
-                            'default': 10,
-                            'description': 'Number of recent memories to retrieve'
-                        },
-                        'format': {
-                            'type': 'string',
-                            'enum': ['json', 'plain', 'list'],
-                            'default': 'json',
-                            'description': 'Output format'
-                        }
-                    }
-                }
-            },
-            {
-                'name': 'cleanup',
-                'description': 'Clean up expired memories',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'force': {
-                            'type': 'boolean',
-                            'default': False,
-                            'description': 'Force cleanup without confirmation'
-                        },
-                        'dry_run': {
-                            'type': 'boolean',
-                            'default': False,
-                            'description': 'Preview what would be cleaned'
-                        }
-                    }
-                }
-            },
-            {
-                'name': 'project',
-                'description': 'Get project information and memory status',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'verbose': {
-                            'type': 'boolean',
-                            'default': False,
-                            'description': 'Show detailed project information'
-                        }
-                    }
-                }
-            },
-            {
-                'name': 'init',
-                'description': 'Initialize memory system for a new project',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                        'path': {
-                            'type': 'string',
-                            'description': 'Project path (current directory if not specified)'
-                        },
-                        'force': {
-                            'type': 'boolean',
-                            'default': False,
-                            'description': 'Force initialization even if already initialized'
-                        }
-                    }
-                }
-            }
         ]
 
         return tool_definitions
@@ -438,8 +426,7 @@ class MCPProtocolHandler:
                 if BatchRequestHandler.is_batch(message):
                     # Process batch
                     responses = await BatchRequestHandler.process_batch(
-                        message,
-                        self.handle_request
+                        message, self.handle_request
                     )
                     if responses:
                         self.protocol.write_message(responses)
@@ -457,9 +444,8 @@ class MCPProtocolHandler:
                 error_response = JSONRPCMessage.create_response(
                     None,
                     error=JSONRPCError(
-                        JSONRPCErrorCode.INTERNAL_ERROR,
-                        f"Server error: {str(e)}"
-                    )
+                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
+                    ),
                 )
                 self.protocol.write_message(error_response)
 
@@ -471,7 +457,8 @@ async def main():
     """Main entry point for MCP server."""
     # Get project root from environment or current directory
     import os
-    project_root = os.environ.get('KUZU_MEMORY_PROJECT')
+
+    project_root = os.environ.get("KUZU_MEMORY_PROJECT")
     if project_root:
         project_root = Path(project_root)
     else:
@@ -492,7 +479,7 @@ async def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run the async main function
     try:
         asyncio.run(main())

@@ -12,12 +12,14 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 
 - **🧠 Cognitive Memory Model** - Based on human memory psychology (SEMANTIC, PROCEDURAL, EPISODIC, etc.)
 - **🚀 No LLM Dependencies** - Operates using pattern matching and local NER only
-- **⚡ Fast Performance** - <10ms memory recall, <20ms memory generation
+- **⚡ Fast Performance** - <3ms memory recall, <8ms memory generation (verified with Kuzu)
 - **💾 Embedded Database** - Single-file Kuzu graph database
 - **🔄 Git-Friendly** - Database files <10MB, perfect for version control
 - **🔌 Simple API** - Just two methods: `attach_memories()` and `generate_memories()`
 - **🌐 Cross-Platform** - Standardized cognitive types shared with TypeScript implementation
 - **📱 Offline First** - Works completely without internet connection
+- **🔧 MCP Ready** - Native Claude Desktop integration with async learning support
+- **🤖 Hook Compatible** - Ready for claude-mpm hook integration
 
 ## 🚀 Quick Start
 
@@ -29,11 +31,16 @@ pipx install kuzu-memory
 
 # Or install via pip
 pip install kuzu-memory
+
+# For development
+pip install kuzu-memory[dev]
 ```
+
+**Now available on PyPI!** KuzuMemory v1.1.0 is published and ready for production use.
 
 ### Claude Desktop Integration
 
-KuzuMemory can be integrated with Claude Desktop via MCP (Model Context Protocol) for seamless memory operations:
+KuzuMemory can be integrated with Claude Desktop via MCP (Model Context Protocol) for seamless memory operations. The system is also ready for claude-mpm hook integration:
 
 ```bash
 # Automatic setup with pipx detection
@@ -48,6 +55,7 @@ The installer automatically:
 - Configures Claude Desktop MCP settings
 - Creates backup of existing configuration
 - Validates the installation
+- Supports async learning with 5-second wait behavior
 
 See [Claude Desktop Setup Guide](docs/CLAUDE_DESKTOP_SETUP.md) for detailed instructions.
 
@@ -162,12 +170,13 @@ patterns:
 
 ## 📊 Performance
 
-| Operation | Target | Typical |
-|-----------|--------|---------|
-| Memory Recall | <10ms | ~3ms |
-| Memory Generation | <20ms | ~8ms |
-| Database Size | <500 bytes/memory | ~300 bytes |
-| RAM Usage | <50MB | ~25MB |
+| Operation | Target | Typical | Verified |
+|-----------|--------|---------|----------|
+| Memory Recall | <100ms | ~3ms | ✅ |
+| Memory Generation | <200ms | ~8ms | ✅ |
+| Database Size | <500 bytes/memory | ~300 bytes | ✅ |
+| RAM Usage | <50MB | ~25MB | ✅ |
+| Async Learning | Smart wait | 5s default | ✅ |
 
 ## 🧪 Testing
 

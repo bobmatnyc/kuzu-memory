@@ -6,8 +6,8 @@ with pooling, health checks, and resource management.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict, AsyncContextManager
 from contextlib import asynccontextmanager
+from typing import Any, AsyncContextManager
 
 
 class IConnection(ABC):
@@ -19,7 +19,7 @@ class IConnection(ABC):
     """
 
     @abstractmethod
-    async def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Execute a query on this connection.
 
@@ -34,8 +34,7 @@ class IConnection(ABC):
 
     @abstractmethod
     async def execute_many(
-        self,
-        queries: list[tuple[str, Optional[Dict[str, Any]]]]
+        self, queries: list[tuple[str, dict[str, Any] | None]]
     ) -> list[Any]:
         """
         Execute multiple queries on this connection.
@@ -99,7 +98,7 @@ class IConnectionPool(ABC):
         pass
 
     @abstractmethod
-    async def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Execute a query using a connection from the pool.
 
@@ -114,8 +113,7 @@ class IConnectionPool(ABC):
 
     @abstractmethod
     async def execute_many(
-        self,
-        queries: list[tuple[str, Optional[Dict[str, Any]]]]
+        self, queries: list[tuple[str, dict[str, Any] | None]]
     ) -> list[Any]:
         """
         Execute multiple queries using connections from the pool.
@@ -129,7 +127,7 @@ class IConnectionPool(ABC):
         pass
 
     @abstractmethod
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """
         Check the health of the connection pool.
 
@@ -139,7 +137,7 @@ class IConnectionPool(ABC):
         pass
 
     @abstractmethod
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get pool statistics.
 

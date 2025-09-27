@@ -4,13 +4,13 @@ MCP Server implementation for KuzuMemory.
 Provides all memory operations as MCP tools for Claude Code integration.
 """
 
-import json
-import sys
-import subprocess
-import logging
-from typing import Any, Dict, List, Optional
-from pathlib import Path
 import asyncio
+import json
+import logging
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MCPServer:
     """MCP Server for KuzuMemory operations."""
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         """Initialize MCP server with project root."""
         self.project_root = project_root or self._find_project_root()
         self.cli_path = self._find_cli_executable()
@@ -27,7 +27,7 @@ class MCPServer:
         """Find project root by looking for git directory or kuzu-memories."""
         current = Path.cwd()
         while current != current.parent:
-            if (current / '.git').exists() or (current / 'kuzu-memories').exists():
+            if (current / ".git").exists() or (current / "kuzu-memories").exists():
                 return current
             current = current.parent
         return Path.cwd()
@@ -36,19 +36,16 @@ class MCPServer:
         """Find the kuzu-memory CLI executable."""
         # Try common locations
         candidates = [
-            'kuzu-memory',  # Global install
-            str(Path.home() / '.local' / 'bin' / 'kuzu-memory'),  # pipx
-            str(self.project_root / '.venv' / 'bin' / 'kuzu-memory'),  # venv
-            str(self.project_root / 'venv' / 'bin' / 'kuzu-memory'),  # venv
+            "kuzu-memory",  # Global install
+            str(Path.home() / ".local" / "bin" / "kuzu-memory"),  # pipx
+            str(self.project_root / ".venv" / "bin" / "kuzu-memory"),  # venv
+            str(self.project_root / "venv" / "bin" / "kuzu-memory"),  # venv
         ]
 
         for candidate in candidates:
             try:
                 result = subprocess.run(
-                    [candidate, '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=2
+                    [candidate, "--version"], capture_output=True, text=True, timeout=2
                 )
                 if result.returncode == 0:
                     return candidate
@@ -58,11 +55,13 @@ class MCPServer:
         # Fallback to python module execution
         return f"{sys.executable} -m kuzu_memory.cli"
 
-    def _run_cli(self, args: List[str], timeout: int = 10) -> Dict[str, Any]:
+    def _run_cli(self, args: list[str], timeout: int = 10) -> dict[str, Any]:
         """Run CLI command and return result."""
         try:
             # Split cli_path if it contains spaces (module execution)
-            cmd_parts = self.cli_path.split() if ' ' in self.cli_path else [self.cli_path]
+            cmd_parts = (
+                self.cli_path.split() if " " in self.cli_path else [self.cli_path]
+            )
             cmd = cmd_parts + args
 
             result = subprocess.run(
@@ -70,28 +69,26 @@ class MCPServer:
                 capture_output=True,
                 text=True,
                 cwd=str(self.project_root),
-                timeout=timeout
+                timeout=timeout,
             )
 
             return {
-                'success': result.returncode == 0,
-                'output': result.stdout.strip() if result.stdout else '',
-                'error': result.stderr.strip() if result.stderr else ''
+                "success": result.returncode == 0,
+                "output": result.stdout.strip() if result.stdout else "",
+                "error": result.stderr.strip() if result.stderr else "",
             }
         except subprocess.TimeoutExpired:
             return {
-                'success': False,
-                'output': '',
-                'error': f'Command timed out after {timeout} seconds'
+                "success": False,
+                "output": "",
+                "error": f"Command timed out after {timeout} seconds",
             }
         except Exception as e:
-            return {
-                'success': False,
-                'output': '',
-                'error': str(e)
-            }
+            return {"success": False, "output": "", "error": str(e)}
 
-    async def _run_cli_async(self, args: List[str], timeout: int = 10) -> Dict[str, Any]:
+    async def _run_cli_async(
+        self, args: list[str], timeout: int = 10
+    ) -> dict[str, Any]:
         """Run CLI command asynchronously."""
         return await asyncio.get_event_loop().run_in_executor(
             None, self._run_cli, args, timeout
@@ -99,7 +96,9 @@ class MCPServer:
 
     # MCP Tool implementations
 
-    def enhance(self, prompt: str, format: str = 'plain', limit: int = 5) -> Dict[str, Any]:
+    def enhance(
+        self, prompt: str, format: str = "plain", limit: int = 5
+    ) -> dict[str, Any]:
         """
         Enhance a prompt with relevant project context.
 
@@ -111,22 +110,21 @@ class MCPServer:
         Returns:
             Enhanced prompt with context
         """
-        args = ['enhance', prompt, '--format', format, '--max-memories', str(limit)]
+        args = ["enhance", prompt, "--format", format, "--max-memories", str(limit)]
         result = self._run_cli(args)
 
-        if result['success']:
-            return {
-                'enhanced_prompt': result['output'],
-                'success': True
-            }
+        if result["success"]:
+            return {"enhanced_prompt": result["output"], "success": True}
         else:
             return {
-                'enhanced_prompt': prompt,  # Fallback to original
-                'success': False,
-                'error': result['error']
+                "enhanced_prompt": prompt,  # Fallback to original
+                "success": False,
+                "error": result["error"],
             }
 
-    def learn(self, content: str, source: str = 'mcp', quiet: bool = True) -> Dict[str, Any]:
+    def learn(
+        self, content: str, source: str = "mcp", quiet: bool = True
+    ) -> dict[str, Any]:
         """
         Store a learning asynchronously (non-blocking).
 
@@ -138,19 +136,21 @@ class MCPServer:
         Returns:
             Status of learning operation
         """
-        args = ['learn', content, '--source', source]
+        args = ["learn", content, "--source", source]
         if quiet:
-            args.append('--quiet')
+            args.append("--quiet")
 
         # Run async to not block
         result = self._run_cli(args, timeout=2)  # Short timeout for async operation
 
         return {
-            'success': True,  # Always return success for async operations
-            'message': 'Learning queued for processing'
+            "success": True,  # Always return success for async operations
+            "message": "Learning queued for processing",
         }
 
-    def recall(self, query: str, limit: int = 5, format: str = 'json') -> Dict[str, Any]:
+    def recall(
+        self, query: str, limit: int = 5, format: str = "json"
+    ) -> dict[str, Any]:
         """
         Query memories for relevant information.
 
@@ -162,32 +162,24 @@ class MCPServer:
         Returns:
             Relevant memories matching the query
         """
-        args = ['recall', query, '--max-results', str(limit), '--output-format', format]
+        args = ["recall", query, "--max-results", str(limit), "--output-format", format]
         result = self._run_cli(args)
 
-        if result['success']:
-            if format == 'json':
+        if result["success"]:
+            if format == "json":
                 try:
-                    memories = json.loads(result['output'])
-                    return {
-                        'memories': memories,
-                        'success': True
-                    }
+                    memories = json.loads(result["output"])
+                    return {"memories": memories, "success": True}
                 except json.JSONDecodeError:
                     pass
 
-            return {
-                'memories': result['output'],
-                'success': True
-            }
+            return {"memories": result["output"], "success": True}
         else:
-            return {
-                'memories': [],
-                'success': False,
-                'error': result['error']
-            }
+            return {"memories": [], "success": False, "error": result["error"]}
 
-    def remember(self, content: str, type: str = 'general', priority: int = 5) -> Dict[str, Any]:
+    def remember(
+        self, content: str, type: str = "general", priority: int = 5
+    ) -> dict[str, Any]:
         """
         Store a direct memory.
 
@@ -199,15 +191,15 @@ class MCPServer:
         Returns:
             Status of memory storage
         """
-        args = ['remember', content, '--type', type, '--priority', str(priority)]
+        args = ["remember", content, "--type", type, "--priority", str(priority)]
         result = self._run_cli(args)
 
         return {
-            'success': result['success'],
-            'message': result['output'] if result['success'] else result['error']
+            "success": result["success"],
+            "message": result["output"] if result["success"] else result["error"],
         }
 
-    def stats(self, detailed: bool = False, format: str = 'json') -> Dict[str, Any]:
+    def stats(self, detailed: bool = False, format: str = "json") -> dict[str, Any]:
         """
         Get memory system statistics.
 
@@ -218,35 +210,25 @@ class MCPServer:
         Returns:
             Memory system statistics
         """
-        args = ['stats', '--output-format', format]
+        args = ["stats", "--output-format", format]
         if detailed:
-            args.append('--detailed')
+            args.append("--detailed")
 
         result = self._run_cli(args)
 
-        if result['success']:
-            if format == 'json':
+        if result["success"]:
+            if format == "json":
                 try:
-                    stats = json.loads(result['output'])
-                    return {
-                        'stats': stats,
-                        'success': True
-                    }
+                    stats = json.loads(result["output"])
+                    return {"stats": stats, "success": True}
                 except json.JSONDecodeError:
                     pass
 
-            return {
-                'stats': result['output'],
-                'success': True
-            }
+            return {"stats": result["output"], "success": True}
         else:
-            return {
-                'stats': {},
-                'success': False,
-                'error': result['error']
-            }
+            return {"stats": {}, "success": False, "error": result["error"]}
 
-    def recent(self, limit: int = 10, format: str = 'json') -> Dict[str, Any]:
+    def recent(self, limit: int = 10, format: str = "json") -> dict[str, Any]:
         """
         Get recent memories.
 
@@ -257,32 +239,22 @@ class MCPServer:
         Returns:
             Recent memories
         """
-        args = ['recent', '--count', str(limit), '--format', format]
+        args = ["recent", "--count", str(limit), "--format", format]
         result = self._run_cli(args)
 
-        if result['success']:
-            if format == 'json':
+        if result["success"]:
+            if format == "json":
                 try:
-                    memories = json.loads(result['output'])
-                    return {
-                        'memories': memories,
-                        'success': True
-                    }
+                    memories = json.loads(result["output"])
+                    return {"memories": memories, "success": True}
                 except json.JSONDecodeError:
                     pass
 
-            return {
-                'memories': result['output'],
-                'success': True
-            }
+            return {"memories": result["output"], "success": True}
         else:
-            return {
-                'memories': [],
-                'success': False,
-                'error': result['error']
-            }
+            return {"memories": [], "success": False, "error": result["error"]}
 
-    def cleanup(self, force: bool = False, dry_run: bool = False) -> Dict[str, Any]:
+    def cleanup(self, force: bool = False, dry_run: bool = False) -> dict[str, Any]:
         """
         Clean up expired memories.
 
@@ -293,20 +265,20 @@ class MCPServer:
         Returns:
             Cleanup results
         """
-        args = ['cleanup']
+        args = ["cleanup"]
         if force:
-            args.append('--force')
+            args.append("--force")
         if dry_run:
-            args.append('--dry-run')
+            args.append("--dry-run")
 
         result = self._run_cli(args)
 
         return {
-            'success': result['success'],
-            'message': result['output'] if result['success'] else result['error']
+            "success": result["success"],
+            "message": result["output"] if result["success"] else result["error"],
         }
 
-    def project(self, verbose: bool = False) -> Dict[str, Any]:
+    def project(self, verbose: bool = False) -> dict[str, Any]:
         """
         Get project information.
 
@@ -316,18 +288,18 @@ class MCPServer:
         Returns:
             Project information
         """
-        args = ['project']
+        args = ["project"]
         if verbose:
-            args.append('--verbose')
+            args.append("--verbose")
 
         result = self._run_cli(args)
 
         return {
-            'success': result['success'],
-            'project_info': result['output'] if result['success'] else result['error']
+            "success": result["success"],
+            "project_info": result["output"] if result["success"] else result["error"],
         }
 
-    def init(self, path: Optional[str] = None, force: bool = False) -> Dict[str, Any]:
+    def init(self, path: str | None = None, force: bool = False) -> dict[str, Any]:
         """
         Initialize a new project.
 
@@ -338,100 +310,180 @@ class MCPServer:
         Returns:
             Initialization status
         """
-        args = ['init']
+        args = ["init"]
         if path:
-            args.extend(['--path', path])
+            args.extend(["--path", path])
         if force:
-            args.append('--force')
+            args.append("--force")
 
         result = self._run_cli(args)
 
         return {
-            'success': result['success'],
-            'message': result['output'] if result['success'] else result['error']
+            "success": result["success"],
+            "message": result["output"] if result["success"] else result["error"],
         }
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """Get list of available MCP tools."""
         return [
             {
-                'name': 'enhance',
-                'description': 'Enhance prompts with relevant project context',
-                'parameters': {
-                    'prompt': {'type': 'string', 'required': True, 'description': 'The prompt to enhance'},
-                    'format': {'type': 'string', 'default': 'plain', 'description': 'Output format (plain, json, markdown)'},
-                    'limit': {'type': 'integer', 'default': 5, 'description': 'Maximum memories to include'}
-                }
+                "name": "enhance",
+                "description": "Enhance prompts with relevant project context",
+                "parameters": {
+                    "prompt": {
+                        "type": "string",
+                        "required": True,
+                        "description": "The prompt to enhance",
+                    },
+                    "format": {
+                        "type": "string",
+                        "default": "plain",
+                        "description": "Output format (plain, json, markdown)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Maximum memories to include",
+                    },
+                },
             },
             {
-                'name': 'learn',
-                'description': 'Store a learning asynchronously (non-blocking)',
-                'parameters': {
-                    'content': {'type': 'string', 'required': True, 'description': 'Content to learn'},
-                    'source': {'type': 'string', 'default': 'mcp', 'description': 'Source of the learning'},
-                    'quiet': {'type': 'boolean', 'default': True, 'description': 'Run quietly'}
-                }
+                "name": "learn",
+                "description": "Store a learning asynchronously (non-blocking)",
+                "parameters": {
+                    "content": {
+                        "type": "string",
+                        "required": True,
+                        "description": "Content to learn",
+                    },
+                    "source": {
+                        "type": "string",
+                        "default": "mcp",
+                        "description": "Source of the learning",
+                    },
+                    "quiet": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Run quietly",
+                    },
+                },
             },
             {
-                'name': 'recall',
-                'description': 'Query memories for relevant information',
-                'parameters': {
-                    'query': {'type': 'string', 'required': True, 'description': 'Search query'},
-                    'limit': {'type': 'integer', 'default': 5, 'description': 'Maximum results'},
-                    'format': {'type': 'string', 'default': 'json', 'description': 'Output format'}
-                }
+                "name": "recall",
+                "description": "Query memories for relevant information",
+                "parameters": {
+                    "query": {
+                        "type": "string",
+                        "required": True,
+                        "description": "Search query",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Maximum results",
+                    },
+                    "format": {
+                        "type": "string",
+                        "default": "json",
+                        "description": "Output format",
+                    },
+                },
             },
             {
-                'name': 'remember',
-                'description': 'Store a direct memory',
-                'parameters': {
-                    'content': {'type': 'string', 'required': True, 'description': 'Content to remember'},
-                    'type': {'type': 'string', 'default': 'general', 'description': 'Memory type'},
-                    'priority': {'type': 'integer', 'default': 5, 'description': 'Priority (1-10)'}
-                }
+                "name": "remember",
+                "description": "Store a direct memory",
+                "parameters": {
+                    "content": {
+                        "type": "string",
+                        "required": True,
+                        "description": "Content to remember",
+                    },
+                    "type": {
+                        "type": "string",
+                        "default": "general",
+                        "description": "Memory type",
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Priority (1-10)",
+                    },
+                },
             },
             {
-                'name': 'stats',
-                'description': 'Get memory system statistics',
-                'parameters': {
-                    'detailed': {'type': 'boolean', 'default': False, 'description': 'Show detailed stats'},
-                    'format': {'type': 'string', 'default': 'json', 'description': 'Output format'}
-                }
+                "name": "stats",
+                "description": "Get memory system statistics",
+                "parameters": {
+                    "detailed": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Show detailed stats",
+                    },
+                    "format": {
+                        "type": "string",
+                        "default": "json",
+                        "description": "Output format",
+                    },
+                },
             },
             {
-                'name': 'recent',
-                'description': 'Get recent memories',
-                'parameters': {
-                    'limit': {'type': 'integer', 'default': 10, 'description': 'Number of memories'},
-                    'format': {'type': 'string', 'default': 'json', 'description': 'Output format'}
-                }
+                "name": "recent",
+                "description": "Get recent memories",
+                "parameters": {
+                    "limit": {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of memories",
+                    },
+                    "format": {
+                        "type": "string",
+                        "default": "json",
+                        "description": "Output format",
+                    },
+                },
             },
             {
-                'name': 'cleanup',
-                'description': 'Clean up expired memories',
-                'parameters': {
-                    'force': {'type': 'boolean', 'default': False, 'description': 'Force cleanup'},
-                    'dry_run': {'type': 'boolean', 'default': False, 'description': 'Show what would be cleaned'}
-                }
+                "name": "cleanup",
+                "description": "Clean up expired memories",
+                "parameters": {
+                    "force": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Force cleanup",
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Show what would be cleaned",
+                    },
+                },
             },
             {
-                'name': 'project',
-                'description': 'Get project information',
-                'parameters': {
-                    'verbose': {'type': 'boolean', 'default': False, 'description': 'Show detailed info'}
-                }
+                "name": "project",
+                "description": "Get project information",
+                "parameters": {
+                    "verbose": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Show detailed info",
+                    }
+                },
             },
             {
-                'name': 'init',
-                'description': 'Initialize a new project',
-                'parameters': {
-                    'path': {'type': 'string', 'description': 'Project path'},
-                    'force': {'type': 'boolean', 'default': False, 'description': 'Force initialization'}
-                }
-            }
+                "name": "init",
+                "description": "Initialize a new project",
+                "parameters": {
+                    "path": {"type": "string", "description": "Project path"},
+                    "force": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Force initialization",
+                    },
+                },
+            },
         ]
 
 
-def create_mcp_server(project_root: Optional[Path] = None) -> MCPServer:
+def create_mcp_server(project_root: Path | None = None) -> MCPServer:
     """Create and return an MCP server instance."""
     return MCPServer(project_root=project_root)

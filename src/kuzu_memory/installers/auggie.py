@@ -4,11 +4,9 @@ Auggie/Claude Installer for KuzuMemory
 Sets up Augment rules and integration files for seamless Auggie integration.
 """
 
-from pathlib import Path
-from typing import List
 import logging
 
-from .base import BaseInstaller, InstallationResult, InstallationError
+from .base import BaseInstaller, InstallationError, InstallationResult
 
 logger = logging.getLogger(__name__)
 
@@ -16,47 +14,49 @@ logger = logging.getLogger(__name__)
 class AuggieInstaller(BaseInstaller):
     """
     Installer for Auggie/Claude AI system integration.
-    
+
     Sets up Augment rules that automatically integrate KuzuMemory
     with Auggie conversations.
     """
-    
+
     @property
     def ai_system_name(self) -> str:
         return "Auggie/Claude"
-    
+
     @property
-    def required_files(self) -> List[str]:
+    def required_files(self) -> list[str]:
         return [
             "AGENTS.md",
             ".augment/rules/kuzu-memory-integration.md",
-            ".augment/rules/memory-quick-reference.md"
+            ".augment/rules/memory-quick-reference.md",
         ]
-    
+
     @property
     def description(self) -> str:
-        return ("Sets up Augment rules for automatic KuzuMemory integration. "
-                "Enables context enhancement and learning from conversations.")
-    
-    def check_prerequisites(self) -> List[str]:
+        return (
+            "Sets up Augment rules for automatic KuzuMemory integration. "
+            "Enables context enhancement and learning from conversations."
+        )
+
+    def check_prerequisites(self) -> list[str]:
         """Check Auggie-specific prerequisites."""
         errors = super().check_prerequisites()
-        
+
         # Check if KuzuMemory is initialized
-        kuzu_dir = self.project_root / 'kuzu-memories'
+        kuzu_dir = self.project_root / "kuzu-memories"
         if not kuzu_dir.exists():
             errors.append("KuzuMemory not initialized. Run 'kuzu-memory init' first.")
-        
+
         return errors
-    
+
     def install(self, force: bool = False, **kwargs) -> InstallationResult:
         """
         Install Auggie integration.
-        
+
         Args:
             force: Force installation even if files exist
             **kwargs: Additional options (unused for Auggie)
-            
+
         Returns:
             InstallationResult with installation details
         """
@@ -65,7 +65,7 @@ class AuggieInstaller(BaseInstaller):
             errors = self.check_prerequisites()
             if errors:
                 raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
-            
+
             # Check if already installed and not forcing
             if not force:
                 existing_files = []
@@ -73,22 +73,22 @@ class AuggieInstaller(BaseInstaller):
                     file_path = self.project_root / file_pattern
                     if file_path.exists():
                         existing_files.append(str(file_path))
-                
+
                 if existing_files:
                     raise InstallationError(
                         f"Auggie integration already exists. Use --force to overwrite. "
                         f"Existing files: {', '.join(existing_files)}"
                     )
-            
+
             # Install main AGENTS.md file
             self._install_agents_md()
-            
+
             # Install detailed integration rules
             self._install_integration_rules()
-            
+
             # Install quick reference
             self._install_quick_reference()
-            
+
             # Create installation result
             return InstallationResult(
                 success=True,
@@ -97,9 +97,9 @@ class AuggieInstaller(BaseInstaller):
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message="Successfully installed Auggie integration with KuzuMemory",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
-            
+
         except Exception as e:
             return InstallationResult(
                 success=False,
@@ -108,12 +108,12 @@ class AuggieInstaller(BaseInstaller):
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message=f"Installation failed: {e}",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
-    
+
     def _install_agents_md(self):
         """Install the main AGENTS.md file."""
-        agents_content = '''# KuzuMemory Project Guidelines
+        agents_content = """# KuzuMemory Project Guidelines
 
 This project uses KuzuMemory for intelligent project memory and context management. All AI assistants should integrate with the memory system for enhanced, project-specific responses.
 
@@ -232,15 +232,15 @@ The memory integration is working well when:
 - New team members get instant project context
 
 Remember: The goal is seamless, invisible integration that makes AI responses more helpful and project-aware without adding complexity for users.
-'''
-        
+"""
+
         agents_path = self.project_root / "AGENTS.md"
         if not self.write_file(agents_path, agents_content):
             raise InstallationError("Failed to create AGENTS.md")
-    
+
     def _install_integration_rules(self):
         """Install detailed integration rules."""
-        integration_content = '''# KuzuMemory Integration Rules
+        integration_content = """# KuzuMemory Integration Rules
 
 ## Automatic Memory Enhancement
 
@@ -388,16 +388,16 @@ The integration is working well when:
 - ✅ Consistent responses across different conversation sessions
 - ✅ New team members get instant project context
 - ✅ Memory operations are fast and invisible to users
-'''
-        
+"""
+
         rules_dir = self.project_root / ".augment" / "rules"
         rules_path = rules_dir / "kuzu-memory-integration.md"
         if not self.write_file(rules_path, integration_content):
             raise InstallationError("Failed to create integration rules")
-    
+
     def _install_quick_reference(self):
         """Install quick reference guide."""
-        reference_content = '''# KuzuMemory Quick Reference
+        reference_content = """# KuzuMemory Quick Reference
 
 ## Two-Step Integration
 
@@ -484,8 +484,8 @@ If any command fails:
 - Always use `--quiet` for storage
 - Use `--format plain` for enhancement
 - Memory operations should never block responses
-'''
-        
+"""
+
         rules_dir = self.project_root / ".augment" / "rules"
         reference_path = rules_dir / "memory-quick-reference.md"
         if not self.write_file(reference_path, reference_content):

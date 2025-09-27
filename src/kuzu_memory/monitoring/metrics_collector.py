@@ -5,11 +5,10 @@ Collects metrics from various components and provides
 consolidated reporting and analysis.
 """
 
-import asyncio
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from ..caching import MemoryCache, EmbeddingsCache
+from ..caching import EmbeddingsCache, MemoryCache
 from ..connection_pool import KuzuConnectionPool
 from .performance_monitor import PerformanceMonitor
 
@@ -28,9 +27,9 @@ class MetricsCollector:
     def __init__(
         self,
         performance_monitor: PerformanceMonitor,
-        memory_cache: Optional[MemoryCache] = None,
-        embeddings_cache: Optional[EmbeddingsCache] = None,
-        connection_pool: Optional[KuzuConnectionPool] = None
+        memory_cache: MemoryCache | None = None,
+        embeddings_cache: EmbeddingsCache | None = None,
+        connection_pool: KuzuConnectionPool | None = None,
     ):
         """
         Initialize metrics collector.
@@ -46,14 +45,14 @@ class MetricsCollector:
         self.embeddings_cache = embeddings_cache
         self.connection_pool = connection_pool
 
-    async def collect_all_metrics(self) -> Dict[str, Any]:
+    async def collect_all_metrics(self) -> dict[str, Any]:
         """Collect metrics from all components."""
         metrics = {
             "timestamp": datetime.now().isoformat(),
             "performance": {},
             "cache": {},
             "database": {},
-            "system_health": {}
+            "system_health": {},
         }
 
         # Collect performance metrics
@@ -86,7 +85,7 @@ class MetricsCollector:
 
         return metrics
 
-    async def _collect_cache_metrics(self) -> Dict[str, Any]:
+    async def _collect_cache_metrics(self) -> dict[str, Any]:
         """Collect metrics from all cache systems."""
         cache_metrics = {}
 
@@ -100,11 +99,13 @@ class MetricsCollector:
 
         # Calculate combined cache statistics
         if cache_metrics:
-            cache_metrics["combined"] = await self._calculate_combined_cache_stats(cache_metrics)
+            cache_metrics["combined"] = await self._calculate_combined_cache_stats(
+                cache_metrics
+            )
 
         return cache_metrics
 
-    async def _collect_database_metrics(self) -> Dict[str, Any]:
+    async def _collect_database_metrics(self) -> dict[str, Any]:
         """Collect metrics from database systems."""
         db_metrics = {}
 
@@ -117,14 +118,20 @@ class MetricsCollector:
 
         return db_metrics
 
-    async def _calculate_combined_cache_stats(self, cache_metrics: Dict[str, Any]) -> Dict[str, Any]:
+    async def _calculate_combined_cache_stats(
+        self, cache_metrics: dict[str, Any]
+    ) -> dict[str, Any]:
         """Calculate combined statistics across all caches."""
         combined = {
             "total_size": 0,
             "total_hits": 0,
             "total_misses": 0,
             "combined_hit_rate": 0.0,
-            "cache_types": len(cache_metrics) - 1 if "combined" in cache_metrics else len(cache_metrics)
+            "cache_types": (
+                len(cache_metrics) - 1
+                if "combined" in cache_metrics
+                else len(cache_metrics)
+            ),
         }
 
         for cache_name, stats in cache_metrics.items():
@@ -150,30 +157,38 @@ class MetricsCollector:
 
         return combined
 
-    async def _calculate_system_health(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+    async def _calculate_system_health(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Calculate overall system health from collected metrics."""
         health = {
             "status": "healthy",
             "score": 100,
             "issues": [],
-            "recommendations": []
+            "recommendations": [],
         }
 
         # Check performance metrics
         performance = metrics.get("performance", {})
         if "violations" in performance:
             violations = performance["violations"]
-            critical_violations = [v for v in violations if v.get("severity") == "critical"]
-            warning_violations = [v for v in violations if v.get("severity") == "warning"]
+            critical_violations = [
+                v for v in violations if v.get("severity") == "critical"
+            ]
+            warning_violations = [
+                v for v in violations if v.get("severity") == "warning"
+            ]
 
             if critical_violations:
                 health["status"] = "unhealthy"
                 health["score"] -= len(critical_violations) * 30
-                health["issues"].extend([f"Critical: {v['metric']}" for v in critical_violations])
+                health["issues"].extend(
+                    [f"Critical: {v['metric']}" for v in critical_violations]
+                )
 
             if warning_violations:
                 health["score"] -= len(warning_violations) * 10
-                health["issues"].extend([f"Warning: {v['metric']}" for v in warning_violations])
+                health["issues"].extend(
+                    [f"Warning: {v['metric']}" for v in warning_violations]
+                )
 
         # Check cache health
         cache = metrics.get("cache", {})
@@ -184,7 +199,9 @@ class MetricsCollector:
             health["status"] = "degraded"
             health["score"] -= 20
             health["issues"].append("Low cache hit rate")
-            health["recommendations"].append("Consider increasing cache size or adjusting TTL")
+            health["recommendations"].append(
+                "Consider increasing cache size or adjusting TTL"
+            )
 
         # Check database health
         database = metrics.get("database", {})
@@ -207,7 +224,7 @@ class MetricsCollector:
 
         return health
 
-    async def get_performance_summary(self, period_hours: int = 1) -> Dict[str, Any]:
+    async def get_performance_summary(self, period_hours: int = 1) -> dict[str, Any]:
         """Get performance summary for a specific time period."""
         period = timedelta(hours=period_hours)
         summary = await self.performance_monitor.get_summary(period)
@@ -218,14 +235,14 @@ class MetricsCollector:
 
         return summary
 
-    async def get_cache_efficiency_report(self) -> Dict[str, Any]:
+    async def get_cache_efficiency_report(self) -> dict[str, Any]:
         """Get detailed cache efficiency report."""
         cache_metrics = await self._collect_cache_metrics()
 
         report = {
             "timestamp": datetime.now().isoformat(),
             "efficiency_analysis": {},
-            "recommendations": []
+            "recommendations": [],
         }
 
         # Analyze memory cache efficiency
@@ -235,8 +252,12 @@ class MetricsCollector:
 
             report["efficiency_analysis"]["memory_cache"] = {
                 "hit_rate": memory_hit_rate,
-                "efficiency": "high" if memory_hit_rate > 0.8 else "medium" if memory_hit_rate > 0.5 else "low",
-                "total_size": memory_cache.get("memory_cache", {}).get("size", 0)
+                "efficiency": (
+                    "high"
+                    if memory_hit_rate > 0.8
+                    else "medium" if memory_hit_rate > 0.5 else "low"
+                ),
+                "total_size": memory_cache.get("memory_cache", {}).get("size", 0),
             }
 
             if memory_hit_rate < 0.7:
@@ -251,8 +272,12 @@ class MetricsCollector:
 
             report["efficiency_analysis"]["embeddings_cache"] = {
                 "hit_rate": embeddings_hit_rate,
-                "efficiency": "high" if embeddings_hit_rate > 0.8 else "medium" if embeddings_hit_rate > 0.5 else "low",
-                "estimated_memory_mb": embeddings_cache.get("estimated_memory_mb", 0)
+                "efficiency": (
+                    "high"
+                    if embeddings_hit_rate > 0.8
+                    else "medium" if embeddings_hit_rate > 0.5 else "low"
+                ),
+                "estimated_memory_mb": embeddings_cache.get("estimated_memory_mb", 0),
             }
 
             if embeddings_hit_rate < 0.6:
@@ -262,7 +287,7 @@ class MetricsCollector:
 
         return report
 
-    async def get_database_health_report(self) -> Dict[str, Any]:
+    async def get_database_health_report(self) -> dict[str, Any]:
         """Get detailed database health report."""
         db_metrics = await self._collect_database_metrics()
 
@@ -270,7 +295,7 @@ class MetricsCollector:
             "timestamp": datetime.now().isoformat(),
             "connection_pool": {},
             "health_status": "unknown",
-            "recommendations": []
+            "recommendations": [],
         }
 
         if "connection_pool" in db_metrics:
@@ -283,7 +308,7 @@ class MetricsCollector:
                 "available_connections": pool_stats.get("available_connections", 0),
                 "total_connections": pool_stats.get("pool_size", 0),
                 "created_connections": pool_stats.get("created_connections", 0),
-                "destroyed_connections": pool_stats.get("destroyed_connections", 0)
+                "destroyed_connections": pool_stats.get("destroyed_connections", 0),
             }
 
             # Determine health status
@@ -311,9 +336,7 @@ class MetricsCollector:
         return report
 
     async def export_metrics_report(
-        self,
-        format: str = "json",
-        include_detailed: bool = True
+        self, format: str = "json", include_detailed: bool = True
     ) -> str:
         """Export comprehensive metrics report."""
         # Collect all metrics
@@ -324,7 +347,7 @@ class MetricsCollector:
             all_metrics["detailed_reports"] = {
                 "cache_efficiency": await self.get_cache_efficiency_report(),
                 "database_health": await self.get_database_health_report(),
-                "performance_summary": await self.get_performance_summary()
+                "performance_summary": await self.get_performance_summary(),
             }
 
         # Export in requested format

@@ -15,25 +15,25 @@ Key Features:
 Example Usage:
     >>> from kuzu_memory import KuzuMemory
     >>> memory = KuzuMemory()
-    >>> 
+    >>>
     >>> # Store memories from conversation
     >>> memory.generate_memories("My name is Alice and I prefer Python")
-    >>> 
+    >>>
     >>> # Retrieve relevant memories
     >>> context = memory.attach_memories("What's my name?")
     >>> print(context.enhanced_prompt)
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from .__version__ import __version__, __version_info__, DB_SCHEMA_VERSION
+from .__version__ import DB_SCHEMA_VERSION, __version__, __version_info__
 
 # Import main classes for public API
 try:
+    from .core.config import KuzuMemoryConfig
     from .core.memory import KuzuMemory
     from .core.models import Memory, MemoryContext, MemoryType
-    from .core.config import KuzuMemoryConfig
 
     # All imports successful
     _IMPORT_ERROR = None
@@ -41,6 +41,7 @@ try:
 except ImportError as e:
     # Graceful degradation during development/testing
     import warnings
+
     warnings.warn(f"Could not import core components: {e}", ImportWarning)
 
     _IMPORT_ERROR = e
@@ -48,7 +49,9 @@ except ImportError as e:
     # Define placeholder classes to prevent import errors
     class KuzuMemory:
         def __init__(self, *args, **kwargs):
-            raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+            raise ImportError(
+                f"KuzuMemory core components not available: {_IMPORT_ERROR}"
+            )
 
     class Memory:
         pass
@@ -62,16 +65,17 @@ except ImportError as e:
     class KuzuMemoryConfig:
         pass
 
+
 # Public API
 __all__ = [
-    "__version__",
-    "__version_info__",
     "DB_SCHEMA_VERSION",
     "KuzuMemory",
+    "KuzuMemoryConfig",
     "Memory",
     "MemoryContext",
     "MemoryType",
-    "KuzuMemoryConfig",
+    "__version__",
+    "__version_info__",
     "create_memory_instance",
     "get_database_path",
     "is_available",
@@ -85,17 +89,19 @@ __author_email__ = "team@kuzu-memory.dev"
 __license__ = "MIT"
 __copyright__ = "Copyright 2024 KuzuMemory Team"
 
+
 def get_version() -> str:
     """Get the current version string."""
     return __version__
 
-def get_database_path(custom_path: Optional[Path] = None) -> Path:
+
+def get_database_path(custom_path: Path | None = None) -> Path:
     """
     Get the default database path with proper initialization.
-    
+
     Args:
         custom_path: Optional custom database path
-        
+
     Returns:
         Path to database file with parent directories created
     """
@@ -103,15 +109,15 @@ def get_database_path(custom_path: Optional[Path] = None) -> Path:
         db_path = Path(custom_path)
     else:
         db_path = Path(".kuzu_memory/memories.db")
-    
+
     # Ensure parent directory exists
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     return db_path
 
+
 def create_memory_instance(
-    db_path: Optional[Path] = None,
-    config: Optional[Dict[str, Any]] = None
+    db_path: Path | None = None, config: dict[str, Any] | None = None
 ) -> "KuzuMemory":
     """
     Factory function to create a KuzuMemory instance with error handling.

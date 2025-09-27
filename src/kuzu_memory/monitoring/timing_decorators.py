@@ -9,14 +9,15 @@ import asyncio
 import functools
 import logging
 import time
-from typing import Any, Callable, Dict, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
 # Global performance monitor instance (set by application)
-_global_monitor: Optional[Any] = None
+_global_monitor: Any | None = None
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def set_global_monitor(monitor: Any) -> None:
@@ -25,16 +26,16 @@ def set_global_monitor(monitor: Any) -> None:
     _global_monitor = monitor
 
 
-def get_global_monitor() -> Optional[Any]:
+def get_global_monitor() -> Any | None:
     """Get the global performance monitor instance."""
     return _global_monitor
 
 
 def time_async(
-    name: Optional[str] = None,
-    tags: Optional[Dict[str, str]] = None,
-    threshold_ms: Optional[float] = None,
-    log_slow: bool = True
+    name: str | None = None,
+    tags: dict[str, str] | None = None,
+    threshold_ms: float | None = None,
+    log_slow: bool = True,
 ) -> Callable[[F], F]:
     """
     Decorator to time async function execution.
@@ -50,6 +51,7 @@ def time_async(
         async def query_database():
             pass
     """
+
     def decorator(func: F) -> F:
         if not asyncio.iscoroutinefunction(func):
             raise TypeError(f"Function {func.__name__} is not async")
@@ -68,7 +70,7 @@ def time_async(
                 if _global_monitor:
                     await _global_monitor.increment_counter(
                         f"{metric_name}.errors",
-                        tags={**(tags or {}), "error_type": type(e).__name__}
+                        tags={**(tags or {}), "error_type": type(e).__name__},
                     )
                 raise
             finally:
@@ -86,14 +88,15 @@ def time_async(
                     )
 
         return wrapper
+
     return decorator
 
 
 def time_sync(
-    name: Optional[str] = None,
-    tags: Optional[Dict[str, str]] = None,
-    threshold_ms: Optional[float] = None,
-    log_slow: bool = True
+    name: str | None = None,
+    tags: dict[str, str] | None = None,
+    threshold_ms: float | None = None,
+    log_slow: bool = True,
 ) -> Callable[[F], F]:
     """
     Decorator to time synchronous function execution.
@@ -109,9 +112,12 @@ def time_sync(
         def process_memories(memories):
             pass
     """
+
     def decorator(func: F) -> F:
         if asyncio.iscoroutinefunction(func):
-            raise TypeError(f"Function {func.__name__} is async, use @time_async instead")
+            raise TypeError(
+                f"Function {func.__name__} is async, use @time_async instead"
+            )
 
         metric_name = name or f"{func.__module__}.{func.__name__}"
 
@@ -127,10 +133,12 @@ def time_sync(
                 if _global_monitor:
                     try:
                         loop = asyncio.get_running_loop()
-                        loop.create_task(_global_monitor.increment_counter(
-                            f"{metric_name}.errors",
-                            tags={**(tags or {}), "error_type": type(e).__name__}
-                        ))
+                        loop.create_task(
+                            _global_monitor.increment_counter(
+                                f"{metric_name}.errors",
+                                tags={**(tags or {}), "error_type": type(e).__name__},
+                            )
+                        )
                     except RuntimeError:
                         # No event loop, skip metric recording
                         pass
@@ -142,7 +150,11 @@ def time_sync(
                 if _global_monitor:
                     try:
                         loop = asyncio.get_running_loop()
-                        loop.create_task(_global_monitor.record_timing(metric_name, duration_ms, tags))
+                        loop.create_task(
+                            _global_monitor.record_timing(
+                                metric_name, duration_ms, tags
+                            )
+                        )
                     except RuntimeError:
                         # No event loop, skip metric recording
                         pass
@@ -155,6 +167,7 @@ def time_sync(
                     )
 
         return wrapper
+
     return decorator
 
 
@@ -175,15 +188,15 @@ class performance_tracker:
     def __init__(
         self,
         name: str,
-        tags: Optional[Dict[str, str]] = None,
-        threshold_ms: Optional[float] = None,
-        log_slow: bool = True
+        tags: dict[str, str] | None = None,
+        threshold_ms: float | None = None,
+        log_slow: bool = True,
     ):
         self.name = name
         self.tags = tags or {}
         self.threshold_ms = threshold_ms
         self.log_slow = log_slow
-        self.start_time: Optional[float] = None
+        self.start_time: float | None = None
 
     def __enter__(self):
         self.start_time = time.perf_counter()
@@ -203,7 +216,7 @@ class performance_tracker:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             await self._record_metric_async(duration_ms, exc_type)
 
-    def _record_metric(self, duration_ms: float, exc_type: Optional[type]):
+    def _record_metric(self, duration_ms: float, exc_type: type | None):
         """Record metric synchronously."""
         if not _global_monitor:
             return
@@ -212,12 +225,18 @@ class performance_tracker:
             loop = asyncio.get_running_loop()
 
             # Record timing
-            loop.create_task(_global_monitor.record_timing(self.name, duration_ms, self.tags))
+            loop.create_task(
+                _global_monitor.record_timing(self.name, duration_ms, self.tags)
+            )
 
             # Record error if exception occurred
             if exc_type:
                 error_tags = {**self.tags, "error_type": exc_type.__name__}
-                loop.create_task(_global_monitor.increment_counter(f"{self.name}.errors", tags=error_tags))
+                loop.create_task(
+                    _global_monitor.increment_counter(
+                        f"{self.name}.errors", tags=error_tags
+                    )
+                )
 
         except RuntimeError:
             # No event loop running, skip metric recording
@@ -230,7 +249,7 @@ class performance_tracker:
                 f"(threshold: {self.threshold_ms}ms)"
             )
 
-    async def _record_metric_async(self, duration_ms: float, exc_type: Optional[type]):
+    async def _record_metric_async(self, duration_ms: float, exc_type: type | None):
         """Record metric asynchronously."""
         if not _global_monitor:
             return
@@ -241,7 +260,9 @@ class performance_tracker:
         # Record error if exception occurred
         if exc_type:
             error_tags = {**self.tags, "error_type": exc_type.__name__}
-            await _global_monitor.increment_counter(f"{self.name}.errors", tags=error_tags)
+            await _global_monitor.increment_counter(
+                f"{self.name}.errors", tags=error_tags
+            )
 
         # Log slow operations
         if self.log_slow and self.threshold_ms and duration_ms > self.threshold_ms:
@@ -254,51 +275,55 @@ class performance_tracker:
 # Convenience functions for common operations
 def time_recall(func: F) -> F:
     """Decorator for memory recall operations (100ms threshold)."""
-    return time_async(
-        name="memory.recall",
-        threshold_ms=100.0,
-        tags={"operation": "recall"}
-    )(func) if asyncio.iscoroutinefunction(func) else time_sync(
-        name="memory.recall",
-        threshold_ms=100.0,
-        tags={"operation": "recall"}
-    )(func)
+    return (
+        time_async(
+            name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"}
+        )(func)
+        if asyncio.iscoroutinefunction(func)
+        else time_sync(
+            name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"}
+        )(func)
+    )
 
 
 def time_generation(func: F) -> F:
     """Decorator for memory generation operations (200ms threshold)."""
-    return time_async(
-        name="memory.generation",
-        threshold_ms=200.0,
-        tags={"operation": "generation"}
-    )(func) if asyncio.iscoroutinefunction(func) else time_sync(
-        name="memory.generation",
-        threshold_ms=200.0,
-        tags={"operation": "generation"}
-    )(func)
+    return (
+        time_async(
+            name="memory.generation",
+            threshold_ms=200.0,
+            tags={"operation": "generation"},
+        )(func)
+        if asyncio.iscoroutinefunction(func)
+        else time_sync(
+            name="memory.generation",
+            threshold_ms=200.0,
+            tags={"operation": "generation"},
+        )(func)
+    )
 
 
 def time_database(func: F) -> F:
     """Decorator for database operations (50ms threshold)."""
-    return time_async(
-        name="database.query",
-        threshold_ms=50.0,
-        tags={"operation": "database"}
-    )(func) if asyncio.iscoroutinefunction(func) else time_sync(
-        name="database.query",
-        threshold_ms=50.0,
-        tags={"operation": "database"}
-    )(func)
+    return (
+        time_async(
+            name="database.query", threshold_ms=50.0, tags={"operation": "database"}
+        )(func)
+        if asyncio.iscoroutinefunction(func)
+        else time_sync(
+            name="database.query", threshold_ms=50.0, tags={"operation": "database"}
+        )(func)
+    )
 
 
 def time_cache(func: F) -> F:
     """Decorator for cache operations (10ms threshold)."""
-    return time_async(
-        name="cache.operation",
-        threshold_ms=10.0,
-        tags={"operation": "cache"}
-    )(func) if asyncio.iscoroutinefunction(func) else time_sync(
-        name="cache.operation",
-        threshold_ms=10.0,
-        tags={"operation": "cache"}
-    )(func)
+    return (
+        time_async(
+            name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"}
+        )(func)
+        if asyncio.iscoroutinefunction(func)
+        else time_sync(
+            name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"}
+        )(func)
+    )

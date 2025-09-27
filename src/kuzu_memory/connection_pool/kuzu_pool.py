@@ -8,12 +8,12 @@ automatic recovery, and resource limits.
 import asyncio
 import logging
 import time
-from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set
 from collections import deque
+from contextlib import asynccontextmanager
+from datetime import timedelta
+from typing import Any
 
-from ..interfaces.connection_pool import IConnectionPool, IConnection
+from ..interfaces.connection_pool import IConnectionPool
 from .kuzu_connection import KuzuConnection
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class KuzuConnectionPool(IConnectionPool):
         num_threads_per_connection: int = 4,
         health_check_interval: timedelta = timedelta(minutes=5),
         connection_timeout: timedelta = timedelta(seconds=30),
-        idle_timeout: timedelta = timedelta(minutes=30)
+        idle_timeout: timedelta = timedelta(minutes=30),
     ):
         """
         Initialize connection pool.
@@ -63,8 +63,8 @@ class KuzuConnectionPool(IConnectionPool):
 
         # Pool state
         self._available_connections: deque[KuzuConnection] = deque()
-        self._active_connections: Set[KuzuConnection] = set()
-        self._all_connections: Set[KuzuConnection] = set()
+        self._active_connections: set[KuzuConnection] = set()
+        self._all_connections: set[KuzuConnection] = set()
 
         # Synchronization
         self._lock = asyncio.Lock()
@@ -72,7 +72,7 @@ class KuzuConnectionPool(IConnectionPool):
         self._pool_condition = asyncio.Condition()
 
         # Health monitoring
-        self._health_check_task: Optional[asyncio.Task] = None
+        self._health_check_task: asyncio.Task | None = None
         self._last_health_check = time.time()
 
         # Statistics
@@ -95,7 +95,9 @@ class KuzuConnectionPool(IConnectionPool):
             if self._initialized:
                 return
 
-            logger.info(f"Initializing Kuzu connection pool: {self.min_connections}-{self.max_connections} connections")
+            logger.info(
+                f"Initializing Kuzu connection pool: {self.min_connections}-{self.max_connections} connections"
+            )
 
             # Create minimum connections
             for _ in range(self.min_connections):
@@ -112,7 +114,7 @@ class KuzuConnectionPool(IConnectionPool):
         try:
             connection = KuzuConnection(
                 database_path=self.database_path,
-                num_threads=self.num_threads_per_connection
+                num_threads=self.num_threads_per_connection,
             )
 
             # Test the connection
@@ -121,7 +123,9 @@ class KuzuConnectionPool(IConnectionPool):
             self._all_connections.add(connection)
             self._created_connections += 1
 
-            logger.debug(f"Created new connection (total: {len(self._all_connections)})")
+            logger.debug(
+                f"Created new connection (total: {len(self._all_connections)})"
+            )
             return connection
 
         except Exception as e:
@@ -160,9 +164,9 @@ class KuzuConnectionPool(IConnectionPool):
         try:
             await asyncio.wait_for(
                 self._connection_semaphore.acquire(),
-                timeout=self.connection_timeout.total_seconds()
+                timeout=self.connection_timeout.total_seconds(),
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._connection_timeouts += 1
             raise RuntimeError("Connection timeout")
 
@@ -205,7 +209,8 @@ class KuzuConnectionPool(IConnectionPool):
         # Pool is full, wait for a connection to become available
         async with self._pool_condition:
             await self._pool_condition.wait_for(
-                lambda: self._available_connections or len(self._all_connections) < self.max_connections
+                lambda: self._available_connections
+                or len(self._all_connections) < self.max_connections
             )
 
         # Try again recursively
@@ -235,20 +240,19 @@ class KuzuConnectionPool(IConnectionPool):
         async with self._pool_condition:
             self._pool_condition.notify()
 
-    async def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """Execute a query using a connection from the pool."""
         async with self.get_connection() as connection:
             return await connection.execute(query, params)
 
     async def execute_many(
-        self,
-        queries: List[tuple[str, Optional[Dict[str, Any]]]]
-    ) -> List[Any]:
+        self, queries: list[tuple[str, dict[str, Any] | None]]
+    ) -> list[Any]:
         """Execute multiple queries using connections from the pool."""
         async with self.get_connection() as connection:
             return await connection.execute_many(queries)
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the connection pool."""
         async with self._lock:
             healthy_connections = 0
@@ -272,7 +276,9 @@ class KuzuConnectionPool(IConnectionPool):
                     connection = await self._create_connection()
                     self._available_connections.append(connection)
                 except Exception as e:
-                    logger.error(f"Failed to create connection during health check: {e}")
+                    logger.error(
+                        f"Failed to create connection during health check: {e}"
+                    )
                     break
 
             return {
@@ -281,10 +287,10 @@ class KuzuConnectionPool(IConnectionPool):
                 "total_connections": len(self._all_connections),
                 "available_connections": len(self._available_connections),
                 "active_connections": len(self._active_connections),
-                "health_check_failures": self._health_check_failures
+                "health_check_failures": self._health_check_failures,
             }
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get comprehensive pool statistics."""
         async with self._lock:
             return {
@@ -298,8 +304,12 @@ class KuzuConnectionPool(IConnectionPool):
                 "connection_requests": self._connection_requests,
                 "connection_timeouts": self._connection_timeouts,
                 "health_check_failures": self._health_check_failures,
-                "utilization": len(self._active_connections) / self.max_connections if self.max_connections > 0 else 0,
-                "database_path": self.database_path
+                "utilization": (
+                    len(self._active_connections) / self.max_connections
+                    if self.max_connections > 0
+                    else 0
+                ),
+                "database_path": self.database_path,
             }
 
     async def close_all(self) -> None:

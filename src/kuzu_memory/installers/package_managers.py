@@ -4,9 +4,8 @@ Package manager implementations for KuzuMemory installation.
 Contains integration examples and templates for different programming languages.
 """
 
-from pathlib import Path
-from typing import Dict, Optional, Any
 import logging
+from pathlib import Path
 
 from .system_utils import FileOperations
 
@@ -223,7 +222,7 @@ if __name__ == "__main__":
     @staticmethod
     def get_javascript_integration() -> str:
         """Get JavaScript/Node.js integration template."""
-        return '''#!/usr/bin/env node
+        return """#!/usr/bin/env node
 /**
  * JavaScript/Node.js Integration Example for KuzuMemory
  *
@@ -447,12 +446,12 @@ if (require.main === module) {
 }
 
 module.exports = { KuzuMemoryIntegration, aiConversationWithMemory };
-'''
+"""
 
     @staticmethod
     def get_shell_integration() -> str:
         """Get shell script integration template."""
-        return '''#!/bin/bash
+        return """#!/bin/bash
 # Shell Integration Example for KuzuMemory
 #
 # This script demonstrates how to integrate KuzuMemory with shell-based AI workflows.
@@ -691,12 +690,12 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
-'''
+"""
 
     @staticmethod
     def get_integration_guide(ai_system: str = "Your AI System") -> str:
         """Get the main integration guide markdown."""
-        return f'''# KuzuMemory Integration Guide
+        return f"""# KuzuMemory Integration Guide
 
 Welcome to KuzuMemory! This guide shows you how to integrate KuzuMemory with {ai_system} for intelligent, persistent memory.
 
@@ -973,7 +972,7 @@ kuzu-memory temporal-analysis --detailed
 ---
 
 **KuzuMemory: Making {ai_system} smarter, one memory at a time.** 🧠✨
-'''
+"""
 
 
 class ExampleGenerator:
@@ -1028,7 +1027,9 @@ class ExampleGenerator:
         return True
 
     @staticmethod
-    def create_integration_guide(project_root: Path, ai_system: str = "Your AI System") -> bool:
+    def create_integration_guide(
+        project_root: Path, ai_system: str = "Your AI System"
+    ) -> bool:
         """Create main integration guide."""
         guide_content = IntegrationTemplates.get_integration_guide(ai_system)
         guide_path = project_root / "kuzu-memory-integration.md"

@@ -2,14 +2,14 @@
 MCP (Model Context Protocol) commands for Claude Code integration.
 """
 
-import sys
 import asyncio
-import click
+import sys
 from pathlib import Path
-from typing import Optional
 
-from .cli_utils import rich_print, rich_panel, RICH_AVAILABLE
-from ..mcp import MCPServer, create_mcp_server
+import click
+
+from ..mcp import create_mcp_server
+from .cli_utils import rich_panel, rich_print
 
 
 @click.group()
@@ -24,11 +24,15 @@ def mcp():
 
 
 @mcp.command()
-@click.option('--port', type=int, help='Port to run server on (for network mode)')
-@click.option('--stdio', is_flag=True, default=True, help='Use stdio for communication (default)')
-@click.option('--project-root', type=click.Path(exists=True), help='Project root directory')
+@click.option("--port", type=int, help="Port to run server on (for network mode)")
+@click.option(
+    "--stdio", is_flag=True, default=True, help="Use stdio for communication (default)"
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
-def serve(ctx, port: Optional[int], stdio: bool, project_root: Optional[str]):
+def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
     """
     Run the MCP server for Claude Code integration.
 
@@ -61,7 +65,7 @@ def serve(ctx, port: Optional[int], stdio: bool, project_root: Optional[str]):
         sys.exit(0)
     except Exception as e:
         rich_print(f"❌ MCP server error: {e}", style="red")
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         sys.exit(1)
 
@@ -85,7 +89,7 @@ def test(ctx):
             ("enhance", {"prompt": "test prompt", "format": "plain"}),
             ("recall", {"query": "test query"}),
             ("stats", {"detailed": False}),
-            ("project", {"verbose": False})
+            ("project", {"verbose": False}),
         ]
 
         results = []
@@ -93,13 +97,16 @@ def test(ctx):
             try:
                 method = getattr(server, tool_name)
                 result = method(**params)
-                success = result.get('success', False)
+                success = result.get("success", False)
                 results.append((tool_name, success))
 
                 if success:
                     rich_print(f"  ✅ {tool_name}: OK", style="green")
                 else:
-                    rich_print(f"  ⚠️  {tool_name}: {result.get('error', 'Failed')}", style="yellow")
+                    rich_print(
+                        f"  ⚠️  {tool_name}: {result.get('error', 'Failed')}",
+                        style="yellow",
+                    )
             except Exception as e:
                 results.append((tool_name, False))
                 rich_print(f"  ❌ {tool_name}: {e}", style="red")
@@ -113,19 +120,19 @@ def test(ctx):
                 f"All {total} tests passed! ✨\n\n"
                 "MCP server is ready for Claude Code integration.",
                 title="🎉 Test Success",
-                style="green"
+                style="green",
             )
         else:
             rich_panel(
                 f"{passed}/{total} tests passed.\n\n"
                 "Some tests failed. Check configuration and try again.",
                 title="⚠️ Test Partial Success",
-                style="yellow"
+                style="yellow",
             )
 
     except Exception as e:
         rich_print(f"❌ MCP test failed: {e}", style="red")
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         sys.exit(1)
 
@@ -137,7 +144,6 @@ def info(ctx):
     Show MCP server information and configuration.
     """
     try:
-        from ..mcp import MCPServer
 
         server = create_mcp_server()
         tools = server.get_tools()
@@ -149,14 +155,14 @@ def info(ctx):
             f"CLI Path: {server.cli_path}\n"
             f"Available Tools: {len(tools)}",
             title="🤖 MCP Server Info",
-            style="blue"
+            style="blue",
         )
 
         rich_print("\n📋 Available Tools:", style="blue")
         for tool in tools:
-            params = tool.get('parameters', {})
-            required = [p for p, info in params.items() if info.get('required')]
-            optional = [p for p, info in params.items() if not info.get('required')]
+            params = tool.get("parameters", {})
+            required = [p for p, info in params.items() if info.get("required")]
+            optional = [p for p, info in params.items() if not info.get("required")]
 
             rich_print(f"\n  • {tool['name']}: {tool['description']}")
             if required:
@@ -166,15 +172,15 @@ def info(ctx):
 
     except Exception as e:
         rich_print(f"❌ Failed to get MCP info: {e}", style="red")
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         sys.exit(1)
 
 
 @mcp.command()
-@click.option('--output', type=click.Path(), help='Save configuration to file')
+@click.option("--output", type=click.Path(), help="Save configuration to file")
 @click.pass_context
-def config(ctx, output: Optional[str]):
+def config(ctx, output: str | None):
     """
     Generate MCP configuration for Claude Code.
 
@@ -190,9 +196,7 @@ def config(ctx, output: Optional[str]):
                 "kuzu-memory": {
                     "command": "kuzu-memory",
                     "args": ["mcp", "serve"],
-                    "env": {
-                        "KUZU_MEMORY_PROJECT": "${PROJECT_ROOT}"
-                    }
+                    "env": {"KUZU_MEMORY_PROJECT": "${PROJECT_ROOT}"},
                 }
             }
         }
@@ -205,9 +209,7 @@ def config(ctx, output: Optional[str]):
             rich_print(f"✅ Configuration saved to: {output_path}", style="green")
         else:
             rich_panel(
-                config_json,
-                title="📋 Claude Code MCP Configuration",
-                style="blue"
+                config_json, title="📋 Claude Code MCP Configuration", style="blue"
             )
 
             rich_print("\n📌 To use this configuration:", style="blue")
@@ -218,6 +220,6 @@ def config(ctx, output: Optional[str]):
 
     except Exception as e:
         rich_print(f"❌ Failed to generate config: {e}", style="red")
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         sys.exit(1)

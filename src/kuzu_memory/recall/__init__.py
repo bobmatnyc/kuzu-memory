@@ -1,13 +1,13 @@
 """Recall components for KuzuMemory."""
 
-from .strategies import (
-    RecallStrategy,
-    KeywordRecallStrategy,
-    EntityRecallStrategy,
-    TemporalRecallStrategy,
-)
 from .coordinator import RecallCoordinator
 from .ranking import MemoryRanker
+from .strategies import (
+    EntityRecallStrategy,
+    KeywordRecallStrategy,
+    RecallStrategy,
+    TemporalRecallStrategy,
+)
 
 __all__ = [
     # Strategies

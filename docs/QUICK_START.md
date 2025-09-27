@@ -8,7 +8,10 @@
 
 ### **Step 1: Installation (1 minute)**
 ```bash
-# Clone and install
+# Production install (recommended)
+pipx install kuzu-memory
+
+# Or development install
 git clone <repository>
 cd kuzu-memory
 make dev-setup    # Installs everything + initializes memories
@@ -16,11 +19,14 @@ make dev-setup    # Installs everything + initializes memories
 
 ### **Step 2: Verify Setup (30 seconds)**
 ```bash
-# Test performance
-make memory-test
+# Initialize memory system
+kuzu-memory init
 
-# Check code quality
-make quality
+# Check installation
+kuzu-memory --version    # Should show v1.1.0
+
+# For development: Test performance and quality
+make memory-test && make quality
 ```
 
 ### **Step 3: Try It Out (30 seconds)**

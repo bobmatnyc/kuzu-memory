@@ -6,25 +6,25 @@ memory classification, entity extraction, sentiment analysis, and intent detecti
 """
 
 from .classifier import (
-    MemoryClassifier,
     ClassificationResult,
     EntityExtractionResult,
-    SentimentResult
+    MemoryClassifier,
+    SentimentResult,
 )
 from .patterns import (
-    MEMORY_TYPE_PATTERNS,
     ENTITY_PATTERNS,
     INTENT_KEYWORDS,
-    get_memory_type_indicators
+    MEMORY_TYPE_PATTERNS,
+    get_memory_type_indicators,
 )
 
 __all__ = [
-    "MemoryClassifier",
-    "ClassificationResult",
-    "EntityExtractionResult",
-    "SentimentResult",
-    "MEMORY_TYPE_PATTERNS",
     "ENTITY_PATTERNS",
     "INTENT_KEYWORDS",
-    "get_memory_type_indicators"
+    "MEMORY_TYPE_PATTERNS",
+    "ClassificationResult",
+    "EntityExtractionResult",
+    "MemoryClassifier",
+    "SentimentResult",
+    "get_memory_type_indicators",
 ]

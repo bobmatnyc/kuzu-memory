@@ -8,13 +8,12 @@ Refactored to use modular components for better maintainability.
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
 from pathlib import Path
+from typing import Any
 
-from ..core.models import Memory, MemoryContext, MemoryType
 from ..utils.exceptions import KuzuMemoryError
-from .auggie_rules import AuggieRuleEngine, RuleType, RulePriority, AuggieRule
-from .auggie_memory import ResponseLearner, MemorySynchronizer
+from .auggie_memory import MemorySynchronizer, ResponseLearner
+from .auggie_rules import AuggieRuleEngine, RuleType
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,13 @@ class AuggieIntegration:
     through integration with Auggie's rules system.
     """
 
-    def __init__(self, kuzu_memory=None, project_root: Optional[Path] = None, memory_system=None, config=None):
+    def __init__(
+        self,
+        kuzu_memory=None,
+        project_root: Path | None = None,
+        memory_system=None,
+        config=None,
+    ):
         """Initialize Auggie integration with project context."""
         self.project_root = project_root or Path.cwd()
 
@@ -59,7 +64,7 @@ class AuggieIntegration:
             "rules_executed": 0,
             "patterns_discovered": 0,
             "last_activity": None,
-            "integration_started": datetime.now()
+            "integration_started": datetime.now(),
         }
 
         # Configuration
@@ -68,7 +73,7 @@ class AuggieIntegration:
             "rule_execution_timeout": 5.0,
             "max_context_memories": 10,
             "learning_threshold": 0.7,
-            "sync_interval_hours": 24
+            "sync_interval_hours": 24,
         }
 
         # Merge user-provided config with defaults
@@ -84,7 +89,7 @@ class AuggieIntegration:
             self.project_root / ".augment",
             self.project_root / "AGENTS.md",
             self.project_root / ".augment" / "rules",
-            self.project_root / "auggie.json"
+            self.project_root / "auggie.json",
         ]
 
         return any(indicator.exists() for indicator in auggie_indicators)
@@ -98,7 +103,9 @@ class AuggieIntegration:
 
             # Check if we have recent activity
             if self.integration_stats["last_activity"]:
-                last_activity = datetime.fromisoformat(self.integration_stats["last_activity"])
+                last_activity = datetime.fromisoformat(
+                    self.integration_stats["last_activity"]
+                )
                 if datetime.now() - last_activity > timedelta(days=7):
                     return False
 
@@ -123,10 +130,10 @@ class AuggieIntegration:
                     "auto_learning": True,
                     "rule_execution": True,
                     "memory_sync": True,
-                    "created": datetime.now().isoformat()
+                    "created": datetime.now().isoformat(),
                 }
 
-                with config_path.open('w') as f:
+                with config_path.open("w") as f:
                     json.dump(config_data, f, indent=2)
 
             logger.info("Auggie project integration set up successfully")
@@ -135,8 +142,12 @@ class AuggieIntegration:
             logger.error(f"Failed to set up Auggie integration: {e}")
             raise KuzuMemoryError(f"Integration setup failed: {e}")
 
-    def enhance_prompt(self, prompt: str, user_id: str = "default",
-                      context: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    def enhance_prompt(
+        self,
+        prompt: str,
+        user_id: str = "default",
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Enhance a prompt using Auggie rules and memory context.
 
@@ -158,22 +169,21 @@ class AuggieIntegration:
                 "user_id": user_id,
                 "prompt_length": len(prompt),
                 "timestamp": datetime.now().isoformat(),
-                **(context or {})
+                **(context or {}),
             }
 
             # Add memory context if available
             if self.memory_system:
                 try:
                     relevant_memories = self.memory_system.recall_memories(
-                        prompt,
-                        max_memories=self.config["max_context_memories"]
+                        prompt, max_memories=self.config["max_context_memories"]
                     )
                     rule_context["memories"] = [
                         {
                             "content": mem.content,
                             "type": mem.memory_type.value,
-                            "relevance": getattr(mem, 'relevance_score', 0.0),
-                            "source": mem.source
+                            "relevance": getattr(mem, "relevance_score", 0.0),
+                            "source": mem.source,
                         }
                         for mem in relevant_memories
                     ]
@@ -186,7 +196,7 @@ class AuggieIntegration:
             # Execute context enhancement rules
             modifications = self.rule_engine.execute_rules(
                 rule_context,
-                rule_types=[RuleType.CONTEXT_ENHANCEMENT, RuleType.PROMPT_MODIFICATION]
+                rule_types=[RuleType.CONTEXT_ENHANCEMENT, RuleType.PROMPT_MODIFICATION],
             )
 
             self.integration_stats["rules_executed"] += 1
@@ -203,14 +213,21 @@ class AuggieIntegration:
                 for context_addition in modifications["added_context"]:
                     if "max_memories" in context_addition:
                         max_memories = context_addition["max_memories"]
-                        relevant_memories = rule_context.get("memories", [])[:max_memories]
+                        relevant_memories = rule_context.get("memories", [])[
+                            :max_memories
+                        ]
 
                         if relevant_memories:
-                            context_text = "\n".join([
-                                f"• {mem['content'][:200]}..." if len(mem['content']) > 200
-                                else f"• {mem['content']}"
-                                for mem in relevant_memories
-                            ])
+                            context_text = "\n".join(
+                                [
+                                    (
+                                        f"• {mem['content'][:200]}..."
+                                        if len(mem["content"]) > 200
+                                        else f"• {mem['content']}"
+                                    )
+                                    for mem in relevant_memories
+                                ]
+                            )
                             added_context.append(f"Relevant context:\n{context_text}")
 
             # Apply prompt modifications
@@ -232,14 +249,16 @@ class AuggieIntegration:
                 "context": "\n\n".join(added_context) if added_context else "",
                 "memories_count": rule_context.get("memories_available", 0),
                 "rules_applied": len([r for r in modifications if modifications[r]]),
-                "modifications": modifications
+                "modifications": modifications,
             }
 
         except Exception as e:
             logger.error(f"Error enhancing prompt: {e}")
             return None
 
-    def learn_from_conversation(self, conversation_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def learn_from_conversation(
+        self, conversation_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Learn from a complete conversation interaction.
 
@@ -266,13 +285,17 @@ class AuggieIntegration:
                 "user_id": user_id,
                 "timestamp": datetime.now().isoformat(),
                 "response_length": len(response),
-                "prompt_length": len(prompt)
+                "prompt_length": len(prompt),
             }
 
             # Process the interaction for learning
             learning_results = self.response_learner.process_interaction(
-                prompt, response, learning_context,
-                {"score": 0.8} if feedback else None  # Default positive feedback if none provided
+                prompt,
+                response,
+                learning_context,
+                (
+                    {"score": 0.8} if feedback else None
+                ),  # Default positive feedback if none provided
             )
 
             # Update integration statistics
@@ -281,12 +304,16 @@ class AuggieIntegration:
             )
 
             # Sync to memory system if available and configured
-            if (self.memory_synchronizer and
-                learning_results.get("patterns_discovered") and
-                len(learning_results["patterns_discovered"]) > 0):
+            if (
+                self.memory_synchronizer
+                and learning_results.get("patterns_discovered")
+                and len(learning_results["patterns_discovered"]) > 0
+            ):
 
                 try:
-                    self.memory_synchronizer.sync_learned_patterns_to_memory(self.response_learner)
+                    self.memory_synchronizer.sync_learned_patterns_to_memory(
+                        self.response_learner
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to sync patterns to memory: {e}")
 
@@ -295,14 +322,14 @@ class AuggieIntegration:
                 "learning_results": learning_results,
                 "memory_id": f"learning_{datetime.now().timestamp()}",
                 "patterns_count": len(learning_results.get("patterns_discovered", [])),
-                "rules_updated": len(learning_results.get("patterns_updated", []))
+                "rules_updated": len(learning_results.get("patterns_updated", [])),
             }
 
         except Exception as e:
             logger.error(f"Error learning from conversation: {e}")
             return None
 
-    def get_rules_summary(self) -> Dict[str, Any]:
+    def get_rules_summary(self) -> dict[str, Any]:
         """Get summary information about current rules."""
         try:
             augment_dir = self.project_root / ".augment"
@@ -311,12 +338,16 @@ class AuggieIntegration:
             rule_files = []
             if rules_dir.exists():
                 for rule_file in rules_dir.glob("*.md"):
-                    rule_files.append({
-                        "path": str(rule_file.relative_to(self.project_root)),
-                        "name": rule_file.name,
-                        "last_modified": datetime.fromtimestamp(rule_file.stat().st_mtime).isoformat(),
-                        "size": rule_file.stat().st_size
-                    })
+                    rule_files.append(
+                        {
+                            "path": str(rule_file.relative_to(self.project_root)),
+                            "name": rule_file.name,
+                            "last_modified": datetime.fromtimestamp(
+                                rule_file.stat().st_mtime
+                            ).isoformat(),
+                            "size": rule_file.stat().st_size,
+                        }
+                    )
 
             engine_rules = self.rule_engine.get_rule_statistics()
 
@@ -329,20 +360,20 @@ class AuggieIntegration:
                         "description": rule.description,
                         "type": rule.rule_type.value,
                         "enabled": rule.enabled,
-                        "usage_count": rule.execution_count
+                        "usage_count": rule.execution_count,
                     }
                     for rule in self.rule_engine.rules.values()
                 ],
                 "active_count": engine_rules["enabled_rules"],
                 "total_count": engine_rules["total_rules"],
-                "statistics": engine_rules
+                "statistics": engine_rules,
             }
 
         except Exception as e:
             logger.error(f"Error getting rules summary: {e}")
             return {}
 
-    def get_integration_stats(self) -> Dict[str, Any]:
+    def get_integration_stats(self) -> dict[str, Any]:
         """Get comprehensive integration statistics."""
         stats = self.integration_stats.copy()
 
@@ -356,25 +387,29 @@ class AuggieIntegration:
 
         # Calculate derived metrics
         if stats["prompts_enhanced"] > 0:
-            stats["enhancement_rate"] = (stats["rules_executed"] / stats["prompts_enhanced"]) * 100
+            stats["enhancement_rate"] = (
+                stats["rules_executed"] / stats["prompts_enhanced"]
+            ) * 100
         else:
             stats["enhancement_rate"] = 0.0
 
         # Add health information
         stats["health"] = {
             "rule_engine": "healthy" if self.rule_engine.rules else "inactive",
-            "learning_system": "healthy" if stats["responses_learned"] > 0 else "inactive",
-            "memory_sync": "healthy" if self.memory_synchronizer else "unavailable"
+            "learning_system": (
+                "healthy" if stats["responses_learned"] > 0 else "inactive"
+            ),
+            "memory_sync": "healthy" if self.memory_synchronizer else "unavailable",
         }
 
         return stats
 
-    def update_configuration(self, config_updates: Dict[str, Any]):
+    def update_configuration(self, config_updates: dict[str, Any]):
         """Update integration configuration."""
         self.config.update(config_updates)
         logger.info(f"Configuration updated: {config_updates}")
 
-    def get_recommendations(self) -> List[Dict[str, Any]]:
+    def get_recommendations(self) -> list[dict[str, Any]]:
         """Get recommendations for improving integration effectiveness."""
         recommendations = []
 
@@ -385,27 +420,33 @@ class AuggieIntegration:
 
             # Add integration-specific recommendations
             if self.integration_stats["prompts_enhanced"] == 0:
-                recommendations.append({
-                    "type": "integration_usage",
-                    "message": "No prompts have been enhanced yet. Try using the enhance functionality.",
-                    "priority": "high"
-                })
+                recommendations.append(
+                    {
+                        "type": "integration_usage",
+                        "message": "No prompts have been enhanced yet. Try using the enhance functionality.",
+                        "priority": "high",
+                    }
+                )
 
             if not self.memory_system:
-                recommendations.append({
-                    "type": "memory_system",
-                    "message": "Memory system not connected. Consider initializing memory integration.",
-                    "priority": "medium"
-                })
+                recommendations.append(
+                    {
+                        "type": "memory_system",
+                        "message": "Memory system not connected. Consider initializing memory integration.",
+                        "priority": "medium",
+                    }
+                )
 
             # Rule-based recommendations
             rule_stats = self.rule_engine.get_rule_statistics()
             if rule_stats["total_executions"] == 0:
-                recommendations.append({
-                    "type": "rule_execution",
-                    "message": "No rules have been executed. Check rule conditions and contexts.",
-                    "priority": "medium"
-                })
+                recommendations.append(
+                    {
+                        "type": "rule_execution",
+                        "message": "No rules have been executed. Check rule conditions and contexts.",
+                        "priority": "medium",
+                    }
+                )
 
         except Exception as e:
             logger.warning(f"Error generating recommendations: {e}")
@@ -420,10 +461,10 @@ class AuggieIntegration:
                 "configuration": self.config,
                 "rules_summary": self.get_rules_summary(),
                 "learning_stats": self.response_learner.get_learning_statistics(),
-                "export_timestamp": datetime.now().isoformat()
+                "export_timestamp": datetime.now().isoformat(),
             }
 
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 json.dump(export_data, f, indent=2)
 
             logger.info(f"Integration data exported to {file_path}")
@@ -442,7 +483,8 @@ class AuggieIntegration:
 
             # Remove old feedback history
             self.response_learner.feedback_history = [
-                record for record in self.response_learner.feedback_history
+                record
+                for record in self.response_learner.feedback_history
                 if datetime.fromisoformat(record["timestamp"]) > cutoff_date
             ]
 

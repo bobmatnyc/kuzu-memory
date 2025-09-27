@@ -4,11 +4,9 @@ Universal Installer for KuzuMemory
 Creates generic integration files that work with any AI system.
 """
 
-from pathlib import Path
-from typing import List
 import logging
 
-from .base import BaseInstaller, InstallationResult, InstallationError
+from .base import BaseInstaller, InstallationError, InstallationResult
 
 logger = logging.getLogger(__name__)
 
@@ -16,39 +14,41 @@ logger = logging.getLogger(__name__)
 class UniversalInstaller(BaseInstaller):
     """
     Universal installer for any AI system integration.
-    
+
     Creates generic integration files and examples that can be
     adapted for any AI system.
     """
-    
+
     @property
     def ai_system_name(self) -> str:
         return "Universal"
-    
+
     @property
-    def required_files(self) -> List[str]:
+    def required_files(self) -> list[str]:
         return [
             "kuzu-memory-integration.md",
             "examples/python_integration.py",
             "examples/javascript_integration.js",
-            "examples/shell_integration.sh"
+            "examples/shell_integration.sh",
         ]
-    
+
     @property
     def description(self) -> str:
-        return ("Creates universal integration files and examples that work with any AI system. "
-                "Includes Python, JavaScript, and shell integration examples.")
-    
+        return (
+            "Creates universal integration files and examples that work with any AI system. "
+            "Includes Python, JavaScript, and shell integration examples."
+        )
+
     def install(self, force: bool = False, **kwargs) -> InstallationResult:
         """
         Install universal integration files.
-        
+
         Args:
             force: Force installation even if files exist
             **kwargs: Additional options
                 - language: Primary language for examples (python, javascript, shell)
                 - ai_system: Name of AI system for customization
-            
+
         Returns:
             InstallationResult with installation details
         """
@@ -57,11 +57,11 @@ class UniversalInstaller(BaseInstaller):
             errors = self.check_prerequisites()
             if errors:
                 raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
-            
+
             # Get options
-            primary_language = kwargs.get('language', 'python')
-            ai_system = kwargs.get('ai_system', 'Your AI System')
-            
+            primary_language = kwargs.get("language", "python")
+            ai_system = kwargs.get("ai_system", "Your AI System")
+
             # Check if already installed and not forcing
             if not force:
                 existing_files = []
@@ -69,26 +69,28 @@ class UniversalInstaller(BaseInstaller):
                     file_path = self.project_root / file_pattern
                     if file_path.exists():
                         existing_files.append(str(file_path))
-                
+
                 if existing_files:
                     raise InstallationError(
                         f"Universal integration already exists. Use --force to overwrite. "
                         f"Existing files: {', '.join(existing_files)}"
                     )
-            
+
             # Install main integration guide
             self._install_integration_guide(ai_system)
-            
+
             # Install examples
             self._install_python_example()
             self._install_javascript_example()
             self._install_shell_example()
-            
+
             # Add language-specific note
-            if primary_language != 'python':
-                self.warnings.append(f"Primary language set to {primary_language}. "
-                                   f"See examples/{primary_language}_integration for your language.")
-            
+            if primary_language != "python":
+                self.warnings.append(
+                    f"Primary language set to {primary_language}. "
+                    f"See examples/{primary_language}_integration for your language."
+                )
+
             return InstallationResult(
                 success=True,
                 ai_system=self.ai_system_name,
@@ -96,9 +98,9 @@ class UniversalInstaller(BaseInstaller):
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message=f"Successfully installed universal integration for {ai_system}",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
-            
+
         except Exception as e:
             return InstallationResult(
                 success=False,
@@ -107,12 +109,12 @@ class UniversalInstaller(BaseInstaller):
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message=f"Installation failed: {e}",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
-    
+
     def _install_integration_guide(self, ai_system: str):
         """Install the main integration guide."""
-        guide_content = f'''# KuzuMemory Integration Guide
+        guide_content = f"""# KuzuMemory Integration Guide
 
 This project uses KuzuMemory for intelligent project memory and context management. This guide shows how to integrate KuzuMemory with {ai_system}.
 
@@ -288,12 +290,12 @@ Your integration is working well when:
 4. **Train your team** - Share integration patterns and best practices
 
 Remember: The goal is seamless, invisible integration that makes AI responses more helpful and project-aware.
-'''
-        
+"""
+
         guide_path = self.project_root / "kuzu-memory-integration.md"
         if not self.write_file(guide_path, guide_content):
             raise InstallationError("Failed to create integration guide")
-    
+
     def _install_python_example(self):
         """Install Python integration example."""
         python_content = '''#!/usr/bin/env python3
@@ -508,15 +510,15 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-        
+
         examples_dir = self.project_root / "examples"
         python_path = examples_dir / "python_integration.py"
         if not self.write_file(python_path, python_content):
             raise InstallationError("Failed to create Python example")
-    
+
     def _install_javascript_example(self):
         """Install JavaScript integration example."""
-        js_content = '''#!/usr/bin/env node
+        js_content = """#!/usr/bin/env node
 /**
  * KuzuMemory JavaScript Integration Example
  * 
@@ -715,16 +717,16 @@ if (require.main === module) {
 }
 
 module.exports = { KuzuMemoryIntegration };
-'''
-        
+"""
+
         examples_dir = self.project_root / "examples"
         js_path = examples_dir / "javascript_integration.js"
         if not self.write_file(js_path, js_content):
             raise InstallationError("Failed to create JavaScript example")
-    
+
     def _install_shell_example(self):
         """Install shell integration example."""
-        shell_content = '''#!/bin/bash
+        shell_content = """#!/bin/bash
 # KuzuMemory Shell Integration Example
 #
 # This example shows how to integrate KuzuMemory with shell-based AI systems.
@@ -968,13 +970,13 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
-'''
-        
+"""
+
         examples_dir = self.project_root / "examples"
         shell_path = examples_dir / "shell_integration.sh"
         if not self.write_file(shell_path, shell_content):
             raise InstallationError("Failed to create shell example")
-        
+
         # Make shell script executable
         try:
             shell_path.chmod(0o755)

@@ -6,8 +6,7 @@ enabling easy testing, mocking, and swapping of storage backends.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, AsyncGenerator
-from datetime import datetime
+from typing import Any
 
 from ..core.models import Memory, MemoryContext
 
@@ -37,7 +36,7 @@ class IMemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_memory(self, memory_id: str) -> Optional[Memory]:
+    async def get_memory(self, memory_id: str) -> Memory | None:
         """
         Retrieve a memory by ID.
 
@@ -54,10 +53,10 @@ class IMemoryStore(ABC):
         self,
         query: str,
         limit: int = 10,
-        memory_types: Optional[List[str]] = None,
+        memory_types: list[str] | None = None,
         min_confidence: float = 0.0,
-        valid_only: bool = True
-    ) -> List[Memory]:
+        valid_only: bool = True,
+    ) -> list[Memory]:
         """
         Search for memories based on content similarity.
 
@@ -74,7 +73,7 @@ class IMemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def update_memory(self, memory_id: str, updates: Dict[str, Any]) -> bool:
+    async def update_memory(self, memory_id: str, updates: dict[str, Any]) -> bool:
         """
         Update an existing memory.
 
@@ -102,9 +101,7 @@ class IMemoryStore(ABC):
 
     @abstractmethod
     async def count_memories(
-        self,
-        memory_types: Optional[List[str]] = None,
-        valid_only: bool = True
+        self, memory_types: list[str] | None = None, valid_only: bool = True
     ) -> int:
         """
         Count total memories matching criteria.
@@ -120,10 +117,8 @@ class IMemoryStore(ABC):
 
     @abstractmethod
     async def get_recent_memories(
-        self,
-        limit: int = 10,
-        hours_back: int = 24
-    ) -> List[Memory]:
+        self, limit: int = 10, hours_back: int = 24
+    ) -> list[Memory]:
         """
         Get recently created or accessed memories.
 
@@ -147,7 +142,7 @@ class IMemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_statistics(self) -> Dict[str, Any]:
+    async def get_statistics(self) -> dict[str, Any]:
         """
         Get storage statistics and health metrics.
 
@@ -176,8 +171,8 @@ class IMemoryRecall(ABC):
         query: str,
         limit: int = 5,
         strategy: str = "auto",
-        context: Optional[Dict[str, Any]] = None
-    ) -> List[Memory]:
+        context: dict[str, Any] | None = None,
+    ) -> list[Memory]:
         """
         Recall relevant memories for a given query.
 
@@ -198,7 +193,7 @@ class IMemoryRecall(ABC):
         prompt: str,
         limit: int = 5,
         strategy: str = "auto",
-        format_style: str = "markdown"
+        format_style: str = "markdown",
     ) -> MemoryContext:
         """
         Enhance a prompt with relevant memory context.
@@ -217,10 +212,10 @@ class IMemoryRecall(ABC):
     @abstractmethod
     async def rank_memories(
         self,
-        memories: List[Memory],
+        memories: list[Memory],
         query: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> List[Memory]:
+        context: dict[str, Any] | None = None,
+    ) -> list[Memory]:
         """
         Rank memories by relevance to a query.
 
@@ -235,7 +230,7 @@ class IMemoryRecall(ABC):
         pass
 
     @abstractmethod
-    def get_available_strategies(self) -> List[str]:
+    def get_available_strategies(self) -> list[str]:
         """
         Get list of available recall strategies.
 

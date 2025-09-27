@@ -5,15 +5,16 @@ Provides decorators and utilities for implementing retry logic,
 circuit breakers, and other resilience patterns.
 """
 
-import time
 import logging
-from typing import Callable, Any, TypeVar, Optional, Tuple, Type
+import time
+from collections.abc import Callable
+from datetime import datetime
 from functools import wraps
-from datetime import datetime, timedelta
+from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def exponential_backoff(
@@ -22,7 +23,7 @@ def exponential_backoff(
     max_delay: float = 10.0,
     exponential_base: float = 2.0,
     jitter: bool = True,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,)
+    exceptions: tuple[type[Exception], ...] = (Exception,),
 ):
     """
     Decorator for exponential backoff retry logic.
@@ -35,6 +36,7 @@ def exponential_backoff(
         jitter: Add random jitter to delays
         exceptions: Tuple of exceptions to catch and retry
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
@@ -47,16 +49,19 @@ def exponential_backoff(
                     last_exception = e
 
                     if attempt == max_retries:
-                        logger.error(f"{func.__name__} failed after {max_retries} retries: {e}")
+                        logger.error(
+                            f"{func.__name__} failed after {max_retries} retries: {e}"
+                        )
                         raise
 
                     # Calculate delay with exponential backoff
-                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    delay = min(base_delay * (exponential_base**attempt), max_delay)
 
                     # Add jitter if enabled
                     if jitter:
                         import random
-                        delay *= (0.5 + random.random())
+
+                        delay *= 0.5 + random.random()
 
                     logger.warning(
                         f"{func.__name__} failed (attempt {attempt + 1}/{max_retries + 1}), "
@@ -69,6 +74,7 @@ def exponential_backoff(
                 raise last_exception
 
         return wrapper
+
     return decorator
 
 
@@ -91,8 +97,8 @@ class CircuitBreaker:
         self,
         failure_threshold: int = 5,
         recovery_timeout: int = 60,
-        expected_exception: Type[Exception] = Exception,
-        name: Optional[str] = None
+        expected_exception: type[Exception] = Exception,
+        name: str | None = None,
     ):
         """
         Initialize circuit breaker.
@@ -109,14 +115,16 @@ class CircuitBreaker:
         self.name = name or "CircuitBreaker"
 
         self.failure_count = 0
-        self.last_failure_time: Optional[datetime] = None
+        self.last_failure_time: datetime | None = None
         self.state = self.State.CLOSED
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator to apply circuit breaker to a function."""
+
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
             return self.call(func, *args, **kwargs)
+
         return wrapper
 
     def call(self, func: Callable[..., T], *args, **kwargs) -> T:
@@ -145,7 +153,7 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except self.expected_exception as e:
+        except self.expected_exception:
             self._on_failure()
             raise
 
@@ -187,7 +195,9 @@ class CircuitBreaker:
         return {
             "state": self.state,
             "failure_count": self.failure_count,
-            "last_failure_time": self.last_failure_time.isoformat() if self.last_failure_time else None
+            "last_failure_time": (
+                self.last_failure_time.isoformat() if self.last_failure_time else None
+            ),
         }
 
 
@@ -195,7 +205,7 @@ def retry_with_fallback(
     primary_func: Callable[..., T],
     fallback_func: Callable[..., T],
     max_retries: int = 2,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,)
+    exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable[..., T]:
     """
     Create a function that retries primary and falls back to secondary.
@@ -209,6 +219,7 @@ def retry_with_fallback(
     Returns:
         Wrapped function with retry and fallback logic
     """
+
     @wraps(primary_func)
     def wrapper(*args, **kwargs) -> T:
         # Try primary function with retries
@@ -222,7 +233,7 @@ def retry_with_fallback(
                         f"falling back to {fallback_func.__name__}: {e}"
                     )
                     break
-                time.sleep(0.1 * (2 ** attempt))  # Simple exponential backoff
+                time.sleep(0.1 * (2**attempt))  # Simple exponential backoff
 
         # Fall back to secondary function
         try:

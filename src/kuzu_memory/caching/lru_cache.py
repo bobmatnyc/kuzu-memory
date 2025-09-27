@@ -11,7 +11,7 @@ import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from threading import RLock
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..interfaces.cache import ICache
 
@@ -31,8 +31,8 @@ class LRUCache(ICache):
     def __init__(
         self,
         max_size: int = 1000,
-        default_ttl: Optional[timedelta] = None,
-        cleanup_interval: timedelta = timedelta(minutes=5)
+        default_ttl: timedelta | None = None,
+        cleanup_interval: timedelta = timedelta(minutes=5),
     ):
         """
         Initialize LRU cache.
@@ -47,7 +47,7 @@ class LRUCache(ICache):
         self._cleanup_interval = cleanup_interval
 
         # Thread-safe cache storage
-        self._cache: OrderedDict[str, "_CacheEntry"] = OrderedDict()
+        self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
         self._lock = RLock()
 
         # Statistics
@@ -57,10 +57,10 @@ class LRUCache(ICache):
         self._expired_cleanups = 0
 
         # Background cleanup
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._last_cleanup = time.time()
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Retrieve a value from cache."""
         with self._lock:
             entry = self._cache.get(key)
@@ -79,12 +79,7 @@ class LRUCache(ICache):
             self._hits += 1
             return entry.value
 
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """Store a value in cache."""
         ttl = ttl or self._default_ttl
         expiry = datetime.now() + ttl if ttl else None
@@ -131,7 +126,7 @@ class LRUCache(ICache):
         with self._lock:
             self._cache.clear()
 
-    async def get_multi(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_multi(self, keys: list[str]) -> dict[str, Any]:
         """Retrieve multiple values from cache."""
         result = {}
         for key in keys:
@@ -141,15 +136,13 @@ class LRUCache(ICache):
         return result
 
     async def set_multi(
-        self,
-        items: Dict[str, Any],
-        ttl: Optional[timedelta] = None
+        self, items: dict[str, Any], ttl: timedelta | None = None
     ) -> None:
         """Store multiple values in cache."""
         for key, value in items.items():
             await self.set(key, value, ttl)
 
-    async def delete_multi(self, keys: List[str]) -> int:
+    async def delete_multi(self, keys: list[str]) -> int:
         """Remove multiple values from cache."""
         deleted = 0
         for key in keys:
@@ -157,7 +150,7 @@ class LRUCache(ICache):
                 deleted += 1
         return deleted
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         with self._lock:
             total_requests = self._hits + self._misses
@@ -171,7 +164,7 @@ class LRUCache(ICache):
                 "hit_rate": round(hit_rate, 3),
                 "evictions": self._evictions,
                 "expired_cleanups": self._expired_cleanups,
-                "utilization": len(self._cache) / self._max_size
+                "utilization": len(self._cache) / self._max_size,
             }
 
     async def cleanup_expired(self) -> int:
@@ -189,7 +182,7 @@ class LRUCache(ICache):
         self._expired_cleanups += len(expired_keys)
         return len(expired_keys)
 
-    def get_sync(self, key: str) -> Optional[Any]:
+    def get_sync(self, key: str) -> Any | None:
         """Synchronous version of get()."""
         with self._lock:
             entry = self._cache.get(key)
@@ -208,12 +201,7 @@ class LRUCache(ICache):
             self._hits += 1
             return entry.value
 
-    def set_sync(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    def set_sync(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """Synchronous version of set()."""
         ttl = ttl or self._default_ttl
         expiry = datetime.now() + ttl if ttl else None
@@ -243,7 +231,7 @@ class LRUCache(ICache):
         # Convert args and kwargs to a consistent string representation
         key_data = {
             "args": args,
-            "kwargs": sorted(kwargs.items())  # Sort for consistency
+            "kwargs": sorted(kwargs.items()),  # Sort for consistency
         }
         key_string = str(key_data)
 
@@ -254,7 +242,7 @@ class LRUCache(ICache):
 class _CacheEntry:
     """Internal cache entry with TTL support."""
 
-    def __init__(self, value: Any, expiry: Optional[datetime] = None):
+    def __init__(self, value: Any, expiry: datetime | None = None):
         self.value = value
         self.expiry = expiry
         self.created_at = datetime.now()

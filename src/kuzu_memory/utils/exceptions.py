@@ -5,9 +5,9 @@ Provides structured exception hierarchy with error codes and recovery suggestion
 Refactored to separate core exceptions from error recovery logic.
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
 
 class MemoryErrorCode(Enum):
@@ -72,11 +72,11 @@ class KuzuMemoryError(Exception):
     def __init__(
         self,
         message: str,
-        error_code: Optional[MemoryErrorCode] = None,
-        suggestion: Optional[str] = None,
-        recovery_actions: Optional[List[RecoveryAction]] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        error_code: MemoryErrorCode | None = None,
+        suggestion: str | None = None,
+        recovery_actions: list[RecoveryAction] | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None,
     ):
         self.message = message
         self.error_code = error_code
@@ -108,22 +108,23 @@ class KuzuMemoryError(Exception):
 
         return " | ".join(parts)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for serialization."""
         return {
-            'message': self.message,
-            'error_code': self.error_code.value if self.error_code else None,
-            'suggestion': self.suggestion,
-            'recovery_actions': [action.value for action in self.recovery_actions],
-            'context': self.context,
-            'timestamp': self.timestamp.isoformat(),
-            'cause': str(self.cause) if self.cause else None
+            "message": self.message,
+            "error_code": self.error_code.value if self.error_code else None,
+            "suggestion": self.suggestion,
+            "recovery_actions": [action.value for action in self.recovery_actions],
+            "context": self.context,
+            "timestamp": self.timestamp.isoformat(),
+            "cause": str(self.cause) if self.cause else None,
         }
 
 
 # Database Exceptions
 class DatabaseError(KuzuMemoryError):
     """Base exception for database-related errors."""
+
     pass
 
 
@@ -135,8 +136,11 @@ class DatabaseLockError(DatabaseError):
             message=message,
             error_code=MemoryErrorCode.DATABASE_LOCK,
             suggestion="Wait for other operations to complete or restart the application",
-            recovery_actions=[RecoveryAction.WAIT_AND_RETRY, RecoveryAction.REINITIALIZE],
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.WAIT_AND_RETRY,
+                RecoveryAction.REINITIALIZE,
+            ],
+            **kwargs,
         )
 
 
@@ -148,8 +152,11 @@ class CorruptedDatabaseError(DatabaseError):
             message=message,
             error_code=MemoryErrorCode.DATABASE_CORRUPTED,
             suggestion="Restore from backup or reinitialize database",
-            recovery_actions=[RecoveryAction.REINITIALIZE, RecoveryAction.CONTACT_SUPPORT],
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.REINITIALIZE,
+                RecoveryAction.CONTACT_SUPPORT,
+            ],
+            **kwargs,
         )
 
 
@@ -163,8 +170,11 @@ class DatabaseVersionError(DatabaseError):
             error_code=MemoryErrorCode.DATABASE_VERSION,
             suggestion="Upgrade database or downgrade application",
             recovery_actions=[RecoveryAction.REINITIALIZE, RecoveryAction.CHECK_CONFIG],
-            context={'current_version': current_version, 'expected_version': expected_version},
-            **kwargs
+            context={
+                "current_version": current_version,
+                "expected_version": expected_version,
+            },
+            **kwargs,
         )
 
 
@@ -177,7 +187,7 @@ class DatabaseConnectionError(DatabaseError):
             error_code=MemoryErrorCode.DATABASE_CONNECTION,
             suggestion="Check database service and connection parameters",
             recovery_actions=[RecoveryAction.RETRY, RecoveryAction.CHECK_CONFIG],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -190,9 +200,12 @@ class DatabaseTimeoutError(DatabaseError):
             message=message,
             error_code=MemoryErrorCode.DATABASE_TIMEOUT,
             suggestion="Increase timeout or optimize query",
-            recovery_actions=[RecoveryAction.OPTIMIZE_QUERY, RecoveryAction.INCREASE_RESOURCES],
-            context={'operation': operation, 'timeout': timeout},
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            context={"operation": operation, "timeout": timeout},
+            **kwargs,
         )
 
 
@@ -206,7 +219,7 @@ class ConfigurationError(KuzuMemoryError):
             error_code=MemoryErrorCode.CONFIG_INVALID,
             suggestion="Check configuration file and settings",
             recovery_actions=[RecoveryAction.CHECK_CONFIG],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -220,7 +233,7 @@ class ExtractionError(KuzuMemoryError):
             error_code=MemoryErrorCode.MEMORY_EXTRACTION,
             suggestion="Check input content and extraction settings",
             recovery_actions=[RecoveryAction.RETRY, RecoveryAction.CHECK_CONFIG],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -233,7 +246,7 @@ class RecallError(KuzuMemoryError):
             error_code=MemoryErrorCode.MEMORY_RECALL,
             suggestion="Check query parameters and database connection",
             recovery_actions=[RecoveryAction.RETRY, RecoveryAction.OPTIMIZE_QUERY],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -246,7 +259,7 @@ class ValidationError(KuzuMemoryError):
             error_code=MemoryErrorCode.MEMORY_VALIDATION,
             suggestion="Check input parameters and format",
             recovery_actions=[RecoveryAction.CHECK_CONFIG],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -259,37 +272,35 @@ class PerformanceError(KuzuMemoryError):
             message=message,
             error_code=MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
             suggestion="Optimize operations or increase performance limits",
-            recovery_actions=[RecoveryAction.OPTIMIZE_QUERY, RecoveryAction.INCREASE_RESOURCES],
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            **kwargs,
         )
 
 
 class PerformanceThresholdError(PerformanceError):
     """Specific performance threshold violation."""
 
-    def __init__(
-        self,
-        operation: str,
-        actual_time: float,
-        threshold: float,
-        **kwargs
-    ):
+    def __init__(self, operation: str, actual_time: float, threshold: float, **kwargs):
         message = f"Performance threshold exceeded for {operation}: {actual_time:.3f}s > {threshold:.3f}s"
         super().__init__(
             message=message,
             context={
-                'operation': operation,
-                'actual_time': actual_time,
-                'threshold': threshold,
-                'overhead': actual_time - threshold
+                "operation": operation,
+                "actual_time": actual_time,
+                "threshold": threshold,
+                "overhead": actual_time - threshold,
             },
-            **kwargs
+            **kwargs,
         )
 
 
 # Cache Exceptions
 class CacheError(KuzuMemoryError):
     """Base exception for cache-related errors."""
+
     pass
 
 
@@ -301,8 +312,11 @@ class CacheFullError(CacheError):
             message=message,
             error_code=MemoryErrorCode.CACHE_FULL,
             suggestion="Clear cache or increase cache size",
-            recovery_actions=[RecoveryAction.REINITIALIZE, RecoveryAction.INCREASE_RESOURCES],
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.REINITIALIZE,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            **kwargs,
         )
 
 
@@ -315,7 +329,7 @@ class CacheCorruptionError(CacheError):
             error_code=MemoryErrorCode.CACHE_CORRUPTION,
             suggestion="Clear corrupted cache and reinitialize",
             recovery_actions=[RecoveryAction.REINITIALIZE],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -328,15 +342,19 @@ class CacheTimeoutError(CacheError):
             message=message,
             error_code=MemoryErrorCode.CACHE_TIMEOUT,
             suggestion="Increase cache timeout or optimize cache operations",
-            recovery_actions=[RecoveryAction.OPTIMIZE_QUERY, RecoveryAction.INCREASE_RESOURCES],
-            context={'operation': operation, 'timeout': timeout},
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            context={"operation": operation, "timeout": timeout},
+            **kwargs,
         )
 
 
 # Connection Pool Exceptions
 class ConnectionPoolError(KuzuMemoryError):
     """Base exception for connection pool errors."""
+
     pass
 
 
@@ -348,8 +366,11 @@ class PoolExhaustedError(ConnectionPoolError):
             message=message,
             error_code=MemoryErrorCode.POOL_EXHAUSTED,
             suggestion="Increase pool size or optimize connection usage",
-            recovery_actions=[RecoveryAction.WAIT_AND_RETRY, RecoveryAction.INCREASE_RESOURCES],
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.WAIT_AND_RETRY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            **kwargs,
         )
 
 
@@ -362,9 +383,12 @@ class PoolTimeoutError(ConnectionPoolError):
             message=message,
             error_code=MemoryErrorCode.POOL_TIMEOUT,
             suggestion="Increase pool timeout or connection limit",
-            recovery_actions=[RecoveryAction.WAIT_AND_RETRY, RecoveryAction.INCREASE_RESOURCES],
-            context={'timeout': timeout},
-            **kwargs
+            recovery_actions=[
+                RecoveryAction.WAIT_AND_RETRY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            context={"timeout": timeout},
+            **kwargs,
         )
 
 
@@ -377,7 +401,7 @@ class PoolConnectionFailedError(ConnectionPoolError):
             error_code=MemoryErrorCode.POOL_CONNECTION_FAILED,
             suggestion="Check database connectivity and configuration",
             recovery_actions=[RecoveryAction.CHECK_CONFIG, RecoveryAction.RETRY],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -392,8 +416,8 @@ class AsyncOperationError(KuzuMemoryError):
             error_code=MemoryErrorCode.ASYNC_OPERATION,
             suggestion="Check async operation status and retry if needed",
             recovery_actions=[RecoveryAction.RETRY, RecoveryAction.CHECK_CONFIG],
-            context={'operation': operation},
-            **kwargs
+            context={"operation": operation},
+            **kwargs,
         )
 
 
@@ -406,7 +430,7 @@ class AIIntegrationError(KuzuMemoryError):
             error_code=MemoryErrorCode.AI_INTEGRATION,
             suggestion="Check AI system connection and configuration",
             recovery_actions=[RecoveryAction.CHECK_CONFIG, RecoveryAction.RETRY],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -420,6 +444,6 @@ class CLIIntegrationError(KuzuMemoryError):
             error_code=MemoryErrorCode.CLI_INTEGRATION,
             suggestion="Check CLI installation and permissions",
             recovery_actions=[RecoveryAction.CHECK_CONFIG, RecoveryAction.RETRY],
-            context={'command': command, 'exit_code': exit_code},
-            **kwargs
+            context={"command": command, "exit_code": exit_code},
+            **kwargs,
         )

@@ -5,22 +5,23 @@ Tests the MemoryClassifier, pattern matching, entity extraction,
 and integration with the memory system.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
 
-from kuzu_memory.core.models import MemoryType, ExtractedMemory
+import pytest
+
+from kuzu_memory.core.models import ExtractedMemory, MemoryType
 from kuzu_memory.nlp.classifier import (
-    MemoryClassifier,
     ClassificationResult,
     EntityExtractionResult,
-    SentimentResult
+    MemoryClassifier,
+    SentimentResult,
 )
 from kuzu_memory.nlp.patterns import (
+    adjust_confidence_by_indicators,
+    calculate_content_importance,
     get_memory_type_indicators,
     get_training_data,
-    adjust_confidence_by_indicators,
-    calculate_content_importance
 )
 
 
@@ -30,21 +31,21 @@ class TestMemoryClassifier:
     @pytest.fixture
     def classifier(self):
         """Create a test classifier instance."""
-        with patch('kuzu_memory.nlp.classifier.NLTK_AVAILABLE', True):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", True):
             # Mock NLTK components
-            with patch('kuzu_memory.nlp.classifier.nltk.download'):
+            with patch("kuzu_memory.nlp.classifier.nltk.download"):
                 classifier = MemoryClassifier(auto_download=False)
                 # Mock the trained classifier
                 mock_pipeline = Mock()
                 mock_pipeline.predict_proba.return_value = [[0.8]]
-                mock_pipeline.classes_ = ['semantic']
+                mock_pipeline.classes_ = ["semantic"]
                 classifier.classifier = mock_pipeline
                 classifier.initialized = True
                 return classifier
 
     def test_classifier_initialization_without_nltk(self):
         """Test classifier initialization when NLTK is not available."""
-        with patch('kuzu_memory.nlp.classifier.NLTK_AVAILABLE', False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             assert not classifier.initialized
             assert classifier.classifier is None
@@ -65,7 +66,7 @@ class TestMemoryClassifier:
         # Should detect semantic type through pattern matching (facts about identity)
         assert result.memory_type in [MemoryType.SEMANTIC, MemoryType.EPISODIC]
         assert result.confidence > 0.5
-        assert result.metadata.get('pattern_match') is not None
+        assert result.metadata.get("pattern_match") is not None
 
     def test_classify_preference_memory(self, classifier):
         """Test classification of preference-type memory."""
@@ -151,7 +152,7 @@ class TestMemoryClassifier:
 
     def test_extract_entities_without_nltk(self):
         """Test entity extraction fallback when NLTK is not available."""
-        with patch('kuzu_memory.nlp.classifier.NLTK_AVAILABLE', False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             content = "Python and JavaScript are programming languages"
             result = classifier.extract_entities(content)
@@ -163,22 +164,20 @@ class TestMemoryClassifier:
         """Test importance score calculation."""
         # High importance for identity type
         importance = classifier.calculate_importance(
-            "My name is Alice",
-            MemoryType.SEMANTIC
+            "My name is Alice", MemoryType.SEMANTIC
         )
         assert importance >= 0.9
 
         # Lower importance for episodic type (casual conversation)
         importance = classifier.calculate_importance(
-            "We talked about the weather",
-            MemoryType.EPISODIC
+            "We talked about the weather", MemoryType.EPISODIC
         )
         assert importance < 0.9  # EPISODIC base is 0.7, should be less than semantic
 
         # Higher importance for technical content
         importance = classifier.calculate_importance(
             "The API endpoint uses JWT authentication with RSA256 algorithm",
-            MemoryType.PROCEDURAL
+            MemoryType.PROCEDURAL,
         )
         assert importance > 0.6
 
@@ -187,17 +186,17 @@ class TestMemoryClassifier:
         # Decision intent
         content = "We decided to use microservices architecture"
         result = classifier.classify(content)
-        assert result.intent == 'decision'
+        assert result.intent == "decision"
 
         # Preference intent
         content = "I prefer functional programming"
         result = classifier.classify(content)
-        assert result.intent == 'preference'
+        assert result.intent == "preference"
 
         # Solution intent
         content = "To fix the issue, increase the timeout"
         result = classifier.classify(content)
-        assert result.intent == 'solution'
+        assert result.intent == "solution"
 
     def test_keyword_extraction(self, classifier):
         """Test keyword extraction from content."""
@@ -218,7 +217,7 @@ class TestMemoryClassifier:
         assert isinstance(positive_result, SentimentResult)
         assert positive_result.positive > 0.5
         assert positive_result.compound > 0.5
-        assert positive_result.dominant == 'positive'
+        assert positive_result.dominant == "positive"
 
         # Negative sentiment
         negative_result = classifier.analyze_sentiment(
@@ -226,7 +225,7 @@ class TestMemoryClassifier:
         )
         assert negative_result.negative > 0.5
         assert negative_result.compound < -0.5
-        assert negative_result.dominant == 'negative'
+        assert negative_result.dominant == "negative"
 
         # Neutral sentiment
         neutral_result = classifier.analyze_sentiment(
@@ -234,7 +233,7 @@ class TestMemoryClassifier:
         )
         assert neutral_result.neutral > 0.5
         assert abs(neutral_result.compound) < 0.5
-        assert neutral_result.dominant == 'neutral'
+        assert neutral_result.dominant == "neutral"
 
         # Mixed sentiment
         mixed_result = classifier.analyze_sentiment(
@@ -245,7 +244,7 @@ class TestMemoryClassifier:
 
     def test_sentiment_without_analyzer(self):
         """Test sentiment analysis fallback when VADER is not available."""
-        with patch('kuzu_memory.nlp.classifier.NLTK_AVAILABLE', False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             result = classifier.analyze_sentiment("Amazing work!")
 
@@ -254,7 +253,7 @@ class TestMemoryClassifier:
             assert result.positive == 0.0
             assert result.negative == 0.0
             assert result.compound == 0.0
-            assert result.dominant == 'neutral'
+            assert result.dominant == "neutral"
 
     def test_batch_classification(self, classifier):
         """Test batch classification functionality."""
@@ -263,7 +262,7 @@ class TestMemoryClassifier:
             "I prefer Python over JavaScript",
             "We decided to use PostgreSQL",
             "",  # Empty content
-            "The bug was fixed by clearing the cache"
+            "The bug was fixed by clearing the cache",
         ]
 
         results = classifier.classify_batch(contents)
@@ -294,13 +293,11 @@ class TestMemoryClassifier:
         # Check batch processing metadata
         for result in results[:-1]:  # Except empty one
             if result.confidence > 0:
-                assert 'batch_processed' in result.metadata
+                assert "batch_processed" in result.metadata
 
     def test_batch_classification_performance(self, classifier, benchmark):
         """Test that batch classification is more efficient than individual."""
-        contents = [
-            f"Test content {i} with some information" for i in range(10)
-        ]
+        contents = [f"Test content {i} with some information" for i in range(10)]
 
         # Benchmark batch processing
         def batch_classify():
@@ -316,20 +313,18 @@ class TestMemoryClassifier:
         individual_results = individual_classify()
 
         assert len(batch_results) == len(individual_results)
-        for batch_r, ind_r in zip(batch_results, individual_results):
+        for batch_r, ind_r in zip(batch_results, individual_results, strict=False):
             # Results should be similar (may differ due to batch optimizations)
-            assert batch_r.memory_type == ind_r.memory_type or \
-                   batch_r.confidence > 0  # At least valid classification
+            assert (
+                batch_r.memory_type == ind_r.memory_type or batch_r.confidence > 0
+            )  # At least valid classification
 
     def test_batch_classification_with_ml_failure(self, classifier):
         """Test batch classification handles ML classifier failures gracefully."""
         # Mock ML classifier to fail
         classifier.classifier.predict_proba.side_effect = Exception("ML error")
 
-        contents = [
-            "Test content 1",
-            "Test content 2"
-        ]
+        contents = ["Test content 1", "Test content 2"]
 
         results = classifier.classify_batch(contents)
 
@@ -342,14 +337,12 @@ class TestMemoryClassifier:
         """Test that sentiment analysis affects importance calculation."""
         # Content with strong positive sentiment
         positive_importance = classifier.calculate_importance(
-            "This is absolutely amazing! Best solution ever!!!",
-            MemoryType.PROCEDURAL
+            "This is absolutely amazing! Best solution ever!!!", MemoryType.PROCEDURAL
         )
 
         # Same content structure but neutral
         neutral_importance = classifier.calculate_importance(
-            "This is a solution to the problem.",
-            MemoryType.PROCEDURAL
+            "This is a solution to the problem.", MemoryType.PROCEDURAL
         )
 
         # Strong sentiment should increase importance
@@ -360,7 +353,7 @@ class TestMemoryClassifier:
         # Content with strong negative sentiment (problems/issues)
         negative_importance = classifier.calculate_importance(
             "This is terrible! The worst bug ever! Everything is broken!",
-            MemoryType.PROCEDURAL
+            MemoryType.PROCEDURAL,
         )
 
         # Negative sentiment about problems is also important
@@ -417,80 +410,79 @@ class TestPatternFunctions:
         # Count examples by type
         type_counts = {}
         for example in data:
-            assert 'text' in example
-            assert 'type' in example
-            assert isinstance(example['text'], str)
-            assert example['type'] in ['episodic', 'semantic', 'procedural',
-                                       'working', 'sensory', 'preference']
-            type_counts[example['type']] = type_counts.get(example['type'], 0) + 1
+            assert "text" in example
+            assert "type" in example
+            assert isinstance(example["text"], str)
+            assert example["type"] in [
+                "episodic",
+                "semantic",
+                "procedural",
+                "working",
+                "sensory",
+                "preference",
+            ]
+            type_counts[example["type"]] = type_counts.get(example["type"], 0) + 1
 
         # Verify distribution of examples
-        assert type_counts['episodic'] == 23
-        assert type_counts['semantic'] == 23
-        assert type_counts['procedural'] == 23
-        assert type_counts['working'] == 24
-        assert type_counts['sensory'] == 23
-        assert type_counts['preference'] == 30
+        assert type_counts["episodic"] == 23
+        assert type_counts["semantic"] == 23
+        assert type_counts["procedural"] == 23
+        assert type_counts["working"] == 24
+        assert type_counts["sensory"] == 23
+        assert type_counts["preference"] == 30
 
     def test_adjust_confidence_by_indicators(self):
         """Test confidence adjustment based on linguistic indicators."""
         # High confidence indicator
         high_conf = adjust_confidence_by_indicators(
-            "We definitely need to implement this",
-            0.5
+            "We definitely need to implement this", 0.5
         )
         assert high_conf > 0.5
 
         # Low confidence indicator
         low_conf = adjust_confidence_by_indicators(
-            "Maybe we could try this approach",
-            0.5
+            "Maybe we could try this approach", 0.5
         )
         assert low_conf < 0.5
 
         # No indicators
         same_conf = adjust_confidence_by_indicators(
-            "We will implement this feature",
-            0.5
+            "We will implement this feature", 0.5
         )
         assert same_conf == 0.5
 
     def test_calculate_content_importance(self):
         """Test content importance factor calculation."""
         # Content with code
-        factors = calculate_content_importance(
-            "def hello(): return 'Hello World'"
-        )
-        assert factors['contains_code'] is True
+        factors = calculate_content_importance("def hello(): return 'Hello World'")
+        assert factors["contains_code"] is True
 
         # Content with URL
         factors = calculate_content_importance(
             "Visit https://example.com for more info"
         )
-        assert factors['contains_url'] is True
+        assert factors["contains_url"] is True
 
         # Content with numbers
         factors = calculate_content_importance(
             "The server has 8 CPU cores and 32GB RAM"
         )
-        assert factors['contains_numbers'] is True
+        assert factors["contains_numbers"] is True
 
         # Question content
-        factors = calculate_content_importance(
-            "How do we implement authentication?"
-        )
-        assert factors['is_question'] is True
+        factors = calculate_content_importance("How do we implement authentication?")
+        assert factors["is_question"] is True
 
         # Technical content
         factors = calculate_content_importance(
             "The API uses a REST architecture with JSON responses"
         )
-        assert factors['is_technical'] is True
+        assert factors["is_technical"] is True
 
         # Long content
         long_text = " ".join(["word"] * 60)
         factors = calculate_content_importance(long_text)
-        assert factors['is_long'] is True
+        assert factors["is_long"] is True
 
 
 class TestIntegrationWithMemoryEnhancer:
@@ -499,15 +491,15 @@ class TestIntegrationWithMemoryEnhancer:
     @pytest.fixture
     def memory_enhancer(self):
         """Create a test MemoryEnhancer with NLP enabled."""
-        from kuzu_memory.storage.memory_enhancer import MemoryEnhancer
         from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.storage.memory_enhancer import MemoryEnhancer
 
         config = KuzuMemoryConfig()
         config.extraction.enable_nlp_classification = True
 
-        with patch('kuzu_memory.storage.memory_enhancer.NLP_AVAILABLE', True):
-            with patch('kuzu_memory.nlp.classifier.NLTK_AVAILABLE', True):
-                with patch('kuzu_memory.nlp.classifier.nltk.download'):
+        with patch("kuzu_memory.storage.memory_enhancer.NLP_AVAILABLE", True):
+            with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", True):
+                with patch("kuzu_memory.nlp.classifier.nltk.download"):
                     enhancer = MemoryEnhancer(config)
                     # Mock the classifier
                     enhancer.nlp_classifier = Mock(spec=MemoryClassifier)
@@ -515,9 +507,9 @@ class TestIntegrationWithMemoryEnhancer:
                         return_value=ClassificationResult(
                             memory_type=MemoryType.PREFERENCE,
                             confidence=0.85,
-                            keywords=['python', 'backend'],
-                            entities=['Python'],
-                            intent='preference'
+                            keywords=["python", "backend"],
+                            entities=["Python"],
+                            intent="preference",
                         )
                     )
                     enhancer.nlp_classifier.calculate_importance = Mock(
@@ -531,12 +523,12 @@ class TestIntegrationWithMemoryEnhancer:
             "I prefer Python for backend development"
         )
 
-        assert result['memory_type'] == MemoryType.PREFERENCE
-        assert result['confidence'] == 0.85
-        assert 'python' in result['keywords']
-        assert 'Python' in result['entities']
-        assert result['intent'] == 'preference'
-        assert result['importance'] == 0.8
+        assert result["memory_type"] == MemoryType.PREFERENCE
+        assert result["confidence"] == 0.85
+        assert "python" in result["keywords"]
+        assert "Python" in result["entities"]
+        assert result["intent"] == "preference"
+        assert result["importance"] == 0.8
 
     def test_enhance_extracted_memory_with_nlp(self, memory_enhancer):
         """Test enhancing extracted memory with NLP."""
@@ -546,25 +538,23 @@ class TestIntegrationWithMemoryEnhancer:
             memory_type=MemoryType.EPISODIC,
             pattern_used="generic",
             entities=[],
-            metadata={}
+            metadata={},
         )
 
-        enhanced = memory_enhancer.enhance_extracted_memory_with_nlp(
-            extracted_memory
-        )
+        enhanced = memory_enhancer.enhance_extracted_memory_with_nlp(extracted_memory)
 
         # Should update with NLP classification (higher confidence)
         assert enhanced.memory_type == MemoryType.PREFERENCE
         assert enhanced.confidence == 0.85
-        assert 'Python' in enhanced.entities
-        assert 'nlp_classification' in enhanced.metadata
-        assert enhanced.metadata['nlp_classification']['type'] == 'preference'
-        assert enhanced.metadata['nlp_classification']['confidence'] == 0.85
+        assert "Python" in enhanced.entities
+        assert "nlp_classification" in enhanced.metadata
+        assert enhanced.metadata["nlp_classification"]["type"] == "preference"
+        assert enhanced.metadata["nlp_classification"]["confidence"] == 0.85
 
     def test_enhance_without_nlp_classifier(self):
         """Test enhancement when NLP classifier is not available."""
-        from kuzu_memory.storage.memory_enhancer import MemoryEnhancer
         from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.storage.memory_enhancer import MemoryEnhancer
 
         config = KuzuMemoryConfig()
         config.extraction.enable_nlp_classification = False
@@ -578,7 +568,7 @@ class TestIntegrationWithMemoryEnhancer:
             memory_type=MemoryType.EPISODIC,
             pattern_used="generic",
             entities=[],
-            metadata={}
+            metadata={},
         )
 
         # Should return unchanged
@@ -590,36 +580,36 @@ class TestIntegrationWithMemoryEnhancer:
         result = ClassificationResult(
             memory_type=MemoryType.SEMANTIC,
             confidence=0.95,
-            keywords=['name', 'engineer'],
-            entities=['Alice'],
-            intent='fact'
+            keywords=["name", "engineer"],
+            entities=["Alice"],
+            intent="fact",
         )
 
         assert result.memory_type == MemoryType.SEMANTIC
         assert result.confidence == 0.95
-        assert 'name' in result.keywords
-        assert 'Alice' in result.entities
-        assert result.intent == 'fact'
+        assert "name" in result.keywords
+        assert "Alice" in result.entities
+        assert result.intent == "fact"
         assert result.metadata == {}  # Default empty dict
 
     def test_entity_extraction_result_dataclass(self):
         """Test EntityExtractionResult dataclass."""
         result = EntityExtractionResult(
-            people=['John Smith', 'Jane Doe'],
-            organizations=['Google', 'Microsoft'],
-            locations=['San Francisco', 'New York'],
-            technologies=['Python', 'Docker'],
-            projects=['Project Alpha'],
-            dates=['2024-01-01', 'yesterday'],
-            all_entities=['John Smith', 'Google', 'Python', '2024-01-01']
+            people=["John Smith", "Jane Doe"],
+            organizations=["Google", "Microsoft"],
+            locations=["San Francisco", "New York"],
+            technologies=["Python", "Docker"],
+            projects=["Project Alpha"],
+            dates=["2024-01-01", "yesterday"],
+            all_entities=["John Smith", "Google", "Python", "2024-01-01"],
         )
 
-        assert 'John Smith' in result.people
-        assert 'Google' in result.organizations
-        assert 'San Francisco' in result.locations
-        assert 'Python' in result.technologies
-        assert 'Project Alpha' in result.projects
-        assert '2024-01-01' in result.dates
+        assert "John Smith" in result.people
+        assert "Google" in result.organizations
+        assert "San Francisco" in result.locations
+        assert "Python" in result.technologies
+        assert "Project Alpha" in result.projects
+        assert "2024-01-01" in result.dates
         assert len(result.all_entities) == 4
 
 
@@ -629,28 +619,20 @@ class TestSentimentResult:
     def test_sentiment_result_creation(self):
         """Test creating SentimentResult instances."""
         result = SentimentResult(
-            positive=0.6,
-            negative=0.1,
-            neutral=0.3,
-            compound=0.7,
-            dominant='positive'
+            positive=0.6, negative=0.1, neutral=0.3, compound=0.7, dominant="positive"
         )
 
         assert result.positive == 0.6
         assert result.negative == 0.1
         assert result.neutral == 0.3
         assert result.compound == 0.7
-        assert result.dominant == 'positive'
+        assert result.dominant == "positive"
 
     def test_sentiment_result_values(self):
         """Test sentiment result value ranges."""
         # Valid sentiment scores
         result = SentimentResult(
-            positive=1.0,
-            negative=0.0,
-            neutral=0.0,
-            compound=1.0,
-            dominant='positive'
+            positive=1.0, negative=0.0, neutral=0.0, compound=1.0, dominant="positive"
         )
         assert result.compound >= -1.0 and result.compound <= 1.0
         assert result.positive >= 0.0 and result.positive <= 1.0
@@ -659,14 +641,10 @@ class TestSentimentResult:
 
         # Negative compound
         result = SentimentResult(
-            positive=0.0,
-            negative=1.0,
-            neutral=0.0,
-            compound=-1.0,
-            dominant='negative'
+            positive=0.0, negative=1.0, neutral=0.0, compound=-1.0, dominant="negative"
         )
         assert result.compound == -1.0
-        assert result.dominant == 'negative'
+        assert result.dominant == "negative"
 
 
 class TestBatchProcessingIntegration:
@@ -682,7 +660,7 @@ class TestBatchProcessingIntegration:
         contents = [
             "User preference: dark mode",
             "Decision: use PostgreSQL",
-            "Pattern: always validate input"
+            "Pattern: always validate input",
         ]
 
         results = classifier.classify_batch(contents)
@@ -690,11 +668,11 @@ class TestBatchProcessingIntegration:
         # Results should be serializable for async queue
         for result in results:
             # Check that result has required attributes
-            assert hasattr(result, 'memory_type')
-            assert hasattr(result, 'confidence')
-            assert hasattr(result, 'keywords')
-            assert hasattr(result, 'entities')
-            assert hasattr(result, 'metadata')
+            assert hasattr(result, "memory_type")
+            assert hasattr(result, "confidence")
+            assert hasattr(result, "keywords")
+            assert hasattr(result, "entities")
+            assert hasattr(result, "metadata")
 
             # Check types are JSON-serializable
             assert isinstance(result.confidence, float)

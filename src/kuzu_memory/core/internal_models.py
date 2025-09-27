@@ -9,8 +9,8 @@ type safety and validation.
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
 from .models import MemoryType
@@ -33,7 +33,7 @@ class InternalMemory:
     # Temporal information
     created_at: datetime = field(default_factory=datetime.now)
     valid_from: datetime = field(default_factory=datetime.now)
-    valid_to: Optional[datetime] = None
+    valid_to: datetime | None = None
     accessed_at: datetime = field(default_factory=datetime.now)
     access_count: int = 0
 
@@ -45,19 +45,19 @@ class InternalMemory:
     # Source tracking
     source_type: str = "conversation"
     agent_id: str = "default"
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
 
     # Metadata and relationships
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    entities: List[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    entities: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         """Initialize computed fields after object creation."""
         # Generate content hash if not provided
         if not self.content_hash and self.content:
             normalized = self.content.lower().strip()
-            self.content_hash = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+            self.content_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
         # Set default importance based on memory type
         if self.importance == 0.5:  # Default value
@@ -69,7 +69,7 @@ class InternalMemory:
             if retention:
                 self.valid_to = self.valid_from + retention
 
-    def is_valid(self, at_time: Optional[datetime] = None) -> bool:
+    def is_valid(self, at_time: datetime | None = None) -> bool:
         """Check if memory is currently valid."""
         check_time = at_time or datetime.now()
 
@@ -81,7 +81,7 @@ class InternalMemory:
 
         return True
 
-    def is_expired(self, at_time: Optional[datetime] = None) -> bool:
+    def is_expired(self, at_time: datetime | None = None) -> bool:
         """Check if memory has expired."""
         return not self.is_valid(at_time)
 
@@ -90,7 +90,7 @@ class InternalMemory:
         self.accessed_at = datetime.now()
         self.access_count += 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for database storage."""
         return {
             "id": self.id,
@@ -113,7 +113,7 @@ class InternalMemory:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "InternalMemory":
+    def from_dict(cls, data: dict[str, Any]) -> "InternalMemory":
         """Create InternalMemory from dictionary."""
         # Parse datetime fields
         for field in ["created_at", "valid_from", "valid_to", "accessed_at"]:
@@ -145,7 +145,7 @@ class InternalMemoryContext:
     # Core content
     original_prompt: str = ""
     enhanced_prompt: str = ""
-    memories: List[InternalMemory] = field(default_factory=list)
+    memories: list[InternalMemory] = field(default_factory=list)
 
     # Metadata
     confidence: float = 0.0
@@ -164,7 +164,9 @@ class InternalMemoryContext:
 
         # Calculate average confidence from memories
         if self.memories:
-            avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
+            avg_confidence = sum(mem.confidence for mem in self.memories) / len(
+                self.memories
+            )
             self.confidence = min(avg_confidence, self.confidence or 1.0)
 
     def to_system_message(self, format_style: str = "markdown") -> str:
@@ -185,16 +187,18 @@ class InternalMemoryContext:
             return f"{context}\nUser query: {self.original_prompt}"
 
         elif format_style == "json":
-            return json.dumps({
-                "context": [mem.content for mem in self.memories],
-                "query": self.original_prompt,
-                "confidence": self.confidence
-            })
+            return json.dumps(
+                {
+                    "context": [mem.content for mem in self.memories],
+                    "query": self.original_prompt,
+                    "confidence": self.confidence,
+                }
+            )
 
         else:
             raise ValueError(f"Unknown format_style: {format_style}")
 
-    def get_memory_summary(self) -> Dict[str, Any]:
+    def get_memory_summary(self) -> dict[str, Any]:
         """Get summary statistics about retrieved memories."""
         if not self.memories:
             return {
@@ -202,17 +206,23 @@ class InternalMemoryContext:
                 "types": {},
                 "avg_importance": 0.0,
                 "avg_confidence": 0.0,
-                "entities": []
+                "entities": [],
             }
 
         # Count by type
         type_counts = {}
         for mem in self.memories:
-            type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
+            type_counts[mem.memory_type.value] = (
+                type_counts.get(mem.memory_type.value, 0) + 1
+            )
 
         # Calculate averages
-        avg_importance = sum(mem.importance for mem in self.memories) / len(self.memories)
-        avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
+        avg_importance = sum(mem.importance for mem in self.memories) / len(
+            self.memories
+        )
+        avg_confidence = sum(mem.confidence for mem in self.memories) / len(
+            self.memories
+        )
 
         # Collect unique entities
         all_entities = set()
@@ -224,7 +234,7 @@ class InternalMemoryContext:
             "types": type_counts,
             "avg_importance": round(avg_importance, 3),
             "avg_confidence": round(avg_confidence, 3),
-            "entities": sorted(list(all_entities))
+            "entities": sorted(list(all_entities)),
         }
 
 
@@ -240,15 +250,15 @@ class InternalExtractedMemory:
     confidence: float = 0.0
     memory_type: MemoryType = MemoryType.EPISODIC
     pattern_used: str = ""
-    entities: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    entities: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_internal_memory(
         self,
         source_type: str = "extraction",
         agent_id: str = "default",
-        user_id: Optional[str] = None,
-        session_id: Optional[str] = None
+        user_id: str | None = None,
+        session_id: str | None = None,
     ) -> InternalMemory:
         """Convert to a full InternalMemory object."""
         return InternalMemory(
@@ -264,8 +274,8 @@ class InternalExtractedMemory:
             metadata={
                 **self.metadata,
                 "pattern_used": self.pattern_used,
-                "extraction_confidence": self.confidence
-            }
+                "extraction_confidence": self.confidence,
+            },
         )
 
 
@@ -277,25 +287,25 @@ class QueryResult:
     Immutable result object that can be cached efficiently.
     """
 
-    memories: List[InternalMemory]
+    memories: list[InternalMemory]
     total_count: int
     query_time_ms: float
     cached: bool = False
-    cache_key: Optional[str] = None
+    cache_key: str | None = None
 
     @property
     def count(self) -> int:
         """Number of memories in this result."""
         return len(self.memories)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "memories": [mem.to_dict() for mem in self.memories],
             "total_count": self.total_count,
             "query_time_ms": self.query_time_ms,
             "cached": self.cached,
-            "cache_key": self.cache_key
+            "cache_key": self.cache_key,
         }
 
 
@@ -311,20 +321,20 @@ class PerformanceMetric:
     value: float
     metric_type: str
     timestamp: datetime = field(default_factory=datetime.now)
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage or export."""
         return {
             "name": self.name,
             "value": self.value,
             "metric_type": self.metric_type,
             "timestamp": self.timestamp.isoformat(),
-            "tags": self.tags
+            "tags": self.tags,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PerformanceMetric":
+    def from_dict(cls, data: dict[str, Any]) -> "PerformanceMetric":
         """Create from dictionary."""
         if isinstance(data.get("timestamp"), str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
@@ -351,13 +361,14 @@ def pydantic_to_internal_memory(pydantic_memory) -> InternalMemory:
         user_id=pydantic_memory.user_id,
         session_id=pydantic_memory.session_id,
         metadata=pydantic_memory.metadata.copy(),
-        entities=pydantic_memory.entities.copy()
+        entities=pydantic_memory.entities.copy(),
     )
 
 
 def internal_to_pydantic_memory(internal_memory: InternalMemory):
     """Convert InternalMemory to Pydantic Memory."""
     from .models import Memory
+
     return Memory(
         id=internal_memory.id,
         content=internal_memory.content,
@@ -375,5 +386,5 @@ def internal_to_pydantic_memory(internal_memory: InternalMemory):
         user_id=internal_memory.user_id,
         session_id=internal_memory.session_id,
         metadata=internal_memory.metadata.copy(),
-        entities=internal_memory.entities.copy()
+        entities=internal_memory.entities.copy(),
     )

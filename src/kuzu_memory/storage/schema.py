@@ -5,8 +5,6 @@ Defines the Kuzu graph database schema including node tables, relationship table
 and indices for optimal performance. Includes version management for migrations.
 """
 
-from typing import Dict, List
-
 # Database schema version for migration support
 SCHEMA_VERSION = "1.0"
 
@@ -105,27 +103,22 @@ SCHEMA_QUERIES = {
         ORDER BY sv.created_at DESC 
         LIMIT 1
     """,
-    
     "check_table_exists": """
         CALL SHOW_TABLES() 
         RETURN name WHERE name = $table_name
     """,
-    
     "get_memory_count": """
         MATCH (m:Memory) 
         RETURN COUNT(m) as count
     """,
-    
     "get_entity_count": """
         MATCH (e:Entity) 
         RETURN COUNT(e) as count
     """,
-    
     "get_session_count": """
         MATCH (s:Session) 
         RETURN COUNT(s) as count
     """,
-    
     "get_database_stats": """
         MATCH (m:Memory) 
         WITH COUNT(m) as memory_count
@@ -136,34 +129,29 @@ SCHEMA_QUERIES = {
         MATCH ()-[r]->() 
         RETURN memory_count, entity_count, session_count, COUNT(r) as relationship_count
     """,
-    
     "cleanup_expired_memories": """
         MATCH (m:Memory) 
         WHERE m.valid_to IS NOT NULL AND m.valid_to < $current_time
         DELETE m
     """,
-    
     "get_memory_types_distribution": """
         MATCH (m:Memory) 
         WHERE m.valid_to IS NULL OR m.valid_to > $current_time
         RETURN m.memory_type, COUNT(m) as count 
         ORDER BY count DESC
     """,
-    
     "get_top_entities": """
         MATCH (e:Entity) 
         RETURN e.name, e.entity_type, e.mention_count 
         ORDER BY e.mention_count DESC 
         LIMIT $limit
     """,
-    
     "find_duplicate_content_hashes": """
         MATCH (m:Memory) 
         WITH m.content_hash, COUNT(m) as count, COLLECT(m.id) as memory_ids
         WHERE count > 1
         RETURN m.content_hash, count, memory_ids
     """,
-    
     "get_recent_memories": """
         MATCH (m:Memory) 
         WHERE m.created_at > $since_time
@@ -172,7 +160,6 @@ SCHEMA_QUERIES = {
         ORDER BY m.created_at DESC 
         LIMIT $limit
     """,
-    
     "get_memories_by_importance": """
         MATCH (m:Memory) 
         WHERE (m.valid_to IS NULL OR m.valid_to > $current_time)
@@ -180,7 +167,7 @@ SCHEMA_QUERIES = {
         RETURN m 
         ORDER BY m.importance DESC, m.created_at DESC 
         LIMIT $limit
-    """
+    """,
 }
 
 # Migration queries for schema updates
@@ -206,57 +193,59 @@ def get_schema_version() -> str:
 def get_query(query_name: str) -> str:
     """
     Get a predefined query by name.
-    
+
     Args:
         query_name: Name of the query to retrieve
-        
+
     Returns:
         Query string
-        
+
     Raises:
         KeyError: If query name is not found
     """
     if query_name not in SCHEMA_QUERIES:
         available_queries = ", ".join(SCHEMA_QUERIES.keys())
-        raise KeyError(f"Query '{query_name}' not found. Available queries: {available_queries}")
-    
+        raise KeyError(
+            f"Query '{query_name}' not found. Available queries: {available_queries}"
+        )
+
     return SCHEMA_QUERIES[query_name]
 
 
-def get_migration_queries(from_version: str, to_version: str) -> List[str]:
+def get_migration_queries(from_version: str, to_version: str) -> list[str]:
     """
     Get migration queries between schema versions.
-    
+
     Args:
         from_version: Source schema version
         to_version: Target schema version
-        
+
     Returns:
         List of migration queries to execute
-        
+
     Raises:
         ValueError: If migration path is not supported
     """
     migration_key = f"{from_version}_to_{to_version}"
-    
+
     if migration_key not in MIGRATION_QUERIES:
         available_migrations = ", ".join(MIGRATION_QUERIES.keys())
         raise ValueError(
             f"Migration from {from_version} to {to_version} not supported. "
             f"Available migrations: {available_migrations}"
         )
-    
+
     return MIGRATION_QUERIES[migration_key]
 
 
 def validate_schema_compatibility(current_version: str, required_version: str) -> bool:
     """
     Check if current schema version is compatible with required version.
-    
+
     Args:
         current_version: Current database schema version
         required_version: Required schema version
-        
+
     Returns:
         True if compatible, False otherwise
     """

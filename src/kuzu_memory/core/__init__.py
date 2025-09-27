@@ -1,15 +1,15 @@
 """Core components for KuzuMemory."""
 
-from .models import Memory, MemoryContext, MemoryType, ExtractedMemory
 from .config import (
-    KuzuMemoryConfig,
-    StorageConfig,
-    RecallConfig,
     ExtractionConfig,
+    KuzuMemoryConfig,
     PerformanceConfig,
+    RecallConfig,
     RetentionConfig,
+    StorageConfig,
 )
 from .memory import KuzuMemory
+from .models import ExtractedMemory, Memory, MemoryContext, MemoryType
 
 __all__ = [
     # Main API

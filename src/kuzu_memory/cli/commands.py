@@ -5,44 +5,53 @@ Provides the main CLI group and imports all subcommands from modular files.
 This is the refactored version that keeps the file under 300 lines.
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+
 import click
 
-from .cli_utils import rich_print, rich_panel, RICH_AVAILABLE, console
+from ..__version__ import __version__
 from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
-from ..utils.exceptions import KuzuMemoryError, ConfigurationError
 from ..utils.project_setup import find_project_root, get_project_db_path
-from ..__version__ import __version__
-
-# Import command modules
-from .memory_commands import enhance, learn, remember, recall, recent
-from .project_commands import init, project, stats, cleanup, create_config
-from .utility_commands import optimize, setup, tips, examples, temporal_analysis
 from .auggie_commands import auggie
 from .claude_commands import claude_group
-from .mcp_commands import mcp
+from .cli_utils import rich_panel, rich_print
 
 # Import install commands
-from .install_commands_simple import install_group, uninstall, status, list_installers
+from .install_commands_simple import install_group, list_installers, status, uninstall
+from .mcp_commands import mcp
+
+# Import command modules
+from .memory_commands import enhance, learn, recall, recent, remember
+from .project_commands import cleanup, create_config, init, project, stats
+from .utility_commands import examples, optimize, setup, temporal_analysis, tips
 
 # Set up logging for CLI
 logging.basicConfig(
     level=logging.WARNING,  # Only show warnings and errors by default
-    format='%(levelname)s: %(message)s'
+    format="%(levelname)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="kuzu-memory")
-@click.option('--debug', is_flag=True, help='Enable debug logging')
-@click.option('--config', type=click.Path(exists=True), help='Path to configuration file')
-@click.option('--db-path', type=click.Path(), help='Path to database file (overrides project default)')
-@click.option('--project-root', type=click.Path(exists=True), help='Project root directory (auto-detected if not specified)')
+@click.option("--debug", is_flag=True, help="Enable debug logging")
+@click.option(
+    "--config", type=click.Path(exists=True), help="Path to configuration file"
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help="Path to database file (overrides project default)",
+)
+@click.option(
+    "--project-root",
+    type=click.Path(exists=True),
+    help="Project root directory (auto-detected if not specified)",
+)
 @click.pass_context
 def cli(ctx, debug, config, db_path, project_root):
     """
@@ -74,7 +83,7 @@ def cli(ctx, debug, config, db_path, project_root):
     # Configure debug logging
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
-        ctx.obj['debug'] = True
+        ctx.obj["debug"] = True
 
     # Determine project root
     try:
@@ -82,12 +91,12 @@ def cli(ctx, debug, config, db_path, project_root):
             project_root = Path(project_root).resolve()
         else:
             project_root = find_project_root()
-        ctx.obj['project_root'] = project_root
-    except Exception as e:
+        ctx.obj["project_root"] = project_root
+    except Exception:
         if debug:
             raise
         # For some commands (like quickstart), project root isn't required
-        ctx.obj['project_root'] = None
+        ctx.obj["project_root"] = None
 
     # Load configuration
     try:
@@ -95,24 +104,24 @@ def cli(ctx, debug, config, db_path, project_root):
         if config:
             loaded_config = config_loader.load_from_file(config)
         else:
-            loaded_config = config_loader.load_config(ctx.obj['project_root'])
-        ctx.obj['config'] = loaded_config
+            loaded_config = config_loader.load_config(ctx.obj["project_root"])
+        ctx.obj["config"] = loaded_config
     except Exception as e:
         if debug:
             logger.debug(f"Config loading failed: {e}")
         # Use default config if loading fails
-        ctx.obj['config'] = KuzuMemoryConfig()
+        ctx.obj["config"] = KuzuMemoryConfig()
 
     # Override database path if specified
     if db_path:
-        ctx.obj['db_path'] = Path(db_path)
+        ctx.obj["db_path"] = Path(db_path)
 
     # Show help if no command provided
     if ctx.invoked_subcommand is None:
         # Check if project is initialized
         try:
-            if ctx.obj['project_root']:
-                db_path_check = get_project_db_path(ctx.obj['project_root'])
+            if ctx.obj["project_root"]:
+                db_path_check = get_project_db_path(ctx.obj["project_root"])
                 if not db_path_check.exists():
                     rich_panel(
                         "Welcome to KuzuMemory! 🚀\n\n"
@@ -120,7 +129,7 @@ def cli(ctx, debug, config, db_path, project_root):
                         "Get started with: kuzu-memory init\n\n"
                         "Or try the interactive quickstart: kuzu-memory quickstart",
                         title="🧠 KuzuMemory",
-                        style="blue"
+                        style="blue",
                     )
                 else:
                     rich_panel(
@@ -132,7 +141,7 @@ def cli(ctx, debug, config, db_path, project_root):
                         "• kuzu-memory enhance       # Enhance prompts\n"
                         "\nFor all commands: kuzu-memory --help",
                         title="🧠 KuzuMemory",
-                        style="green"
+                        style="green",
                     )
         except:
             pass  # If anything fails, just show help
@@ -141,7 +150,7 @@ def cli(ctx, debug, config, db_path, project_root):
 
 
 @click.command()
-@click.option('--skip-demo', is_flag=True, help='Skip the interactive demo')
+@click.option("--skip-demo", is_flag=True, help="Skip the interactive demo")
 @click.pass_context
 def quickstart(ctx, skip_demo):
     """
@@ -160,8 +169,6 @@ def quickstart(ctx, skip_demo):
     Perfect for first-time users!
     """
     try:
-        from ..core.memory import KuzuMemory
-        from ..core.config import KuzuMemoryConfig
 
         rich_panel(
             "Welcome to KuzuMemory! 🧠✨\n\n"
@@ -172,12 +179,12 @@ def quickstart(ctx, skip_demo):
             "• Learning best practices\n\n"
             "Let's get started!",
             title="🎯 KuzuMemory Quickstart",
-            style="blue"
+            style="blue",
         )
 
         # Step 1: Project Setup
         rich_print("\n📁 Step 1: Project Setup")
-        project_root = ctx.obj.get('project_root')
+        project_root = ctx.obj.get("project_root")
         if not project_root:
             project_root = Path.cwd()
             rich_print(f"Using current directory: {project_root}")
@@ -203,7 +210,7 @@ def quickstart(ctx, skip_demo):
         if rich_confirm("Would you like to store your first memory?", default=True):
             sample_memory = rich_prompt(
                 "Enter something about your project",
-                default="This is a Python project using KuzuMemory for AI memory"
+                default="This is a Python project using KuzuMemory for AI memory",
             )
             ctx.invoke(remember, content=sample_memory, source="quickstart")
 
@@ -212,9 +219,11 @@ def quickstart(ctx, skip_demo):
         if rich_confirm("Try enhancing a prompt?", default=True):
             sample_prompt = rich_prompt(
                 "Enter a question about your project",
-                default="How should I structure my code?"
+                default="How should I structure my code?",
             )
-            ctx.invoke(enhance, prompt=sample_prompt, max_memories=3, output_format="context")
+            ctx.invoke(
+                enhance, prompt=sample_prompt, max_memories=3, output_format="context"
+            )
 
         # Step 4: Show stats
         rich_print("\n📊 Step 4: Project Status")
@@ -233,11 +242,11 @@ def quickstart(ctx, skip_demo):
             "• Get tips: kuzu-memory tips\n"
             "• Read docs: See project documentation",
             title="🎯 Ready to Go!",
-            style="green"
+            style="green",
         )
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Quickstart failed: {e}", style="red")
         sys.exit(1)
@@ -258,7 +267,7 @@ def demo(ctx):
             "This demo will show you how KuzuMemory works with real examples.\n"
             "Follow along to learn the key features.",
             title="🎮 Demo Mode",
-            style="magenta"
+            style="magenta",
         )
 
         # Demo implementation would go here
@@ -267,7 +276,7 @@ def demo(ctx):
         rich_print("kuzu-memory quickstart")
 
     except Exception as e:
-        if ctx.obj.get('debug'):
+        if ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Demo failed: {e}", style="red")
         sys.exit(1)
@@ -289,20 +298,20 @@ cli.add_command(init)
 cli.add_command(project)
 cli.add_command(stats)
 cli.add_command(cleanup)
-cli.add_command(create_config, name='create-config')
+cli.add_command(create_config, name="create-config")
 
 # Utility commands
 cli.add_command(optimize)
 cli.add_command(setup)
 cli.add_command(tips)
 cli.add_command(examples)
-cli.add_command(temporal_analysis, name='temporal-analysis')
+cli.add_command(temporal_analysis, name="temporal-analysis")
 
 # Auggie integration
 cli.add_command(auggie)
 
 # Claude integration
-cli.add_command(claude_group, name='claude')
+cli.add_command(claude_group, name="claude")
 
 # MCP server commands
 cli.add_command(mcp)
@@ -310,9 +319,9 @@ cli.add_command(mcp)
 # Install commands
 cli.add_command(install_group)
 cli.add_command(uninstall)
-cli.add_command(status, name='install-status')
-cli.add_command(list_installers, name='list-installers')
+cli.add_command(status, name="install-status")
+cli.add_command(list_installers, name="list-installers")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

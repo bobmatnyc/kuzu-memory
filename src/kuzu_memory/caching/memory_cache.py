@@ -6,8 +6,7 @@ deduplication and temporal decay features.
 """
 
 import hashlib
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set
+from datetime import timedelta
 
 from ..core.internal_models import InternalMemory, QueryResult
 from ..interfaces.cache import ICache
@@ -29,8 +28,8 @@ class MemoryCache(ICache):
         self,
         max_memories: int = 5000,
         max_query_results: int = 1000,
-        default_ttl: Optional[timedelta] = timedelta(hours=1),
-        importance_threshold: float = 0.8
+        default_ttl: timedelta | None = timedelta(hours=1),
+        importance_threshold: float = 0.8,
     ):
         """
         Initialize memory cache.
@@ -46,25 +45,20 @@ class MemoryCache(ICache):
         self._importance_threshold = importance_threshold
 
         # Separate caches for different data types
-        self._memory_cache = LRUCache(
-            max_size=max_memories,
-            default_ttl=default_ttl
-        )
+        self._memory_cache = LRUCache(max_size=max_memories, default_ttl=default_ttl)
         self._query_cache = LRUCache(
             max_size=max_query_results,
-            default_ttl=timedelta(minutes=15)  # Shorter TTL for query results
+            default_ttl=timedelta(minutes=15),  # Shorter TTL for query results
         )
 
         # Content hash to memory ID mapping for deduplication
-        self._content_hash_map: Dict[str, str] = {}
+        self._content_hash_map: dict[str, str] = {}
 
         # Track cached memory IDs for efficient cleanup
-        self._cached_memory_ids: Set[str] = set()
+        self._cached_memory_ids: set[str] = set()
 
     async def cache_memory(
-        self,
-        memory: InternalMemory,
-        ttl: Optional[timedelta] = None
+        self, memory: InternalMemory, ttl: timedelta | None = None
     ) -> None:
         """
         Cache a memory with intelligent TTL based on importance.
@@ -78,7 +72,7 @@ class MemoryCache(ICache):
             if memory.importance >= self._importance_threshold:
                 ttl = timedelta(hours=24)  # Long-term cache for important memories
             else:
-                ttl = timedelta(hours=1)   # Short-term cache for less important
+                ttl = timedelta(hours=1)  # Short-term cache for less important
 
         # Cache the memory
         await self._memory_cache.set(memory.id, memory, ttl)
@@ -90,11 +84,11 @@ class MemoryCache(ICache):
         # Track cached memory ID
         self._cached_memory_ids.add(memory.id)
 
-    async def get_memory(self, memory_id: str) -> Optional[InternalMemory]:
+    async def get_memory(self, memory_id: str) -> InternalMemory | None:
         """Get a cached memory by ID."""
         return await self._memory_cache.get(memory_id)
 
-    async def get_memory_by_hash(self, content_hash: str) -> Optional[InternalMemory]:
+    async def get_memory_by_hash(self, content_hash: str) -> InternalMemory | None:
         """Get a memory by content hash for deduplication."""
         memory_id = self._content_hash_map.get(content_hash)
         if memory_id:
@@ -102,10 +96,7 @@ class MemoryCache(ICache):
         return None
 
     async def cache_query_result(
-        self,
-        query_key: str,
-        result: QueryResult,
-        ttl: Optional[timedelta] = None
+        self, query_key: str, result: QueryResult, ttl: timedelta | None = None
     ) -> None:
         """
         Cache a query result.
@@ -121,7 +112,7 @@ class MemoryCache(ICache):
             total_count=result.total_count,
             query_time_ms=result.query_time_ms,
             cached=True,
-            cache_key=query_key
+            cache_key=query_key,
         )
 
         await self._query_cache.set(query_key, cached_result, ttl)
@@ -130,7 +121,7 @@ class MemoryCache(ICache):
         for memory in result.memories:
             await self.cache_memory(memory)
 
-    async def get_query_result(self, query_key: str) -> Optional[QueryResult]:
+    async def get_query_result(self, query_key: str) -> QueryResult | None:
         """Get a cached query result."""
         return await self._query_cache.get(query_key)
 
@@ -161,11 +152,11 @@ class MemoryCache(ICache):
         # This is a simplified approach - in practice, you'd need to track
         # which queries contain which memories for efficient invalidation
         await self._query_cache.clear()
-        invalidated = query_stats.get('size', 0)
+        invalidated = query_stats.get("size", 0)
 
         return invalidated
 
-    async def get_cached_memory_ids(self) -> Set[str]:
+    async def get_cached_memory_ids(self) -> set[str]:
         """Get all currently cached memory IDs."""
         return self._cached_memory_ids.copy()
 
@@ -173,9 +164,9 @@ class MemoryCache(ICache):
         self,
         query: str,
         limit: int = 10,
-        memory_types: Optional[List[str]] = None,
+        memory_types: list[str] | None = None,
         min_confidence: float = 0.0,
-        strategy: str = "auto"
+        strategy: str = "auto",
     ) -> str:
         """Create a consistent cache key for a query."""
         key_data = {
@@ -183,14 +174,14 @@ class MemoryCache(ICache):
             "limit": limit,
             "memory_types": sorted(memory_types or []),
             "min_confidence": min_confidence,
-            "strategy": strategy
+            "strategy": strategy,
         }
 
         key_string = str(sorted(key_data.items()))
         return hashlib.md5(key_string.encode()).hexdigest()
 
     # ICache interface implementation
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Generic get from either cache."""
         # Try memory cache first
         result = await self._memory_cache.get(key)
@@ -200,12 +191,7 @@ class MemoryCache(ICache):
         # Try query cache
         return await self._query_cache.get(key)
 
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """Generic set to appropriate cache based on value type."""
         if isinstance(value, InternalMemory):
             await self.cache_memory(value, ttl)
@@ -223,9 +209,8 @@ class MemoryCache(ICache):
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in either cache."""
-        return (
-            await self._memory_cache.exists(key) or
-            await self._query_cache.exists(key)
+        return await self._memory_cache.exists(key) or await self._query_cache.exists(
+            key
         )
 
     async def clear(self) -> None:
@@ -235,7 +220,7 @@ class MemoryCache(ICache):
         self._content_hash_map.clear()
         self._cached_memory_ids.clear()
 
-    async def get_multi(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_multi(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from appropriate cache."""
         result = await self._memory_cache.get_multi(keys)
         query_result = await self._query_cache.get_multi(keys)
@@ -243,21 +228,19 @@ class MemoryCache(ICache):
         return result
 
     async def set_multi(
-        self,
-        items: Dict[str, Any],
-        ttl: Optional[timedelta] = None
+        self, items: dict[str, Any], ttl: timedelta | None = None
     ) -> None:
         """Set multiple values to appropriate caches."""
         for key, value in items.items():
             await self.set(key, value, ttl)
 
-    async def delete_multi(self, keys: List[str]) -> int:
+    async def delete_multi(self, keys: list[str]) -> int:
         """Delete multiple values from both caches."""
         memory_deleted = await self._memory_cache.delete_multi(keys)
         query_deleted = await self._query_cache.delete_multi(keys)
         return memory_deleted + query_deleted
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         memory_stats = await self._memory_cache.get_stats()
         query_stats = await self._query_cache.get_stats()
@@ -269,10 +252,15 @@ class MemoryCache(ICache):
             "tracked_memory_ids": len(self._cached_memory_ids),
             "total_size": memory_stats["size"] + query_stats["size"],
             "combined_hit_rate": (
-                (memory_stats["hits"] + query_stats["hits"]) /
-                max(1, memory_stats["hits"] + memory_stats["misses"] +
-                    query_stats["hits"] + query_stats["misses"])
-            )
+                (memory_stats["hits"] + query_stats["hits"])
+                / max(
+                    1,
+                    memory_stats["hits"]
+                    + memory_stats["misses"]
+                    + query_stats["hits"]
+                    + query_stats["misses"],
+                )
+            ),
         }
 
     async def cleanup_expired(self) -> int:

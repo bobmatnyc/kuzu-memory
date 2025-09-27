@@ -7,12 +7,8 @@ versions and type systems.
 
 from .cognitive_types import (
     CognitiveTypesMigration,
+    create_migration_script,
     migrate_memory_type,
-    create_migration_script
 )
 
-__all__ = [
-    "CognitiveTypesMigration",
-    "migrate_memory_type",
-    "create_migration_script"
-]
+__all__ = ["CognitiveTypesMigration", "create_migration_script", "migrate_memory_type"]

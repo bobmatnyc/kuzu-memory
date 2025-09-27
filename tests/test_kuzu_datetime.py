@@ -3,6 +3,7 @@
 
 from datetime import datetime, timedelta
 from pathlib import Path
+
 import kuzu
 
 # Find the database
@@ -21,13 +22,17 @@ week_ago = now - timedelta(days=7)
 
 test_params = [
     # Raw datetime object
-    ({'now': now, 'week_ago': week_ago}, "datetime objects"),
-
+    ({"now": now, "week_ago": week_ago}, "datetime objects"),
     # ISO format strings
-    ({'now': now.isoformat(), 'week_ago': week_ago.isoformat()}, "ISO strings"),
-
+    ({"now": now.isoformat(), "week_ago": week_ago.isoformat()}, "ISO strings"),
     # Timestamp integers
-    ({'now': int(now.timestamp() * 1000), 'week_ago': int(week_ago.timestamp() * 1000)}, "timestamps"),
+    (
+        {
+            "now": int(now.timestamp() * 1000),
+            "week_ago": int(week_ago.timestamp() * 1000),
+        },
+        "timestamps",
+    ),
 ]
 
 query = """
@@ -44,7 +49,7 @@ for params, desc in test_params:
             row = result.get_next()
             print(f"  Success! Count: {row[0]}")
         else:
-            print(f"  No results")
+            print("  No results")
     except Exception as e:
         print(f"  Error: {e}")
 

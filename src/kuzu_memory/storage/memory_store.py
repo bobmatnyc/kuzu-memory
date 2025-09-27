@@ -6,15 +6,14 @@ Refactored core store interface that coordinates query building and memory enhan
 
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import json
+from typing import Any
 
-from ..core.models import Memory, MemoryType, ExtractedMemory
 from ..core.config import KuzuMemoryConfig
-from ..utils.exceptions import DatabaseError, ValidationError, PerformanceError
+from ..core.models import Memory
+from ..utils.exceptions import DatabaseError, ValidationError
 from .cache import MemoryCache
-from .query_builder import QueryBuilder
 from .memory_enhancer import MemoryEnhancer
+from .query_builder import QueryBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -43,29 +42,33 @@ class MemoryStore:
         self.memory_enhancer = MemoryEnhancer(config)
 
         # Initialize cache
-        self.cache = MemoryCache(
-            maxsize=config.recall.cache_size,
-            ttl_seconds=config.recall.cache_ttl_seconds
-        ) if config.recall.enable_caching else None
+        self.cache = (
+            MemoryCache(
+                maxsize=config.recall.cache_size,
+                ttl_seconds=config.recall.cache_ttl_seconds,
+            )
+            if config.recall.enable_caching
+            else None
+        )
 
         # Storage statistics
         self._storage_stats = {
-            'memories_stored': 0,
-            'memories_skipped': 0,
-            'memories_updated': 0,
-            'extraction_errors': 0,
-            'storage_errors': 0
+            "memories_stored": 0,
+            "memories_skipped": 0,
+            "memories_updated": 0,
+            "extraction_errors": 0,
+            "storage_errors": 0,
         }
 
     def generate_memories(
         self,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
         source: str = "conversation",
-        user_id: Optional[str] = None,
-        session_id: Optional[str] = None,
-        agent_id: str = "default"
-    ) -> List[str]:
+        user_id: str | None = None,
+        session_id: str | None = None,
+        agent_id: str = "default",
+    ) -> list[str]:
         """
         Extract and store memories from content.
 
@@ -84,7 +87,9 @@ class MemoryStore:
             logger.debug(f"Generating memories from content: {len(content)} characters")
 
             # Extract memories using pattern matching
-            extracted_memories = self.memory_enhancer.extract_memories_from_content(content)
+            extracted_memories = self.memory_enhancer.extract_memories_from_content(
+                content
+            )
 
             if not extracted_memories:
                 logger.info("No memories extracted from content")
@@ -95,36 +100,40 @@ class MemoryStore:
 
             # Enhance memories with entity information
             if entities:
-                self.memory_enhancer.enhance_memories_with_entities(extracted_memories, entities)
+                self.memory_enhancer.enhance_memories_with_entities(
+                    extracted_memories, entities
+                )
 
             # Get existing memories for deduplication
-            existing_memories = self.query_builder.get_existing_memories_for_deduplication(
-                content=content,
-                source=source,
-                user_id=user_id,
-                session_id=session_id,
-                days_back=30
+            existing_memories = (
+                self.query_builder.get_existing_memories_for_deduplication(
+                    content=content,
+                    source=source,
+                    user_id=user_id,
+                    session_id=session_id,
+                    days_back=30,
+                )
             )
 
             # Prepare base memory data
             base_memory_data = {
-                'source': source,
-                'user_id': user_id,
-                'session_id': session_id,
-                'agent_id': agent_id,
-                'metadata': metadata or {}
+                "source": source,
+                "user_id": user_id,
+                "session_id": session_id,
+                "agent_id": agent_id,
+                "metadata": metadata or {},
             }
 
             # Process and store each extracted memory
             stored_ids = []
-            memory_id_to_extracted = {}  # Map to track which memory ID corresponds to which extracted memory
+            memory_id_to_extracted = (
+                {}
+            )  # Map to track which memory ID corresponds to which extracted memory
 
             for extracted_memory in extracted_memories:
                 try:
                     memory_id = self.memory_enhancer.process_extracted_memory(
-                        extracted_memory,
-                        existing_memories,
-                        base_memory_data
+                        extracted_memory, existing_memories, base_memory_data
                     )
 
                     if memory_id:
@@ -135,43 +144,48 @@ class MemoryStore:
                         memory_to_store = Memory(
                             id=memory_id,
                             content=extracted_memory.content,
-                            source_type=base_memory_data['source'],
+                            source_type=base_memory_data["source"],
                             memory_type=extracted_memory.memory_type,
-                            user_id=base_memory_data['user_id'],
-                            session_id=base_memory_data['session_id'],
-                            agent_id=base_memory_data['agent_id'],
+                            user_id=base_memory_data["user_id"],
+                            session_id=base_memory_data["session_id"],
+                            agent_id=base_memory_data["agent_id"],
                             confidence=extracted_memory.confidence,
                             metadata={
-                                **base_memory_data['metadata'],
-                                'pattern_used': extracted_memory.pattern_used,
-                                'extraction_metadata': extracted_memory.metadata
-                            }
+                                **base_memory_data["metadata"],
+                                "pattern_used": extracted_memory.pattern_used,
+                                "extraction_metadata": extracted_memory.metadata,
+                            },
                         )
 
                         # Add entities if available
-                        if hasattr(extracted_memory, 'entities') and extracted_memory.entities:
+                        if (
+                            hasattr(extracted_memory, "entities")
+                            and extracted_memory.entities
+                        ):
                             memory_to_store.entities = extracted_memory.entities
 
                         # Store in database
                         self._store_memory_in_database(memory_to_store)
                         stored_ids.append(memory_id)
-                        self._storage_stats['memories_stored'] += 1
+                        self._storage_stats["memories_stored"] += 1
                     else:
-                        self._storage_stats['memories_skipped'] += 1
+                        self._storage_stats["memories_skipped"] += 1
 
                 except Exception as e:
-                    self._storage_stats['storage_errors'] += 1
+                    self._storage_stats["storage_errors"] += 1
                     logger.error(f"Error processing and storing extracted memory: {e}")
 
             logger.info(f"Generated {len(stored_ids)} memories from content")
             return stored_ids
 
         except Exception as e:
-            self._storage_stats['extraction_errors'] += 1
+            self._storage_stats["extraction_errors"] += 1
             logger.error(f"Error generating memories: {e}")
             raise DatabaseError(f"Failed to generate memories: {e}")
 
-    def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
+    def _store_memory_in_database(
+        self, memory: Memory, is_update: bool = False
+    ) -> None:
         """
         Store or update a memory in the database using query builder.
 
@@ -184,7 +198,7 @@ class MemoryStore:
             self.query_builder.store_memory_in_database(memory, is_update)
 
             # Store associated entities
-            if hasattr(memory, 'entities') and memory.entities:
+            if hasattr(memory, "entities") and memory.entities:
                 self.query_builder.store_memory_entities(memory)
 
             # Clear cache if caching is enabled
@@ -218,7 +232,7 @@ class MemoryStore:
             logger.error(f"Error cleaning up expired memories: {e}")
             raise DatabaseError(f"Failed to cleanup expired memories: {e}")
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> List[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
         """
         Get recent memories using query builder.
 
@@ -251,7 +265,7 @@ class MemoryStore:
             logger.error(f"Error getting recent memories: {e}")
             raise DatabaseError(f"Failed to get recent memories: {e}")
 
-    def get_memory_by_id(self, memory_id: str) -> Optional[Memory]:
+    def get_memory_by_id(self, memory_id: str) -> Memory | None:
         """
         Get a specific memory by its ID using query builder.
 
@@ -295,15 +309,15 @@ class MemoryStore:
                 WHERE m.valid_to IS NULL OR m.valid_to > $now
                 RETURN count(m) as count
             """
-            params = {'now': datetime.now()}
+            params = {"now": datetime.now()}
             results = self.query_builder.db_adapter.execute_query(query, params)
-            return results[0]['count'] if results else 0
+            return results[0]["count"] if results else 0
 
         except Exception as e:
             logger.error(f"Error getting memory count: {e}")
             return 0
 
-    def get_memory_type_stats(self) -> Dict[str, int]:
+    def get_memory_type_stats(self) -> dict[str, int]:
         """
         Get statistics by memory type.
 
@@ -312,13 +326,13 @@ class MemoryStore:
         """
         try:
             stats = self.query_builder.get_memory_statistics()
-            return stats.get('memory_by_type', {})
+            return stats.get("memory_by_type", {})
 
         except Exception as e:
             logger.error(f"Error getting memory type statistics: {e}")
             return {}
 
-    def get_source_stats(self) -> Dict[str, int]:
+    def get_source_stats(self) -> dict[str, int]:
         """
         Get statistics by source.
 
@@ -327,13 +341,13 @@ class MemoryStore:
         """
         try:
             stats = self.query_builder.get_memory_statistics()
-            return stats.get('memory_by_source', {})
+            return stats.get("memory_by_source", {})
 
         except Exception as e:
             logger.error(f"Error getting source statistics: {e}")
             return {}
 
-    def get_daily_activity_stats(self, days: int = 7) -> Dict[str, int]:
+    def get_daily_activity_stats(self, days: int = 7) -> dict[str, int]:
         """
         Get daily activity statistics.
 
@@ -345,12 +359,16 @@ class MemoryStore:
         """
         try:
             # This would require a more complex query - simplified implementation
-            recent_count = self.query_builder.get_memory_statistics().get('recent_activity', 0)
+            recent_count = self.query_builder.get_memory_statistics().get(
+                "recent_activity", 0
+            )
 
             # Return simplified daily stats (could be enhanced with more detailed queries)
             today = datetime.now().date()
             return {
-                str(today - timedelta(days=i)): recent_count // days if recent_count else 0
+                str(today - timedelta(days=i)): (
+                    recent_count // days if recent_count else 0
+                )
                 for i in range(days)
             }
 
@@ -379,7 +397,7 @@ class MemoryStore:
             logger.error(f"Error getting average memory length: {e}")
             return 0.0
 
-    def get_oldest_memory_date(self) -> Optional[datetime]:
+    def get_oldest_memory_date(self) -> datetime | None:
         """
         Get the date of the oldest memory.
 
@@ -395,7 +413,7 @@ class MemoryStore:
             logger.error(f"Error getting oldest memory date: {e}")
             return None
 
-    def get_newest_memory_date(self) -> Optional[datetime]:
+    def get_newest_memory_date(self) -> datetime | None:
         """
         Get the date of the newest memory.
 
@@ -412,7 +430,7 @@ class MemoryStore:
             logger.error(f"Error getting newest memory date: {e}")
             return None
 
-    def get_expired_memories(self) -> List[Memory]:
+    def get_expired_memories(self) -> list[Memory]:
         """
         Get list of expired memories.
 
@@ -428,7 +446,7 @@ class MemoryStore:
             logger.error(f"Error getting expired memories: {e}")
             return []
 
-    def find_duplicate_memories(self) -> List[List[Memory]]:
+    def find_duplicate_memories(self) -> list[list[Memory]]:
         """
         Find groups of duplicate memories.
 
@@ -464,7 +482,7 @@ class MemoryStore:
             logger.error(f"Error deleting memory: {e}")
             return False
 
-    def get_storage_statistics(self) -> Dict[str, Any]:
+    def get_storage_statistics(self) -> dict[str, Any]:
         """
         Get comprehensive storage statistics.
 
@@ -474,24 +492,21 @@ class MemoryStore:
         try:
             # Combine statistics from all components
             stats = {
-                'storage': self._storage_stats.copy(),
-                'query_performance': self.query_builder.get_query_performance_stats(),
-                'memory_enhancement': self.memory_enhancer.get_enhancement_statistics(),
-                'database': self.query_builder.get_memory_statistics()
+                "storage": self._storage_stats.copy(),
+                "query_performance": self.query_builder.get_query_performance_stats(),
+                "memory_enhancement": self.memory_enhancer.get_enhancement_statistics(),
+                "database": self.query_builder.get_memory_statistics(),
             }
 
             # Add cache statistics if available
             if self.cache:
-                stats['cache'] = self.cache.get_stats()
+                stats["cache"] = self.cache.get_stats()
 
             return stats
 
         except Exception as e:
             logger.error(f"Error getting storage statistics: {e}")
-            return {
-                'storage': self._storage_stats.copy(),
-                'error': str(e)
-            }
+            return {"storage": self._storage_stats.copy(), "error": str(e)}
 
     def clear_cache(self):
         """Clear the memory cache if enabled."""
@@ -499,13 +514,13 @@ class MemoryStore:
             self.cache.clear_all()
             logger.info("Memory cache cleared")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics if caching is enabled."""
         if self.cache:
             return self.cache.get_stats()
-        return {'cache_enabled': False}
+        return {"cache_enabled": False}
 
-    def batch_store_memories(self, memories: List[Memory]) -> List[str]:
+    def batch_store_memories(self, memories: list[Memory]) -> list[str]:
         """
         Store multiple memories in a single batch operation.
 
@@ -532,14 +547,14 @@ class MemoryStore:
                     raise ValidationError(
                         "memories",
                         type(memory).__name__,
-                        "All items must be Memory objects"
+                        "All items must be Memory objects",
                     )
 
             # Delegate to query builder for batch storage
             stored_ids = self.query_builder.batch_store_memories(memories)
 
             # Update statistics
-            self._storage_stats['memories_stored'] += len(stored_ids)
+            self._storage_stats["memories_stored"] += len(stored_ids)
 
             # Clear cache if caching is enabled
             if self.cache:
@@ -551,11 +566,11 @@ class MemoryStore:
         except ValidationError:
             raise
         except Exception as e:
-            self._storage_stats['storage_errors'] += 1
+            self._storage_stats["storage_errors"] += 1
             logger.error(f"Error batch storing memories: {e}")
             raise DatabaseError(f"Failed to batch store memories: {e}")
 
-    def batch_get_memories_by_ids(self, memory_ids: List[str]) -> List[Memory]:
+    def batch_get_memories_by_ids(self, memory_ids: list[str]) -> list[Memory]:
         """
         Retrieve multiple memories by their IDs in a single batch operation.
 
@@ -592,7 +607,9 @@ class MemoryStore:
 
             # Fetch missing memories from database
             if memories_to_fetch:
-                db_memories = self.query_builder.batch_get_memories_by_ids(memories_to_fetch)
+                db_memories = self.query_builder.batch_get_memories_by_ids(
+                    memories_to_fetch
+                )
 
                 # Cache the fetched memories
                 if self.cache:
@@ -604,7 +621,9 @@ class MemoryStore:
             else:
                 all_memories = cached_memories
 
-            logger.debug(f"Batch retrieved {len(all_memories)} memories (cached: {len(cached_memories)}, fetched: {len(memories_to_fetch)})")
+            logger.debug(
+                f"Batch retrieved {len(all_memories)} memories (cached: {len(cached_memories)}, fetched: {len(memories_to_fetch)})"
+            )
             return all_memories
 
         except Exception as e:

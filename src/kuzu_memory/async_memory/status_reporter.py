@@ -5,22 +5,26 @@ Provides background reporting of memory operation results.
 Allows monitoring of async learning and storage tasks.
 """
 
-import time
-import threading
 import logging
-from typing import Dict, List, Optional, Callable, Any
-from datetime import datetime, timedelta
+import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING, Any
 
-from .queue_manager import MemoryQueueManager, MemoryTask, TaskStatus, get_queue_manager
-from .background_learner import BackgroundLearner, get_background_learner
+from .queue_manager import MemoryQueueManager, TaskStatus
+
+if TYPE_CHECKING:
+    from .background_learner import BackgroundLearner
 
 logger = logging.getLogger(__name__)
 
 
 class ReportLevel(Enum):
     """Levels for status reporting."""
+
     DEBUG = "debug"
     INFO = "info"
     WARNING = "warning"
@@ -30,31 +34,32 @@ class ReportLevel(Enum):
 @dataclass
 class StatusReport:
     """A status report for memory operations."""
+
     timestamp: datetime
     level: ReportLevel
     message: str
-    task_id: Optional[str] = None
-    task_type: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
+    task_id: str | None = None
+    task_type: str | None = None
+    details: dict[str, Any] | None = None
 
 
 class MemoryStatusReporter:
     """
     Background status reporter for memory operations.
-    
+
     Monitors async tasks and provides status updates without blocking
     the main application flow.
     """
-    
+
     def __init__(
         self,
         report_interval_seconds: float = 5.0,
         max_reports: int = 100,
-        min_report_level: ReportLevel = ReportLevel.INFO
+        min_report_level: ReportLevel = ReportLevel.INFO,
     ):
         """
         Initialize the status reporter.
-        
+
         Args:
             report_interval_seconds: How often to check for status updates
             max_reports: Maximum number of reports to keep in memory
@@ -63,167 +68,187 @@ class MemoryStatusReporter:
         self.report_interval = report_interval_seconds
         self.max_reports = max_reports
         self.min_report_level = min_report_level
-        
-        # Components
-        self.queue_manager = get_queue_manager()
-        self.background_learner = get_background_learner()
-        
+
+        # Components - lazy initialized to avoid circular imports
+        self._queue_manager: MemoryQueueManager | None = None
+        self._background_learner = None  # Type: Optional[BackgroundLearner]
+
         # Reporting state
-        self.reports: List[StatusReport] = []
+        self.reports: list[StatusReport] = []
         self.running = False
-        self.reporter_thread: Optional[threading.Thread] = None
+        self.reporter_thread: threading.Thread | None = None
         self.lock = threading.Lock()
-        
+
         # Callbacks for different report levels
-        self.callbacks: Dict[ReportLevel, List[Callable]] = {
+        self.callbacks: dict[ReportLevel, list[Callable]] = {
             level: [] for level in ReportLevel
         }
-        
+
         # Last seen task states (to detect changes)
-        self.last_task_states: Dict[str, TaskStatus] = {}
-        
+        self.last_task_states: dict[str, TaskStatus] = {}
+
         # Statistics
         self.stats = {
-            'reports_generated': 0,
-            'tasks_monitored': 0,
-            'last_report_time': None,
+            "reports_generated": 0,
+            "tasks_monitored": 0,
+            "last_report_time": None,
         }
-        
+
         logger.info("Initialized MemoryStatusReporter")
-    
+
+    @property
+    def queue_manager(self) -> MemoryQueueManager:
+        """Lazy load queue manager to avoid circular imports."""
+        if self._queue_manager is None:
+            from .queue_manager import get_queue_manager
+
+            self._queue_manager = get_queue_manager()
+        return self._queue_manager
+
+    @property
+    def background_learner(self) -> "BackgroundLearner":
+        """Lazy load background learner to avoid circular imports."""
+        if self._background_learner is None:
+            from .background_learner import get_background_learner
+
+            self._background_learner = get_background_learner()
+        return self._background_learner
+
     def start(self):
         """Start the status reporter thread."""
         if self.running:
             return
-        
+
         self.running = True
         self.reporter_thread = threading.Thread(
-            target=self._reporter_loop,
-            name="MemoryStatusReporter",
-            daemon=True
+            target=self._reporter_loop, name="MemoryStatusReporter", daemon=True
         )
         self.reporter_thread.start()
-        
+
         logger.info("Started memory status reporter")
-    
+
     def stop(self, timeout: float = 5.0):
         """Stop the status reporter thread."""
         if not self.running:
             return
-        
+
         self.running = False
-        
+
         if self.reporter_thread:
             self.reporter_thread.join(timeout=timeout)
             self.reporter_thread = None
-        
+
         logger.info("Stopped memory status reporter")
-    
-    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]):
+
+    def add_callback(
+        self, level: ReportLevel, callback: Callable[[StatusReport], None]
+    ):
         """
         Add a callback for status reports at a specific level.
-        
+
         Args:
             level: Report level to listen for
             callback: Function to call with StatusReport
         """
         self.callbacks[level].append(callback)
         logger.debug(f"Added callback for {level.value} reports")
-    
-    def get_recent_reports(self, count: int = 10) -> List[StatusReport]:
+
+    def get_recent_reports(self, count: int = 10) -> list[StatusReport]:
         """Get recent status reports."""
         with self.lock:
             return self.reports[-count:] if self.reports else []
-    
-    def get_reports_by_level(self, level: ReportLevel) -> List[StatusReport]:
+
+    def get_reports_by_level(self, level: ReportLevel) -> list[StatusReport]:
         """Get all reports at a specific level."""
         with self.lock:
             return [r for r in self.reports if r.level == level]
-    
-    def get_task_reports(self, task_id: str) -> List[StatusReport]:
+
+    def get_task_reports(self, task_id: str) -> list[StatusReport]:
         """Get all reports for a specific task."""
         with self.lock:
             return [r for r in self.reports if r.task_id == task_id]
-    
-    def get_reporter_stats(self) -> Dict[str, Any]:
+
+    def get_reporter_stats(self) -> dict[str, Any]:
         """Get reporter statistics."""
         with self.lock:
             queue_stats = self.queue_manager.get_queue_stats()
             learning_stats = self.background_learner.get_learning_stats()
-            
+
             return {
                 **self.stats,
-                'total_reports': len(self.reports),
-                'reports_by_level': {
+                "total_reports": len(self.reports),
+                "reports_by_level": {
                     level.value: len([r for r in self.reports if r.level == level])
                     for level in ReportLevel
                 },
-                'queue_stats': queue_stats,
-                'learning_stats': learning_stats,
+                "queue_stats": queue_stats,
+                "learning_stats": learning_stats,
             }
-    
+
     def _reporter_loop(self):
         """Main reporter loop."""
         logger.debug("Started status reporter loop")
-        
+
         while self.running:
             try:
                 # Check for task status changes
                 self._check_task_updates()
-                
+
                 # Generate periodic reports
                 self._generate_periodic_reports()
-                
+
                 # Clean up old reports
                 self._cleanup_old_reports()
-                
+
                 # Sleep until next check
                 time.sleep(self.report_interval)
-                
+
             except Exception as e:
                 logger.error(f"Status reporter error: {e}")
                 time.sleep(self.report_interval)
-        
+
         logger.debug("Stopped status reporter loop")
-    
+
     def _check_task_updates(self):
         """Check for task status updates and generate reports."""
         # Get current tasks from queue manager
         current_tasks = {}
-        
+
         # This would need to be implemented in queue_manager
         # For now, we'll simulate with a simple approach
         queue_stats = self.queue_manager.get_queue_stats()
-        
+
         # Generate report for queue status if significant changes
-        if queue_stats.get('queue_size', 0) > 10:
+        if queue_stats.get("queue_size", 0) > 10:
             self._add_report(
                 ReportLevel.WARNING,
                 f"Memory queue is getting full: {queue_stats['queue_size']} tasks",
-                details=queue_stats
+                details=queue_stats,
             )
-        
+
         # Check learning statistics
         learning_stats = self.background_learner.get_learning_stats()
-        
-        if learning_stats.get('learning_failures', 0) > 0:
+
+        if learning_stats.get("learning_failures", 0) > 0:
             self._add_report(
                 ReportLevel.ERROR,
                 f"Learning failures detected: {learning_stats['learning_failures']} failures",
-                details=learning_stats
+                details=learning_stats,
             )
-    
+
     def _generate_periodic_reports(self):
         """Generate periodic status reports."""
         now = datetime.now()
-        
+
         # Generate summary report every minute
-        if (not self.stats['last_report_time'] or 
-            (now - self.stats['last_report_time']).total_seconds() > 60):
-            
+        if (
+            not self.stats["last_report_time"]
+            or (now - self.stats["last_report_time"]).total_seconds() > 60
+        ):
+
             queue_stats = self.queue_manager.get_queue_stats()
             learning_stats = self.background_learner.get_learning_stats()
-            
+
             # Generate summary
             summary = (
                 f"Memory system status: "
@@ -231,32 +256,32 @@ class MemoryStatusReporter:
                 f"{queue_stats.get('queue_size', 0)} queued, "
                 f"{learning_stats.get('memories_learned', 0)} memories learned"
             )
-            
+
             self._add_report(
                 ReportLevel.INFO,
                 summary,
                 details={
-                    'queue_stats': queue_stats,
-                    'learning_stats': learning_stats,
-                }
+                    "queue_stats": queue_stats,
+                    "learning_stats": learning_stats,
+                },
             )
-            
-            self.stats['last_report_time'] = now
-    
+
+            self.stats["last_report_time"] = now
+
     def _cleanup_old_reports(self):
         """Clean up old reports to prevent memory growth."""
         with self.lock:
             if len(self.reports) > self.max_reports:
                 # Keep only the most recent reports
-                self.reports = self.reports[-self.max_reports:]
-    
+                self.reports = self.reports[-self.max_reports :]
+
     def _add_report(
         self,
         level: ReportLevel,
         message: str,
-        task_id: Optional[str] = None,
-        task_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        task_id: str | None = None,
+        task_type: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Add a status report."""
         # Check if level meets minimum threshold
@@ -266,10 +291,10 @@ class MemoryStatusReporter:
             ReportLevel.WARNING: 2,
             ReportLevel.ERROR: 3,
         }
-        
+
         if level_values[level] < level_values[self.min_report_level]:
             return
-        
+
         # Create report
         report = StatusReport(
             timestamp=datetime.now(),
@@ -277,21 +302,21 @@ class MemoryStatusReporter:
             message=message,
             task_id=task_id,
             task_type=task_type,
-            details=details
+            details=details,
         )
-        
+
         # Add to reports list
         with self.lock:
             self.reports.append(report)
-            self.stats['reports_generated'] += 1
-        
+            self.stats["reports_generated"] += 1
+
         # Call callbacks
         for callback in self.callbacks[level]:
             try:
                 callback(report)
             except Exception as e:
                 logger.error(f"Status report callback failed: {e}")
-        
+
         # Log the report
         log_level = {
             ReportLevel.DEBUG: logging.DEBUG,
@@ -299,12 +324,12 @@ class MemoryStatusReporter:
             ReportLevel.WARNING: logging.WARNING,
             ReportLevel.ERROR: logging.ERROR,
         }[level]
-        
+
         logger.log(log_level, f"Memory Status: {message}")
 
 
 # Global status reporter instance
-_status_reporter: Optional[MemoryStatusReporter] = None
+_status_reporter: MemoryStatusReporter | None = None
 
 
 def get_status_reporter() -> MemoryStatusReporter:
@@ -322,7 +347,7 @@ def add_status_callback(level: ReportLevel, callback: Callable[[StatusReport], N
     reporter.add_callback(level, callback)
 
 
-def get_recent_status(count: int = 10) -> List[StatusReport]:
+def get_recent_status(count: int = 10) -> list[StatusReport]:
     """Get recent status reports."""
     reporter = get_status_reporter()
     return reporter.get_recent_reports(count)

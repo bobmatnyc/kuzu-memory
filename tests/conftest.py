@@ -5,19 +5,19 @@ Provides common test fixtures, utilities, and configuration
 for unit tests, integration tests, and benchmarks.
 """
 
-import pytest
-import tempfile
-import shutil
-from pathlib import Path
-from typing import Dict, Any, List
 import logging
+import shutil
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from kuzu_memory import KuzuMemory, KuzuMemoryConfig
 
-
 # Configure logging for tests
 logging.basicConfig(level=logging.WARNING)
-logging.getLogger('kuzu_memory').setLevel(logging.INFO)
+logging.getLogger("kuzu_memory").setLevel(logging.INFO)
 
 
 @pytest.fixture(scope="session")
@@ -32,6 +32,7 @@ def test_data_dir():
 def temp_db_path(test_data_dir):
     """Create a unique temporary database path for each test."""
     import uuid
+
     db_path = test_data_dir / f"test_db_{uuid.uuid4().hex[:8]}.db"
     yield db_path
     # Cleanup is handled by session-level test_data_dir fixture
@@ -55,11 +56,7 @@ def default_test_config():
             "max_memories": 10,
             "default_strategy": "auto",
             "strategies": ["keyword", "entity", "temporal"],
-            "strategy_weights": {
-                "keyword": 0.4,
-                "entity": 0.4,
-                "temporal": 0.2
-            },
+            "strategy_weights": {"keyword": 0.4, "entity": 0.4, "temporal": 0.2},
             "min_confidence_threshold": 0.1,
             "enable_caching": True,
             "cache_size": 100,  # Smaller cache for tests
@@ -94,7 +91,7 @@ def default_test_config():
             "custom_retention": {},
             "max_total_memories": 1000,  # Smaller for tests
             "cleanup_batch_size": 100,
-        }
+        },
     }
 
 
@@ -124,36 +121,36 @@ def sample_memories_data():
             "user_id": "user-1",
             "session_id": "session-1",
             "source": "conversation",
-            "metadata": {"context": "introduction"}
+            "metadata": {"context": "introduction"},
         },
         {
             "content": "I prefer Python for backend development and React for frontend.",
-            "user_id": "user-1", 
+            "user_id": "user-1",
             "session_id": "session-1",
             "source": "conversation",
-            "metadata": {"context": "preferences"}
+            "metadata": {"context": "preferences"},
         },
         {
             "content": "We decided to use PostgreSQL as our main database.",
             "user_id": "user-1",
             "session_id": "session-2",
             "source": "meeting",
-            "metadata": {"context": "architecture_decision"}
+            "metadata": {"context": "architecture_decision"},
         },
         {
             "content": "Bob is working on the payment integration module.",
             "user_id": "user-2",
             "session_id": "session-3",
             "source": "conversation",
-            "metadata": {"context": "team_update"}
+            "metadata": {"context": "team_update"},
         },
         {
             "content": "Currently debugging the authentication service.",
             "user_id": "user-1",
             "session_id": "session-4",
             "source": "status_update",
-            "metadata": {"context": "current_work"}
-        }
+            "metadata": {"context": "current_work"},
+        },
     ]
 
 
@@ -161,7 +158,7 @@ def sample_memories_data():
 def populated_memory(kuzu_memory_instance, sample_memories_data):
     """KuzuMemory instance populated with sample data."""
     memory = kuzu_memory_instance
-    
+
     # Store sample memories
     for data in sample_memories_data:
         memory.generate_memories(
@@ -169,9 +166,9 @@ def populated_memory(kuzu_memory_instance, sample_memories_data):
             user_id=data["user_id"],
             session_id=data["session_id"],
             source=data["source"],
-            metadata=data["metadata"]
+            metadata=data["metadata"],
         )
-    
+
     return memory
 
 
@@ -188,45 +185,56 @@ def test_prompts():
         "What technologies do we use?",
         "What are my preferences?",
         "What decisions have we made?",
-        "What's the current status?"
+        "What's the current status?",
     ]
 
 
 class MemoryTestHelper:
     """Helper class for memory testing utilities."""
-    
+
     @staticmethod
-    def assert_memory_content_contains(memories: List, expected_content: str):
+    def assert_memory_content_contains(memories: list, expected_content: str):
         """Assert that at least one memory contains the expected content."""
-        found = any(expected_content.lower() in memory.content.lower() for memory in memories)
+        found = any(
+            expected_content.lower() in memory.content.lower() for memory in memories
+        )
         assert found, f"No memory found containing '{expected_content}'"
-    
+
     @staticmethod
     def assert_enhanced_prompt_contains(context, expected_content: str):
         """Assert that enhanced prompt contains expected content."""
-        assert expected_content.lower() in context.enhanced_prompt.lower(), \
-            f"Enhanced prompt does not contain '{expected_content}'"
-    
+        assert (
+            expected_content.lower() in context.enhanced_prompt.lower()
+        ), f"Enhanced prompt does not contain '{expected_content}'"
+
     @staticmethod
-    def count_memories_by_type(memories: List, memory_type) -> int:
+    def count_memories_by_type(memories: list, memory_type) -> int:
         """Count memories of a specific type."""
         return sum(1 for memory in memories if memory.memory_type == memory_type)
-    
+
     @staticmethod
-    def get_unique_memory_contents(memories: List) -> set:
+    def get_unique_memory_contents(memories: list) -> set:
         """Get set of unique memory contents."""
         return {memory.content for memory in memories}
-    
+
     @staticmethod
-    def assert_performance_within_limit(actual_time_ms: float, limit_ms: float, operation: str):
+    def assert_performance_within_limit(
+        actual_time_ms: float, limit_ms: float, operation: str
+    ):
         """Assert that operation time is within performance limit."""
-        assert actual_time_ms <= limit_ms, \
-            f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
-    
+        assert (
+            actual_time_ms <= limit_ms
+        ), f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+
     @staticmethod
-    def create_test_memory_content(count: int, prefix: str = "Test memory") -> List[str]:
+    def create_test_memory_content(
+        count: int, prefix: str = "Test memory"
+    ) -> list[str]:
         """Create a list of test memory contents."""
-        return [f"{prefix} {i}: This is test content for memory number {i}." for i in range(count)]
+        return [
+            f"{prefix} {i}: This is test content for memory number {i}."
+            for i in range(count)
+        ]
 
 
 @pytest.fixture
@@ -242,7 +250,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "benchmark: Performance benchmark tests")
     config.addinivalue_line("markers", "slow: Slow tests that take more time")
-    config.addinivalue_line("markers", "requires_kuzu: Tests that require Kuzu database")
+    config.addinivalue_line(
+        "markers", "requires_kuzu: Tests that require Kuzu database"
+    )
 
 
 # Skip tests if Kuzu is not available
@@ -250,10 +260,11 @@ def pytest_collection_modifyitems(config, items):
     """Modify test collection to handle missing dependencies."""
     try:
         import kuzu
+
         kuzu_available = True
     except ImportError:
         kuzu_available = False
-    
+
     if not kuzu_available:
         skip_kuzu = pytest.mark.skip(reason="Kuzu database not available")
         for item in items:
@@ -285,7 +296,7 @@ def assert_memory_context_valid(context):
     assert context.confidence >= 0.0, "Context confidence is negative"
     assert context.confidence <= 1.0, "Context confidence exceeds 1.0"
     assert context.recall_time_ms >= 0.0, "Recall time is negative"
-    
+
     # Validate each memory in the context
     for memory in context.memories:
         assert_memory_valid(memory)

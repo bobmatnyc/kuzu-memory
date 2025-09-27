@@ -4,9 +4,11 @@ This guide explains how to configure Claude Desktop to use KuzuMemory via the Mo
 
 ## Prerequisites
 
-1. **KuzuMemory Installation**: Ensure KuzuMemory is installed via pipx:
+1. **KuzuMemory Installation**: Ensure KuzuMemory v1.1.0+ is installed via pipx:
    ```bash
    pipx install kuzu-memory
+   # Or upgrade if already installed
+   pipx upgrade kuzu-memory
    ```
 
 2. **Claude Desktop**: Have Claude Desktop installed on your system
@@ -120,6 +122,7 @@ Store learnings or observations asynchronously (non-blocking).
 - **Parameters**:
   - `content` (required): The content to learn and store
   - `source` (optional): Source of the learning (default: "ai-conversation")
+- **Note**: Uses 5-second default wait behavior for async processing
 
 ### kuzu_recall
 Query specific memories from the project.
@@ -178,6 +181,21 @@ Ensure the configuration file and directories have proper permissions:
 chmod 644 ~/Library/Application\ Support/Claude/claude_desktop_config.json
 chmod 755 ~/.kuzu-memory
 ```
+
+### Async Learning Issues
+
+If async learning (`kuzu_learn`) appears to hang or take too long:
+
+1. **Normal Behavior**: The tool waits up to 5 seconds for processing by default
+2. **Check Status**: Use `kuzu_stats` to verify memories are being stored
+3. **Adjust Timeout**: Set `KUZU_MEMORY_ASYNC_TIMEOUT` environment variable:
+   ```json
+   "env": {
+     "KUZU_MEMORY_DB": "~/.kuzu-memory/memorydb",
+     "KUZU_MEMORY_MODE": "mcp",
+     "KUZU_MEMORY_ASYNC_TIMEOUT": "3"
+   }
+   ```
 
 ## Environment Variables
 

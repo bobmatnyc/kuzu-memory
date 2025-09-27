@@ -8,9 +8,9 @@ Provides comprehensive error types for different failure scenarios with:
 - Performance threshold enforcement
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
 
 class MemoryErrorCode(Enum):
@@ -75,11 +75,11 @@ class KuzuMemoryError(Exception):
     def __init__(
         self,
         message: str,
-        error_code: Optional[MemoryErrorCode] = None,
-        suggestion: Optional[str] = None,
-        recovery_actions: Optional[List[RecoveryAction]] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        error_code: MemoryErrorCode | None = None,
+        suggestion: str | None = None,
+        recovery_actions: list[RecoveryAction] | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None,
     ):
         self.message = message
         self.error_code = error_code
@@ -114,7 +114,7 @@ class KuzuMemoryError(Exception):
 
         return "\n".join(parts)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for logging/serialization."""
         return {
             "error_type": type(self).__name__,
@@ -124,21 +124,24 @@ class KuzuMemoryError(Exception):
             "recovery_actions": [action.value for action in self.recovery_actions],
             "context": self.context,
             "timestamp": self.timestamp.isoformat(),
-            "cause": str(self.cause) if self.cause else None
+            "cause": str(self.cause) if self.cause else None,
         }
 
 
 class DatabaseError(KuzuMemoryError):
     """Base class for database-related errors."""
+
     pass
 
 
 class DatabaseLockError(DatabaseError):
     """Database is locked by another process."""
 
-    def __init__(self, db_path: str, timeout: float = 5.0, pid: Optional[int] = None):
+    def __init__(self, db_path: str, timeout: float = 5.0, pid: int | None = None):
         message = f"Database at '{db_path}' is locked by another process"
-        suggestion = f"Wait {timeout}s and try again, or check for other KuzuMemory instances"
+        suggestion = (
+            f"Wait {timeout}s and try again, or check for other KuzuMemory instances"
+        )
 
         context = {"db_path": db_path, "timeout": timeout}
         if pid:
@@ -149,14 +152,19 @@ class DatabaseLockError(DatabaseError):
             error_code=MemoryErrorCode.DATABASE_LOCK,
             suggestion=suggestion,
             recovery_actions=[RecoveryAction.WAIT_AND_RETRY],
-            context=context
+            context=context,
         )
 
 
 class CorruptedDatabaseError(DatabaseError):
     """Database file is corrupted or incompatible."""
 
-    def __init__(self, db_path: str, error_details: Optional[str] = None, backup_available: bool = False):
+    def __init__(
+        self,
+        db_path: str,
+        error_details: str | None = None,
+        backup_available: bool = False,
+    ):
         message = f"Database at '{db_path}' is corrupted or incompatible"
         if error_details:
             message += f": {error_details}"
@@ -174,14 +182,19 @@ class CorruptedDatabaseError(DatabaseError):
             error_code=MemoryErrorCode.DATABASE_CORRUPTED,
             suggestion=suggestion,
             recovery_actions=recovery_actions,
-            context={"db_path": db_path, "backup_available": backup_available}
+            context={"db_path": db_path, "backup_available": backup_available},
         )
 
 
 class DatabaseVersionError(DatabaseError):
     """Database schema version is incompatible."""
 
-    def __init__(self, current_version: str, required_version: str, migration_available: bool = False):
+    def __init__(
+        self,
+        current_version: str,
+        required_version: str,
+        migration_available: bool = False,
+    ):
         message = f"Database schema version {current_version} is incompatible with required {required_version}"
 
         if migration_available:
@@ -199,15 +212,17 @@ class DatabaseVersionError(DatabaseError):
             context={
                 "current_version": current_version,
                 "required_version": required_version,
-                "migration_available": migration_available
-            }
+                "migration_available": migration_available,
+            },
         )
 
 
 class DatabaseConnectionError(DatabaseError):
     """Failed to connect to database."""
 
-    def __init__(self, db_path: str, cause: Optional[Exception] = None, retry_count: int = 0):
+    def __init__(
+        self, db_path: str, cause: Exception | None = None, retry_count: int = 0
+    ):
         message = f"Failed to connect to database at '{db_path}'"
         if retry_count > 0:
             message += f" after {retry_count} attempts"
@@ -221,14 +236,14 @@ class DatabaseConnectionError(DatabaseError):
             suggestion=suggestion,
             recovery_actions=recovery_actions,
             context={"db_path": db_path, "retry_count": retry_count},
-            cause=cause
+            cause=cause,
         )
 
 
 class DatabaseTimeoutError(DatabaseError):
     """Database operation timed out."""
 
-    def __init__(self, operation: str, timeout_ms: float, query: Optional[str] = None):
+    def __init__(self, operation: str, timeout_ms: float, query: str | None = None):
         message = f"Database operation '{operation}' timed out after {timeout_ms}ms"
         suggestion = "Consider optimizing the query or increasing timeout"
 
@@ -240,14 +255,17 @@ class DatabaseTimeoutError(DatabaseError):
             message=message,
             error_code=MemoryErrorCode.DATABASE_TIMEOUT,
             suggestion=suggestion,
-            recovery_actions=[RecoveryAction.OPTIMIZE_QUERY, RecoveryAction.INCREASE_RESOURCES],
-            context=context
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            context=context,
         )
 
 
 class ConfigurationError(KuzuMemoryError):
     """Configuration is invalid or missing."""
-    
+
     def __init__(self, config_issue: str):
         message = f"Configuration error: {config_issue}"
         suggestion = "Check your configuration file or initialization parameters"
@@ -256,7 +274,7 @@ class ConfigurationError(KuzuMemoryError):
 
 class ExtractionError(KuzuMemoryError):
     """Error during memory extraction from text."""
-    
+
     def __init__(self, text_length: int, error_details: str):
         message = f"Failed to extract memories from text ({text_length} chars): {error_details}"
         suggestion = "Check input text encoding and length limits"
@@ -265,25 +283,29 @@ class ExtractionError(KuzuMemoryError):
 
 class RecallError(KuzuMemoryError):
     """Error during memory recall/retrieval."""
-    
+
     def __init__(self, query: str, error_details: str):
-        message = f"Failed to recall memories for query '{query[:50]}...': {error_details}"
+        message = (
+            f"Failed to recall memories for query '{query[:50]}...': {error_details}"
+        )
         suggestion = "Try a simpler query or check database connectivity"
         super().__init__(message, suggestion)
 
 
 class PerformanceError(KuzuMemoryError):
     """Operation exceeded performance requirements."""
-    
+
     def __init__(self, operation: str, actual_time: float, max_time: float):
-        message = f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
+        message = (
+            f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
+        )
         suggestion = "Consider optimizing database indices or reducing query complexity"
         super().__init__(message, suggestion)
 
 
 class ValidationError(KuzuMemoryError):
     """Input validation failed."""
-    
+
     def __init__(self, field: str, value: str, requirement: str):
         message = f"Validation failed for {field}='{value}': {requirement}"
         suggestion = "Check input parameters and their constraints"
@@ -291,6 +313,7 @@ class ValidationError(KuzuMemoryError):
 
 
 # Convenience functions for common error scenarios
+
 
 def raise_if_empty_text(text: str, operation: str) -> None:
     """Raise ValidationError if text is empty or whitespace-only."""
@@ -302,16 +325,16 @@ def raise_if_invalid_path(path: str) -> None:
     """Raise ValidationError if path is invalid."""
     if not path or len(path.strip()) == 0:
         raise ValidationError("path", path, "cannot be empty")
-    
+
     # Additional path validation could be added here
     if len(path) > 255:
-        raise ValidationError("path", path[:50] + "...", "path too long (max 255 chars)")
+        raise ValidationError(
+            "path", path[:50] + "...", "path too long (max 255 chars)"
+        )
 
 
 def raise_if_performance_exceeded(
-    operation: str,
-    actual_time: float,
-    max_time: float
+    operation: str, actual_time: float, max_time: float
 ) -> None:
     """Raise PerformanceError if operation exceeded time limit."""
     if actual_time > max_time:
@@ -320,8 +343,10 @@ def raise_if_performance_exceeded(
 
 # Enhanced exception classes for new components
 
+
 class CacheError(KuzuMemoryError):
     """Base class for cache-related errors."""
+
     pass
 
 
@@ -341,15 +366,15 @@ class CacheFullError(CacheError):
                 "cache_type": cache_type,
                 "current_size": current_size,
                 "max_size": max_size,
-                "utilization": current_size / max_size
-            }
+                "utilization": current_size / max_size,
+            },
         )
 
 
 class CacheCorruptionError(CacheError):
     """Cache data is corrupted or invalid."""
 
-    def __init__(self, cache_type: str, corrupted_keys: List[str]):
+    def __init__(self, cache_type: str, corrupted_keys: list[str]):
         message = f"{cache_type} cache corruption detected"
         if corrupted_keys:
             message += f" in keys: {corrupted_keys[:5]}"
@@ -366,8 +391,8 @@ class CacheCorruptionError(CacheError):
             context={
                 "cache_type": cache_type,
                 "corrupted_count": len(corrupted_keys),
-                "corrupted_keys": corrupted_keys[:10]  # Limit for logging
-            }
+                "corrupted_keys": corrupted_keys[:10],  # Limit for logging
+            },
         )
 
 
@@ -386,13 +411,14 @@ class CacheTimeoutError(CacheError):
             context={
                 "operation": operation,
                 "timeout_ms": timeout_ms,
-                "cache_type": cache_type
-            }
+                "cache_type": cache_type,
+            },
         )
 
 
 class ConnectionPoolError(KuzuMemoryError):
     """Base class for connection pool errors."""
+
     pass
 
 
@@ -410,20 +436,23 @@ class PoolExhaustedError(ConnectionPoolError):
             message=message,
             error_code=MemoryErrorCode.POOL_EXHAUSTED,
             suggestion=suggestion,
-            recovery_actions=[RecoveryAction.INCREASE_RESOURCES, RecoveryAction.WAIT_AND_RETRY],
+            recovery_actions=[
+                RecoveryAction.INCREASE_RESOURCES,
+                RecoveryAction.WAIT_AND_RETRY,
+            ],
             context={
                 "pool_size": pool_size,
                 "active_connections": active_connections,
                 "utilization": active_connections / pool_size,
-                "wait_time_ms": wait_time_ms
-            }
+                "wait_time_ms": wait_time_ms,
+            },
         )
 
 
 class PoolTimeoutError(ConnectionPoolError):
     """Timed out waiting for connection from pool."""
 
-    def __init__(self, timeout_ms: float, pool_stats: Dict[str, Any]):
+    def __init__(self, timeout_ms: float, pool_stats: dict[str, Any]):
         message = f"Timed out waiting {timeout_ms}ms for connection from pool"
         suggestion = "Increase connection timeout or pool size"
 
@@ -431,18 +460,18 @@ class PoolTimeoutError(ConnectionPoolError):
             message=message,
             error_code=MemoryErrorCode.POOL_TIMEOUT,
             suggestion=suggestion,
-            recovery_actions=[RecoveryAction.INCREASE_RESOURCES, RecoveryAction.WAIT_AND_RETRY],
-            context={
-                "timeout_ms": timeout_ms,
-                "pool_stats": pool_stats
-            }
+            recovery_actions=[
+                RecoveryAction.INCREASE_RESOURCES,
+                RecoveryAction.WAIT_AND_RETRY,
+            ],
+            context={"timeout_ms": timeout_ms, "pool_stats": pool_stats},
         )
 
 
 class PoolConnectionFailedError(ConnectionPoolError):
     """Failed to create new connection in pool."""
 
-    def __init__(self, db_path: str, cause: Optional[Exception] = None, attempts: int = 1):
+    def __init__(self, db_path: str, cause: Exception | None = None, attempts: int = 1):
         message = f"Failed to create connection to {db_path}"
         if attempts > 1:
             message += f" after {attempts} attempts"
@@ -453,12 +482,12 @@ class PoolConnectionFailedError(ConnectionPoolError):
             message=message,
             error_code=MemoryErrorCode.POOL_CONNECTION_FAILED,
             suggestion=suggestion,
-            recovery_actions=[RecoveryAction.CHECK_CONFIG, RecoveryAction.WAIT_AND_RETRY],
-            context={
-                "db_path": db_path,
-                "attempts": attempts
-            },
-            cause=cause
+            recovery_actions=[
+                RecoveryAction.CHECK_CONFIG,
+                RecoveryAction.WAIT_AND_RETRY,
+            ],
+            context={"db_path": db_path, "attempts": attempts},
+            cause=cause,
         )
 
 
@@ -471,7 +500,7 @@ class PerformanceThresholdError(PerformanceError):
         actual_time: float,
         threshold: float,
         severity: str = "warning",
-        recommendations: Optional[List[str]] = None
+        recommendations: list[str] | None = None,
     ):
         message = f"Performance threshold exceeded: {operation} took {actual_time:.1f}ms (threshold: {threshold:.1f}ms)"
         suggestion = "Consider performance optimization"
@@ -480,24 +509,31 @@ class PerformanceThresholdError(PerformanceError):
             suggestion += f": {', '.join(recommendations)}"
 
         error_code = (
-            MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT if "recall" in operation.lower()
-            else MemoryErrorCode.PERFORMANCE_GENERATION_TIMEOUT if "generation" in operation.lower()
-            else MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
+            MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT
+            if "recall" in operation.lower()
+            else (
+                MemoryErrorCode.PERFORMANCE_GENERATION_TIMEOUT
+                if "generation" in operation.lower()
+                else MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
+            )
         )
 
         super().__init__(
             message=message,
             error_code=error_code,
             suggestion=suggestion,
-            recovery_actions=[RecoveryAction.OPTIMIZE_QUERY, RecoveryAction.INCREASE_RESOURCES],
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
             context={
                 "operation": operation,
                 "actual_time_ms": actual_time,
                 "threshold_ms": threshold,
                 "severity": severity,
                 "performance_ratio": actual_time / threshold,
-                "recommendations": recommendations or []
-            }
+                "recommendations": recommendations or [],
+            },
         )
 
 
@@ -508,8 +544,8 @@ class AsyncOperationError(KuzuMemoryError):
         self,
         operation: str,
         error_details: str,
-        task_id: Optional[str] = None,
-        cause: Optional[Exception] = None
+        task_id: str | None = None,
+        cause: Exception | None = None,
     ):
         message = f"Async operation '{operation}' failed: {error_details}"
         suggestion = "Check async task management and error handling"
@@ -524,17 +560,18 @@ class AsyncOperationError(KuzuMemoryError):
             suggestion=suggestion,
             recovery_actions=[RecoveryAction.RETRY, RecoveryAction.CHECK_CONFIG],
             context=context,
-            cause=cause
+            cause=cause,
         )
 
 
 # Enhanced validation functions with structured error handling
 
+
 def validate_performance_requirements(
     operation: str,
     actual_time_ms: float,
     max_time_ms: float,
-    recommendations: Optional[List[str]] = None
+    recommendations: list[str] | None = None,
 ) -> None:
     """Validate operation meets performance requirements."""
     if actual_time_ms > max_time_ms:
@@ -543,15 +580,12 @@ def validate_performance_requirements(
             actual_time=actual_time_ms,
             threshold=max_time_ms,
             severity="critical" if actual_time_ms > max_time_ms * 2 else "warning",
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
 
 def validate_cache_operation(
-    cache_type: str,
-    operation: str,
-    success: bool,
-    error_details: Optional[str] = None
+    cache_type: str, operation: str, success: bool, error_details: str | None = None
 ) -> None:
     """Validate cache operation success."""
     if not success:
@@ -564,9 +598,7 @@ def validate_cache_operation(
 
 
 def validate_connection_pool_health(
-    pool_size: int,
-    active_connections: int,
-    max_utilization: float = 0.95
+    pool_size: int, active_connections: int, max_utilization: float = 0.95
 ) -> None:
     """Validate connection pool is healthy."""
     if pool_size == 0:
@@ -579,11 +611,14 @@ def validate_connection_pool_health(
 
 # Error recovery utilities
 
+
 class ErrorRecoveryManager:
     """Manages automatic error recovery strategies."""
 
     @staticmethod
-    def should_retry(error: KuzuMemoryError, attempt: int, max_attempts: int = 3) -> bool:
+    def should_retry(
+        error: KuzuMemoryError, attempt: int, max_attempts: int = 3
+    ) -> bool:
         """Determine if an error should trigger a retry."""
         if attempt >= max_attempts:
             return False
@@ -592,7 +627,7 @@ class ErrorRecoveryManager:
         retry_actions = {
             RecoveryAction.RETRY,
             RecoveryAction.WAIT_AND_RETRY,
-            RecoveryAction.OPTIMIZE_QUERY
+            RecoveryAction.OPTIMIZE_QUERY,
         }
 
         return any(action in retry_actions for action in error.recovery_actions)
@@ -606,21 +641,21 @@ class ErrorRecoveryManager:
         if error.error_code in [
             MemoryErrorCode.DATABASE_LOCK,
             MemoryErrorCode.POOL_TIMEOUT,
-            MemoryErrorCode.CACHE_TIMEOUT
+            MemoryErrorCode.CACHE_TIMEOUT,
         ]:
-            return base_delay * (2 ** attempt)
+            return base_delay * (2**attempt)
 
         # Linear backoff for performance issues
         if error.error_code in [
             MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
-            MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
+            MemoryErrorCode.PERFORMANCE_DATABASE_SLOW,
         ]:
             return base_delay * attempt
 
         return base_delay
 
     @staticmethod
-    def suggest_configuration_changes(error: KuzuMemoryError) -> Dict[str, Any]:
+    def suggest_configuration_changes(error: KuzuMemoryError) -> dict[str, Any]:
         """Suggest configuration changes based on error."""
         suggestions = {}
 
@@ -634,7 +669,7 @@ class ErrorRecoveryManager:
 
         elif error.error_code in [
             MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
-            MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
+            MemoryErrorCode.PERFORMANCE_DATABASE_SLOW,
         ]:
             suggestions["performance.enable_caching"] = True
             suggestions["database.connection_pool_size"] = "increase"

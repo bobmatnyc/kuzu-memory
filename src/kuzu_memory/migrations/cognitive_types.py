@@ -6,10 +6,10 @@ type system to the cognitive memory type system.
 """
 
 import logging
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any
 
-from ..core.models import MemoryType, Memory
+from ..core.models import Memory, MemoryType
 from ..storage.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -20,16 +20,16 @@ class CognitiveTypesMigration:
 
     # Legacy to cognitive type mapping
     MIGRATION_MAP = {
-        "identity": MemoryType.SEMANTIC,      # Facts about identity
+        "identity": MemoryType.SEMANTIC,  # Facts about identity
         "preference": MemoryType.PREFERENCE,  # Unchanged
-        "decision": MemoryType.EPISODIC,     # Decisions are events
-        "pattern": MemoryType.PROCEDURAL,    # Patterns are procedures
-        "solution": MemoryType.PROCEDURAL,   # Solutions are instructions
-        "status": MemoryType.WORKING,        # Status is current work
-        "context": MemoryType.EPISODIC,      # Context is experiential
+        "decision": MemoryType.EPISODIC,  # Decisions are events
+        "pattern": MemoryType.PROCEDURAL,  # Patterns are procedures
+        "solution": MemoryType.PROCEDURAL,  # Solutions are instructions
+        "status": MemoryType.WORKING,  # Status is current work
+        "context": MemoryType.EPISODIC,  # Context is experiential
     }
 
-    def __init__(self, memory_store: Optional[MemoryStore] = None):
+    def __init__(self, memory_store: MemoryStore | None = None):
         """
         Initialize the migration utility.
 
@@ -42,7 +42,7 @@ class CognitiveTypesMigration:
             "migrated": 0,
             "skipped": 0,
             "errors": 0,
-            "type_counts": {}
+            "type_counts": {},
         }
 
     def migrate_memory_type(self, legacy_type: str) -> MemoryType:
@@ -68,7 +68,14 @@ class CognitiveTypesMigration:
         # First check if it's already a cognitive type
         try:
             # Try to create MemoryType directly
-            cognitive_types = ["episodic", "semantic", "procedural", "working", "sensory", "preference"]
+            cognitive_types = [
+                "episodic",
+                "semantic",
+                "procedural",
+                "working",
+                "sensory",
+                "preference",
+            ]
             if legacy_type_lower in cognitive_types:
                 return MemoryType(legacy_type_lower)
         except ValueError:
@@ -113,11 +120,17 @@ class CognitiveTypesMigration:
                 # Add migration metadata
                 if not memory.metadata:
                     memory.metadata = {}
-                memory.metadata["migrated_from"] = original_type.value if hasattr(original_type, 'value') else str(original_type)
+                memory.metadata["migrated_from"] = (
+                    original_type.value
+                    if hasattr(original_type, "value")
+                    else str(original_type)
+                )
                 memory.metadata["migrated_to"] = new_type.value
                 memory.metadata["migration_date"] = datetime.now().isoformat()
 
-                logger.debug(f"Migrated memory {memory.id} from {original_type} to {new_type}")
+                logger.debug(
+                    f"Migrated memory {memory.id} from {original_type} to {new_type}"
+                )
                 return memory
 
             # No migration needed
@@ -128,7 +141,7 @@ class CognitiveTypesMigration:
             self.migration_stats["errors"] += 1
             return memory
 
-    def migrate_all_memories(self) -> Dict[str, Any]:
+    def migrate_all_memories(self) -> dict[str, Any]:
         """
         Migrate all memories in the memory store.
 
@@ -189,20 +202,24 @@ class CognitiveTypesMigration:
                 MemoryType.PROCEDURAL,
                 MemoryType.WORKING,
                 MemoryType.SENSORY,
-                MemoryType.PREFERENCE
+                MemoryType.PREFERENCE,
             }
 
             invalid_memories = []
             for memory in all_memories:
                 if memory.memory_type not in cognitive_types:
-                    invalid_memories.append({
-                        "id": memory.id,
-                        "type": memory.memory_type,
-                        "content": memory.content[:50]
-                    })
+                    invalid_memories.append(
+                        {
+                            "id": memory.id,
+                            "type": memory.memory_type,
+                            "content": memory.content[:50],
+                        }
+                    )
 
             if invalid_memories:
-                logger.warning(f"Found {len(invalid_memories)} memories with invalid types")
+                logger.warning(
+                    f"Found {len(invalid_memories)} memories with invalid types"
+                )
                 for mem in invalid_memories[:5]:  # Show first 5
                     logger.warning(f"  - Memory {mem['id']}: type={mem['type']}")
                 return False
@@ -235,7 +252,9 @@ class CognitiveTypesMigration:
 
                     # Convert back to MemoryType enum
                     # Note: This would need the old enum definitions to work properly
-                    logger.warning(f"Cannot fully rollback memory {memory.id} - old types no longer defined")
+                    logger.warning(
+                        f"Cannot fully rollback memory {memory.id} - old types no longer defined"
+                    )
 
                     # At minimum, remove migration metadata
                     del memory.metadata["migrated_from"]

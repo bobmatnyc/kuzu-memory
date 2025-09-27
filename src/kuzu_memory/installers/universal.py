@@ -5,13 +5,11 @@ Creates generic integration files that work with any AI system.
 Refactored to use modular system utilities and package managers.
 """
 
-from pathlib import Path
-from typing import List
 import logging
 
-from .base import BaseInstaller, InstallationResult, InstallationError
-from .system_utils import EnvironmentValidator, FileOperations
-from .package_managers import ExampleGenerator, IntegrationTemplates
+from .base import BaseInstaller, InstallationError, InstallationResult
+from .package_managers import ExampleGenerator
+from .system_utils import EnvironmentValidator
 
 logger = logging.getLogger(__name__)
 
@@ -29,18 +27,20 @@ class UniversalInstaller(BaseInstaller):
         return "Universal"
 
     @property
-    def required_files(self) -> List[str]:
+    def required_files(self) -> list[str]:
         return [
             "kuzu-memory-integration.md",
             "examples/python_integration.py",
             "examples/javascript_integration.js",
-            "examples/shell_integration.sh"
+            "examples/shell_integration.sh",
         ]
 
     @property
     def description(self) -> str:
-        return ("Creates universal integration files and examples that work with any AI system. "
-                "Includes Python, JavaScript, and shell integration examples.")
+        return (
+            "Creates universal integration files and examples that work with any AI system. "
+            "Includes Python, JavaScript, and shell integration examples."
+        )
 
     def install(self, force: bool = False, **kwargs) -> InstallationResult:
         """
@@ -62,8 +62,8 @@ class UniversalInstaller(BaseInstaller):
                 raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
 
             # Get options
-            primary_language = kwargs.get('language', 'python')
-            ai_system = kwargs.get('ai_system', 'Your AI System')
+            primary_language = kwargs.get("language", "python")
+            ai_system = kwargs.get("ai_system", "Your AI System")
 
             # Check if already installed and not forcing
             if not force:
@@ -79,9 +79,11 @@ class UniversalInstaller(BaseInstaller):
             self._install_examples()
 
             # Add language-specific note
-            if primary_language != 'python':
-                self.warnings.append(f"Primary language set to {primary_language}. "
-                                   f"See examples/{primary_language}_integration for your language.")
+            if primary_language != "python":
+                self.warnings.append(
+                    f"Primary language set to {primary_language}. "
+                    f"See examples/{primary_language}_integration for your language."
+                )
 
             return InstallationResult(
                 success=True,
@@ -90,31 +92,33 @@ class UniversalInstaller(BaseInstaller):
                 files_modified=self.files_modified,
                 backup_files=self.backup_files,
                 message=f"Successfully installed universal integration for {ai_system}",
-                warnings=self.warnings
+                warnings=self.warnings,
             )
 
         except Exception as e:
             logger.error(f"Universal installation failed: {e}")
             raise InstallationError(f"Installation failed: {e}")
 
-    def check_prerequisites(self) -> List[str]:
+    def check_prerequisites(self) -> list[str]:
         """Check installation prerequisites."""
         errors = []
 
         # Validate environment
         env_status = EnvironmentValidator.validate_environment(self.project_root)
 
-        if not env_status['python_version_ok']:
+        if not env_status["python_version_ok"]:
             errors.append("Python 3.8+ required")
 
-        if not env_status['write_permissions_ok']:
+        if not env_status["write_permissions_ok"]:
             errors.append(f"Write permissions required for {self.project_root}")
 
-        if not env_status['disk_space_ok']:
+        if not env_status["disk_space_ok"]:
             errors.append("Insufficient disk space")
 
-        if not env_status['kuzu_memory_available']:
-            self.warnings.append("kuzu-memory CLI not available - examples will include installation instructions")
+        if not env_status["kuzu_memory_available"]:
+            self.warnings.append(
+                "kuzu-memory CLI not available - examples will include installation instructions"
+            )
 
         return errors
 
@@ -143,14 +147,14 @@ class UniversalInstaller(BaseInstaller):
                 files_modified=[],
                 backup_files=[],
                 message=f"Successfully uninstalled universal integration. Removed {len(removed_files)} files.",
-                warnings=[]
+                warnings=[],
             )
 
         except Exception as e:
             logger.error(f"Universal uninstallation failed: {e}")
             raise InstallationError(f"Uninstallation failed: {e}")
 
-    def _check_existing_files(self) -> List[str]:
+    def _check_existing_files(self) -> list[str]:
         """Check for existing installation files."""
         existing_files = []
         for file_pattern in self.required_files:
@@ -210,36 +214,36 @@ class UniversalInstaller(BaseInstaller):
     def get_status(self) -> dict:
         """Get installation status information."""
         status = {
-            'installed': False,
-            'files_exist': [],
-            'files_missing': [],
-            'examples_available': [],
-            'system_info': {}
+            "installed": False,
+            "files_exist": [],
+            "files_missing": [],
+            "examples_available": [],
+            "system_info": {},
         }
 
         # Check file existence
         for file_pattern in self.required_files:
             file_path = self.project_root / file_pattern
             if file_path.exists():
-                status['files_exist'].append(str(file_path))
+                status["files_exist"].append(str(file_path))
             else:
-                status['files_missing'].append(file_pattern)
+                status["files_missing"].append(file_pattern)
 
-        status['installed'] = len(status['files_missing']) == 0
+        status["installed"] = len(status["files_missing"]) == 0
 
         # Check available examples
         examples_dir = self.project_root / "examples"
         if examples_dir.exists():
             for example_file in examples_dir.glob("*_integration.*"):
-                status['examples_available'].append(example_file.name)
+                status["examples_available"].append(example_file.name)
 
         # Get system information
         env_status = EnvironmentValidator.validate_environment(self.project_root)
-        status['system_info'] = {
-            'kuzu_memory_cli': env_status['kuzu_memory_available'],
-            'write_permissions': env_status['write_permissions_ok'],
-            'python_version': env_status['python_version_ok'],
-            'platform': env_status['system_info']['platform']
+        status["system_info"] = {
+            "kuzu_memory_cli": env_status["kuzu_memory_available"],
+            "write_permissions": env_status["write_permissions_ok"],
+            "python_version": env_status["python_version_ok"],
+            "platform": env_status["system_info"]["platform"],
         }
 
         return status
@@ -247,21 +251,21 @@ class UniversalInstaller(BaseInstaller):
     def get_integration_info(self) -> dict:
         """Get information about available integrations."""
         return {
-            'name': self.ai_system_name,
-            'description': self.description,
-            'supported_languages': ['python', 'javascript', 'shell'],
-            'required_files': self.required_files,
-            'features': [
-                'Universal compatibility via CLI interface',
-                'Sub-100ms context retrieval',
-                'Async learning operations',
-                'Project-specific memory',
-                'Multiple language examples',
-                'Complete integration guide'
+            "name": self.ai_system_name,
+            "description": self.description,
+            "supported_languages": ["python", "javascript", "shell"],
+            "required_files": self.required_files,
+            "features": [
+                "Universal compatibility via CLI interface",
+                "Sub-100ms context retrieval",
+                "Async learning operations",
+                "Project-specific memory",
+                "Multiple language examples",
+                "Complete integration guide",
             ],
-            'prerequisites': [
-                'Python 3.8+',
-                'Write permissions to project directory',
-                'kuzu-memory CLI (recommended)'
-            ]
+            "prerequisites": [
+                "Python 3.8+",
+                "Write permissions to project directory",
+                "kuzu-memory CLI (recommended)",
+            ],
         }

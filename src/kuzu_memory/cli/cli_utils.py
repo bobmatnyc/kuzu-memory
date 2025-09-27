@@ -4,18 +4,17 @@ Common CLI utilities and formatting functions for KuzuMemory CLI.
 Provides Rich-based formatting functions and fallbacks for terminal output.
 """
 
-import sys
-
 # Rich imports for beautiful CLI output
 try:
     from rich.console import Console
-    from rich.table import Table
-    from rich.panel import Panel
-    from rich.text import Text
-    from rich.syntax import Syntax
     from rich.markdown import Markdown
-    from rich.prompt import Prompt, Confirm
+    from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn
+    from rich.prompt import Confirm, Prompt
+    from rich.syntax import Syntax
+    from rich.table import Table
+    from rich.text import Text
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -58,16 +57,23 @@ def rich_table(headers, rows, title=None):
             print("-" * len(title))
 
         # Simple table formatting
-        col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
+        col_widths = [
+            max(len(str(row[i])) for row in [headers] + rows)
+            for i in range(len(headers))
+        ]
 
         # Header
-        header_row = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
+        header_row = " | ".join(
+            headers[i].ljust(col_widths[i]) for i in range(len(headers))
+        )
         print(header_row)
         print("-" * len(header_row))
 
         # Rows
         for row in rows:
-            row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
+            row_str = " | ".join(
+                str(row[i]).ljust(col_widths[i]) for i in range(len(row))
+            )
             print(row_str)
 
 
@@ -77,7 +83,7 @@ def rich_progress_bar(description="Processing..."):
         return Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
-            console=console
+            console=console,
         )
     else:
         return None
@@ -92,7 +98,7 @@ def rich_confirm(message, default=True):
         response = input(f"{message} [{default_str}]: ").strip().lower()
         if not response:
             return default
-        return response in ['y', 'yes']
+        return response in ["y", "yes"]
 
 
 def rich_prompt(message, default=None):
@@ -109,6 +115,7 @@ def format_exception(e, debug=False):
     """Format exceptions for CLI output."""
     if debug:
         import traceback
+
         return traceback.format_exc()
     else:
         return str(e)

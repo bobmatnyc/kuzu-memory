@@ -16,16 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automated version bumping with `make version-*` commands
 - Build tracking with BUILD_INFO file generation
 - Git tagging for releases
+- PyPI package publication for production use
+- Ready-to-use claude-mpm hook compatibility
 
 ### Fixed
 - Async learning queue now properly processes and stores memories
 - DateTime comparison errors in relationships and models preventing proper memory storage
 - Memory extraction patterns now properly handle cognitive type classification
+- F-string syntax errors in version management files
 
 ### Improved
 - Performance thresholds for async operations to reduce unnecessary processing
 - Help text with pattern matching examples for better user guidance
 - Async learning reliability and error handling
+- Performance metrics verified: ~3ms recall, ~8ms generation
+- 5-second default wait behavior for async operations
+
+### Released
+- **Production Ready**: KuzuMemory v1.1.0 published to PyPI
+- **Verified Performance**: All benchmarks passing with Kuzu database
+- **MCP Integration**: Stable Claude Desktop integration available
 
 ## [1.0.1] - 2024-09-26
 

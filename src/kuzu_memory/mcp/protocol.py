@@ -5,12 +5,12 @@ Implements the JSON-RPC 2.0 specification for communication between
 Claude Code and the KuzuMemory MCP server.
 """
 
-import json
-import sys
 import asyncio
+import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+import sys
 from enum import IntEnum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,21 +38,18 @@ class JSONRPCErrorCode(IntEnum):
 class JSONRPCError(Exception):
     """JSON-RPC error with code and message."""
 
-    def __init__(self, code: int, message: str, data: Optional[Any] = None):
+    def __init__(self, code: int, message: str, data: Any | None = None):
         """Initialize JSON-RPC error."""
         self.code = code
         self.message = message
         self.data = data
         super().__init__(message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-RPC error format."""
-        error_dict = {
-            'code': self.code,
-            'message': self.message
-        }
+        error_dict = {"code": self.code, "message": self.message}
         if self.data is not None:
-            error_dict['data'] = self.data
+            error_dict["data"] = self.data
         return error_dict
 
 
@@ -60,7 +57,7 @@ class JSONRPCMessage:
     """JSON-RPC 2.0 message handler."""
 
     @staticmethod
-    def parse_request(raw_message: str) -> Dict[str, Any]:
+    def parse_request(raw_message: str) -> dict[str, Any]:
         """
         Parse and validate a JSON-RPC request.
 
@@ -76,47 +73,42 @@ class JSONRPCMessage:
         try:
             message = json.loads(raw_message)
         except json.JSONDecodeError as e:
-            raise JSONRPCError(
-                JSONRPCErrorCode.PARSE_ERROR,
-                f"Parse error: {str(e)}"
-            )
+            raise JSONRPCError(JSONRPCErrorCode.PARSE_ERROR, f"Parse error: {e!s}")
 
         # Validate JSON-RPC version
-        if message.get('jsonrpc') != '2.0':
+        if message.get("jsonrpc") != "2.0":
             raise JSONRPCError(
                 JSONRPCErrorCode.INVALID_REQUEST,
-                "Invalid JSON-RPC version, must be '2.0'"
+                "Invalid JSON-RPC version, must be '2.0'",
             )
 
         # Validate method
-        if 'method' not in message:
+        if "method" not in message:
             raise JSONRPCError(
-                JSONRPCErrorCode.INVALID_REQUEST,
-                "Missing 'method' field"
+                JSONRPCErrorCode.INVALID_REQUEST, "Missing 'method' field"
             )
 
-        if not isinstance(message['method'], str):
+        if not isinstance(message["method"], str):
             raise JSONRPCError(
-                JSONRPCErrorCode.INVALID_REQUEST,
-                "'method' must be a string"
+                JSONRPCErrorCode.INVALID_REQUEST, "'method' must be a string"
             )
 
         # Validate params if present
-        if 'params' in message:
-            if not isinstance(message['params'], (dict, list)):
+        if "params" in message:
+            if not isinstance(message["params"], (dict, list)):
                 raise JSONRPCError(
                     JSONRPCErrorCode.INVALID_REQUEST,
-                    "'params' must be an object or array"
+                    "'params' must be an object or array",
                 )
 
         return message
 
     @staticmethod
     def create_response(
-        request_id: Optional[Union[str, int]],
-        result: Optional[Any] = None,
-        error: Optional[JSONRPCError] = None
-    ) -> Dict[str, Any]:
+        request_id: str | int | None,
+        result: Any | None = None,
+        error: JSONRPCError | None = None,
+    ) -> dict[str, Any]:
         """
         Create a JSON-RPC response.
 
@@ -132,20 +124,21 @@ class JSONRPCMessage:
             # Notifications don't get responses
             return None
 
-        response = {
-            'jsonrpc': '2.0',
-            'id': request_id
-        }
+        response = {"jsonrpc": "2.0", "id": request_id}
 
         if error is not None:
-            response['error'] = error.to_dict() if isinstance(error, JSONRPCError) else error
+            response["error"] = (
+                error.to_dict() if isinstance(error, JSONRPCError) else error
+            )
         else:
-            response['result'] = result if result is not None else {}
+            response["result"] = result if result is not None else {}
 
         return response
 
     @staticmethod
-    def create_notification(method: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def create_notification(
+        method: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Create a JSON-RPC notification (no response expected).
 
@@ -156,18 +149,15 @@ class JSONRPCMessage:
         Returns:
             JSON-RPC notification dictionary
         """
-        notification = {
-            'jsonrpc': '2.0',
-            'method': method
-        }
+        notification = {"jsonrpc": "2.0", "method": method}
 
         if params is not None:
-            notification['params'] = params
+            notification["params"] = params
 
         return notification
 
     @staticmethod
-    def is_notification(message: Dict[str, Any]) -> bool:
+    def is_notification(message: dict[str, Any]) -> bool:
         """
         Check if a message is a notification (no ID field).
 
@@ -177,7 +167,7 @@ class JSONRPCMessage:
         Returns:
             True if notification, False if request
         """
-        return 'id' not in message
+        return "id" not in message
 
 
 class JSONRPCProtocol:
@@ -196,7 +186,7 @@ class JSONRPCProtocol:
         protocol = asyncio.StreamReaderProtocol(self.reader)
         await asyncio.get_event_loop().connect_read_pipe(lambda: protocol, sys.stdin)
 
-    async def read_message(self) -> Optional[Dict[str, Any]]:
+    async def read_message(self) -> dict[str, Any] | None:
         """
         Read a single JSON-RPC message from stdin.
 
@@ -210,11 +200,11 @@ class JSONRPCProtocol:
                 if not data:
                     return None  # EOF
 
-                self._buffer += data.decode('utf-8')
+                self._buffer += data.decode("utf-8")
 
                 # Look for complete JSON messages (line-delimited)
-                while '\n' in self._buffer:
-                    line, self._buffer = self._buffer.split('\n', 1)
+                while "\n" in self._buffer:
+                    line, self._buffer = self._buffer.split("\n", 1)
                     line = line.strip()
 
                     if not line:
@@ -225,9 +215,9 @@ class JSONRPCProtocol:
                     except JSONRPCError as e:
                         # Return error as a special message
                         return {
-                            'jsonrpc': '2.0',
-                            'error': e.to_dict(),
-                            'id': None  # We don't know the ID yet
+                            "jsonrpc": "2.0",
+                            "error": e.to_dict(),
+                            "id": None,  # We don't know the ID yet
                         }
 
             except asyncio.CancelledError:
@@ -239,7 +229,7 @@ class JSONRPCProtocol:
 
         return None
 
-    def write_message(self, message: Dict[str, Any]) -> None:
+    def write_message(self, message: dict[str, Any]) -> None:
         """
         Write a JSON-RPC message to stdout.
 
@@ -250,13 +240,15 @@ class JSONRPCProtocol:
             return  # Don't send responses for notifications
 
         try:
-            json_str = json.dumps(message, separators=(',', ':'))
-            self.writer.write(json_str + '\n')
+            json_str = json.dumps(message, separators=(",", ":"))
+            self.writer.write(json_str + "\n")
             self.writer.flush()
         except Exception as e:
             logger.error(f"Error writing message: {e}")
 
-    async def send_notification(self, method: str, params: Optional[Dict[str, Any]] = None) -> None:
+    async def send_notification(
+        self, method: str, params: dict[str, Any] | None = None
+    ) -> None:
         """
         Send a JSON-RPC notification.
 
@@ -290,9 +282,8 @@ class BatchRequestHandler:
 
     @staticmethod
     async def process_batch(
-        messages: List[Dict[str, Any]],
-        handler_func
-    ) -> List[Dict[str, Any]]:
+        messages: list[dict[str, Any]], handler_func
+    ) -> list[dict[str, Any]]:
         """
         Process a batch of JSON-RPC requests.
 
@@ -320,20 +311,18 @@ class BatchRequestHandler:
 
             except JSONRPCError as e:
                 # Include error response if there's an ID
-                if isinstance(message, dict) and 'id' in message:
-                    responses.append(JSONRPCMessage.create_response(
-                        message['id'],
-                        error=e
-                    ))
+                if isinstance(message, dict) and "id" in message:
+                    responses.append(
+                        JSONRPCMessage.create_response(message["id"], error=e)
+                    )
             except Exception as e:
                 # Internal error
-                if isinstance(message, dict) and 'id' in message:
-                    responses.append(JSONRPCMessage.create_response(
-                        message['id'],
-                        error=JSONRPCError(
-                            JSONRPCErrorCode.INTERNAL_ERROR,
-                            str(e)
+                if isinstance(message, dict) and "id" in message:
+                    responses.append(
+                        JSONRPCMessage.create_response(
+                            message["id"],
+                            error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, str(e)),
                         )
-                    ))
+                    )
 
         return responses if responses else None

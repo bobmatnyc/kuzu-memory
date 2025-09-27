@@ -5,21 +5,22 @@ Handles entity extraction, memory enhancement, and processing logic.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Any
 
-from ..core.models import Memory, MemoryType, ExtractedMemory
 from ..core.config import KuzuMemoryConfig
-from ..extraction.patterns import PatternExtractor
+from ..core.models import ExtractedMemory, Memory, MemoryType
 from ..extraction.entities import EntityExtractor
+from ..extraction.patterns import PatternExtractor
 from ..extraction.relationships import RelationshipDetector
 from ..utils.deduplication import DeduplicationEngine
-from ..utils.exceptions import ExtractionError, ValidationError
+from ..utils.exceptions import ExtractionError
 from ..utils.validation import validate_text_input
 
 # Import NLP classifier if available
 try:
     from ..nlp.classifier import MemoryClassifier
+
     NLP_AVAILABLE = True
 except ImportError:
     NLP_AVAILABLE = False
@@ -42,7 +43,7 @@ class MemoryEnhancer:
         # Initialize extraction components
         self.pattern_extractor = PatternExtractor(
             enable_compilation=config.extraction.enable_pattern_compilation,
-            custom_patterns=config.extraction.custom_patterns
+            custom_patterns=config.extraction.custom_patterns,
         )
 
         self.entity_extractor = EntityExtractor(
@@ -53,9 +54,7 @@ class MemoryEnhancer:
 
         # Initialize deduplication engine
         self.deduplication_engine = DeduplicationEngine(
-            near_threshold=0.95,
-            semantic_threshold=0.85,
-            enable_update_detection=True
+            near_threshold=0.95, semantic_threshold=0.85, enable_update_detection=True
         )
 
         # Initialize NLP classifier if available
@@ -69,14 +68,14 @@ class MemoryEnhancer:
 
         # Enhancement statistics
         self.enhancement_stats = {
-            'memories_processed': 0,
-            'memories_enhanced': 0,
-            'entities_extracted': 0,
-            'relationships_found': 0,
-            'extraction_errors': 0
+            "memories_processed": 0,
+            "memories_enhanced": 0,
+            "entities_extracted": 0,
+            "relationships_found": 0,
+            "extraction_errors": 0,
         }
 
-    def extract_memories_from_content(self, content: str) -> List[ExtractedMemory]:
+    def extract_memories_from_content(self, content: str) -> list[ExtractedMemory]:
         """
         Extract discrete memories from content using pattern matching.
 
@@ -98,12 +97,16 @@ class MemoryEnhancer:
             for extraction in extracted_memories:
                 try:
                     # Update metadata to include original content context
-                    updated_metadata = extraction.metadata.copy() if extraction.metadata else {}
-                    updated_metadata.update({
-                        'original_content': content,
-                        'extraction_method': 'pattern_matching',
-                        'extracted_at': datetime.now()
-                    })
+                    updated_metadata = (
+                        extraction.metadata.copy() if extraction.metadata else {}
+                    )
+                    updated_metadata.update(
+                        {
+                            "original_content": content,
+                            "extraction_method": "pattern_matching",
+                            "extracted_at": datetime.now(),
+                        }
+                    )
 
                     # Create a new ExtractedMemory with updated metadata
                     memory = ExtractedMemory(
@@ -112,7 +115,7 @@ class MemoryEnhancer:
                         confidence=extraction.confidence,
                         pattern_used=extraction.pattern_used,
                         entities=extraction.entities,
-                        metadata=updated_metadata
+                        metadata=updated_metadata,
                     )
 
                     # Enhance with NLP classification if available
@@ -122,20 +125,20 @@ class MemoryEnhancer:
                     memories.append(memory)
                 except Exception as e:
                     logger.warning(f"Error creating ExtractedMemory: {e}")
-                    self.enhancement_stats['extraction_errors'] += 1
+                    self.enhancement_stats["extraction_errors"] += 1
 
-            self.enhancement_stats['memories_processed'] += 1
-            self.enhancement_stats['memories_enhanced'] += len(memories)
+            self.enhancement_stats["memories_processed"] += 1
+            self.enhancement_stats["memories_enhanced"] += len(memories)
 
             logger.debug(f"Extracted {len(memories)} memories from content")
             return memories
 
         except Exception as e:
-            self.enhancement_stats['extraction_errors'] += 1
+            self.enhancement_stats["extraction_errors"] += 1
             logger.error(f"Error extracting memories from content: {e}")
             raise ExtractionError(f"Memory extraction failed: {e}")
 
-    def extract_entities_from_content(self, content: str) -> List[Dict[str, Any]]:
+    def extract_entities_from_content(self, content: str) -> list[dict[str, Any]]:
         """
         Extract entities from content.
 
@@ -153,30 +156,32 @@ class MemoryEnhancer:
             enhanced_entities = []
             for entity in entities:
                 enhanced_entity = {
-                    'name': entity.text,
-                    'type': entity.entity_type,
-                    'confidence': entity.confidence,
-                    'context': '',  # Entity doesn't have context
-                    'positions': [entity.start_pos, entity.end_pos],
-                    'metadata': {
-                        'extraction_method': 'pattern_matching',
-                        'extracted_at': datetime.now(),
-                        'normalized_text': entity.normalized_text
-                    }
+                    "name": entity.text,
+                    "type": entity.entity_type,
+                    "confidence": entity.confidence,
+                    "context": "",  # Entity doesn't have context
+                    "positions": [entity.start_pos, entity.end_pos],
+                    "metadata": {
+                        "extraction_method": "pattern_matching",
+                        "extracted_at": datetime.now(),
+                        "normalized_text": entity.normalized_text,
+                    },
                 }
                 enhanced_entities.append(enhanced_entity)
 
-            self.enhancement_stats['entities_extracted'] += len(enhanced_entities)
+            self.enhancement_stats["entities_extracted"] += len(enhanced_entities)
 
             logger.debug(f"Extracted {len(enhanced_entities)} entities from content")
             return enhanced_entities
 
         except Exception as e:
-            self.enhancement_stats['extraction_errors'] += 1
+            self.enhancement_stats["extraction_errors"] += 1
             logger.error(f"Error extracting entities from content: {e}")
             return []
 
-    def enhance_memories_with_entities(self, memories: List[ExtractedMemory], entities: List[Dict[str, Any]]) -> None:
+    def enhance_memories_with_entities(
+        self, memories: list[ExtractedMemory], entities: list[dict[str, Any]]
+    ) -> None:
         """
         Enhance extracted memories with entity information.
 
@@ -196,43 +201,45 @@ class MemoryEnhancer:
                 for entity in entities:
                     if self._entity_appears_in_content(entity, memory.content):
                         # Calculate relevance score based on entity context and memory content
-                        relevance_score = self._calculate_entity_relevance(entity, memory)
+                        relevance_score = self._calculate_entity_relevance(
+                            entity, memory
+                        )
 
                         if relevance_score > 0.3:  # Threshold for entity relevance
                             memory_entity = {
-                                'name': entity['name'],
-                                'type': entity['type'],
-                                'confidence': entity['confidence'],
-                                'relevance': relevance_score,
-                                'context': entity['context'],
-                                'extraction_metadata': entity['metadata']
+                                "name": entity["name"],
+                                "type": entity["type"],
+                                "confidence": entity["confidence"],
+                                "relevance": relevance_score,
+                                "context": entity["context"],
+                                "extraction_metadata": entity["metadata"],
                             }
                             memory_entities.append(memory_entity)
 
                 # Attach entities to memory
                 if memory_entities:
-                    if not hasattr(memory, 'entities'):
+                    if not hasattr(memory, "entities"):
                         memory.entities = []
                     memory.entities.extend(memory_entities)
 
                     # Update memory metadata
                     if not memory.metadata:
                         memory.metadata = {}
-                    memory.metadata['entity_count'] = len(memory_entities)
-                    memory.metadata['entities_enhanced'] = True
+                    memory.metadata["entity_count"] = len(memory_entities)
+                    memory.metadata["entities_enhanced"] = True
 
             logger.debug(f"Enhanced {len(memories)} memories with entity information")
 
         except Exception as e:
-            self.enhancement_stats['extraction_errors'] += 1
+            self.enhancement_stats["extraction_errors"] += 1
             logger.error(f"Error enhancing memories with entities: {e}")
 
     def process_extracted_memory(
         self,
         extracted_memory: ExtractedMemory,
-        existing_memories: List[Memory],
-        base_memory_data: Dict[str, Any]
-    ) -> Optional[str]:
+        existing_memories: list[Memory],
+        base_memory_data: dict[str, Any],
+    ) -> str | None:
         """
         Process an extracted memory, handling deduplication and storage.
 
@@ -247,34 +254,33 @@ class MemoryEnhancer:
         try:
             # Check for deduplication
             dedup_result = self.deduplication_engine.get_deduplication_action(
-                extracted_memory.content,
-                existing_memories
+                extracted_memory.content, existing_memories
             )
 
-            action = dedup_result.get('action', 'store')
+            action = dedup_result.get("action", "store")
 
-            if action == 'skip':
-                logger.debug(f"Skipping duplicate memory: {extracted_memory.content[:50]}...")
+            if action == "skip":
+                logger.debug(
+                    f"Skipping duplicate memory: {extracted_memory.content[:50]}..."
+                )
                 return None
-            elif action == 'update':
+            elif action == "update":
                 # Update existing memory
-                existing_memory = dedup_result.get('existing_memory')
+                existing_memory = dedup_result.get("existing_memory")
                 if existing_memory:
                     return self._update_existing_memory(
-                        existing_memory,
-                        extracted_memory,
-                        base_memory_data
+                        existing_memory, extracted_memory, base_memory_data
                     )
 
             # Store new memory
             return self._create_new_memory(extracted_memory, base_memory_data)
 
         except Exception as e:
-            self.enhancement_stats['extraction_errors'] += 1
+            self.enhancement_stats["extraction_errors"] += 1
             logger.error(f"Error processing extracted memory: {e}")
             return None
 
-    def _entity_appears_in_content(self, entity: Dict[str, Any], content: str) -> bool:
+    def _entity_appears_in_content(self, entity: dict[str, Any], content: str) -> bool:
         """
         Check if an entity appears in the given content.
 
@@ -286,7 +292,7 @@ class MemoryEnhancer:
             True if entity appears in content
         """
         try:
-            entity_name = entity['name'].lower()
+            entity_name = entity["name"].lower()
             content_lower = content.lower()
 
             # Direct name match
@@ -308,7 +314,9 @@ class MemoryEnhancer:
             logger.warning(f"Error checking entity appearance: {e}")
             return False
 
-    def _calculate_entity_relevance(self, entity: Dict[str, Any], memory: ExtractedMemory) -> float:
+    def _calculate_entity_relevance(
+        self, entity: dict[str, Any], memory: ExtractedMemory
+    ) -> float:
         """
         Calculate relevance score between an entity and a memory.
 
@@ -323,13 +331,13 @@ class MemoryEnhancer:
             relevance = 0.0
 
             # Base relevance from entity confidence
-            relevance += entity.get('confidence', 0.5) * 0.4
+            relevance += entity.get("confidence", 0.5) * 0.4
 
             # Relevance from memory confidence
             relevance += memory.confidence * 0.3
 
             # Relevance from entity context overlap with memory content
-            entity_context = entity.get('context', '').lower()
+            entity_context = entity.get("context", "").lower()
             memory_content = memory.content.lower()
 
             if entity_context and memory_content:
@@ -346,7 +354,7 @@ class MemoryEnhancer:
             logger.warning(f"Error calculating entity relevance: {e}")
             return 0.5
 
-    def classify_memory(self, content: str) -> Dict[str, Any]:
+    def classify_memory(self, content: str) -> dict[str, Any]:
         """
         Classify memory content using NLP if available.
 
@@ -357,12 +365,12 @@ class MemoryEnhancer:
             Classification result with type, confidence, entities, etc.
         """
         result = {
-            'memory_type': MemoryType.EPISODIC,
-            'confidence': 0.5,
-            'entities': [],
-            'keywords': [],
-            'intent': None,
-            'metadata': {}
+            "memory_type": MemoryType.EPISODIC,
+            "confidence": 0.5,
+            "entities": [],
+            "keywords": [],
+            "intent": None,
+            "metadata": {},
         }
 
         if not self.nlp_classifier:
@@ -372,23 +380,27 @@ class MemoryEnhancer:
             # Use NLP classifier for automatic classification
             classification = self.nlp_classifier.classify(content)
 
-            result.update({
-                'memory_type': classification.memory_type,
-                'confidence': classification.confidence,
-                'entities': classification.entities,
-                'keywords': classification.keywords,
-                'intent': classification.intent,
-                'metadata': classification.metadata or {}
-            })
+            result.update(
+                {
+                    "memory_type": classification.memory_type,
+                    "confidence": classification.confidence,
+                    "entities": classification.entities,
+                    "keywords": classification.keywords,
+                    "intent": classification.intent,
+                    "metadata": classification.metadata or {},
+                }
+            )
 
             # Calculate importance score
             importance = self.nlp_classifier.calculate_importance(
                 content, classification.memory_type
             )
-            result['importance'] = importance
+            result["importance"] = importance
 
-            logger.debug(f"NLP classified memory as {classification.memory_type} "
-                        f"with confidence {classification.confidence:.2f}")
+            logger.debug(
+                f"NLP classified memory as {classification.memory_type} "
+                f"with confidence {classification.confidence:.2f}"
+            )
 
         except Exception as e:
             logger.warning(f"NLP classification failed: {e}")
@@ -396,8 +408,7 @@ class MemoryEnhancer:
         return result
 
     def enhance_extracted_memory_with_nlp(
-        self,
-        extracted_memory: ExtractedMemory
+        self, extracted_memory: ExtractedMemory
     ) -> ExtractedMemory:
         """
         Enhance an extracted memory with NLP classification.
@@ -416,24 +427,24 @@ class MemoryEnhancer:
             classification_result = self.classify_memory(extracted_memory.content)
 
             # Update memory type if NLP has higher confidence
-            nlp_confidence = classification_result.get('confidence', 0)
+            nlp_confidence = classification_result.get("confidence", 0)
             if nlp_confidence > extracted_memory.confidence:
-                extracted_memory.memory_type = classification_result['memory_type']
+                extracted_memory.memory_type = classification_result["memory_type"]
                 extracted_memory.confidence = nlp_confidence
 
             # Add entities from NLP
-            nlp_entities = classification_result.get('entities', [])
+            nlp_entities = classification_result.get("entities", [])
             if nlp_entities:
                 # Convert NLP entities (strings) to proper entity dictionaries
                 # Ensure extracted_memory.entities is a list of dicts
-                if not hasattr(extracted_memory, 'entities'):
+                if not hasattr(extracted_memory, "entities"):
                     extracted_memory.entities = []
 
                 # Create a set of existing entity names for deduplication
                 existing_entity_names = set()
                 for entity in extracted_memory.entities:
-                    if isinstance(entity, dict) and 'name' in entity:
-                        existing_entity_names.add(entity['name'].lower())
+                    if isinstance(entity, dict) and "name" in entity:
+                        existing_entity_names.add(entity["name"].lower())
                     elif isinstance(entity, str):
                         # Handle legacy string entities
                         existing_entity_names.add(entity.lower())
@@ -445,20 +456,20 @@ class MemoryEnhancer:
                         entity_name = nlp_entity.strip()
                         if entity_name.lower() not in existing_entity_names:
                             entity_dict = {
-                                'name': entity_name,
-                                'type': 'nlp_extracted',  # Default type for NLP entities
-                                'confidence': nlp_confidence,
-                                'extraction_method': 'nlp'
+                                "name": entity_name,
+                                "type": "nlp_extracted",  # Default type for NLP entities
+                                "confidence": nlp_confidence,
+                                "extraction_method": "nlp",
                             }
                             extracted_memory.entities.append(entity_dict)
                             existing_entity_names.add(entity_name.lower())
                     elif isinstance(nlp_entity, dict):
                         # NLP entity is already a dict, ensure it has required fields
-                        entity_name = nlp_entity.get('name', str(nlp_entity))
+                        entity_name = nlp_entity.get("name", str(nlp_entity))
                         if entity_name.lower() not in existing_entity_names:
-                            nlp_entity.setdefault('type', 'nlp_extracted')
-                            nlp_entity.setdefault('confidence', nlp_confidence)
-                            nlp_entity.setdefault('extraction_method', 'nlp')
+                            nlp_entity.setdefault("type", "nlp_extracted")
+                            nlp_entity.setdefault("confidence", nlp_confidence)
+                            nlp_entity.setdefault("extraction_method", "nlp")
                             extracted_memory.entities.append(nlp_entity)
                             existing_entity_names.add(entity_name.lower())
 
@@ -466,17 +477,19 @@ class MemoryEnhancer:
             if not extracted_memory.metadata:
                 extracted_memory.metadata = {}
 
-            extracted_memory.metadata.update({
-                'nlp_classification': {
-                    'type': classification_result['memory_type'].value,
-                    'confidence': nlp_confidence,
-                    'keywords': classification_result.get('keywords', []),
-                    'intent': classification_result.get('intent'),
-                    'importance': classification_result.get('importance', 0.5)
+            extracted_memory.metadata.update(
+                {
+                    "nlp_classification": {
+                        "type": classification_result["memory_type"].value,
+                        "confidence": nlp_confidence,
+                        "keywords": classification_result.get("keywords", []),
+                        "intent": classification_result.get("intent"),
+                        "importance": classification_result.get("importance", 0.5),
+                    }
                 }
-            })
+            )
 
-            self.enhancement_stats['memories_enhanced'] += 1
+            self.enhancement_stats["memories_enhanced"] += 1
 
         except Exception as e:
             logger.warning(f"NLP enhancement failed: {e}")
@@ -487,7 +500,7 @@ class MemoryEnhancer:
         self,
         existing_memory: Memory,
         extracted_memory: ExtractedMemory,
-        base_memory_data: Dict[str, Any]
+        base_memory_data: dict[str, Any],
     ) -> str:
         """
         Update an existing memory with new information.
@@ -509,43 +522,50 @@ class MemoryEnhancer:
             if existing_memory.metadata is None:
                 existing_memory.metadata = {}
 
-            existing_memory.metadata.update({
-                'updated_at': datetime.now(),
-                'update_source': base_memory_data.get('source', 'unknown'),
-                'update_reason': 'deduplication_merge',
-                'original_confidence': existing_memory.metadata.get('confidence', 1.0),
-                'new_confidence': extracted_memory.confidence
-            })
+            existing_memory.metadata.update(
+                {
+                    "updated_at": datetime.now(),
+                    "update_source": base_memory_data.get("source", "unknown"),
+                    "update_reason": "deduplication_merge",
+                    "original_confidence": existing_memory.metadata.get(
+                        "confidence", 1.0
+                    ),
+                    "new_confidence": extracted_memory.confidence,
+                }
+            )
 
             # Update entities if new memory has more entities
-            if hasattr(extracted_memory, 'entities') and extracted_memory.entities:
-                if not hasattr(existing_memory, 'entities'):
+            if hasattr(extracted_memory, "entities") and extracted_memory.entities:
+                if not hasattr(existing_memory, "entities"):
                     existing_memory.entities = []
 
                 # Merge entities (avoid duplicates) - handle both dict and string formats
                 existing_entity_names = set()
                 # First collect existing entity names
                 for entity in existing_memory.entities:
-                    if isinstance(entity, dict) and 'name' in entity:
-                        existing_entity_names.add(entity['name'].lower())
+                    if isinstance(entity, dict) and "name" in entity:
+                        existing_entity_names.add(entity["name"].lower())
                     elif isinstance(entity, str):
                         existing_entity_names.add(entity.lower())
 
                 # Add new entities that aren't duplicates
                 for new_entity in extracted_memory.entities:
                     if isinstance(new_entity, dict):
-                        entity_name = new_entity.get('name', '')
-                        if entity_name and entity_name.lower() not in existing_entity_names:
+                        entity_name = new_entity.get("name", "")
+                        if (
+                            entity_name
+                            and entity_name.lower() not in existing_entity_names
+                        ):
                             existing_memory.entities.append(new_entity)
                             existing_entity_names.add(entity_name.lower())
                     elif isinstance(new_entity, str) and new_entity:
                         if new_entity.lower() not in existing_entity_names:
                             # Convert string to dict format
                             entity_dict = {
-                                'name': new_entity,
-                                'type': 'extracted',
-                                'confidence': 0.8,
-                                'extraction_method': 'pattern'
+                                "name": new_entity,
+                                "type": "extracted",
+                                "confidence": 0.8,
+                                "extraction_method": "pattern",
                             }
                             existing_memory.entities.append(entity_dict)
                             existing_entity_names.add(new_entity.lower())
@@ -557,7 +577,9 @@ class MemoryEnhancer:
             logger.error(f"Error updating existing memory: {e}")
             raise
 
-    def _create_new_memory(self, extracted_memory: ExtractedMemory, base_memory_data: Dict[str, Any]) -> str:
+    def _create_new_memory(
+        self, extracted_memory: ExtractedMemory, base_memory_data: dict[str, Any]
+    ) -> str:
         """
         Create a new memory from extracted data.
 
@@ -572,21 +594,21 @@ class MemoryEnhancer:
             # Create Memory object
             memory = Memory(
                 content=extracted_memory.content,
-                source=base_memory_data.get('source', 'conversation'),
+                source=base_memory_data.get("source", "conversation"),
                 memory_type=extracted_memory.memory_type,
-                user_id=base_memory_data.get('user_id'),
-                session_id=base_memory_data.get('session_id'),
-                agent_id=base_memory_data.get('agent_id', 'default'),
+                user_id=base_memory_data.get("user_id"),
+                session_id=base_memory_data.get("session_id"),
+                agent_id=base_memory_data.get("agent_id", "default"),
                 metadata={
-                    **base_memory_data.get('metadata', {}),
-                    'extraction_confidence': extracted_memory.confidence,
-                    'pattern_used': extracted_memory.pattern_used,
-                    'extraction_metadata': extracted_memory.metadata
-                }
+                    **base_memory_data.get("metadata", {}),
+                    "extraction_confidence": extracted_memory.confidence,
+                    "pattern_used": extracted_memory.pattern_used,
+                    "extraction_metadata": extracted_memory.metadata,
+                },
             )
 
             # Add entities if available
-            if hasattr(extracted_memory, 'entities') and extracted_memory.entities:
+            if hasattr(extracted_memory, "entities") and extracted_memory.entities:
                 memory.entities = extracted_memory.entities
 
             logger.debug(f"Created new memory: {memory.id}")
@@ -596,7 +618,9 @@ class MemoryEnhancer:
             logger.error(f"Error creating new memory: {e}")
             raise
 
-    def detect_relationships(self, memories: List[ExtractedMemory]) -> List[Dict[str, Any]]:
+    def detect_relationships(
+        self, memories: list[ExtractedMemory]
+    ) -> list[dict[str, Any]]:
         """
         Detect relationships between extracted memories.
 
@@ -611,51 +635,61 @@ class MemoryEnhancer:
                 return []
 
             relationships = self.relationship_detector.detect_relationships(memories)
-            self.enhancement_stats['relationships_found'] += len(relationships)
+            self.enhancement_stats["relationships_found"] += len(relationships)
 
-            logger.debug(f"Detected {len(relationships)} relationships between memories")
+            logger.debug(
+                f"Detected {len(relationships)} relationships between memories"
+            )
             return relationships
 
         except Exception as e:
-            self.enhancement_stats['extraction_errors'] += 1
+            self.enhancement_stats["extraction_errors"] += 1
             logger.error(f"Error detecting relationships: {e}")
             return []
 
-    def get_enhancement_statistics(self) -> Dict[str, Any]:
+    def get_enhancement_statistics(self) -> dict[str, Any]:
         """Get memory enhancement statistics."""
         stats = self.enhancement_stats.copy()
 
         # Calculate derived metrics
-        if stats['memories_processed'] > 0:
-            stats['enhancement_rate'] = (stats['memories_enhanced'] / stats['memories_processed']) * 100
-            stats['avg_entities_per_memory'] = stats['entities_extracted'] / stats['memories_processed']
+        if stats["memories_processed"] > 0:
+            stats["enhancement_rate"] = (
+                stats["memories_enhanced"] / stats["memories_processed"]
+            ) * 100
+            stats["avg_entities_per_memory"] = (
+                stats["entities_extracted"] / stats["memories_processed"]
+            )
         else:
-            stats['enhancement_rate'] = 0.0
-            stats['avg_entities_per_memory'] = 0.0
+            stats["enhancement_rate"] = 0.0
+            stats["avg_entities_per_memory"] = 0.0
 
-        if stats['entities_extracted'] > 0:
-            stats['avg_relationships_per_entity'] = stats['relationships_found'] / stats['entities_extracted']
+        if stats["entities_extracted"] > 0:
+            stats["avg_relationships_per_entity"] = (
+                stats["relationships_found"] / stats["entities_extracted"]
+            )
         else:
-            stats['avg_relationships_per_entity'] = 0.0
+            stats["avg_relationships_per_entity"] = 0.0
 
         # Error rate
         total_operations = (
-            stats['memories_processed'] + stats['entities_extracted'] + stats['relationships_found']
+            stats["memories_processed"]
+            + stats["entities_extracted"]
+            + stats["relationships_found"]
         )
         if total_operations > 0:
-            stats['error_rate'] = (stats['extraction_errors'] / total_operations) * 100
+            stats["error_rate"] = (stats["extraction_errors"] / total_operations) * 100
         else:
-            stats['error_rate'] = 0.0
+            stats["error_rate"] = 0.0
 
         return stats
 
     def reset_statistics(self):
         """Reset enhancement statistics."""
         self.enhancement_stats = {
-            'memories_processed': 0,
-            'memories_enhanced': 0,
-            'entities_extracted': 0,
-            'relationships_found': 0,
-            'extraction_errors': 0
+            "memories_processed": 0,
+            "memories_enhanced": 0,
+            "entities_extracted": 0,
+            "relationships_found": 0,
+            "extraction_errors": 0,
         }
         logger.info("Enhancement statistics reset")

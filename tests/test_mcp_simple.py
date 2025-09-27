@@ -8,6 +8,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+
 async def test_mcp_init():
     """Test basic MCP server initialization."""
     try:
@@ -30,8 +31,10 @@ async def test_mcp_init():
     except Exception as e:
         print(f"✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_mcp_init())

@@ -6,8 +6,8 @@ for performance optimization.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict, List
 from datetime import timedelta
+from typing import Any
 
 
 class ICache(ABC):
@@ -19,7 +19,7 @@ class ICache(ABC):
     """
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Retrieve a value from cache.
 
@@ -32,12 +32,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """
         Store a value in cache.
 
@@ -80,7 +75,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def get_multi(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_multi(self, keys: list[str]) -> dict[str, Any]:
         """
         Retrieve multiple values from cache.
 
@@ -94,9 +89,7 @@ class ICache(ABC):
 
     @abstractmethod
     async def set_multi(
-        self,
-        items: Dict[str, Any],
-        ttl: Optional[timedelta] = None
+        self, items: dict[str, Any], ttl: timedelta | None = None
     ) -> None:
         """
         Store multiple values in cache.
@@ -108,7 +101,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def delete_multi(self, keys: List[str]) -> int:
+    async def delete_multi(self, keys: list[str]) -> int:
         """
         Remove multiple values from cache.
 
@@ -121,7 +114,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -141,7 +134,7 @@ class ICache(ABC):
         pass
 
     # Synchronous versions for performance-critical operations
-    def get_sync(self, key: str) -> Optional[Any]:
+    def get_sync(self, key: str) -> Any | None:
         """
         Synchronous version of get() for performance-critical paths.
 
@@ -153,6 +146,7 @@ class ICache(ABC):
         """
         # Default implementation falls back to async
         import asyncio
+
         try:
             loop = asyncio.get_running_loop()
             return loop.run_until_complete(self.get(key))
@@ -160,12 +154,7 @@ class ICache(ABC):
             # No event loop running, create new one
             return asyncio.run(self.get(key))
 
-    def set_sync(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[timedelta] = None
-    ) -> None:
+    def set_sync(self, key: str, value: Any, ttl: timedelta | None = None) -> None:
         """
         Synchronous version of set() for performance-critical paths.
 
@@ -176,6 +165,7 @@ class ICache(ABC):
         """
         # Default implementation falls back to async
         import asyncio
+
         try:
             loop = asyncio.get_running_loop()
             loop.run_until_complete(self.set(key, value, ttl))
