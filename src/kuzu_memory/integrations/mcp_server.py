@@ -389,10 +389,7 @@ class KuzuMemoryMCPServer:
             try:
                 # Run the MCP server with proper streams
                 await self.server.run(
-                    read_stream,
-                    write_stream,
-                    init_options,
-                    raise_exceptions=False
+                    read_stream, write_stream, init_options, raise_exceptions=False
                 )
             except asyncio.CancelledError:
                 logger.info("Server shutdown requested")

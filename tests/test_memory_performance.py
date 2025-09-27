@@ -11,6 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
+
 def main():
     """Run basic memory performance tests."""
     print("🧠 KuzuMemory Performance Test")
@@ -33,7 +34,7 @@ def main():
             memory_ids = memory.generate_memories(
                 "Alice is a Python developer working on microservices with FastAPI and PostgreSQL.",
                 user_id="test-user",
-                session_id="test-session"
+                session_id="test-session",
             )
             generation_time = (time.perf_counter() - start_time) * 1000
 
@@ -45,7 +46,7 @@ def main():
             context = memory.attach_memories(
                 "What programming languages are mentioned?",
                 user_id="test-user",
-                max_memories=5
+                max_memories=5,
             )
             recall_time = (time.perf_counter() - start_time) * 1000
 
@@ -73,6 +74,7 @@ def main():
     except Exception as e:
         print(f"❌ Performance test failed: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

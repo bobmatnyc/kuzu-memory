@@ -25,7 +25,7 @@ Example Usage:
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from .__version__ import DB_SCHEMA_VERSION, __version__, __version_info__
 
@@ -42,7 +42,7 @@ except ImportError as e:
     # Graceful degradation during development/testing
     import warnings
 
-    warnings.warn(f"Could not import core components: {e}", ImportWarning)
+    warnings.warn(f"Could not import core components: {e}", ImportWarning, stacklevel=2)
 
     _IMPORT_ERROR = e
 
@@ -142,7 +142,7 @@ def create_memory_instance(
     try:
         return KuzuMemory(db_path=db_path, config=config)
     except Exception as e:
-        raise RuntimeError(f"Failed to initialize KuzuMemory: {e}")
+        raise RuntimeError(f"Failed to initialize KuzuMemory: {e}") from e
 
 
 def is_available() -> bool:

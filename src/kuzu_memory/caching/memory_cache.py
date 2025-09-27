@@ -7,6 +7,7 @@ deduplication and temporal decay features.
 
 import hashlib
 from datetime import timedelta
+from typing import Any
 
 from ..core.internal_models import InternalMemory, QueryResult
 from ..interfaces.cache import ICache
