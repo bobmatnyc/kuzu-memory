@@ -217,7 +217,9 @@ class KeywordRecallStrategy(RecallStrategy):
             query += " AND m.session_id = $session_id"
             parameters["session_id"] = session_id
 
-        if agent_id:
+        # Only filter by agent_id if it's not the default value
+        # This allows recall to work across all agent contexts when not specified
+        if agent_id and agent_id != "default":
             query += " AND m.agent_id = $agent_id"
             parameters["agent_id"] = agent_id
 
@@ -342,7 +344,9 @@ class EntityRecallStrategy(RecallStrategy):
             query += " AND m.session_id = $session_id"
             parameters["session_id"] = session_id
 
-        if agent_id:
+        # Only filter by agent_id if it's not the default value
+        # This allows recall to work across all agent contexts when not specified
+        if agent_id and agent_id != "default":
             query += " AND m.agent_id = $agent_id"
             parameters["agent_id"] = agent_id
 
@@ -441,7 +445,9 @@ class TemporalRecallStrategy(RecallStrategy):
             query += " AND m.session_id = $session_id"
             parameters["session_id"] = session_id
 
-        if agent_id:
+        # Only filter by agent_id if it's not the default value
+        # This allows recall to work across all agent contexts when not specified
+        if agent_id and agent_id != "default":
             query += " AND m.agent_id = $agent_id"
             parameters["agent_id"] = agent_id
 
