@@ -1,0 +1,43 @@
+{
+  "project_root": "/Users/masa/Projects/managed/kuzu-memory",
+  "index_path": "/Users/masa/Projects/managed/kuzu-memory/.mcp-vector-search",
+  "file_extensions": [
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".mjs",
+    ".java",
+    ".cpp",
+    ".c",
+    ".h",
+    ".hpp",
+    ".cs",
+    ".go",
+    ".rs",
+    ".php",
+    ".rb",
+    ".swift",
+    ".kt",
+    ".scala",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".json",
+    ".md",
+    ".txt"
+  ],
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "similarity_threshold": 0.5,
+  "max_chunk_size": 512,
+  "languages": [
+    "bash",
+    "json",
+    "markdown",
+    "python"
+  ],
+  "watch_files": false,
+  "cache_embeddings": true,
+  "max_cache_size": 1000
+}

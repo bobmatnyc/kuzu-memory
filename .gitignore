@@ -193,10 +193,14 @@ config.local.yml
 .env.production
 .env.staging
 
-# Memory system specific
-memory_data/
-memory_cache/
-*.memory
+# Memory system specific - KuzuMemory database locations
+.kuzu_memory/              # Primary database location (standardized)
+kuzu-memories/             # Legacy database location (to be consolidated)
+.test_kuzu_memory/         # Test database (ephemeral)
+.kuzu-memory-backups/      # Database backups (keep for safety)
+memory_data/               # Legacy memory data
+memory_cache/              # Memory cache files
+*.memory                   # Memory export files
 
 # Benchmark results
 benchmark_results/

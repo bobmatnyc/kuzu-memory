@@ -414,6 +414,11 @@ class TemporalRecallStrategy(RecallStrategy):
         # Detect temporal markers in prompt
         time_range = self._detect_time_range(prompt)
 
+        # If no temporal patterns are detected, return empty list
+        # The temporal strategy should only return results when temporal context is present
+        if not time_range:
+            return []
+
         # Build temporal query
         query = """
             MATCH (m:Memory)
@@ -423,11 +428,10 @@ class TemporalRecallStrategy(RecallStrategy):
         current_time = datetime.now()
         parameters = {"current_time": current_time.isoformat(), "limit": max_memories}
 
-        # Add temporal filter if detected
-        if time_range:
-            since_time = current_time - time_range
-            query += " AND m.created_at > $since_time"
-            parameters["since_time"] = since_time.isoformat()
+        # Add temporal filter (we know time_range exists now)
+        since_time = current_time - time_range
+        query += " AND m.created_at > $since_time"
+        parameters["since_time"] = since_time.isoformat()
 
         # Add user/session/agent filters
         if user_id:

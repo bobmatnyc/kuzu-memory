@@ -17,6 +17,7 @@ from typing import Any
 try:
     from mcp.server import NotificationOptions, Server
     from mcp.server.models import InitializationOptions
+    from mcp.server.stdio import stdio_server
     from mcp.types import (
         Resource,
         ResourceTemplate,
@@ -379,15 +380,27 @@ class KuzuMemoryMCPServer:
             ),
         )
 
-        # The server.run() method returns a context manager
-        async with self.server.run(
-            sys.stdin.buffer, sys.stdout.buffer, init_options
-        ) as running_server:
+        # Use stdio_server async context manager for proper stream handling
+        async with stdio_server() as (read_stream, write_stream):
             logger.info(
                 f"KuzuMemory MCP Server running for project: {self.project_root}"
             )
-            # Keep server running
-            await asyncio.Event().wait()
+
+            try:
+                # Run the MCP server with proper streams
+                await self.server.run(
+                    read_stream,
+                    write_stream,
+                    init_options,
+                    raise_exceptions=False
+                )
+            except asyncio.CancelledError:
+                logger.info("Server shutdown requested")
+                raise
+            except GeneratorExit:
+                logger.info("Server context manager cleanup")
+                # Allow proper cleanup without ignoring GeneratorExit
+                raise
 
 
 async def main():
@@ -409,6 +422,12 @@ async def main():
         await server.run()
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
+    except asyncio.CancelledError:
+        logger.info("Server cancelled")
+    except GeneratorExit:
+        logger.info("Server generator exit")
+        # Don't suppress GeneratorExit - let it propagate for proper cleanup
+        raise
     except Exception as e:
         logger.error(f"Server error: {e}")
         sys.exit(1)
@@ -480,19 +499,27 @@ class SimplifiedMCPServer:
         protocol = asyncio.StreamReaderProtocol(reader)
         await asyncio.get_running_loop().connect_read_pipe(lambda: protocol, sys.stdin)
 
-        while True:
-            try:
-                line = await reader.readline()
-                if not line:
+        try:
+            while True:
+                try:
+                    line = await reader.readline()
+                    if not line:
+                        break
+
+                    request = json.loads(line.decode())
+                    response = await self.handle_request(request)
+
+                    print(json.dumps(response))
+                    sys.stdout.flush()
+                except asyncio.CancelledError:
+                    logger.info("Simplified server cancelled")
                     break
-
-                request = json.loads(line.decode())
-                response = await self.handle_request(request)
-
-                print(json.dumps(response))
-                sys.stdout.flush()
-            except Exception as e:
-                logger.error(f"Error handling request: {e}")
+                except Exception as e:
+                    logger.error(f"Error handling request: {e}")
+        except GeneratorExit:
+            logger.info("Simplified server generator exit")
+            # Allow proper cleanup
+            raise
 
 
 if __name__ == "__main__":
