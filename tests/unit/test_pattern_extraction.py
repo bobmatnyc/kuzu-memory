@@ -46,8 +46,8 @@ class TestPatternExtractor:
         assert len(pattern_extractor.compiled_patterns) > 0
 
         # Check that patterns are actually compiled regex objects
-        for pattern_group, memory_type in pattern_extractor.compiled_patterns:
-            for compiled_regex, confidence, name in pattern_group:
+        for pattern_group, _memory_type in pattern_extractor.compiled_patterns:
+            for compiled_regex, _confidence, _name in pattern_group:
                 assert hasattr(compiled_regex, "search")  # Compiled regex method
                 assert hasattr(compiled_regex, "finditer")
 
@@ -99,9 +99,9 @@ class TestPatternExtractor:
             found_content = any(
                 expected_content.lower() in m.content.lower() for m in semantic_memories
             )
-            assert (
-                found_content
-            ), f"Expected '{expected_content}' not found in extracted memories"
+            assert found_content, (
+                f"Expected '{expected_content}' not found in extracted memories"
+            )
 
     def test_preference_pattern_extraction(self, pattern_extractor):
         """Test extraction of preference-related memories."""
@@ -124,9 +124,9 @@ class TestPatternExtractor:
                 m for m in memories if m.memory_type == MemoryType.PREFERENCE
             ]
 
-            assert (
-                len(preference_memories) > 0
-            ), f"No preference memory found for: {text}"
+            assert len(preference_memories) > 0, (
+                f"No preference memory found for: {text}"
+            )
 
             # Check content extraction
             found_content = any(
@@ -183,9 +183,9 @@ class TestPatternExtractor:
 
             # Corrections should be high confidence
             high_confidence_memories = [m for m in memories if m.confidence >= 0.9]
-            assert (
-                len(high_confidence_memories) > 0
-            ), f"No high-confidence memory for correction: {text}"
+            assert len(high_confidence_memories) > 0, (
+                f"No high-confidence memory for correction: {text}"
+            )
 
             found_content = any(
                 expected_content.lower() in m.content.lower() for m in memories
@@ -372,9 +372,9 @@ class TestPatternExtractor:
 
             # Should have at least one memory of the expected type
             type_memories = [m for m in memories if m.memory_type == expected_type]
-            assert (
-                len(type_memories) > 0
-            ), f"No {expected_type} memory found for: {text}"
+            assert len(type_memories) > 0, (
+                f"No {expected_type} memory found for: {text}"
+            )
 
     def test_confidence_score_assignment(self, pattern_extractor):
         """Test that confidence scores are properly assigned."""
@@ -386,10 +386,6 @@ class TestPatternExtractor:
         ]
 
         # Lower confidence patterns
-        lower_confidence_texts = [
-            "Maybe we should use React.",  # Uncertain
-            "I think Python is good.",  # Opinion
-        ]
 
         for text in high_confidence_texts:
             memories = pattern_extractor.extract_memories(text)

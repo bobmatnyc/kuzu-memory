@@ -13,20 +13,20 @@ from .schema import (
 )
 
 __all__ = [
+    "SCHEMA_VERSION",
+    "BloomFilter",
     # Database adapter
     "KuzuAdapter",
     "KuzuConnectionPool",
-    # Memory storage
-    "MemoryStore",
     # Caching
     "LRUCache",
     "MemoryCache",
-    "BloomFilter",
+    # Memory storage
+    "MemoryStore",
+    "get_migration_queries",
+    "get_query",
     # Schema
     "get_schema_ddl",
     "get_schema_version",
-    "get_query",
-    "get_migration_queries",
     "validate_schema_compatibility",
-    "SCHEMA_VERSION",
 ]

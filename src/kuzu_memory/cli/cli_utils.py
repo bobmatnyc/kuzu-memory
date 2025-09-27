@@ -7,13 +7,10 @@ Provides Rich-based formatting functions and fallbacks for terminal output.
 # Rich imports for beautiful CLI output
 try:
     from rich.console import Console
-    from rich.markdown import Markdown
     from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich.prompt import Confirm, Prompt
-    from rich.syntax import Syntax
     from rich.table import Table
-    from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -58,7 +55,7 @@ def rich_table(headers, rows, title=None):
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers] + rows)
+            max(len(str(row[i])) for row in [headers, *rows])
             for i in range(len(headers))
         ]
 

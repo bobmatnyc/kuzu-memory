@@ -245,7 +245,7 @@ def project(ctx, verbose):
         try:
             # Basic health checks
             with KuzuMemory(db_path=db_path) as memory:
-                test_memories = memory.get_recent_memories(limit=1)
+                memory.get_recent_memories(limit=1)
                 # Add more health checks as needed
         except Exception as e:
             health_status = f"⚠️  Issues detected: {e}"

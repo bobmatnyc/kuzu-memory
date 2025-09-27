@@ -153,7 +153,7 @@ def optimize(ctx, enable_cli, disable_cli):
                         import time
 
                         start_time = time.time()
-                        test_memories = memory.get_recent_memories(limit=5)
+                        memory.get_recent_memories(limit=5)
                         end_time = time.time()
 
                         response_time = (end_time - start_time) * 1000  # Convert to ms
@@ -170,7 +170,7 @@ def optimize(ctx, enable_cli, disable_cli):
                     rich_print(f"⚠️  Performance test failed: {e}", style="yellow")
 
         else:
-            rich_print("ℹ️  No changes made", style="blue")
+            rich_print("[i]  No changes made", style="blue")
 
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -278,7 +278,7 @@ def setup(ctx, advanced):
                                 f"   ⚠️  Auggie setup failed: {e}", style="yellow"
                             )
             except ImportError:
-                rich_print("   ℹ️  Auggie integration not available")
+                rich_print("   [i]  Auggie integration not available")
 
         # Save configuration
         config_path = project_root / ".kuzu-memory" / "config.json"
@@ -401,7 +401,7 @@ def tips(ctx):
                 rich_print("\n" + "\n".join(topic_help[topic]))
             else:
                 rich_print(
-                    "ℹ️  Topic not found. Available: getting-started, performance, ai-integration, config",
+                    "[i]  Topic not found. Available: getting-started, performance, ai-integration, config",
                     style="blue",
                 )
 
@@ -533,7 +533,7 @@ def examples(ctx, topic):
                 rich_print(f"Available topics: {', '.join(all_examples.keys())}")
         else:
             # Show all examples
-            for topic_name, example_set in all_examples.items():
+            for _topic_name, example_set in all_examples.items():
                 rich_panel(
                     "\n".join(example_set["examples"]),
                     title=example_set["title"],
@@ -605,7 +605,7 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
                 memories = memory.get_recent_memories(limit=limit, **filters)
 
             if not memories:
-                rich_print("ℹ️  No memories found for analysis", style="blue")
+                rich_print("[i]  No memories found for analysis", style="blue")
                 return
 
             # Analyze temporal decay for each memory

@@ -9,7 +9,7 @@ import statistics
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -129,26 +129,26 @@ class TestPerformanceBenchmarks:
         print(f"  Max: {stats['max']:.2f}ms")
 
         # Performance assertions (relaxed for test environment)
-        assert (
-            stats["mean"] < 50.0
-        ), f"Mean time {stats['mean']:.2f}ms exceeds 50ms target"
-        assert (
-            stats["p95"] < 100.0
-        ), f"P95 time {stats['p95']:.2f}ms exceeds 100ms threshold"
-        assert (
-            stats["p99"] < 200.0
-        ), f"P99 time {stats['p99']:.2f}ms exceeds 200ms threshold"
+        assert stats["mean"] < 50.0, (
+            f"Mean time {stats['mean']:.2f}ms exceeds 50ms target"
+        )
+        assert stats["p95"] < 100.0, (
+            f"P95 time {stats['p95']:.2f}ms exceeds 100ms threshold"
+        )
+        assert stats["p99"] < 200.0, (
+            f"P99 time {stats['p99']:.2f}ms exceeds 200ms threshold"
+        )
 
     def test_generate_memories_performance_target(self, temp_db_path, benchmark_config):
         """Test that generate_memories meets <20ms performance target."""
         # Disable performance monitoring to avoid PerformanceError during test
         test_config = benchmark_config.copy()
-        test_config["performance"][
-            "max_generation_time_ms"
-        ] = 200.0  # Relaxed for test environment
-        test_config["performance"][
-            "enable_performance_monitoring"
-        ] = False  # Disable to avoid errors
+        test_config["performance"]["max_generation_time_ms"] = (
+            200.0  # Relaxed for test environment
+        )
+        test_config["performance"]["enable_performance_monitoring"] = (
+            False  # Disable to avoid errors
+        )
 
         memory = KuzuMemory(db_path=temp_db_path, config=test_config)
 
@@ -173,15 +173,15 @@ class TestPerformanceBenchmarks:
         print(f"  Max: {stats['max']:.2f}ms")
 
         # Performance assertions (relaxed for test environment with schema creation)
-        assert (
-            stats["mean"] < 100.0
-        ), f"Mean time {stats['mean']:.2f}ms exceeds 100ms target"
-        assert (
-            stats["p95"] < 150.0
-        ), f"P95 time {stats['p95']:.2f}ms exceeds 150ms threshold"
-        assert (
-            stats["p99"] < 250.0
-        ), f"P99 time {stats['p99']:.2f}ms exceeds 250ms threshold"
+        assert stats["mean"] < 100.0, (
+            f"Mean time {stats['mean']:.2f}ms exceeds 100ms target"
+        )
+        assert stats["p95"] < 150.0, (
+            f"P95 time {stats['p95']:.2f}ms exceeds 150ms threshold"
+        )
+        assert stats["p99"] < 250.0, (
+            f"P99 time {stats['p99']:.2f}ms exceeds 250ms threshold"
+        )
 
         memory.close()
 
@@ -194,9 +194,9 @@ class TestPerformanceBenchmarks:
 
         for strategy in strategies:
 
-            def strategy_operation():
+            def strategy_operation(current_strategy=strategy):
                 context = populated_memory.attach_memories(
-                    prompt, strategy=strategy, user_id="user-0", max_memories=5
+                    prompt, strategy=current_strategy, user_id="user-0", max_memories=5
                 )
                 # Performance test - don't assert on memory count
                 return context
@@ -210,9 +210,9 @@ class TestPerformanceBenchmarks:
 
         # All strategies should be reasonably fast (relaxed for test environment)
         for strategy, stats in strategy_stats.items():
-            assert (
-                stats["mean"] < 75.0
-            ), f"{strategy} strategy too slow: {stats['mean']:.2f}ms"
+            assert stats["mean"] < 75.0, (
+                f"{strategy} strategy too slow: {stats['mean']:.2f}ms"
+            )
 
     def test_cache_performance_impact(self, populated_memory):
         """Test the performance impact of caching."""
@@ -240,9 +240,9 @@ class TestPerformanceBenchmarks:
         print(f"  Speedup: {first_stats['mean'] / cached_stats['mean']:.1f}x")
 
         # Cached calls should be faster
-        assert (
-            cached_stats["mean"] < first_stats["mean"]
-        ), "Cache should improve performance"
+        assert cached_stats["mean"] < first_stats["mean"], (
+            "Cache should improve performance"
+        )
 
     def test_memory_count_scaling(self, temp_db_path, benchmark_config):
         """Test how performance scales with number of memories."""
@@ -282,9 +282,9 @@ class TestPerformanceBenchmarks:
         min_time = min(performance_data.values())
         degradation_factor = max_time / min_time
 
-        assert (
-            degradation_factor < 200.0
-        ), f"Performance degraded by {degradation_factor:.1f}x with more memories (relaxed for test environment)"
+        assert degradation_factor < 200.0, (
+            f"Performance degraded by {degradation_factor:.1f}x with more memories (relaxed for test environment)"
+        )
 
         memory.close()
 
@@ -301,7 +301,7 @@ class TestPerformanceBenchmarks:
             times = []
             for i in range(operations_per_thread):
                 start_time = time.perf_counter()
-                context = populated_memory.attach_memories(
+                populated_memory.attach_memories(
                     f"Query {i}: What are my current projects?",
                     user_id="concurrent-user",
                     max_memories=5,
@@ -393,14 +393,14 @@ def test_benchmark_thresholds():
 
         # Test recall performance threshold
         start_time = time.perf_counter()
-        context = memory.attach_memories(
+        memory.attach_memories(
             "What technologies are mentioned?", user_id="threshold-user", max_memories=5
         )
         recall_time = (time.perf_counter() - start_time) * 1000
 
         # Test generation performance threshold
         start_time = time.perf_counter()
-        memory_ids = memory.generate_memories(
+        memory.generate_memories(
             "Another test for generation performance with PostgreSQL and TypeScript.",
             user_id="threshold-user",
             session_id="threshold-session",
@@ -414,11 +414,11 @@ def test_benchmark_thresholds():
         print(f"  Generation time: {generation_time:.2f}ms (target: <200ms)")
 
         # Relaxed assertions for test environment
-        assert (
-            recall_time < 500.0
-        ), f"Recall time {recall_time:.2f}ms exceeds 500ms threshold"
-        assert (
-            generation_time < 1000.0
-        ), f"Generation time {generation_time:.2f}ms exceeds 1000ms threshold"
+        assert recall_time < 500.0, (
+            f"Recall time {recall_time:.2f}ms exceeds 500ms threshold"
+        )
+        assert generation_time < 1000.0, (
+            f"Generation time {generation_time:.2f}ms exceeds 1000ms threshold"
+        )
 
         print("✅ Performance thresholds validated successfully")

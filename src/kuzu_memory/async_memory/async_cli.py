@@ -80,7 +80,7 @@ class AsyncMemoryCLI:
                     if context.memories:
                         return f"🧠 Enhanced with {len(context.memories)} memories (confidence: {context.confidence:.2f})\n\n{context.enhanced_prompt}"
                     else:
-                        return f"ℹ️  No relevant memories found\n\n{prompt}"
+                        return f"(i) No relevant memories found\n\n{prompt}"
 
         except Exception:
             # Return original prompt on error

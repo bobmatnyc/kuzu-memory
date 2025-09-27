@@ -364,8 +364,8 @@ class ResponseLearner:
         self,
         original_prompt: str,
         ai_response: str,
-        user_feedback: str = None,
-        context: dict[str, Any] = None,
+        user_feedback: str | None = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Learn from AI response and user feedback."""
         learning_results = {
@@ -413,7 +413,7 @@ class ResponseLearner:
             return learning_results
 
     def _extract_memories_from_response(
-        self, response: str, context: dict[str, Any] = None
+        self, response: str, context: dict[str, Any] | None = None
     ) -> list[str]:
         """Extract new memories from AI response."""
         if not self.kuzu_memory:
@@ -468,7 +468,7 @@ class ResponseLearner:
         return corrections
 
     def _apply_corrections(
-        self, corrections: list[dict[str, Any]], context: dict[str, Any] = None
+        self, corrections: list[dict[str, Any]], context: dict[str, Any] | None = None
     ):
         """Apply corrections by updating memories."""
         if not self.kuzu_memory:
@@ -503,7 +503,9 @@ class ResponseLearner:
         except Exception as e:
             logger.error(f"Error applying corrections: {e}")
 
-    def _analyze_response_quality(self, response: str, feedback: str = None) -> float:
+    def _analyze_response_quality(
+        self, response: str, feedback: str | None = None
+    ) -> float:
         """Analyze the quality of AI response."""
         quality_score = 0.8  # Default score
 
@@ -535,7 +537,7 @@ class ResponseLearner:
             return 0.5
 
     def _adjust_rules_for_poor_response(
-        self, prompt: str, context: dict[str, Any] = None
+        self, prompt: str, context: dict[str, Any] | None = None
     ):
         """Adjust rules based on poor response quality."""
         if not self.rule_engine:
@@ -599,7 +601,7 @@ class ResponseLearner:
 class AuggieIntegration:
     """Main integration class for KuzuMemory and Auggie rules system."""
 
-    def __init__(self, kuzu_memory=None, config: dict[str, Any] = None):
+    def __init__(self, kuzu_memory=None, config: dict[str, Any] | None = None):
         """Initialize the Auggie integration."""
         self.kuzu_memory = kuzu_memory
         self.config = config or {}
@@ -620,7 +622,7 @@ class AuggieIntegration:
         }
 
     def enhance_prompt(
-        self, prompt: str, user_id: str, context: dict[str, Any] = None
+        self, prompt: str, user_id: str, context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Enhance a prompt using memories and rules."""
         try:
@@ -673,9 +675,9 @@ class AuggieIntegration:
         self,
         prompt: str,
         ai_response: str,
-        user_feedback: str = None,
-        user_id: str = None,
-        context: dict[str, Any] = None,
+        user_feedback: str | None = None,
+        user_id: str | None = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Learn from a complete AI interaction."""
         try:
@@ -703,7 +705,7 @@ class AuggieIntegration:
             return {"error": str(e)}
 
     def _build_rule_context(
-        self, prompt: str, user_id: str, context: dict[str, Any] = None
+        self, prompt: str, user_id: str, context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Build context for rule evaluation."""
         rule_context = {
@@ -953,7 +955,7 @@ class AuggieIntegration:
             with open(file_path) as f:
                 rules_data = json.load(f)
 
-            for rule_id, rule_dict in rules_data.items():
+            for _rule_id, rule_dict in rules_data.items():
                 # Convert strings back to datetime objects
                 if rule_dict["created_at"]:
                     rule_dict["created_at"] = datetime.fromisoformat(

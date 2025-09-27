@@ -255,7 +255,7 @@ class KuzuMemoryMCPServer:
             Command output or status message
         """
         try:
-            cmd = ["kuzu-memory"] + args
+            cmd = ["kuzu-memory", *args]
 
             if capture_output:
                 process = await asyncio.create_subprocess_exec(
@@ -469,7 +469,7 @@ class SimplifiedMCPServer:
     async def _run_cli_command(self, args: list[str]) -> Any:
         """Run kuzu-memory CLI command."""
         try:
-            cmd = ["kuzu-memory"] + args
+            cmd = ["kuzu-memory", *args]
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,

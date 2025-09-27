@@ -270,7 +270,6 @@ class MemoryCache(ICache):
         query_cleaned = await self._query_cache.cleanup_expired()
 
         # Clean up tracking data structures
-        valid_memory_ids = set()
         memory_stats = await self._memory_cache.get_stats()
         if memory_stats["size"] > 0:
             # In a real implementation, you'd iterate through cache entries

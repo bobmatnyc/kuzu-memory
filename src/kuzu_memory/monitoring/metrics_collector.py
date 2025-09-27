@@ -255,7 +255,9 @@ class MetricsCollector:
                 "efficiency": (
                     "high"
                     if memory_hit_rate > 0.8
-                    else "medium" if memory_hit_rate > 0.5 else "low"
+                    else "medium"
+                    if memory_hit_rate > 0.5
+                    else "low"
                 ),
                 "total_size": memory_cache.get("memory_cache", {}).get("size", 0),
             }
@@ -275,7 +277,9 @@ class MetricsCollector:
                 "efficiency": (
                     "high"
                     if embeddings_hit_rate > 0.8
-                    else "medium" if embeddings_hit_rate > 0.5 else "low"
+                    else "medium"
+                    if embeddings_hit_rate > 0.5
+                    else "low"
                 ),
                 "estimated_memory_mb": embeddings_cache.get("estimated_memory_mb", 0),
             }

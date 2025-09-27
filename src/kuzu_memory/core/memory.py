@@ -178,7 +178,7 @@ class KuzuMemory:
             logger.info(f"KuzuMemory initialized with database at {self.db_path}")
 
         except Exception as e:
-            if isinstance(e, (ConfigurationError, DatabaseError)):
+            if isinstance(e, ConfigurationError | DatabaseError):
                 raise
             raise KuzuMemoryError(f"Failed to initialize KuzuMemory: {e}")
 
@@ -309,7 +309,7 @@ class KuzuMemory:
             return context
 
         except Exception as e:
-            if isinstance(e, (ValidationError, PerformanceError)):
+            if isinstance(e, ValidationError | PerformanceError):
                 raise
             raise KuzuMemoryError(f"attach_memories failed: {e}")
 
@@ -439,7 +439,7 @@ class KuzuMemory:
             return memory_ids
 
         except Exception as e:
-            if isinstance(e, (ValidationError, PerformanceError)):
+            if isinstance(e, ValidationError | PerformanceError):
                 raise
             raise KuzuMemoryError(f"generate_memories failed: {e}")
 
@@ -502,22 +502,6 @@ class KuzuMemory:
         except Exception as e:
             logger.error(f"Failed to get memory count: {e}")
             return 0
-
-    def get_recent_memories(self, limit: int = 10) -> list[Memory]:
-        """
-        Get the most recently created memories.
-
-        Args:
-            limit: Maximum number of memories to return
-
-        Returns:
-            List of recent memories
-        """
-        try:
-            return self.memory_store.get_recent_memories(limit=limit)
-        except Exception as e:
-            logger.error(f"Failed to get recent memories: {e}")
-            return []
 
     def get_memory_type_stats(self) -> dict[str, int]:
         """

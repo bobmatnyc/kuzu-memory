@@ -8,6 +8,8 @@ with user-friendly output and error handling.
 import json
 import logging
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 import click
@@ -15,13 +17,9 @@ import click
 # Rich imports for beautiful CLI output
 try:
     from rich.console import Console
-    from rich.markdown import Markdown
     from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich.prompt import Confirm, Prompt
-    from rich.syntax import Syntax
     from rich.table import Table
-    from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -37,7 +35,7 @@ from ..utils.project_setup import (
     get_project_context_summary,
     get_project_db_path,
 )
-from .install_commands_simple import install_group
+from .install_commands_simple import install_group, list_installers, status, uninstall
 
 # Install commands imported below
 
@@ -87,7 +85,7 @@ def rich_table(headers, rows, title=None):
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers] + rows)
+            max(len(str(row[i])) for row in [headers, *rows])
             for i in range(len(headers))
         ]
 
@@ -274,7 +272,7 @@ def quickstart(ctx, skip_demo):
                         default="",
                     )
                     if custom_memory.strip():
-                        sample_memories = [custom_memory] + sample_memories[:2]
+                        sample_memories = [custom_memory, *sample_memories[:2]]
 
             stored_count = 0
             for memory_text in sample_memories:
@@ -385,8 +383,6 @@ def demo(ctx):
     )
 
     try:
-        import tempfile
-
         from ..core.config import KuzuMemoryConfig
         from ..core.memory import KuzuMemory
 
@@ -411,9 +407,7 @@ def demo(ctx):
                 # Store memories
                 rich_print("\n💾 Storing demo memories...", style="bold")
                 for memory_text in demo_memories:
-                    memory_ids = memory.generate_memories(
-                        memory_text, user_id="demo-user"
-                    )
+                    memory.generate_memories(memory_text, user_id="demo-user")
                     rich_print(f"  ✓ {memory_text}", style="dim")
 
                 # Test recall
@@ -796,7 +790,7 @@ def enhance(ctx, prompt, max_memories, output_format):
                     click.echo()
                     click.echo(context.enhanced_prompt)
                 else:
-                    rich_print("ℹ️  No relevant memories found", style="yellow")
+                    rich_print("[i] No relevant memories found", style="yellow")
                     click.echo(prompt)
 
     except Exception as e:
@@ -877,7 +871,7 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
         # Use sync processing only if explicitly requested
         if use_sync:
             if not quiet:
-                rich_print("ℹ️  Using synchronous processing", style="blue")
+                rich_print("[i] Using synchronous processing", style="blue")
         else:
             # Default: Use async processing (non-blocking)
             try:
@@ -920,7 +914,7 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
                     rich_print(f"✅ Stored {len(memory_ids)} memories", style="green")
                 else:
                     rich_print(
-                        "ℹ️  No memories extracted (content may be too generic)",
+                        "[i] No memories extracted (content may be too generic)",
                         style="yellow",
                     )
 
@@ -1004,7 +998,7 @@ def recent(ctx, recent, output_format):
                         created = memory.created_at.strftime("%Y-%m-%d %H:%M")
                         rich_print(f"  {i}. [{created}] {memory.content}", style="cyan")
                 else:
-                    rich_print("ℹ️  No memories found", style="yellow")
+                    rich_print("[i] No memories found", style="yellow")
 
     except Exception as e:
         rich_print(f"❌ Error getting recent memories: {e}", style="red")
@@ -1689,8 +1683,6 @@ def optimize(ctx, enable_cli, disable_cli):
         # Test the configuration
         rich_print("\n🧪 Testing configuration...", style="bold")
 
-        import tempfile
-
         from ..core.memory import KuzuMemory
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1700,9 +1692,7 @@ def optimize(ctx, enable_cli, disable_cli):
                 with KuzuMemory(db_path=test_db, config=config) as memory:
                     # Quick test
                     start_time = time.time()
-                    memory_ids = memory.generate_memories(
-                        "Test optimization", user_id="test"
-                    )
+                    memory.generate_memories("Test optimization", user_id="test")
                     test_time = (time.time() - start_time) * 1000
 
                     adapter_type = (
@@ -2024,12 +2014,12 @@ def auggie(ctx):
     pass
 
 
-@auggie.command()
+@auggie.command("enhance")
 @click.argument("prompt")
 @click.option("--user-id", default="cli-user", help="User ID for context")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed information")
 @click.pass_context
-def enhance(ctx, prompt, user_id, verbose):
+def auggie_enhance(ctx, prompt, user_id, verbose):
     """Enhance a prompt using Auggie rules and memories."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2053,7 +2043,7 @@ def enhance(ctx, prompt, user_id, verbose):
                 if memory_context and memory_context.memories:
                     click.echo(f"Memories used: {len(memory_context.memories)}")
                     for i, memory in enumerate(memory_context.memories[:3]):
-                        click.echo(f"  {i+1}. {memory.content[:60]}...")
+                        click.echo(f"  {i + 1}. {memory.content[:60]}...")
 
                 executed_rules = enhancement["rule_modifications"].get(
                     "executed_rules", []
@@ -2070,14 +2060,14 @@ def enhance(ctx, prompt, user_id, verbose):
         sys.exit(1)
 
 
-@auggie.command()
+@auggie.command("learn")
 @click.argument("prompt")
 @click.argument("response")
 @click.option("--feedback", help="User feedback on the response")
 @click.option("--user-id", default="cli-user", help="User ID for context")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed learning data")
 @click.pass_context
-def learn(ctx, prompt, response, feedback, user_id, verbose):
+def auggie_learn(ctx, prompt, response, feedback, user_id, verbose):
     """Learn from an AI response and optional user feedback."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2169,10 +2159,10 @@ def rules(ctx, verbose):
         sys.exit(1)
 
 
-@auggie.command()
+@auggie.command("stats")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed statistics")
 @click.pass_context
-def stats(ctx, verbose):
+def auggie_stats(ctx, verbose):
     """Show Auggie integration statistics."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2219,7 +2209,7 @@ def stats(ctx, verbose):
                     reverse=True,
                 )
 
-                for rule_id, perf in sorted_rules[:10]:  # Top 10
+                for _rule_id, perf in sorted_rules[:10]:  # Top 10
                     name = perf["name"]
                     count = perf["execution_count"]
                     success = perf["success_rate"] * 100
@@ -2236,7 +2226,6 @@ def stats(ctx, verbose):
 # See AGENTS.md and .augment/rules/ for proper Augment integration
 
 # Add install commands to CLI
-from .install_commands_simple import list_installers, status, uninstall
 
 cli.add_command(install_group)
 cli.add_command(uninstall)
@@ -2301,7 +2290,7 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
                 memories = memory.get_recent_memories(limit=limit, **filters)
 
             if not memories:
-                rich_print("ℹ️  No memories found for analysis", style="blue")
+                rich_print("[i] No memories found for analysis", style="blue")
                 return
 
             # Analyze temporal decay for each memory

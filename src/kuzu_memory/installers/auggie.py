@@ -249,7 +249,7 @@ Remember: The goal is seamless, invisible integration that makes AI responses mo
 When users ask technical questions, ALWAYS enhance them with project context:
 
 **Trigger patterns:**
-- "How do I..." 
+- "How do I..."
 - "What's the best way to..."
 - "How should I..."
 - "How to implement..."
@@ -417,7 +417,7 @@ kuzu-memory learn "[information to store]" --source ai-conversation --quiet
 
 ✅ **DO enhance these:**
 - "How do I..." questions
-- "What's the best way..." questions  
+- "What's the best way..." questions
 - "How should I..." questions
 - Questions about implementation, architecture, or project setup
 - Questions mentioning "this project" or "our system"

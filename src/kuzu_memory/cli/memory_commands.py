@@ -67,7 +67,7 @@ def enhance(ctx, prompt, max_memories, output_format):
                     rich_print(json.dumps(result, indent=2))
                 else:
                     rich_print(
-                        f"ℹ️  No relevant memories found for: '{prompt}'", style="blue"
+                        f"[i]  No relevant memories found for: '{prompt}'", style="blue"
                     )
                     if output_format != "plain":
                         rich_print(memory_context.enhanced_prompt or prompt)
@@ -222,7 +222,7 @@ def learn(ctx, content, source, metadata, quiet, no_wait, timeout):
                     f"⏳ Learning queued (task {result['task_id'][:8]}...): {content[:100]}{'...' if len(content) > 100 else ''}",
                     style="yellow",
                 )
-                rich_print("   ℹ️  Task is processing in background", style="dim")
+                rich_print("   [i]  Task is processing in background", style="dim")
             elif result.get("status") == "failed" and not quiet:
                 rich_print(
                     f"❌ {result.get('message', 'Learning failed')}", style="red"
@@ -414,7 +414,7 @@ def recall(
             memories = memory_context.memories
 
             if not memories:
-                rich_print(f"ℹ️  No memories found for: '{prompt}'", style="blue")
+                rich_print(f"[i]  No memories found for: '{prompt}'", style="blue")
                 return
 
             # Output results
@@ -531,7 +531,7 @@ def recent(ctx, recent, output_format):
             memories = memory.get_recent_memories(limit=recent)
 
             if not memories:
-                rich_print("ℹ️  No memories found in this project", style="blue")
+                rich_print("[i]  No memories found in this project", style="blue")
                 return
 
             if output_format == "json":

@@ -116,9 +116,9 @@ def main():
     func_success = test_cli_functionality()
 
     # Overall results
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📊 OVERALL RESULTS")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     tests = [("Help System", help_success), ("Functionality", func_success)]
 

@@ -490,7 +490,7 @@ class PatternExtractor:
         unique_memories = []
         seen_content = {}  # Map from normalized content to memory index
 
-        for i, memory in enumerate(memories):
+        for _i, memory in enumerate(memories):
             # Normalize content for comparison
             normalized = memory.content.lower().strip()
 

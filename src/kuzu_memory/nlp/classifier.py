@@ -13,13 +13,10 @@ from typing import Any
 
 try:
     import nltk
-    import numpy as np
     from nltk.chunk import ne_chunk
-    from nltk.corpus import stopwords
-    from nltk.sentiment.vader import SentimentIntensityAnalyzer
     from nltk.stem import PorterStemmer
     from nltk.tag import pos_tag
-    from nltk.tokenize import sent_tokenize, word_tokenize
+    from nltk.tokenize import word_tokenize
     from nltk.tree import Tree
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.naive_bayes import MultinomialNB
@@ -618,7 +615,7 @@ class MemoryClassifier:
             # Count frequencies
             word_freq = {}
             for word in important_words:
-                stemmed = self.stemmer.stem(word)
+                self.stemmer.stem(word)
                 word_freq[word] = word_freq.get(word, 0) + 1
 
             # Sort by frequency

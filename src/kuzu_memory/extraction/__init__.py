@@ -5,13 +5,13 @@ from .patterns import PatternExtractor, PatternMatch
 from .relationships import Relationship, RelationshipDetector
 
 __all__ = [
+    "Entity",
+    # Entity extraction
+    "EntityExtractor",
     # Pattern extraction
     "PatternExtractor",
     "PatternMatch",
-    # Entity extraction
-    "EntityExtractor",
-    "Entity",
+    "Relationship",
     # Relationship detection
     "RelationshipDetector",
-    "Relationship",
 ]

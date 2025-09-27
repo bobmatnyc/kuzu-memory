@@ -98,74 +98,74 @@ FULL_SCHEMA_DDL = SCHEMA_DDL + "\n" + INDICES_DDL + "\n" + INITIAL_DATA_DDL
 # Common queries for schema operations
 SCHEMA_QUERIES = {
     "get_schema_version": """
-        MATCH (sv:SchemaVersion) 
-        RETURN sv.version, sv.created_at, sv.description 
-        ORDER BY sv.created_at DESC 
+        MATCH (sv:SchemaVersion)
+        RETURN sv.version, sv.created_at, sv.description
+        ORDER BY sv.created_at DESC
         LIMIT 1
     """,
     "check_table_exists": """
-        CALL SHOW_TABLES() 
+        CALL SHOW_TABLES()
         RETURN name WHERE name = $table_name
     """,
     "get_memory_count": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         RETURN COUNT(m) as count
     """,
     "get_entity_count": """
-        MATCH (e:Entity) 
+        MATCH (e:Entity)
         RETURN COUNT(e) as count
     """,
     "get_session_count": """
-        MATCH (s:Session) 
+        MATCH (s:Session)
         RETURN COUNT(s) as count
     """,
     "get_database_stats": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WITH COUNT(m) as memory_count
-        MATCH (e:Entity) 
+        MATCH (e:Entity)
         WITH memory_count, COUNT(e) as entity_count
-        MATCH (s:Session) 
+        MATCH (s:Session)
         WITH memory_count, entity_count, COUNT(s) as session_count
-        MATCH ()-[r]->() 
+        MATCH ()-[r]->()
         RETURN memory_count, entity_count, session_count, COUNT(r) as relationship_count
     """,
     "cleanup_expired_memories": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WHERE m.valid_to IS NOT NULL AND m.valid_to < $current_time
         DELETE m
     """,
     "get_memory_types_distribution": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WHERE m.valid_to IS NULL OR m.valid_to > $current_time
-        RETURN m.memory_type, COUNT(m) as count 
+        RETURN m.memory_type, COUNT(m) as count
         ORDER BY count DESC
     """,
     "get_top_entities": """
-        MATCH (e:Entity) 
-        RETURN e.name, e.entity_type, e.mention_count 
-        ORDER BY e.mention_count DESC 
+        MATCH (e:Entity)
+        RETURN e.name, e.entity_type, e.mention_count
+        ORDER BY e.mention_count DESC
         LIMIT $limit
     """,
     "find_duplicate_content_hashes": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WITH m.content_hash, COUNT(m) as count, COLLECT(m.id) as memory_ids
         WHERE count > 1
         RETURN m.content_hash, count, memory_ids
     """,
     "get_recent_memories": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WHERE m.created_at > $since_time
         AND (m.valid_to IS NULL OR m.valid_to > $current_time)
-        RETURN m 
-        ORDER BY m.created_at DESC 
+        RETURN m
+        ORDER BY m.created_at DESC
         LIMIT $limit
     """,
     "get_memories_by_importance": """
-        MATCH (m:Memory) 
+        MATCH (m:Memory)
         WHERE (m.valid_to IS NULL OR m.valid_to > $current_time)
         AND m.importance >= $min_importance
-        RETURN m 
-        ORDER BY m.importance DESC, m.created_at DESC 
+        RETURN m
+        ORDER BY m.importance DESC, m.created_at DESC
         LIMIT $limit
     """,
 }

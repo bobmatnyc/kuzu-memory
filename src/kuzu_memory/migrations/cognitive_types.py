@@ -248,7 +248,7 @@ class CognitiveTypesMigration:
             for memory in all_memories:
                 if memory.metadata and "migrated_from" in memory.metadata:
                     # Restore original type
-                    original_type_str = memory.metadata["migrated_from"]
+                    memory.metadata["migrated_from"]
 
                     # Convert back to MemoryType enum
                     # Note: This would need the old enum definitions to work properly

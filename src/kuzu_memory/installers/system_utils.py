@@ -234,7 +234,7 @@ class ProcessRunner:
     ) -> subprocess.CompletedProcess:
         """Run a Python module command."""
         python_exe = SystemDetector.get_python_executable()
-        command = [str(python_exe)] + module_args
+        command = [str(python_exe), *module_args]
         return ProcessRunner.run_command(command, cwd=cwd, timeout=timeout)
 
     @staticmethod

@@ -126,7 +126,7 @@ def test_basic_memory_operations():
                     print("  ⚠️  Max recall time exceeds target")
 
                 # Test 4: Memory statistics
-                stats = memory.get_statistics()
+                memory.get_statistics()
                 print("\n📊 Memory Statistics:")
                 print(f"  Total memories: {len(stored_memory_ids)}")
                 print(f"  Recall operations: {len(test_queries)}")
@@ -400,9 +400,9 @@ def main():
     ]
 
     for test_name, test_func in tests:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"🧪 Running: {test_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         start_time = time.time()
         try:
@@ -430,9 +430,9 @@ def main():
             print(f"Error: {e}")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📊 TEST SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     total_tests = len(test_results)
     passed_tests = sum(1 for r in test_results if r["success"])

@@ -205,9 +205,9 @@ def main():
             results.append((test_name, False))
 
     # Summary
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print("📊 COMPLETE SETUP VERIFICATION SUMMARY")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     passed_tests = sum(1 for _, success in results if success)
     total_tests = len(results)

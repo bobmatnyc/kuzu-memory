@@ -8,7 +8,6 @@ to ensure efficient bulk operations work correctly.
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -95,7 +94,7 @@ class TestBatchOperations:
         stored_ids = kuzu_memory.batch_store_memories(sample_memories[:5])
 
         # Mix valid and invalid IDs
-        mixed_ids = stored_ids[:3] + ["invalid-id-1", "invalid-id-2"]
+        mixed_ids = [*stored_ids[:3], "invalid-id-1", "invalid-id-2"]
 
         # Retrieve memories
         retrieved = kuzu_memory.batch_get_memories_by_ids(mixed_ids)

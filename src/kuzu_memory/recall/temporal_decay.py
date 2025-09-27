@@ -33,7 +33,7 @@ class TemporalDecayEngine:
     sophisticated configuration options.
     """
 
-    def __init__(self, config: dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize temporal decay engine.
 
@@ -148,7 +148,6 @@ class TemporalDecayEngine:
             self.decay_config["enable_adaptive_decay"]
             and age_hours < self.decay_config["boost_recent_threshold_hours"]
         ):
-
             boost_multiplier = params.get("boost_multiplier", 1.0)
             recent_boost = (
                 self.decay_config["boost_recent_multiplier"] * boost_multiplier

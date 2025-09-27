@@ -181,7 +181,7 @@ class MemoryStore:
 
         except Exception as e:
             self._storage_stats["extraction_errors"] += 1
-            if isinstance(e, (ExtractionError, DatabaseError, PerformanceError)):
+            if isinstance(e, ExtractionError | DatabaseError | PerformanceError):
                 raise
             raise ExtractionError(len(content), str(e))
 
@@ -631,53 +631,6 @@ class MemoryStore:
             return self.db_adapter.get_memory_by_id(memory_id)
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}")
-            return None
-
-    def get_memory_by_id(self, memory_id: str) -> Memory | None:
-        """
-        Get a memory by its ID.
-
-        Args:
-            memory_id: Memory ID to retrieve
-
-        Returns:
-            Memory object or None if not found
-        """
-        try:
-            # Check cache first
-            if self.cache:
-                cached_memory = self.cache.get_memory(memory_id)
-                if cached_memory:
-                    return cached_memory
-
-            # Query database
-            query = """
-                MATCH (m:Memory {id: $memory_id})
-                WHERE m.valid_to IS NULL OR m.valid_to > $current_time
-                RETURN m
-            """
-
-            parameters = {
-                "memory_id": memory_id,
-                "current_time": datetime.now().isoformat(),
-            }
-
-            results = self.db_adapter.execute_query(query, parameters)
-
-            if results:
-                memory_data = results[0]["m"]
-                memory = Memory.from_dict(memory_data)
-
-                # Cache the memory
-                if self.cache:
-                    self.cache.put_memory(memory)
-
-                return memory
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Failed to get memory {memory_id}: {e}")
             return None
 
     def get_storage_statistics(self) -> dict[str, Any]:

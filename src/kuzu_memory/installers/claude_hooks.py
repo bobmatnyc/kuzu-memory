@@ -154,8 +154,8 @@ This project uses KuzuMemory for intelligent context management.
 
 ## Project Information
 - **Path**: {self.project_root}
-- **Language**: {project_info.get('language', 'Unknown')}
-- **Framework**: {project_info.get('framework', 'Unknown')}
+- **Language**: {project_info.get("language", "Unknown")}
+- **Framework**: {project_info.get("framework", "Unknown")}
 
 ## Memory Integration
 
@@ -176,13 +176,13 @@ When interacting with Claude Desktop, the following MCP tools are available:
 
 ## Project Context
 
-{project_info.get('description', 'Add project description here')}
+{project_info.get("description", "Add project description here")}
 
 ## Key Technologies
-{self._format_list(project_info.get('technologies', []))}
+{self._format_list(project_info.get("technologies", []))}
 
 ## Development Guidelines
-{self._format_list(project_info.get('guidelines', []))}
+{self._format_list(project_info.get("guidelines", []))}
 
 ## Memory Guidelines
 

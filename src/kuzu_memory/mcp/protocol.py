@@ -95,7 +95,7 @@ class JSONRPCMessage:
 
         # Validate params if present
         if "params" in message:
-            if not isinstance(message["params"], (dict, list)):
+            if not isinstance(message["params"], dict | list):
                 raise JSONRPCError(
                     JSONRPCErrorCode.INVALID_REQUEST,
                     "'params' must be an object or array",

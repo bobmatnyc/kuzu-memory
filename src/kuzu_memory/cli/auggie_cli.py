@@ -37,7 +37,7 @@ def cmd_enhance_prompt(args):
                 if memory_context and memory_context.memories:
                     print(f"Memories used: {len(memory_context.memories)}")
                     for i, memory in enumerate(memory_context.memories[:3]):
-                        print(f"  {i+1}. {memory.content[:60]}...")
+                        print(f"  {i + 1}. {memory.content[:60]}...")
 
                 executed_rules = enhancement["rule_modifications"].get(
                     "executed_rules", []
@@ -259,7 +259,7 @@ def cmd_stats(args):
                     reverse=True,
                 )
 
-                for rule_id, perf in sorted_rules[:10]:  # Top 10
+                for _rule_id, perf in sorted_rules[:10]:  # Top 10
                     name = perf["name"]
                     count = perf["execution_count"]
                     success = perf["success_rate"] * 100

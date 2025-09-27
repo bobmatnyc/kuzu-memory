@@ -67,7 +67,7 @@ def enhance(ctx, prompt, user_id, verbose):
         enhanced_result = auggie.enhance_prompt(prompt, user_id=user_id)
 
         if not enhanced_result:
-            rich_print(f"ℹ️  No enhancement available for: '{prompt}'", style="blue")
+            rich_print(f"(i) No enhancement available for: '{prompt}'", style="blue")
             rich_print(prompt)
             return
 
@@ -196,7 +196,7 @@ def rules(ctx, verbose):
         rules_info = auggie.get_rules_summary()
 
         if not rules_info:
-            rich_print("ℹ️  No Auggie rules found", style="blue")
+            rich_print("(i) No Auggie rules found", style="blue")
             return
 
         # Display basic rules info
@@ -269,7 +269,7 @@ def stats(ctx, verbose):
         stats = auggie.get_integration_stats()
 
         if not stats:
-            rich_print("ℹ️  No Auggie statistics available", style="blue")
+            rich_print("(i) No Auggie statistics available", style="blue")
             return
 
         # Display basic statistics
@@ -321,7 +321,9 @@ def stats(ctx, verbose):
                     icon = (
                         "✅"
                         if status == "healthy"
-                        else "⚠️" if status == "warning" else "❌"
+                        else "⚠️"
+                        if status == "warning"
+                        else "❌"
                     )
                     rich_print(
                         f"   {component.replace('_', ' ').title()}: {icon} {status}"

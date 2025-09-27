@@ -396,7 +396,7 @@ class TestPatternFunctions:
         assert MemoryType.SENSORY in indicators
 
         # Check that each type has indicators
-        for memory_type, patterns in indicators.items():
+        for _memory_type, patterns in indicators.items():
             assert len(patterns) > 0
             assert all(isinstance(p, str) for p in patterns)
 

@@ -146,9 +146,7 @@ class TestCompleteWorkflows:
                     )
 
             # Step 5: Verify memory persistence
-            total_memories = (
-                len(profile_memory_ids) + len(project_memory_ids) + len(work_memory_ids)
-            )
+            (len(profile_memory_ids) + len(project_memory_ids) + len(work_memory_ids))
             stats = memory.get_statistics()
 
             assert stats["performance_stats"]["generate_memories_calls"] >= 3
@@ -411,18 +409,18 @@ class TestCompleteWorkflows:
             print(f"Max generation time: {max_generation_time:.2f}ms")
 
             # Performance assertions (relaxed for E2E)
-            assert (
-                avg_recall_time < 50.0
-            ), f"Average recall time too high: {avg_recall_time:.2f}ms"
-            assert (
-                avg_generation_time < 100.0
-            ), f"Average generation time too high: {avg_generation_time:.2f}ms"
-            assert (
-                max_recall_time < 200.0
-            ), f"Max recall time too high: {max_recall_time:.2f}ms"
-            assert (
-                max_generation_time < 400.0
-            ), f"Max generation time too high: {max_generation_time:.2f}ms"
+            assert avg_recall_time < 50.0, (
+                f"Average recall time too high: {avg_recall_time:.2f}ms"
+            )
+            assert avg_generation_time < 100.0, (
+                f"Average generation time too high: {avg_generation_time:.2f}ms"
+            )
+            assert max_recall_time < 200.0, (
+                f"Max recall time too high: {max_recall_time:.2f}ms"
+            )
+            assert max_generation_time < 400.0, (
+                f"Max generation time too high: {max_generation_time:.2f}ms"
+            )
 
     @pytest.mark.skip(
         reason="Entity extraction patterns need tuning for test content alignment"
@@ -588,9 +586,9 @@ class TestCompleteWorkflows:
             # 2. Invalid query handling
             try:
                 memory.attach_memories("", user_id=user_id)
-                assert False, "Should have raised an exception for empty query"
+                raise AssertionError("Should have raised an exception for empty query")
             except Exception as e:
-                assert isinstance(e, (ValueError, KuzuMemoryError))
+                assert isinstance(e, ValueError | KuzuMemoryError)
 
             # 3. Very long content handling
             very_long_content = "This is a very long memory. " * 1000
@@ -624,7 +622,7 @@ class TestCompleteWorkflows:
                     assert isinstance(memory_ids, list)
                 except Exception as e:
                     # Should be a handled exception, not a crash
-                    assert isinstance(e, (ValueError, KuzuMemoryError))
+                    assert isinstance(e, ValueError | KuzuMemoryError)
 
             # 6. System should remain functional after errors
             normal_content = "After handling errors, the system should work normally."

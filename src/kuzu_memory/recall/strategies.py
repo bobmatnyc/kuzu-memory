@@ -200,7 +200,6 @@ class KeywordRecallStrategy(RecallStrategy):
             return []
 
         # Build query with keyword matching
-        query_parts = []
         parameters = {"current_time": datetime.now().isoformat(), "limit": max_memories}
 
         # Base query
@@ -318,7 +317,7 @@ class EntityRecallStrategy(RecallStrategy):
             return []
 
         # Get entity names for matching
-        entity_names = [entity.text for entity in entities]
+        [entity.text for entity in entities]
         normalized_names = [entity.normalized_text for entity in entities]
 
         # Build query to find memories through entity relationships

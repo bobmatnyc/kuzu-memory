@@ -160,7 +160,7 @@ class MemoryQueueManager:
             # Start worker threads
             for i in range(self.max_workers):
                 worker = threading.Thread(
-                    target=self._worker_loop, name=f"MemoryWorker-{i+1}", daemon=True
+                    target=self._worker_loop, name=f"MemoryWorker-{i + 1}", daemon=True
                 )
                 worker.start()
                 self.workers.append(worker)

@@ -335,7 +335,7 @@ class DeduplicationEngine:
 
         # Consider it a duplicate if we find any matches above thresholds
         # but exclude updates/corrections
-        for memory, score, match_type in duplicates:
+        for _memory, _score, match_type in duplicates:
             if match_type in ["exact", "normalized", "semantic"]:
                 return True
 

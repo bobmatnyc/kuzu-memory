@@ -143,7 +143,7 @@ def cli(ctx, debug, config, db_path, project_root):
                         title="🧠 KuzuMemory",
                         style="green",
                     )
-        except:
+        except Exception:
             pass  # If anything fails, just show help
 
         rich_print(ctx.get_help())
@@ -169,7 +169,6 @@ def quickstart(ctx, skip_demo):
     Perfect for first-time users!
     """
     try:
-
         rich_panel(
             "Welcome to KuzuMemory! 🧠✨\n\n"
             "This quickstart will walk you through:\n"

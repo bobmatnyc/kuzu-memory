@@ -309,7 +309,6 @@ class AuggieIntegration:
                 and learning_results.get("patterns_discovered")
                 and len(learning_results["patterns_discovered"]) > 0
             ):
-
                 try:
                     self.memory_synchronizer.sync_learned_patterns_to_memory(
                         self.response_learner

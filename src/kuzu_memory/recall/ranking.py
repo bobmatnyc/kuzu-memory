@@ -25,7 +25,7 @@ class MemoryRanker:
     temporal relevance, importance, and user interaction patterns.
     """
 
-    def __init__(self, config: dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize memory ranker.
 
@@ -105,7 +105,7 @@ class MemoryRanker:
         memories: list[Memory],
         query: str,
         context_type: str = "general",
-        user_preferences: dict[str, Any] = None,
+        user_preferences: dict[str, Any] | None = None,
     ) -> list[tuple[Memory, float]]:
         """
         Rank memories by relevance to query.
@@ -143,7 +143,7 @@ class MemoryRanker:
         query_lower: str,
         query_words: set[str],
         context_type: str,
-        user_preferences: dict[str, Any] = None,
+        user_preferences: dict[str, Any] | None = None,
     ) -> float:
         """Calculate comprehensive relevance score for a memory."""
 

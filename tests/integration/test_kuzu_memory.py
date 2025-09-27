@@ -244,7 +244,7 @@ class TestKuzuMemoryIntegration:
 
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:
             # Store a status memory (should expire quickly)
-            memory_ids = memory.generate_memories(
+            memory.generate_memories(
                 "Currently working on testing.", user_id="test-user"
             )
 
@@ -298,11 +298,11 @@ class TestKuzuMemoryIntegration:
             assert len(memory_ids) == 0  # Should handle gracefully
 
             # Test empty prompt
-            with pytest.raises(Exception):  # Should raise validation error
+            with pytest.raises(ValueError):  # Should raise validation error
                 memory.attach_memories("", user_id="test-user")
 
             # Test invalid strategy
-            with pytest.raises(Exception):
+            with pytest.raises((ValueError, KeyError)):
                 memory.attach_memories(
                     "Test prompt", strategy="invalid_strategy", user_id="test-user"
                 )

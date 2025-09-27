@@ -122,7 +122,7 @@ class TestCognitiveTypesMigration:
 
         # Check that valid_to is set correctly
         if retention:
-            expected_valid_to = memory.valid_from + retention
+            memory.valid_from + retention
             # The Memory model should set this automatically
             assert memory.valid_to is not None
 

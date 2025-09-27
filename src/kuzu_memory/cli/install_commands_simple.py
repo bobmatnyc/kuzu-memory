@@ -135,7 +135,7 @@ def uninstall(ai_system, project, confirm):
         # Check installation status
         status = installer.get_status()
         if not status["installed"]:
-            print(f"ℹ️  {installer.ai_system_name} integration is not installed.")
+            print(f"[i]  {installer.ai_system_name} integration is not installed.")
             sys.exit(0)
 
         print(f"🗑️  Uninstalling {installer.ai_system_name} integration...")

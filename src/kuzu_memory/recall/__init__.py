@@ -10,13 +10,13 @@ from .strategies import (
 )
 
 __all__ = [
-    # Strategies
-    "RecallStrategy",
-    "KeywordRecallStrategy",
     "EntityRecallStrategy",
-    "TemporalRecallStrategy",
-    # Coordinator
-    "RecallCoordinator",
+    "KeywordRecallStrategy",
     # Ranking
     "MemoryRanker",
+    # Coordinator
+    "RecallCoordinator",
+    # Strategies
+    "RecallStrategy",
+    "TemporalRecallStrategy",
 ]

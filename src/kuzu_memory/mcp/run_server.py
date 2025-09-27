@@ -55,7 +55,6 @@ class MCPProtocolHandler:
         is_notification = JSONRPCMessage.is_notification(request)
 
         try:
-
             # Handle different MCP methods
             if method == "initialize":
                 # Initialize handshake
@@ -186,7 +185,7 @@ class MCPProtocolHandler:
                             "type": "text",
                             "text": (
                                 json.dumps(result)
-                                if isinstance(result, (dict, list))
+                                if isinstance(result, dict | list)
                                 else str(result)
                             ),
                         }
@@ -206,7 +205,6 @@ class MCPProtocolHandler:
 
     def _format_tools_for_mcp(self) -> list[dict[str, Any]]:
         """Format tools for MCP protocol."""
-        tools = []
 
         # Define tools with MCP-compatible schema
         tool_definitions = [

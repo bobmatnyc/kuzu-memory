@@ -151,7 +151,7 @@ class KuzuConnectionPool:
             if connection is not None:
                 try:
                     self._pool.put(connection, timeout=1.0)
-                except:
+                except Exception:
                     # If we can't return to pool, create a new connection
                     logger.warning(
                         "Failed to return connection to pool, creating new one"
@@ -159,7 +159,7 @@ class KuzuConnectionPool:
                     try:
                         new_conn = self._create_connection()
                         self._pool.put(new_conn, timeout=1.0)
-                    except:
+                    except Exception:
                         logger.error("Failed to create replacement connection")
 
     def close(self) -> None:
@@ -265,15 +265,15 @@ class KuzuAdapter:
                 for i, statement in enumerate(table_statements):
                     if statement:
                         logger.info(
-                            f"Executing table statement {i+1}: {statement[:50]}..."
+                            f"Executing table statement {i + 1}: {statement[:50]}..."
                         )
                         try:
-                            result = conn.execute(statement)
+                            conn.execute(statement)
                             logger.info(
-                                f"✅ Table statement {i+1} completed successfully"
+                                f"✅ Table statement {i + 1} completed successfully"
                             )
                         except Exception as e:
-                            logger.error(f"❌ Table statement {i+1} failed: {e}")
+                            logger.error(f"❌ Table statement {i + 1} failed: {e}")
                             logger.error(f"   Full statement: {statement}")
                             raise
 
@@ -285,15 +285,15 @@ class KuzuAdapter:
                 for i, statement in enumerate(index_statements):
                     if statement:
                         logger.info(
-                            f"Executing index statement {i+1}: {statement[:50]}..."
+                            f"Executing index statement {i + 1}: {statement[:50]}..."
                         )
                         try:
-                            result = conn.execute(statement)
+                            conn.execute(statement)
                             logger.info(
-                                f"✅ Index statement {i+1} completed successfully"
+                                f"✅ Index statement {i + 1} completed successfully"
                             )
                         except Exception as e:
-                            logger.error(f"❌ Index statement {i+1} failed: {e}")
+                            logger.error(f"❌ Index statement {i + 1} failed: {e}")
                             # Indices failing is not critical, continue
 
                 # Finally insert initial data
@@ -303,15 +303,15 @@ class KuzuAdapter:
                 for i, statement in enumerate(data_statements):
                     if statement:
                         logger.info(
-                            f"Executing data statement {i+1}: {statement[:50]}..."
+                            f"Executing data statement {i + 1}: {statement[:50]}..."
                         )
                         try:
-                            result = conn.execute(statement)
+                            conn.execute(statement)
                             logger.info(
-                                f"✅ Data statement {i+1} completed successfully"
+                                f"✅ Data statement {i + 1} completed successfully"
                             )
                         except Exception as e:
-                            logger.error(f"❌ Data statement {i+1} failed: {e}")
+                            logger.error(f"❌ Data statement {i + 1} failed: {e}")
                             # Data insertion failing is not critical, continue
 
                 logger.info("Created database schema successfully")

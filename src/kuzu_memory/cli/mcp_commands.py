@@ -144,7 +144,6 @@ def info(ctx):
     Show MCP server information and configuration.
     """
     try:
-
         server = create_mcp_server()
         tools = server.get_tools()
 

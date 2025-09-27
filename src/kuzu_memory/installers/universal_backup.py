@@ -319,31 +319,31 @@ logger = logging.getLogger(__name__)
 class KuzuMemoryIntegration:
     """
     KuzuMemory integration for Python AI systems.
-    
+
     Provides methods for enhancing prompts and storing learning.
     """
-    
+
     def __init__(self, project_path: Optional[str] = None, timeout: int = 5):
         """
         Initialize integration.
-        
+
         Args:
             project_path: Path to project directory (optional)
             timeout: Timeout for memory operations in seconds
         """
         self.project_path = project_path
         self.timeout = timeout
-    
-    def enhance_prompt(self, prompt: str, format: str = 'plain', 
+
+    def enhance_prompt(self, prompt: str, format: str = 'plain',
                       max_memories: int = 5) -> str:
         """
         Enhance prompt with project context.
-        
+
         Args:
             prompt: Original user prompt
             format: Output format ('plain', 'json', 'context')
             max_memories: Maximum memories to include
-            
+
         Returns:
             Enhanced prompt with project context
         """
@@ -352,25 +352,25 @@ class KuzuMemoryIntegration:
             '--format', format,
             '--max-memories', str(max_memories)
         ]
-        
+
         if self.project_path:
             cmd.extend(['--project', self.project_path])
-        
+
         try:
             start_time = time.time()
             result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True, 
-                check=True, 
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
                 timeout=self.timeout
             )
-            
+
             elapsed = (time.time() - start_time) * 1000
             logger.info(f"Enhancement completed in {elapsed:.1f}ms")
-            
+
             return result.stdout.strip()
-            
+
         except subprocess.TimeoutExpired:
             logger.warning(f"Enhancement timed out after {self.timeout}s")
             return prompt
@@ -380,17 +380,17 @@ class KuzuMemoryIntegration:
         except Exception as e:
             logger.error(f"Enhancement error: {e}")
             return prompt
-    
+
     def store_learning(self, content: str, source: str = 'ai-conversation',
                       metadata: Optional[Dict[str, Any]] = None) -> bool:
         """
         Store learning asynchronously.
-        
+
         Args:
             content: Content to store
             source: Source of the learning
             metadata: Additional metadata
-            
+
         Returns:
             True if submission successful, False otherwise
         """
@@ -399,41 +399,41 @@ class KuzuMemoryIntegration:
             '--source', source,
             '--quiet'
         ]
-        
+
         if metadata:
             cmd.extend(['--metadata', json.dumps(metadata)])
-        
+
         if self.project_path:
             cmd.extend(['--project', self.project_path])
-        
+
         try:
             start_time = time.time()
             subprocess.run(cmd, check=False, timeout=self.timeout)
-            
+
             elapsed = (time.time() - start_time) * 1000
             logger.info(f"Learning submitted in {elapsed:.1f}ms")
-            
+
             return True
-            
+
         except subprocess.TimeoutExpired:
             logger.warning(f"Learning submission timed out after {self.timeout}s")
             return False
         except Exception as e:
             logger.warning(f"Learning submission failed: {e}")
             return False
-    
+
     def get_project_stats(self) -> Dict[str, Any]:
         """
         Get project memory statistics.
-        
+
         Returns:
             Dictionary with project statistics
         """
         cmd = ['kuzu-memory', 'stats', '--format', 'json']
-        
+
         if self.project_path:
             cmd.extend(['--project', self.project_path])
-        
+
         try:
             result = subprocess.run(
                 cmd,
@@ -442,9 +442,9 @@ class KuzuMemoryIntegration:
                 check=True,
                 timeout=self.timeout
             )
-            
+
             return json.loads(result.stdout)
-            
+
         except Exception as e:
             logger.error(f"Failed to get stats: {e}")
             return {}
@@ -453,30 +453,30 @@ class KuzuMemoryIntegration:
 def ai_conversation_with_memory(user_input: str, memory: KuzuMemoryIntegration) -> str:
     """
     Example AI conversation function with memory integration.
-    
+
     Args:
         user_input: User's input/question
         memory: KuzuMemory integration instance
-        
+
     Returns:
         AI response
     """
     # Step 1: Enhance prompt with project context
     enhanced_prompt = memory.enhance_prompt(user_input)
-    
+
     # Step 2: Generate AI response (replace with your AI system)
     ai_response = your_ai_system(enhanced_prompt)
-    
+
     # Step 3: Store learning from conversation (async, non-blocking)
     memory.store_learning(f"Q: {user_input} A: {ai_response}")
-    
+
     return ai_response
 
 
 def your_ai_system(prompt: str) -> str:
     """
     Placeholder for your AI system.
-    
+
     Replace this with your actual AI system call.
     """
     return f"AI Response to: {prompt}"
@@ -486,19 +486,19 @@ def main():
     """Example usage of KuzuMemory integration."""
     # Initialize memory integration
     memory = KuzuMemoryIntegration()
-    
+
     # Example conversation
     user_questions = [
         "How do I structure an API endpoint?",
         "What's the best way to handle database connections?",
         "How should I write tests for this project?"
     ]
-    
+
     for question in user_questions:
         print(f"\\nUser: {question}")
         response = ai_conversation_with_memory(question, memory)
         print(f"AI: {response}")
-    
+
     # Show project statistics
     stats = memory.get_project_stats()
     if stats:
@@ -521,7 +521,7 @@ if __name__ == "__main__":
         js_content = """#!/usr/bin/env node
 /**
  * KuzuMemory JavaScript Integration Example
- * 
+ *
  * This example shows how to integrate KuzuMemory with a JavaScript/Node.js AI system.
  */
 
@@ -531,7 +531,7 @@ const fs = require('fs');
 class KuzuMemoryIntegration {
     /**
      * Initialize KuzuMemory integration.
-     * 
+     *
      * @param {string} projectPath - Path to project directory (optional)
      * @param {number} timeout - Timeout for operations in milliseconds
      */
@@ -539,10 +539,10 @@ class KuzuMemoryIntegration {
         this.projectPath = projectPath;
         this.timeout = timeout;
     }
-    
+
     /**
      * Enhance prompt with project context.
-     * 
+     *
      * @param {string} prompt - Original user prompt
      * @param {string} format - Output format ('plain', 'json', 'context')
      * @param {number} maxMemories - Maximum memories to include
@@ -555,31 +555,31 @@ class KuzuMemoryIntegration {
                 '--format', format,
                 '--max-memories', maxMemories.toString()
             ];
-            
+
             if (this.projectPath) {
                 cmd.push('--project', this.projectPath);
             }
-            
+
             const startTime = Date.now();
             const result = execSync(cmd.join(' '), {
                 encoding: 'utf8',
                 timeout: this.timeout
             });
-            
+
             const elapsed = Date.now() - startTime;
             console.log(`Enhancement completed in ${elapsed}ms`);
-            
+
             return result.trim();
-            
+
         } catch (error) {
             console.warn(`Enhancement failed: ${error.message}`);
             return prompt; // Fallback to original
         }
     }
-    
+
     /**
      * Store learning asynchronously.
-     * 
+     *
      * @param {string} content - Content to store
      * @param {string} source - Source of the learning
      * @param {Object} metadata - Additional metadata
@@ -592,56 +592,56 @@ class KuzuMemoryIntegration {
                 '--source', source,
                 '--quiet'
             ];
-            
+
             if (metadata) {
                 cmd.push('--metadata', JSON.stringify(metadata));
             }
-            
+
             if (this.projectPath) {
                 cmd.push('--project', this.projectPath);
             }
-            
+
             const startTime = Date.now();
-            
+
             // Spawn async process (non-blocking)
             const child = spawn(cmd[0], cmd.slice(1), {
                 detached: true,
                 stdio: 'ignore'
             });
-            
+
             child.unref(); // Don't wait for completion
-            
+
             const elapsed = Date.now() - startTime;
             console.log(`Learning submitted in ${elapsed}ms`);
-            
+
             return true;
-            
+
         } catch (error) {
             console.warn(`Learning submission failed: ${error.message}`);
             return false;
         }
     }
-    
+
     /**
      * Get project memory statistics.
-     * 
+     *
      * @returns {Object} Project statistics
      */
     getProjectStats() {
         try {
             const cmd = ['kuzu-memory', 'stats', '--format', 'json'];
-            
+
             if (this.projectPath) {
                 cmd.push('--project', this.projectPath);
             }
-            
+
             const result = execSync(cmd.join(' '), {
                 encoding: 'utf8',
                 timeout: this.timeout
             });
-            
+
             return JSON.parse(result);
-            
+
         } catch (error) {
             console.error(`Failed to get stats: ${error.message}`);
             return {};
@@ -651,7 +651,7 @@ class KuzuMemoryIntegration {
 
 /**
  * Example AI conversation function with memory integration.
- * 
+ *
  * @param {string} userInput - User's input/question
  * @param {KuzuMemoryIntegration} memory - Memory integration instance
  * @returns {string} AI response
@@ -659,20 +659,20 @@ class KuzuMemoryIntegration {
 function aiConversationWithMemory(userInput, memory) {
     // Step 1: Enhance prompt with project context
     const enhancedPrompt = memory.enhancePrompt(userInput);
-    
+
     // Step 2: Generate AI response (replace with your AI system)
     const aiResponse = yourAISystem(enhancedPrompt);
-    
+
     // Step 3: Store learning from conversation (async, non-blocking)
     memory.storeLearning(`Q: ${userInput} A: ${aiResponse}`);
-    
+
     return aiResponse;
 }
 
 /**
  * Placeholder for your AI system.
  * Replace this with your actual AI system call.
- * 
+ *
  * @param {string} prompt - Enhanced prompt
  * @returns {string} AI response
  */
@@ -686,20 +686,20 @@ function yourAISystem(prompt) {
 function main() {
     // Initialize memory integration
     const memory = new KuzuMemoryIntegration();
-    
+
     // Example conversation
     const userQuestions = [
         "How do I structure an API endpoint?",
         "What's the best way to handle database connections?",
         "How should I write tests for this project?"
     ];
-    
+
     userQuestions.forEach(question => {
         console.log(`\\nUser: ${question}`);
         const response = aiConversationWithMemory(question, memory);
         console.log(`AI: ${response}`);
     });
-    
+
     // Show project statistics
     setTimeout(() => {
         const stats = memory.getProjectStats();
@@ -767,28 +767,28 @@ enhance_prompt() {
     local prompt="$1"
     local format="${2:-plain}"
     local max_memories="${3:-5}"
-    
+
     local cmd="kuzu-memory enhance \\"$prompt\\" --format $format --max-memories $max_memories"
-    
+
     if [[ -n "$PROJECT_PATH" ]]; then
         cmd="$cmd --project \\"$PROJECT_PATH\\""
     fi
-    
+
     if [[ "$DEBUG" == "true" ]]; then
         log_info "Running: $cmd"
     fi
-    
+
     local start_time=$(date +%s%3N)
-    
+
     # Try to enhance prompt, fallback to original on failure
     if result=$(timeout $TIMEOUT bash -c "$cmd" 2>/dev/null); then
         local end_time=$(date +%s%3N)
         local elapsed=$((end_time - start_time))
-        
+
         if [[ "$DEBUG" == "true" ]]; then
             log_info "Enhancement completed in ${elapsed}ms"
         fi
-        
+
         echo "$result"
     else
         if [[ "$DEBUG" == "true" ]]; then
@@ -803,32 +803,32 @@ store_learning() {
     local content="$1"
     local source="${2:-ai-conversation}"
     local metadata="$3"
-    
+
     local cmd="kuzu-memory learn \\"$content\\" --source \\"$source\\" --quiet"
-    
+
     if [[ -n "$metadata" ]]; then
         cmd="$cmd --metadata \\"$metadata\\""
     fi
-    
+
     if [[ -n "$PROJECT_PATH" ]]; then
         cmd="$cmd --project \\"$PROJECT_PATH\\""
     fi
-    
+
     if [[ "$DEBUG" == "true" ]]; then
         log_info "Running: $cmd"
     fi
-    
+
     local start_time=$(date +%s%3N)
-    
+
     # Run in background (async, non-blocking)
     if timeout $TIMEOUT bash -c "$cmd" >/dev/null 2>&1 &; then
         local end_time=$(date +%s%3N)
         local elapsed=$((end_time - start_time))
-        
+
         if [[ "$DEBUG" == "true" ]]; then
             log_info "Learning submitted in ${elapsed}ms"
         fi
-        
+
         return 0
     else
         if [[ "$DEBUG" == "true" ]]; then
@@ -841,11 +841,11 @@ store_learning() {
 # Function to get project statistics
 get_project_stats() {
     local cmd="kuzu-memory stats --format json"
-    
+
     if [[ -n "$PROJECT_PATH" ]]; then
         cmd="$cmd --project \\"$PROJECT_PATH\\""
     fi
-    
+
     if result=$(timeout $TIMEOUT bash -c "$cmd" 2>/dev/null); then
         echo "$result"
     else
@@ -856,20 +856,20 @@ get_project_stats() {
 # Example AI conversation function with memory integration
 ai_conversation_with_memory() {
     local user_input="$1"
-    
+
     log_info "User: $user_input"
-    
+
     # Step 1: Enhance prompt with project context
     local enhanced_prompt
     enhanced_prompt=$(enhance_prompt "$user_input")
-    
+
     # Step 2: Generate AI response (replace with your AI system)
     local ai_response
     ai_response=$(your_ai_system "$enhanced_prompt")
-    
+
     # Step 3: Store learning from conversation (async, non-blocking)
     store_learning "Q: $user_input A: $ai_response"
-    
+
     log_success "AI: $ai_response"
 }
 
@@ -887,7 +887,7 @@ check_kuzu_memory() {
         log_error "pip install kuzu-memory"
         exit 1
     fi
-    
+
     log_success "KuzuMemory is available"
 }
 
@@ -907,7 +907,7 @@ init_project_if_needed() {
 # Main function
 main() {
     log_info "KuzuMemory Shell Integration Example"
-    
+
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -936,29 +936,29 @@ main() {
                 ;;
         esac
     done
-    
+
     # Check prerequisites
     check_kuzu_memory
     init_project_if_needed
-    
+
     # Example conversation
     local user_questions=(
         "How do I structure an API endpoint?"
         "What's the best way to handle database connections?"
         "How should I write tests for this project?"
     )
-    
+
     for question in "${user_questions[@]}"; do
         echo
         ai_conversation_with_memory "$question"
     done
-    
+
     # Show project statistics
     echo
     log_info "Project Memory Statistics:"
     local stats
     stats=$(get_project_stats)
-    
+
     if [[ "$stats" != "{}" ]]; then
         echo "$stats" | jq . 2>/dev/null || echo "$stats"
     else

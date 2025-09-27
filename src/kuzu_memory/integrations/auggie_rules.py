@@ -426,7 +426,7 @@ class AuggieRuleEngine:
             with open(file_path) as f:
                 rules_data = json.load(f)
 
-            for rule_id, rule_dict in rules_data.items():
+            for _rule_id, rule_dict in rules_data.items():
                 # Convert strings back to datetime objects
                 if rule_dict["created_at"]:
                     rule_dict["created_at"] = datetime.fromisoformat(

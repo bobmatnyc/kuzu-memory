@@ -116,10 +116,10 @@ class InternalMemory:
     def from_dict(cls, data: dict[str, Any]) -> "InternalMemory":
         """Create InternalMemory from dictionary."""
         # Parse datetime fields
-        for field in ["created_at", "valid_from", "valid_to", "accessed_at"]:
-            if data.get(field):
-                if isinstance(data[field], str):
-                    data[field] = datetime.fromisoformat(data[field])
+        for field_name in ["created_at", "valid_from", "valid_to", "accessed_at"]:
+            if data.get(field_name):
+                if isinstance(data[field_name], str):
+                    data[field_name] = datetime.fromisoformat(data[field_name])
 
         # Parse JSON fields
         if isinstance(data.get("metadata"), str):
@@ -234,7 +234,7 @@ class InternalMemoryContext:
             "types": type_counts,
             "avg_importance": round(avg_importance, 3),
             "avg_confidence": round(avg_confidence, 3),
-            "entities": sorted(list(all_entities)),
+            "entities": sorted(all_entities),
         }
 
 

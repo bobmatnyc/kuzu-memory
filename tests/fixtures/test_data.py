@@ -9,7 +9,7 @@ import random
 from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 from kuzu_memory.core.models import Memory, MemoryType
 
@@ -126,7 +126,7 @@ class DataGenerator:
             "CTO",
         ]
 
-    def generate_semantic_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_semantic_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate a semantic memory (facts and general knowledge)."""
         name = random.choice(self.names)
         company = random.choice(self.companies)
@@ -148,7 +148,7 @@ class DataGenerator:
             "entities": [name, company, role],
         }
 
-    def generate_preference_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_preference_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate a preference-related memory."""
         tech1 = random.choice(self.technologies)
         tech2 = random.choice(self.technologies)
@@ -171,7 +171,7 @@ class DataGenerator:
             "entities": [tech1, tech2],
         }
 
-    def generate_episodic_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_episodic_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate an episodic memory (personal experiences and events)."""
         tech = random.choice(self.technologies)
         project = random.choice(self.projects)
@@ -193,7 +193,7 @@ class DataGenerator:
             "entities": [tech, project],
         }
 
-    def generate_working_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_working_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate a working memory (tasks and current focus)."""
         project = random.choice(self.projects)
         tech = random.choice(self.technologies)
@@ -215,7 +215,7 @@ class DataGenerator:
             "entities": [project, tech],
         }
 
-    def generate_procedural_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_procedural_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate a procedural memory (instructions and how-to content)."""
         templates = [
             "Always validate input data before processing.",
@@ -237,7 +237,7 @@ class DataGenerator:
             "entities": [],
         }
 
-    def generate_sensory_memory(self, user_id: str = None) -> dict[str, Any]:
+    def generate_sensory_memory(self, user_id: str | None = None) -> dict[str, Any]:
         """Generate a sensory memory (sensory descriptions)."""
         tech = random.choice(self.technologies)
 
@@ -259,7 +259,10 @@ class DataGenerator:
         }
 
     def generate_memory_batch(
-        self, count: int, user_id: str = None, memory_types: list[MemoryType] = None
+        self,
+        count: int,
+        user_id: str | None = None,
+        memory_types: list[MemoryType] | None = None,
     ) -> list[dict[str, Any]]:
         """Generate a batch of diverse memories."""
         if memory_types is None:
@@ -598,7 +601,7 @@ def get_test_scenario(scenario_name: str) -> DataScenario:
 
 
 def generate_test_memories(
-    count: int, user_id: str = None, memory_types: list[MemoryType] = None
+    count: int, user_id: str | None = None, memory_types: list[MemoryType] | None = None
 ) -> list[dict[str, Any]]:
     """Generate test memories."""
     return test_data_generator.generate_memory_batch(count, user_id, memory_types)

@@ -551,7 +551,7 @@ class QueryBuilder:
                         stats[stat_name] = results[0]["recent_count"] if results else 0
                     else:
                         stats[stat_name] = {
-                            result[list(result.keys())[0]]: result["count"]
+                            result[next(iter(result.keys()))]: result["count"]
                             for result in results
                         }
 

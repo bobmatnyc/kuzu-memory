@@ -535,10 +535,7 @@ class ResponseLearner:
                     pattern_id: pattern.to_dict()
                     for pattern_id, pattern in self.learned_patterns.items()
                 },
-                "context_patterns": {
-                    context_type: patterns
-                    for context_type, patterns in self.context_patterns.items()
-                },
+                "context_patterns": dict(self.context_patterns.items()),
                 "statistics": self.get_learning_statistics(),
                 "export_timestamp": datetime.now().isoformat(),
             }

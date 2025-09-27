@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class TestRunner:
@@ -28,7 +28,7 @@ class TestRunner:
         self, cmd: list[str], description: str, timeout: int | None = None
     ) -> bool:
         """Run a command with enhanced error handling and reporting."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"🚀 Running: {description}")
         print(f"📝 Command: {' '.join(cmd)}")
         print("=" * 60)
@@ -173,14 +173,14 @@ class TestRunner:
             print(f"⏭️  Skipping {description} - directory not found: {test_path}")
             return True
 
-        cmd = self.build_pytest_command(args) + [test_path]
+        cmd = [*self.build_pytest_command(args), test_path]
         return self.run_command(cmd, description, timeout)
 
     def print_summary(self):
         """Print comprehensive test summary."""
         total_duration = time.time() - self.start_time
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("📊 TEST EXECUTION SUMMARY")
         print("=" * 60)
 
@@ -191,7 +191,7 @@ class TestRunner:
 
         print(f"⏱️  Total Duration: {total_duration:.1f}s")
         print(
-            f"📈 Success Rate: {success_count}/{total_count} ({success_count/total_count*100:.1f}%)"
+            f"📈 Success Rate: {success_count}/{total_count} ({success_count / total_count * 100:.1f}%)"
         )
         print()
 

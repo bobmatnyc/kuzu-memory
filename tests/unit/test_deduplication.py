@@ -278,7 +278,7 @@ class TestDeduplicationEngine:
         )
 
         # Should only find semantic memories
-        for memory, score, match_type in duplicates:
+        for memory, _score, _match_type in duplicates:
             assert memory.memory_type == MemoryType.SEMANTIC
 
     def test_memory_type_filtering_no_matches(self, dedup_engine, sample_memories):
@@ -301,7 +301,7 @@ class TestDeduplicationEngine:
         duplicates = strict_dedup_engine.find_duplicates(content, sample_memories)
 
         # Strict thresholds should find fewer matches
-        high_similarity_matches = [d for d in duplicates if d[1] >= 0.95]
+        [d for d in duplicates if d[1] >= 0.95]
         # May or may not find matches depending on exact similarity
         assert isinstance(duplicates, list)  # Should not crash
 

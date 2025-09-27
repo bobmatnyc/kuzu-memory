@@ -210,7 +210,7 @@ def uninstall(ctx, ai_system, project, confirm):
         status = installer.get_status()
         if not status["installed"]:
             rich_print(
-                f"[blue]ℹ️  {installer.ai_system_name} integration is not installed.[/blue]"
+                f"[blue][i] {installer.ai_system_name} integration is not installed.[/blue]"
             )
             sys.exit(0)
 
@@ -380,7 +380,7 @@ def _show_next_steps(ai_system: str, project_root: Path):
 
 2. **Check the examples:**
    ls examples/
-   
+
 3. **Test basic functionality:**
    kuzu-memory enhance "How do I deploy this?" --format plain
    kuzu-memory learn "Test integration" --quiet

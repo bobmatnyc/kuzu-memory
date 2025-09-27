@@ -177,7 +177,7 @@ class Memory(BaseModel):
         if not isinstance(v, list):
             raise ValueError("Entities must be a list")
         # Remove duplicates and empty strings
-        return list(set(entity.strip() for entity in v if entity and entity.strip()))
+        return list({entity.strip() for entity in v if entity and entity.strip()})
 
     @model_validator(mode="before")
     @classmethod
@@ -437,7 +437,7 @@ class MemoryContext(BaseModel):
             "types": type_counts,
             "avg_importance": round(avg_importance, 3),
             "avg_confidence": round(avg_confidence, 3),
-            "entities": sorted(list(all_entities)),
+            "entities": sorted(all_entities),
         }
 
 

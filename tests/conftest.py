@@ -9,7 +9,7 @@ import logging
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -203,9 +203,9 @@ class MemoryTestHelper:
     @staticmethod
     def assert_enhanced_prompt_contains(context, expected_content: str):
         """Assert that enhanced prompt contains expected content."""
-        assert (
-            expected_content.lower() in context.enhanced_prompt.lower()
-        ), f"Enhanced prompt does not contain '{expected_content}'"
+        assert expected_content.lower() in context.enhanced_prompt.lower(), (
+            f"Enhanced prompt does not contain '{expected_content}'"
+        )
 
     @staticmethod
     def count_memories_by_type(memories: list, memory_type) -> int:
@@ -222,9 +222,9 @@ class MemoryTestHelper:
         actual_time_ms: float, limit_ms: float, operation: str
     ):
         """Assert that operation time is within performance limit."""
-        assert (
-            actual_time_ms <= limit_ms
-        ), f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        assert actual_time_ms <= limit_ms, (
+            f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        )
 
     @staticmethod
     def create_test_memory_content(

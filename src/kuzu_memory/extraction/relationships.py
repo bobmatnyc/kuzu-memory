@@ -223,7 +223,6 @@ class RelationshipDetector:
             new_memory.memory_type == existing_memory.memory_type
             and new_memory.memory_type in [MemoryType.SEMANTIC, MemoryType.PROCEDURAL]
         ):
-
             # Same type memories in specific categories are likely related
             relationship = Relationship(
                 source_id=new_memory.id,
@@ -248,7 +247,6 @@ class RelationshipDetector:
             and existing_memory.session_id
             and new_memory.session_id == existing_memory.session_id
         ):
-
             # Check that both memories have created_at timestamps
             if new_memory.created_at and existing_memory.created_at:
                 time_diff = abs(
@@ -276,8 +274,8 @@ class RelationshipDetector:
             return False
 
         # Tokenize and normalize
-        words1 = set(word.lower() for word in context1.split() if len(word) > 2)
-        words2 = set(word.lower() for word in context2.split() if len(word) > 2)
+        words1 = {word.lower() for word in context1.split() if len(word) > 2}
+        words2 = {word.lower() for word in context2.split() if len(word) > 2}
 
         if not words1 or not words2:
             return False

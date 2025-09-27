@@ -338,7 +338,7 @@ def test_claude_integration(ctx, project_root):
 
         # Test 4: MCP server module
         try:
-            from ..integrations import mcp_server
+            from ..integrations import mcp_server  # noqa: F401
 
             tests.append(("MCP Server Module", True, "Module available"))
         except ImportError:

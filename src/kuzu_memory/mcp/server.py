@@ -141,7 +141,7 @@ class MCPServer:
             args.append("--quiet")
 
         # Run async to not block
-        result = self._run_cli(args, timeout=2)  # Short timeout for async operation
+        self._run_cli(args, timeout=2)  # Short timeout for async operation
 
         return {
             "success": True,  # Always return success for async operations

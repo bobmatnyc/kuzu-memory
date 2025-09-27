@@ -45,7 +45,7 @@ def find_project_root(start_path: Path | None = None) -> Path | None:
     ]
 
     # Walk up the directory tree
-    for parent in [current] + list(current.parents):
+    for parent in [current, *list(current.parents)]:
         for indicator in project_indicators:
             if (parent / indicator).exists():
                 logger.debug(f"Found project root at {parent} (indicator: {indicator})")
@@ -177,7 +177,7 @@ This directory contains the KuzuMemory database for the **{project_name}** proje
 
 This memory database stores:
 - **Project context** - Architecture, decisions, patterns
-- **Team knowledge** - Preferences, conventions, best practices  
+- **Team knowledge** - Preferences, conventions, best practices
 - **Development history** - Solutions, learnings, gotchas
 - **AI context** - Information for enhanced AI assistance
 
@@ -259,7 +259,7 @@ kuzu-memory cleanup
 
 ---
 
-**This directory is managed by KuzuMemory v1.0.0**  
+**This directory is managed by KuzuMemory v1.0.0**
 Generated on: {project_root.stat().st_mtime}
 """
 
@@ -274,10 +274,10 @@ This file contains structured information about the project that helps KuzuMemor
 
 ## 🏗️ Project Overview
 
-**Project Name**: {project_name}  
-**Type**: [Web App / API / Library / CLI Tool / etc.]  
-**Language**: [Python / JavaScript / Rust / etc.]  
-**Framework**: [FastAPI / React / Django / etc.]  
+**Project Name**: {project_name}
+**Type**: [Web App / API / Library / CLI Tool / etc.]
+**Language**: [Python / JavaScript / Rust / etc.]
+**Framework**: [FastAPI / React / Django / etc.]
 
 ## 🎯 Project Purpose
 

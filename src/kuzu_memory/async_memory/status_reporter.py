@@ -212,7 +212,6 @@ class MemoryStatusReporter:
     def _check_task_updates(self):
         """Check for task status updates and generate reports."""
         # Get current tasks from queue manager
-        current_tasks = {}
 
         # This would need to be implemented in queue_manager
         # For now, we'll simulate with a simple approach
@@ -245,7 +244,6 @@ class MemoryStatusReporter:
             not self.stats["last_report_time"]
             or (now - self.stats["last_report_time"]).total_seconds() > 60
         ):
-
             queue_stats = self.queue_manager.get_queue_stats()
             learning_stats = self.background_learner.get_learning_stats()
 

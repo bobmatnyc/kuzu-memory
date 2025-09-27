@@ -12,18 +12,18 @@ from .memory import KuzuMemory
 from .models import ExtractedMemory, Memory, MemoryContext, MemoryType
 
 __all__ = [
+    "ExtractedMemory",
+    "ExtractionConfig",
     # Main API
     "KuzuMemory",
+    # Configuration
+    "KuzuMemoryConfig",
     # Models
     "Memory",
     "MemoryContext",
     "MemoryType",
-    "ExtractedMemory",
-    # Configuration
-    "KuzuMemoryConfig",
-    "StorageConfig",
-    "RecallConfig",
-    "ExtractionConfig",
     "PerformanceConfig",
+    "RecallConfig",
     "RetentionConfig",
+    "StorageConfig",
 ]

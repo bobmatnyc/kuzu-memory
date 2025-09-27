@@ -6,8 +6,8 @@ with pooling, health checks, and resource management.
 """
 
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
-from typing import Any, AsyncContextManager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from typing import Any
 
 
 class IConnection(ABC):
@@ -88,7 +88,7 @@ class IConnectionPool(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def get_connection(self) -> AsyncContextManager[IConnection]:
+    async def get_connection(self) -> AbstractAsyncContextManager[IConnection]:
         """
         Get a connection from the pool.
 

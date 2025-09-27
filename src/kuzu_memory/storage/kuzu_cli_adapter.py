@@ -166,7 +166,7 @@ class KuzuCLIAdapter:
             execution_time_ms = (time.time() - start_time) * 1000
             raise PerformanceError("execute_query", execution_time_ms, timeout_ms)
         except Exception as e:
-            if isinstance(e, (DatabaseError, PerformanceError)):
+            if isinstance(e, DatabaseError | PerformanceError):
                 raise
 
             # Check for specific error types
@@ -196,7 +196,8 @@ class KuzuCLIAdapter:
 
             # Format value based on type
             if isinstance(param_value, str):
-                formatted_value = f"'{param_value.replace('\'', '\\\'')}'"
+                escaped_value = param_value.replace("'", "\\'")
+                formatted_value = f"'{escaped_value}'"
             elif isinstance(param_value, datetime):
                 formatted_value = f"'{param_value.isoformat()}'"
             elif isinstance(param_value, bool):
@@ -259,7 +260,7 @@ class KuzuCLIAdapter:
         Returns:
             List of results for each query
         """
-        start_time = time.time()
+        time.time()
         timeout_ms = timeout_ms or self.config.storage.query_timeout_ms
 
         # Build transaction query
@@ -289,7 +290,7 @@ class KuzuCLIAdapter:
             # Try to rollback
             try:
                 self.execute_query("ROLLBACK;", timeout_ms=5000)
-            except:
+            except Exception:
                 pass  # Rollback failed, but original error is more important
             raise
 
@@ -298,7 +299,7 @@ class KuzuCLIAdapter:
         try:
             # Query for basic statistics
             stats_query = """
-            MATCH (m:Memory) 
+            MATCH (m:Memory)
             WITH COUNT(m) as memory_count
             MATCH (e:Entity)
             WITH memory_count, COUNT(e) as entity_count

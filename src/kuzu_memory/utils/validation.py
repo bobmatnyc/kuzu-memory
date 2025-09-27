@@ -121,7 +121,7 @@ def validate_confidence_score(
     Raises:
         ValidationError: If confidence is invalid
     """
-    if not isinstance(confidence, (int, float)):
+    if not isinstance(confidence, int | float):
         raise ValidationError(field_name, str(type(confidence)), "must be a number")
 
     if not (MIN_CONFIDENCE <= confidence <= MAX_CONFIDENCE):
@@ -203,7 +203,7 @@ def validate_config_dict(config: dict[str, Any]) -> dict[str, Any]:
 
         if "max_size_mb" in storage_config:
             max_size = storage_config["max_size_mb"]
-            if not isinstance(max_size, (int, float)) or max_size <= 0:
+            if not isinstance(max_size, int | float) or max_size <= 0:
                 raise ValidationError(
                     "config.storage.max_size_mb",
                     str(max_size),

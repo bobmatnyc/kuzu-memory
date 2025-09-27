@@ -78,7 +78,7 @@ def test_cli_adapter():
 
                 # Query data
                 select_query = """
-                MATCH (n:TestNode) 
+                MATCH (n:TestNode)
                 RETURN n.id, n.name
                 """
 
@@ -226,9 +226,9 @@ def main():
             print(f"\n❌ {test_name} test error: {e}")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📊 TEST SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"🎯 Results: {passed}/{len(tests)} tests passed")
 
     if passed == len(tests):

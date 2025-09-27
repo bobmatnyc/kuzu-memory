@@ -176,7 +176,7 @@ class RecallCoordinator:
             return context
 
         except Exception as e:
-            if isinstance(e, (RecallError, PerformanceError)):
+            if isinstance(e, RecallError | PerformanceError):
                 raise
             raise RecallError(f"Recall failed for prompt '{prompt}': {e!s}")
 
