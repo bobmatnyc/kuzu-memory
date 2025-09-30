@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2025-09-29
+
+### Fixed
+- Updated MCP protocol version from "2024-11-05" to "2025-06-18" for Claude Code compatibility
+  - Maintains backward compatibility with legacy protocol version
+  - Fixes version negotiation to prefer latest supported version
+  - Resolves MCP server connection issues with Claude Desktop
+
+### Changed
+- Improved CLI syntax: `kuzu-memory recent --limit N` replaces `--recent N`
+  - Eliminates redundant "recent --recent" syntax
+  - Maintains backward compatibility with deprecation warning
+  - Follows common CLI conventions for result limiting
+
 ## [1.1.5] - 2025-09-29
 
 ### Fixed
@@ -112,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.2...v1.1.3
