@@ -7,7 +7,7 @@
 ## 🔴 CRITICAL PROJECT INFORMATION
 
 ### Project Identity
-- **Name**: KuzuMemory v1.1.0
+- **Name**: KuzuMemory v1.1.4
 - **Type**: Python CLI Library/Tool for AI Memory Management
 - **Path**: `/Users/masa/Projects/managed/kuzu-memory`
 - **Language**: Python 3.11+
@@ -16,28 +16,29 @@
 ### Core Mission
 Lightweight, embedded graph-based memory system for AI applications using cognitive memory models inspired by human memory psychology. Provides fast, offline memory capabilities without requiring LLM calls.
 
-### Production Status - v1.1.0 Release Success
+### Production Status - v1.1.4 Release
 ✅ **Published to PyPI**: Available as `kuzu-memory` package
 ✅ **Performance Verified**: 3ms recall, genuine Kuzu graph database
 ✅ **Database Confirmed**: Genuine Kuzu implementation validated
-❌ **Known Issues Identified**: Critical functionality issues discovered
+✅ **MCP Server Fixed**: Async stdin issue resolved for Claude Desktop integration
+✅ **Memory Recall Fixed**: Search functionality restored (fixed in v1.1.3)
 
-### ⚠️ KNOWN CRITICAL ISSUES
-**Status**: Production Ready with Known Limitations
-**Documentation**: See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for complete details
+### ⚠️ RESOLVED ISSUES (as of v1.1.4)
+**Status**: Production Ready
+**Documentation**: See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for historical issues
 
-**BLOCKING ISSUES**:
-- ❌ **MCP Server Non-Functional**: RuntimeError with async generator - **blocks Claude Desktop integration**
-- ❌ **Memory Recall Broken**: Search returns empty results - **blocks core functionality**
-- ⚠️ **Dual Database Locations**: Data consistency risk with multiple database directories
+**RECENTLY FIXED**:
+- ✅ **MCP Server**: Fixed async stdin RuntimeError on macOS (v1.1.4)
+- ✅ **Memory Recall**: Search functionality restored (v1.1.3)
+- ✅ **Claude Desktop Integration**: Now fully functional with thread-based stdin reading
 
 **DEPLOYMENT GUIDANCE**:
-- ✅ **CLI Interface**: Safe for development and testing
-- ✅ **Python API**: Functional with documented workarounds
-- ❌ **MCP Server**: DO NOT DEPLOY until v1.1.1 fixes
-- ⚠️ **Production Use**: DELAY until recall functionality restored
+- ✅ **CLI Interface**: Fully functional for all operations
+- ✅ **Python API**: Production ready
+- ✅ **MCP Server**: Fixed and ready for Claude Desktop integration
+- ✅ **Production Use**: All critical issues resolved
 
-**MITIGATION**: Use CLI interface and Python API while awaiting v1.1.1 critical fixes
+**STATUS**: All major blocking issues have been resolved as of v1.1.4
 
 ### Security & Infrastructure Standards
 - **Version Control**: All changes tracked with semantic versioning
@@ -412,4 +413,4 @@ kuzu-memory stats --validate                 # Verify restoration
 
 ---
 
-**Version**: 1.1.0 | **Updated**: 2025-09-27 | **Status**: Production Ready | **PyPI**: Available | **Performance**: 3ms Recall ✅ | **Claude MPM**: Fully Compliant
+**Version**: 1.1.4 | **Updated**: 2025-09-29 | **Status**: Production Ready | **PyPI**: Available | **Performance**: 3ms Recall ✅ | **MCP Server**: Fixed ✅ | **Claude MPM**: Fully Compliant

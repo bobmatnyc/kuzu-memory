@@ -37,6 +37,7 @@ class MCPServer:
         # Try common locations
         candidates = [
             "kuzu-memory",  # Global install
+            "/opt/homebrew/bin/kuzu-memory",  # Homebrew on macOS
             str(Path.home() / ".local" / "bin" / "kuzu-memory"),  # pipx
             str(self.project_root / ".venv" / "bin" / "kuzu-memory"),  # venv
             str(self.project_root / "venv" / "bin" / "kuzu-memory"),  # venv
@@ -162,7 +163,7 @@ class MCPServer:
         Returns:
             Relevant memories matching the query
         """
-        args = ["recall", query, "--max-results", str(limit), "--output-format", format]
+        args = ["recall", query, "--max-memories", str(limit), "--format", format]
         result = self._run_cli(args)
 
         if result["success"]:
@@ -178,20 +179,23 @@ class MCPServer:
             return {"memories": [], "success": False, "error": result["error"]}
 
     def remember(
-        self, content: str, type: str = "general", priority: int = 5
+        self, content: str, source: str = "mcp", session_id: str | None = None
     ) -> dict[str, Any]:
         """
         Store a direct memory.
 
         Args:
             content: The content to remember
-            type: Memory type
-            priority: Priority level (1-10)
+            source: Source of the memory
+            session_id: Session ID to group related memories
 
         Returns:
             Status of memory storage
         """
-        args = ["remember", content, "--type", type, "--priority", str(priority)]
+        args = ["remember", content, "--source", source]
+        if session_id:
+            args.extend(["--session-id", session_id])
+
         result = self._run_cli(args)
 
         return {
@@ -210,7 +214,7 @@ class MCPServer:
         Returns:
             Memory system statistics
         """
-        args = ["stats", "--output-format", format]
+        args = ["stats", "--format", format]
         if detailed:
             args.append("--detailed")
 
@@ -239,7 +243,7 @@ class MCPServer:
         Returns:
             Recent memories
         """
-        args = ["recent", "--count", str(limit), "--format", format]
+        args = ["recent", "--recent", str(limit), "--format", format]
         result = self._run_cli(args)
 
         if result["success"]:
@@ -294,9 +298,11 @@ class MCPServer:
 
         result = self._run_cli(args)
 
+        # Always return success field for consistency
         return {
             "success": result["success"],
-            "project_info": result["output"] if result["success"] else result["error"],
+            "project_info": result["output"] if result["success"] else "",
+            "error": result["error"] if not result["success"] else None,
         }
 
     def init(self, path: str | None = None, force: bool = False) -> dict[str, Any]:
@@ -398,15 +404,15 @@ class MCPServer:
                         "required": True,
                         "description": "Content to remember",
                     },
-                    "type": {
+                    "source": {
                         "type": "string",
-                        "default": "general",
-                        "description": "Memory type",
+                        "default": "mcp",
+                        "description": "Source of the memory",
                     },
-                    "priority": {
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Priority (1-10)",
+                    "session_id": {
+                        "type": "string",
+                        "required": False,
+                        "description": "Session ID to group related memories",
                     },
                 },
             },

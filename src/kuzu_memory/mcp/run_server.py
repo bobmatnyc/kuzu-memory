@@ -94,6 +94,8 @@ class MCPProtocolHandler:
             elif method == "shutdown":
                 # Shutdown the server
                 self.running = False
+                # Also signal the protocol to stop
+                self.protocol.running = False
                 return JSONRPCMessage.create_response(request_id, {})
 
             elif method == "ping":
@@ -293,17 +295,14 @@ class MCPProtocolHandler:
                             "type": "string",
                             "description": "Content to remember",
                         },
-                        "type": {
+                        "source": {
                             "type": "string",
-                            "default": "general",
-                            "description": "Memory type",
+                            "default": "mcp",
+                            "description": "Source of the memory",
                         },
-                        "priority": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 10,
-                            "default": 5,
-                            "description": "Priority level",
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID to group related memories",
                         },
                     },
                     "required": ["content"],
@@ -433,6 +432,10 @@ class MCPProtocolHandler:
                     response = await self.handle_request(message)
                     if response is not None:
                         self.protocol.write_message(response)
+
+                    # Check if we should stop after processing
+                    if not self.running:
+                        break
 
             except asyncio.CancelledError:
                 break

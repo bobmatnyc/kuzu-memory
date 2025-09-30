@@ -5,7 +5,7 @@ model: opus
 type: engineer
 color: blue
 category: engineering
-version: "3.8.1"
+version: "3.9.0"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.472561Z
 updated_at: 2025-08-25T15:30:00.000000Z

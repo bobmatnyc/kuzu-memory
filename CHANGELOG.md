@@ -7,10 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2025-09-29
+
+### Fixed
+- Fixed MCP server async stdin issue on macOS by implementing thread-based synchronous reading
+  - Resolves "can't register file descriptor 0" RuntimeError when running MCP server
+  - Enables proper Claude Desktop integration through stable stdin communication
+  - MCP server now uses synchronous stdin reading in a separate thread to avoid async event loop conflicts
+- MCP server `remember` command parameters now correctly match CLI arguments (source, session_id instead of type, priority)
+
 ## [1.1.3] - 2025-09-27
 
+### Fixed
+- Critical memory recall functionality that was returning empty results due to overly restrictive agent_id filtering
+- MCP server parameter names now correctly match CLI command arguments (--max-memories, --format)
+- MCPServer now properly detects homebrew installations on macOS
+
 ### Changed
-- Version bump
+- KeywordRecallStrategy, EntityRecallStrategy, and TemporalRecallStrategy now only filter by agent_id when explicitly provided
+- MCP server is fully integrated into main CLI as `kuzu-memory mcp serve` (no separate script needed)
 
 ## [1.1.2] - 2025-09-27
 
@@ -87,7 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.0...v1.1.1

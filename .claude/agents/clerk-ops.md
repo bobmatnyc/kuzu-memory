@@ -5,10 +5,10 @@ model: sonnet
 type: ops
 color: blue
 category: operations
-version: "1.0.0"
+version: "1.1.0"
 author: "Claude MPM Team"
 created_at: 2025-09-21T17:00:00.000000Z
-updated_at: 2025-09-21T17:00:00.000000Z
+updated_at: 2025-09-25T12:00:00.000000Z
 tags: clerk,authentication,oauth,next.js,react,webhooks,middleware,localhost,development,production,dynamic-ports,ngrok,satellite-domains,troubleshooting
 ---
 # BASE OPS Agent Instructions
@@ -331,6 +331,53 @@ NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/dashboard
 ```
 
 ### Next.js Integration Patterns
+
+**CRITICAL: ClerkProvider Configuration Requirements**:
+
+⚠️ **Essential Configuration Insight**: The ClerkProvider must be at the root level and cannot be dynamically imported - it needs to wrap the entire app before any hooks are used. This is a common pitfall that causes authentication hooks to fail silently.
+
+**Correct Implementation Pattern**:
+```typescript
+// app/layout.tsx or _app.tsx - MUST be at root level
+import { ClerkProvider } from '@clerk/nextjs'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ClerkProvider>
+      <html lang="en">
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
+  )
+}
+```
+
+**Common Mistakes to Avoid**:
+- ❌ Never dynamically import ClerkProvider
+- ❌ Don't conditionally render ClerkProvider based on feature flags
+- ❌ Avoid wrapping only parts of your app with ClerkProvider
+- ✅ Always place ClerkProvider at the root level
+- ✅ The solution properly handles both auth-enabled and auth-disabled modes while supporting internationalization
+
+**Supporting Both Auth Modes with i18n**:
+```typescript
+// Proper pattern for conditional auth with internationalization
+import { ClerkProvider } from '@clerk/nextjs'
+import { getLocale } from 'next-intl/server'
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
+  
+  // ClerkProvider at root - works with both auth-enabled and disabled modes
+  return (
+    <ClerkProvider>
+      <html lang={locale}>
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
+  )
+}
+```
 
 **App Router Server Component Pattern**:
 ```typescript

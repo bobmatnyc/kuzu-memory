@@ -52,7 +52,9 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
         else:
             project_path = Path.cwd()
 
-        rich_print(f"Starting MCP server for project: {project_path}", style="blue")
+        # When running MCP server, all logging must go to stderr to avoid
+        # contaminating stdout which must contain only JSON-RPC messages
+        print(f"Starting MCP server for project: {project_path}", file=sys.stderr)
 
         # Import the run_server module
         from ..mcp.run_server import main
@@ -61,10 +63,10 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
         asyncio.run(main())
 
     except KeyboardInterrupt:
-        rich_print("\n🛑 MCP server stopped", style="yellow")
+        print("\n🛑 MCP server stopped", file=sys.stderr)
         sys.exit(0)
     except Exception as e:
-        rich_print(f"❌ MCP server error: {e}", style="red")
+        print(f"❌ MCP server error: {e}", file=sys.stderr)
         if ctx.obj.get("debug"):
             raise
         sys.exit(1)

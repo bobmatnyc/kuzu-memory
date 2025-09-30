@@ -83,7 +83,11 @@ def init(ctx, force, config_path):
                 memory.remember(
                     context_str,
                     source="project-initialization",
-                    metadata={"type": "project-context", "auto-generated": True, **project_context},
+                    metadata={
+                        "type": "project-context",
+                        "auto-generated": True,
+                        **project_context,
+                    },
                 )
 
         rich_print(f"✅ Initialized database: {db_path}")

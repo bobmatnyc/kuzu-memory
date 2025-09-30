@@ -8,8 +8,11 @@ Claude Code and the KuzuMemory MCP server.
 import asyncio
 import json
 import logging
+import select
 import sys
+import threading
 from enum import IntEnum
+from queue import Empty, Queue
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -175,16 +178,69 @@ class JSONRPCProtocol:
 
     def __init__(self):
         """Initialize JSON-RPC protocol handler."""
-        self.reader = None
+        self.reader = sys.stdin
         self.writer = sys.stdout
         self.running = True
         self._buffer = ""
+        self._message_queue = Queue()
+        self._reader_thread = None
+
+    def _read_stdin_sync(self):
+        """Synchronously read from stdin in a separate thread."""
+        try:
+            while self.running:
+                # Use select to check if stdin has data available (with timeout)
+                # This allows us to periodically check self.running
+                if sys.platform == "win32":
+                    # Windows doesn't support select on stdin, use blocking read
+                    line = self.reader.readline()
+                else:
+                    # Unix-like systems: use select with timeout
+                    ready, _, exceptional = select.select(
+                        [self.reader], [], [self.reader], 0.5
+                    )
+
+                    if exceptional:
+                        # Exception on stdin (closed, etc)
+                        self._message_queue.put(None)
+                        self.running = False
+                        break
+
+                    if not ready:
+                        # Timeout - check if we should continue
+                        if not self.running:
+                            break
+                        continue
+
+                    # Data is available, read it
+                    line = self.reader.readline()
+
+                if not line:  # EOF
+                    # Signal EOF by putting None in queue
+                    self._message_queue.put(None)
+                    self.running = False  # Stop the protocol
+                    break
+
+                line = line.strip()
+                if line:  # Skip empty lines
+                    self._message_queue.put(line)
+
+                # Check if we should stop
+                if not self.running:
+                    break
+
+        except Exception as e:
+            logger.error(f"Error in stdin reader thread: {e}")
+            self._message_queue.put(None)
+            self.running = False
 
     async def initialize(self):
-        """Initialize stdio communication."""
-        self.reader = asyncio.StreamReader()
-        protocol = asyncio.StreamReaderProtocol(self.reader)
-        await asyncio.get_event_loop().connect_read_pipe(lambda: protocol, sys.stdin)
+        """Initialize stdio communication with synchronous reading thread."""
+        # Start the synchronous reader thread
+        self._reader_thread = threading.Thread(
+            target=self._read_stdin_sync, daemon=True
+        )
+        self._reader_thread.start()
 
     async def read_message(self) -> dict[str, Any] | None:
         """
@@ -193,32 +249,49 @@ class JSONRPCProtocol:
         Returns:
             Parsed message or None if EOF
         """
+        loop = asyncio.get_event_loop()
+
         while self.running:
             try:
-                # Read data from stdin
-                data = await self.reader.read(4096)
-                if not data:
-                    return None  # EOF
+                # Check for messages from the reader thread using executor
+                line = None
+                try:
+                    # Helper function that handles Empty exception
+                    def get_with_timeout():
+                        try:
+                            return self._message_queue.get(timeout=0.1)
+                        except Empty:
+                            return "__EMPTY__"  # Sentinel value for empty queue
 
-                self._buffer += data.decode("utf-8")
+                    # Run blocking queue.get in executor to avoid blocking the event loop
+                    result = await loop.run_in_executor(None, get_with_timeout)
 
-                # Look for complete JSON messages (line-delimited)
-                while "\n" in self._buffer:
-                    line, self._buffer = self._buffer.split("\n", 1)
-                    line = line.strip()
+                    if result == "__EMPTY__":
+                        raise Empty()  # Re-raise for the outer handler
 
-                    if not line:
-                        continue  # Skip empty lines
+                    line = result
+                except Empty:
+                    # Check if we should stop
+                    if not self.running:
+                        return None
+                    # No message yet, continue waiting
+                    await asyncio.sleep(0.01)
+                    continue
 
-                    try:
-                        return JSONRPCMessage.parse_request(line)
-                    except JSONRPCError as e:
-                        # Return error as a special message
-                        return {
-                            "jsonrpc": "2.0",
-                            "error": e.to_dict(),
-                            "id": None,  # We don't know the ID yet
-                        }
+                if line is None:
+                    # EOF signal received
+                    return None
+
+                # Parse the JSON-RPC message
+                try:
+                    return JSONRPCMessage.parse_request(line)
+                except JSONRPCError as e:
+                    # Return error as a special message
+                    return {
+                        "jsonrpc": "2.0",
+                        "error": e.to_dict(),
+                        "id": None,  # We don't know the ID yet
+                    }
 
             except asyncio.CancelledError:
                 self.running = False
@@ -262,6 +335,12 @@ class JSONRPCProtocol:
     def close(self):
         """Close the protocol handler."""
         self.running = False
+        # Stop the reader thread
+        if self._reader_thread and self._reader_thread.is_alive():
+            # Put None to signal thread to exit
+            self._message_queue.put(None)
+            # Give thread time to exit gracefully
+            self._reader_thread.join(timeout=1.0)
 
 
 class BatchRequestHandler:
