@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-09-29
+
+### Fixed
+- Fixed MCP server stdout contamination issue for proper protocol compliance
+  - Redirected startup message "Starting MCP server for project: ..." from stdout to stderr
+  - MCP protocol requires stdout to contain only JSON-RPC messages
+  - All logging and status messages now correctly output to stderr
+  - Resolves integration issues with Claude Desktop and other MCP clients
+  - Added comprehensive unit tests to prevent regression of this issue
+
 ## [1.1.4] - 2025-09-29
 
 ### Fixed
@@ -102,7 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.1...v1.1.2
