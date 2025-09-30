@@ -43,13 +43,18 @@ class MCPProtocolComplianceTest:
         # For testing, we need to run the development version directly
         # to ensure we test the current code changes
         import os
+
         project_root = Path(__file__).parent.parent
-        cmd = [sys.executable, "-c", f"""
+        cmd = [
+            sys.executable,
+            "-c",
+            f"""
 import sys
 sys.path.insert(0, '{project_root}/src')
 from kuzu_memory.cli.commands import cli
 cli(['mcp', 'serve'])
-"""]
+""",
+        ]
 
         self.process = subprocess.Popen(
             cmd,
@@ -148,11 +153,7 @@ def is_valid_json_rpc(line: str) -> bool:
         # Check for JSON-RPC 2.0 format
         if "jsonrpc" in msg and msg["jsonrpc"] == "2.0":
             # Must have either method (request) or result/error (response)
-            return (
-                "method" in msg
-                or "result" in msg
-                or "error" in msg
-            )
+            return "method" in msg or "result" in msg or "error" in msg
     except (json.JSONDecodeError, TypeError):
         pass
     return False
@@ -178,14 +179,10 @@ def test_startup_message_goes_to_stderr():
                 )
 
         # Check that startup message is in stderr
-        startup_found = any(
-            "Starting MCP server" in line
-            for line in stderr_lines
-        )
+        startup_found = any("Starting MCP server" in line for line in stderr_lines)
 
         assert startup_found, (
-            "Startup message should be in stderr. "
-            f"stderr: {stderr_lines}"
+            "Startup message should be in stderr. " f"stderr: {stderr_lines}"
         )
 
     finally:
@@ -204,12 +201,7 @@ def test_json_rpc_communication_clean():
         test.capture_all_output(timeout=0.5)
 
         # Send initialize request
-        request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {}
-        }
+        request = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
 
         response = test.send_request(request)
 
@@ -218,17 +210,12 @@ def test_json_rpc_communication_clean():
         assert response.get("jsonrpc") == "2.0", "Invalid JSON-RPC version"
         assert "id" in response, "Missing id in response"
         assert response["id"] == 1, "Mismatched request id"
-        assert "result" in response or "error" in response, (
-            "Response must have result or error"
-        )
+        assert (
+            "result" in response or "error" in response
+        ), "Response must have result or error"
 
         # Send tools/list request
-        request = {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {}
-        }
+        request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
 
         response = test.send_request(request)
 
@@ -243,9 +230,7 @@ def test_json_rpc_communication_clean():
         # Verify stdout is clean (empty or only JSON-RPC)
         for line in stdout_lines:
             if line and not is_valid_json_rpc(line):
-                pytest.fail(
-                    f"Non-JSON-RPC content in stdout: {line}"
-                )
+                pytest.fail(f"Non-JSON-RPC content in stdout: {line}")
 
     finally:
         test.cleanup()
@@ -264,7 +249,7 @@ def test_error_messages_go_to_stderr():
             "jsonrpc": "2.0",
             "id": 3,
             "method": "non_existent_method",
-            "params": {}
+            "params": {},
         }
 
         response = test.send_request(request)
@@ -286,9 +271,9 @@ def test_error_messages_go_to_stderr():
         if error_response_line:
             error_response = json.loads(error_response_line.decode())
             assert "error" in error_response, "Expected error response"
-            assert error_response["error"]["code"] == -32700, (
-                "Expected parse error code"
-            )
+            assert (
+                error_response["error"]["code"] == -32700
+            ), "Expected parse error code"
 
         # Capture any logging output
         stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
@@ -296,9 +281,7 @@ def test_error_messages_go_to_stderr():
         # Verify stdout only has JSON-RPC
         for line in stdout_lines:
             if line and not is_valid_json_rpc(line):
-                pytest.fail(
-                    f"Non-JSON-RPC content in stdout: {line}"
-                )
+                pytest.fail(f"Non-JSON-RPC content in stdout: {line}")
 
     finally:
         test.cleanup()
@@ -314,18 +297,8 @@ def test_batch_requests_clean_stdout():
 
         # Send batch request
         batch_request = [
-            {
-                "jsonrpc": "2.0",
-                "id": 4,
-                "method": "tools/list",
-                "params": {}
-            },
-            {
-                "jsonrpc": "2.0",
-                "id": 5,
-                "method": "ping",
-                "params": {}
-            }
+            {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}},
+            {"jsonrpc": "2.0", "id": 5, "method": "ping", "params": {}},
         ]
 
         batch_str = json.dumps(batch_request) + "\n"
@@ -351,9 +324,7 @@ def test_batch_requests_clean_stdout():
         # Verify stdout is clean
         for line in stdout_lines:
             if line and not is_valid_json_rpc(line):
-                pytest.fail(
-                    f"Non-JSON-RPC content in stdout during batch: {line}"
-                )
+                pytest.fail(f"Non-JSON-RPC content in stdout during batch: {line}")
 
     finally:
         test.cleanup()
@@ -368,12 +339,7 @@ def test_shutdown_clean():
         test.start_mcp_server()
 
         # Send shutdown request
-        request = {
-            "jsonrpc": "2.0",
-            "id": 6,
-            "method": "shutdown",
-            "params": {}
-        }
+        request = {"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": {}}
 
         response = test.send_request(request)
 
@@ -388,21 +354,17 @@ def test_shutdown_clean():
 
         # Capture any final output
         final_stdout = test.process.stdout.read().decode()
-        final_stderr = test.process.stderr.read().decode()
+        test.process.stderr.read().decode()
 
         # Check final stdout for cleanliness
         if final_stdout.strip():
-            for line in final_stdout.strip().split('\n'):
+            for line in final_stdout.strip().split("\n"):
                 if line and not is_valid_json_rpc(line):
-                    pytest.fail(
-                        f"Non-JSON-RPC in final stdout: {line}"
-                    )
+                    pytest.fail(f"Non-JSON-RPC in final stdout: {line}")
 
         # Shutdown messages should be in stderr if present
         if "MCP server" in final_stdout:
-            pytest.fail(
-                "Server messages found in stdout instead of stderr"
-            )
+            pytest.fail("Server messages found in stdout instead of stderr")
 
     finally:
         test.cleanup()
@@ -420,14 +382,8 @@ def test_long_running_compliance():
         operations = [
             ("initialize", {}),
             ("tools/list", {}),
-            ("tools/call", {
-                "name": "stats",
-                "arguments": {"detailed": False}
-            }),
-            ("tools/call", {
-                "name": "recall",
-                "arguments": {"query": "test"}
-            }),
+            ("tools/call", {"name": "stats", "arguments": {"detailed": False}}),
+            ("tools/call", {"name": "recall", "arguments": {"query": "test"}}),
             ("ping", {}),
         ]
 
@@ -436,7 +392,7 @@ def test_long_running_compliance():
                 "jsonrpc": "2.0",
                 "id": i + 10,
                 "method": method,
-                "params": params
+                "params": params,
             }
 
             response = test.send_request(request)
@@ -455,9 +411,7 @@ def test_long_running_compliance():
         # Final check - stdout should be clean
         for line in stdout_lines:
             if line and not is_valid_json_rpc(line):
-                pytest.fail(
-                    f"Protocol violation after operations: {line}"
-                )
+                pytest.fail(f"Protocol violation after operations: {line}")
 
     finally:
         test.cleanup()
@@ -491,7 +445,7 @@ if __name__ == "__main__":
 
             test_func()
             signal.alarm(0)  # Cancel alarm
-            print(f"  ✅ PASSED")
+            print("  ✅ PASSED")
         except TimeoutError as e:
             print(f"  ⏱️ TIMEOUT: {e}")
             failed.append((name, e))

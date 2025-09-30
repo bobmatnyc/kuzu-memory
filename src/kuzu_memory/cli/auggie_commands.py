@@ -321,9 +321,7 @@ def stats(ctx, verbose):
                     icon = (
                         "✅"
                         if status == "healthy"
-                        else "⚠️"
-                        if status == "warning"
-                        else "❌"
+                        else "⚠️" if status == "warning" else "❌"
                     )
                     rich_print(
                         f"   {component.replace('_', ' ').title()}: {icon} {status}"

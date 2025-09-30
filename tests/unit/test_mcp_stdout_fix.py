@@ -35,7 +35,7 @@ import sys
 sys.path.insert(0, '{src_path}')
 from kuzu_memory.cli.commands import cli
 cli(['mcp', 'serve'])
-"""
+""",
     ]
 
     process = subprocess.Popen(
@@ -43,7 +43,7 @@ cli(['mcp', 'serve'])
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=False
+        text=False,
     )
 
     try:
@@ -97,12 +97,12 @@ cli(['mcp', 'serve'])
     )
 
     # 3. Startup message SHOULD be in stderr
-    assert "Starting MCP server" in stderr_all, (
-        f"Startup message not found in stderr. stderr content: {stderr_all[:200]}"
-    )
+    assert (
+        "Starting MCP server" in stderr_all
+    ), f"Startup message not found in stderr. stderr content: {stderr_all[:200]}"
 
     # 4. Verify stdout contains only JSON-RPC
-    for line in stdout_full.strip().split('\n'):
+    for line in stdout_full.strip().split("\n"):
         if line.strip():
             # Each non-empty line should be valid JSON
             try:
@@ -127,7 +127,7 @@ import sys
 sys.path.insert(0, '{src_path}')
 from kuzu_memory.cli.commands import cli
 cli(['mcp', 'serve'])
-"""
+""",
     ]
 
     process = subprocess.Popen(
@@ -135,7 +135,7 @@ cli(['mcp', 'serve'])
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=False
+        text=False,
     )
 
     try:
@@ -147,7 +147,7 @@ cli(['mcp', 'serve'])
             "jsonrpc": "2.0",
             "id": 1,
             "method": "non_existent_method",
-            "params": {}
+            "params": {},
         }
         process.stdin.write((json.dumps(request) + "\n").encode())
         process.stdin.flush()
@@ -172,7 +172,7 @@ cli(['mcp', 'serve'])
 
     # Get remaining output
     stdout_rest = process.stdout.read().decode()
-    stderr_all = process.stderr.read().decode()
+    process.stderr.read().decode()
 
     # Verify error response is valid JSON-RPC
     assert error_response_line, "No error response received"
@@ -183,7 +183,7 @@ cli(['mcp', 'serve'])
 
     # Verify no error text leaked to stdout
     stdout_full = error_response_line.decode() + stdout_rest
-    for line in stdout_full.strip().split('\n'):
+    for line in stdout_full.strip().split("\n"):
         if line.strip():
             msg = json.loads(line)  # Should not raise - all lines must be valid JSON
             assert "jsonrpc" in msg
@@ -204,7 +204,7 @@ import sys
 sys.path.insert(0, '{src_path}')
 from kuzu_memory.cli.commands import cli
 cli(['mcp', 'serve'])
-"""
+""",
     ]
 
     process = subprocess.Popen(
@@ -212,7 +212,7 @@ cli(['mcp', 'serve'])
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=False
+        text=False,
     )
 
     try:
@@ -222,7 +222,7 @@ cli(['mcp', 'serve'])
         # Send batch request
         batch_request = [
             {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
-            {"jsonrpc": "2.0", "id": 2, "method": "ping", "params": {}}
+            {"jsonrpc": "2.0", "id": 2, "method": "ping", "params": {}},
         ]
         process.stdin.write((json.dumps(batch_request) + "\n").encode())
         process.stdin.flush()

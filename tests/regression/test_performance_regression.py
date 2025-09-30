@@ -149,17 +149,17 @@ class TestPerformanceRegression:
 
             # Regression assertions (allow 50% degradation for test environment)
             tolerance = 1.5
-            assert perf_stats["mean"] <= baseline["mean_ms"] * tolerance, (
-                f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["mean"] <= baseline["mean_ms"] * tolerance
+            ), f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p95"] <= baseline["p95_ms"] * tolerance, (
-                f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p95"] <= baseline["p95_ms"] * tolerance
+            ), f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p99"] <= baseline["p99_ms"] * tolerance, (
-                f"P99 performance regressed: {perf_stats['p99']:.2f}ms > {baseline['p99_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p99"] <= baseline["p99_ms"] * tolerance
+            ), f"P99 performance regressed: {perf_stats['p99']:.2f}ms > {baseline['p99_ms'] * tolerance:.2f}ms"
 
     @pytest.mark.skip(
         reason="Performance thresholds too aggressive for test environment"
@@ -199,13 +199,13 @@ class TestPerformanceRegression:
 
             # Regression assertions (allow 50% degradation for test environment)
             tolerance = 1.5
-            assert perf_stats["mean"] <= baseline["mean_ms"] * tolerance, (
-                f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["mean"] <= baseline["mean_ms"] * tolerance
+            ), f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p95"] <= baseline["p95_ms"] * tolerance, (
-                f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p95"] <= baseline["p95_ms"] * tolerance
+            ), f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
 
     @pytest.mark.skip(
         reason="Performance thresholds too aggressive for test environment"
@@ -272,9 +272,9 @@ class TestPerformanceRegression:
                 f"  Scaling factor: {actual_degradation:.2f}x (baseline limit: {baseline_scaling['degradation_factor']:.2f}x)"
             )
 
-            assert actual_degradation <= baseline_scaling["degradation_factor"], (
-                f"Scaling performance regressed: {actual_degradation:.2f}x > {baseline_scaling['degradation_factor']:.2f}x"
-            )
+            assert (
+                actual_degradation <= baseline_scaling["degradation_factor"]
+            ), f"Scaling performance regressed: {actual_degradation:.2f}x > {baseline_scaling['degradation_factor']:.2f}x"
 
     @pytest.mark.skip(
         reason="Performance thresholds too aggressive for test environment"
@@ -327,9 +327,9 @@ class TestPerformanceRegression:
             # Compare against baseline
             baseline_cache = performance_baseline["cache_performance"]
 
-            assert cache_speedup >= baseline_cache["cache_hit_speedup"], (
-                f"Cache speedup regressed: {cache_speedup:.2f}x < {baseline_cache['cache_hit_speedup']:.2f}x"
-            )
+            assert (
+                cache_speedup >= baseline_cache["cache_hit_speedup"]
+            ), f"Cache speedup regressed: {cache_speedup:.2f}x < {baseline_cache['cache_hit_speedup']:.2f}x"
 
     @pytest.mark.skip(
         reason="Performance thresholds too aggressive for test environment"
@@ -402,9 +402,9 @@ class TestPerformanceRegression:
             print(f"  Throughput: {throughput:.1f} ops/sec")
 
             # Regression assertions
-            assert mean_time < 50.0, (
-                f"Concurrent mean time regressed: {mean_time:.2f}ms"
-            )
+            assert (
+                mean_time < 50.0
+            ), f"Concurrent mean time regressed: {mean_time:.2f}ms"
             assert p95_time < 100.0, f"Concurrent P95 time regressed: {p95_time:.2f}ms"
             assert throughput > 10.0, f"Throughput regressed: {throughput:.1f} ops/sec"
 
@@ -450,9 +450,9 @@ class TestPerformanceRegression:
             print(f"  Memory increase: {memory_increase:.1f} MB")
 
             # Memory usage should be reasonable
-            assert memory_increase < 100.0, (
-                f"Memory usage regressed: {memory_increase:.1f} MB increase"
-            )
+            assert (
+                memory_increase < 100.0
+            ), f"Memory usage regressed: {memory_increase:.1f} MB increase"
 
     @pytest.mark.skip(
         reason="Performance thresholds too aggressive for test environment"
@@ -487,9 +487,9 @@ class TestPerformanceRegression:
             print(f"  Storage ratio: {storage_ratio:.2f}x")
 
             # Storage should be reasonably efficient
-            assert storage_ratio < 5.0, (
-                f"Database storage efficiency regressed: {storage_ratio:.2f}x"
-            )
-            assert size_increase < 10 * 1024 * 1024, (
-                f"Database size too large: {size_increase / 1024 / 1024:.1f} MB"
-            )
+            assert (
+                storage_ratio < 5.0
+            ), f"Database storage efficiency regressed: {storage_ratio:.2f}x"
+            assert (
+                size_increase < 10 * 1024 * 1024
+            ), f"Database size too large: {size_increase / 1024 / 1024:.1f} MB"
