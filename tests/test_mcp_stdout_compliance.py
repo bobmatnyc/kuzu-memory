@@ -437,8 +437,9 @@ if __name__ == "__main__":
             import signal
 
             # Add timeout to prevent hanging
+            test_name = name  # Capture name in local scope
             def timeout_handler(signum, frame):
-                raise TimeoutError(f"Test {name} timed out after 10 seconds")
+                raise TimeoutError(f"Test {test_name} timed out after 10 seconds")
 
             signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(10)  # 10 second timeout per test
