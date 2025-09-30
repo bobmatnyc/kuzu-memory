@@ -494,7 +494,13 @@ def recall(
 
 
 @click.command()
-@click.option("--recent", default=10, help="Number of recent memories to show")
+@click.option("--limit", default=10, help="Number of recent memories to show")
+@click.option(
+    "--recent",
+    "recent_deprecated",
+    type=int,
+    help="(Deprecated: use --limit instead)",
+)
 @click.option(
     "--format",
     "output_format",
@@ -503,7 +509,7 @@ def recall(
     help="Output format",
 )
 @click.pass_context
-def recent(ctx, recent, output_format):
+def recent(ctx, limit, recent_deprecated, output_format):
     """
     🕒 Show recent memories stored in the project.
 
@@ -516,7 +522,7 @@ def recent(ctx, recent, output_format):
       kuzu-memory recent
 
       # Show last 20 memories
-      kuzu-memory recent --recent 20
+      kuzu-memory recent --limit 20
 
       # JSON format for scripts
       kuzu-memory recent --format json
@@ -525,10 +531,18 @@ def recent(ctx, recent, output_format):
       kuzu-memory recent --format list
     """
     try:
+        # Handle backward compatibility - use --recent if provided, otherwise use --limit
+        if recent_deprecated is not None:
+            limit = recent_deprecated
+            rich_print(
+                "⚠️  Warning: --recent is deprecated. Please use --limit instead.",
+                style="yellow",
+            )
+
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
         with KuzuMemory(db_path=db_path) as memory:
-            memories = memory.get_recent_memories(limit=recent)
+            memories = memory.get_recent_memories(limit=limit)
 
             if not memories:
                 rich_print("[i]  No memories found in this project", style="blue")

@@ -106,9 +106,9 @@ class TestCacheIntegration:
             cold_cache_time = (cold_end_time - cold_start_time) * 1000
 
             assert len(cold_context.memories) > 0
-            assert (
-                cold_context.confidence > 0.1
-            ), f"Expected confidence > 0.1, got {cold_context.confidence}"
+            assert cold_context.confidence > 0.1, (
+                f"Expected confidence > 0.1, got {cold_context.confidence}"
+            )
 
             # Subsequent queries - warm cache
             warm_times = []
@@ -123,9 +123,9 @@ class TestCacheIntegration:
 
                 # Results should be consistent
                 assert len(warm_context.memories) > 0
-                assert (
-                    warm_context.confidence > 0.1
-                ), f"Expected confidence > 0.1, got {warm_context.confidence}"
+                assert warm_context.confidence > 0.1, (
+                    f"Expected confidence > 0.1, got {warm_context.confidence}"
+                )
 
             avg_warm_time = sum(warm_times) / len(warm_times)
             min_warm_time = min(warm_times)
@@ -142,12 +142,12 @@ class TestCacheIntegration:
             print(f"  Best improvement: {best_improvement:.1%}")
 
             # Validate cache effectiveness
-            assert (
-                cache_improvement > 0.1
-            ), f"Cache improvement {cache_improvement:.1%} insufficient"
-            assert (
-                avg_warm_time <= cold_cache_time
-            ), "Warm cache should not be slower than cold"
+            assert cache_improvement > 0.1, (
+                f"Cache improvement {cache_improvement:.1%} insufficient"
+            )
+            assert avg_warm_time <= cold_cache_time, (
+                "Warm cache should not be slower than cold"
+            )
 
     @pytest.mark.skip(
         reason="Memory extraction patterns need adjustment - no memories generated from test content"
@@ -442,15 +442,15 @@ class TestCacheIntegration:
         print(f"  Performance improvement: {performance_improvement:.1%}")
 
         # Cache should provide measurable improvement
-        assert (
-            performance_improvement > 0.05
-        ), f"Cache improvement {performance_improvement:.1%} too small"
+        assert performance_improvement > 0.05, (
+            f"Cache improvement {performance_improvement:.1%} too small"
+        )
         assert avg_cached < avg_uncached, "Cached queries should be faster on average"
 
         # Both should still meet performance targets
-        assert (
-            avg_cached < 100.0
-        ), f"Cached performance {avg_cached:.2f}ms still too slow"
-        assert (
-            avg_uncached < 200.0
-        ), f"Uncached performance {avg_uncached:.2f}ms too slow"
+        assert avg_cached < 100.0, (
+            f"Cached performance {avg_cached:.2f}ms still too slow"
+        )
+        assert avg_uncached < 200.0, (
+            f"Uncached performance {avg_uncached:.2f}ms too slow"
+        )

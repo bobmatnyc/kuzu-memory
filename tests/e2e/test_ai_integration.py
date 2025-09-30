@@ -216,9 +216,9 @@ class TestAIIntegration:
         ]
         found_terms = [term for term in learned_terms if term in enhanced_tech_lower]
 
-        assert (
-            len(found_terms) > 0
-        ), f"No newly learned content found in enhancement: {enhanced_tech}"
+        assert len(found_terms) > 0, (
+            f"No newly learned content found in enhancement: {enhanced_tech}"
+        )
 
     def test_ai_conversation_workflow(self, temp_db_path, ai_config_path):
         """Test complete AI conversation workflow with memory integration."""
@@ -348,9 +348,9 @@ class TestAIIntegration:
         )
 
         # Memory should accumulate over the conversation
-        assert (
-            later_half_context >= earlier_half_context
-        ), "Context should improve over conversation"
+        assert later_half_context >= earlier_half_context, (
+            "Context should improve over conversation"
+        )
 
         # Most learning attempts should succeed
         learning_rate = sum(learning_successes) / len(learning_successes)
@@ -484,20 +484,20 @@ class TestAIIntegration:
         print(f"  Learning success rate: {learning_success_rate:.1%}")
 
         # System should handle errors gracefully
-        assert (
-            enhancement_success_rate > 0.8
-        ), f"Enhancement error handling {enhancement_success_rate:.1%} insufficient"
+        assert enhancement_success_rate > 0.8, (
+            f"Enhancement error handling {enhancement_success_rate:.1%} insufficient"
+        )
         # Learning can be more permissive since it's fire-and-forget
-        assert (
-            learning_success_rate > 0.5
-        ), f"Learning error handling {learning_success_rate:.1%} insufficient"
+        assert learning_success_rate > 0.5, (
+            f"Learning error handling {learning_success_rate:.1%} insufficient"
+        )
 
         # Test system recovery after errors
         normal_query = "What's a normal query after error conditions?"
         recovery_enhanced = robust_enhance_with_memory(normal_query)
-        assert len(recovery_enhanced) > len(
-            normal_query
-        ), "System should recover after error conditions"
+        assert len(recovery_enhanced) > len(normal_query), (
+            "System should recover after error conditions"
+        )
 
         recovery_learn = robust_learn_async(
             "System recovery test: normal operation after errors."
@@ -600,9 +600,9 @@ class TestAIIntegration:
         failed_results = [r for r in performance_results if not r["success"]]
 
         success_rate = len(successful_results) / len(performance_results)
-        assert (
-            success_rate > 0.95
-        ), f"Performance test success rate {success_rate:.1%} too low"
+        assert success_rate > 0.95, (
+            f"Performance test success rate {success_rate:.1%} too low"
+        )
 
         if successful_results:
             total_times = [r["total_time_ms"] for r in successful_results]
@@ -624,18 +624,18 @@ class TestAIIntegration:
             print(f"  Average memories per query: {avg_memory_count:.1f}")
 
             # Validate performance targets
-            assert (
-                avg_total_time < 200.0
-            ), f"Average total time {avg_total_time:.2f}ms too high"
-            assert (
-                avg_recall_time < 100.0
-            ), f"Average recall time {avg_recall_time:.2f}ms exceeds target"
-            assert (
-                max_recall_time < 150.0
-            ), f"Max recall time {max_recall_time:.2f}ms too high"
-            assert (
-                avg_memory_count > 1.0
-            ), f"Average memory count {avg_memory_count:.1f} too low"
+            assert avg_total_time < 200.0, (
+                f"Average total time {avg_total_time:.2f}ms too high"
+            )
+            assert avg_recall_time < 100.0, (
+                f"Average recall time {avg_recall_time:.2f}ms exceeds target"
+            )
+            assert max_recall_time < 150.0, (
+                f"Max recall time {max_recall_time:.2f}ms too high"
+            )
+            assert avg_memory_count > 1.0, (
+                f"Average memory count {avg_memory_count:.1f} too low"
+            )
 
         if failed_results:
             print(f"\nFailed operations: {len(failed_results)}")
@@ -779,12 +779,12 @@ class TestAIIntegration:
         print(f"  Enhance success rate: {enhance_success_rate:.1%}")
         print(f"  Learn success rate: {learn_success_rate:.1%}")
 
-        assert (
-            enhance_success_rate > 0.90
-        ), f"Concurrent enhance success rate {enhance_success_rate:.1%} too low"
-        assert (
-            learn_success_rate > 0.75
-        ), f"Concurrent learn success rate {learn_success_rate:.1%} too low"
+        assert enhance_success_rate > 0.90, (
+            f"Concurrent enhance success rate {enhance_success_rate:.1%} too low"
+        )
+        assert learn_success_rate > 0.75, (
+            f"Concurrent learn success rate {learn_success_rate:.1%} too low"
+        )
 
         if successful_enhances:
             enhance_times = [r["enhance_time_ms"] for r in successful_enhances]
@@ -795,12 +795,12 @@ class TestAIIntegration:
             print(f"  Max enhance time: {max_enhance_time:.2f}ms")
 
             # Performance should remain reasonable under concurrent load
-            assert (
-                avg_enhance_time < 300.0
-            ), f"Concurrent enhance time {avg_enhance_time:.2f}ms too high"
-            assert (
-                max_enhance_time < 1000.0
-            ), f"Max concurrent enhance time {max_enhance_time:.2f}ms too high"
+            assert avg_enhance_time < 300.0, (
+                f"Concurrent enhance time {avg_enhance_time:.2f}ms too high"
+            )
+            assert max_enhance_time < 1000.0, (
+                f"Max concurrent enhance time {max_enhance_time:.2f}ms too high"
+            )
 
         # Verify user isolation in concurrent scenarios
         user_results = {}

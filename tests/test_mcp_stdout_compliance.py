@@ -182,7 +182,7 @@ def test_startup_message_goes_to_stderr():
         startup_found = any("Starting MCP server" in line for line in stderr_lines)
 
         assert startup_found, (
-            "Startup message should be in stderr. " f"stderr: {stderr_lines}"
+            f"Startup message should be in stderr. stderr: {stderr_lines}"
         )
 
     finally:
@@ -210,9 +210,9 @@ def test_json_rpc_communication_clean():
         assert response.get("jsonrpc") == "2.0", "Invalid JSON-RPC version"
         assert "id" in response, "Missing id in response"
         assert response["id"] == 1, "Mismatched request id"
-        assert (
-            "result" in response or "error" in response
-        ), "Response must have result or error"
+        assert "result" in response or "error" in response, (
+            "Response must have result or error"
+        )
 
         # Send tools/list request
         request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
@@ -271,9 +271,9 @@ def test_error_messages_go_to_stderr():
         if error_response_line:
             error_response = json.loads(error_response_line.decode())
             assert "error" in error_response, "Expected error response"
-            assert (
-                error_response["error"]["code"] == -32700
-            ), "Expected parse error code"
+            assert error_response["error"]["code"] == -32700, (
+                "Expected parse error code"
+            )
 
         # Capture any logging output
         stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
@@ -437,8 +437,7 @@ if __name__ == "__main__":
             import signal
 
             # Add timeout to prevent hanging
-            test_name = name  # Capture name in local scope
-            def timeout_handler(signum, frame):
+            def timeout_handler(signum, frame, test_name=name):
                 raise TimeoutError(f"Test {test_name} timed out after 10 seconds")
 
             signal.signal(signal.SIGALRM, timeout_handler)

@@ -236,7 +236,7 @@ kuzu-memory stats --detailed
 kuzu-memory stats
 
 # Show recent memories (ranked by temporal decay)
-kuzu-memory recent --count 50
+kuzu-memory recent --limit 50
 
 # Analyze temporal patterns
 kuzu-memory temporal-analysis --memory-type decision --format detailed

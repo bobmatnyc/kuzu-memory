@@ -221,9 +221,8 @@ kuzu-memory recent [OPTIONS]
 ```
 
 **Options:**
-- `--count N` - Number of recent memories (default: 10)
+- `--limit N` - Number of recent memories (default: 10)
 - `--format FORMAT` - Output format: `table`, `json`, `list` (default: `table`)
-- `--source SOURCE` - Filter by source
 
 **Examples:**
 ```bash
@@ -231,13 +230,10 @@ kuzu-memory recent [OPTIONS]
 kuzu-memory recent
 
 # Show more memories
-kuzu-memory recent --count 20
+kuzu-memory recent --limit 20
 
 # List format
 kuzu-memory recent --format list
-
-# Filter by source
-kuzu-memory recent --source ai-conversation
 ```
 
 ---
@@ -428,7 +424,7 @@ def kuzu_stats():
 ### **Chaining Commands**
 ```bash
 # Store and immediately verify
-kuzu-memory learn "New API endpoint pattern" && kuzu-memory recent --count 1
+kuzu-memory learn "New API endpoint pattern" && kuzu-memory recent --limit 1
 
 # Search and enhance
 kuzu-memory recall "database" | head -1 | kuzu-memory enhance "How do I optimize queries?"

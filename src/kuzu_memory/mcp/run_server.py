@@ -57,9 +57,25 @@ class MCPProtocolHandler:
         try:
             # Handle different MCP methods
             if method == "initialize":
-                # Initialize handshake
+                # Initialize handshake - support multiple protocol versions
+                client_protocol_version = params.get("protocolVersion", "2025-06-18")
+
+                # List of supported protocol versions (latest first)
+                supported_versions = ["2025-06-18", "2024-11-05"]
+
+                # Use client's version if supported, otherwise use latest supported
+                if client_protocol_version in supported_versions:
+                    response_version = client_protocol_version
+                else:
+                    # Log warning but continue with latest supported version (first in list)
+                    logger.warning(
+                        f"Client requested unsupported protocol version {client_protocol_version}, "
+                        f"using {supported_versions[0]}"
+                    )
+                    response_version = supported_versions[0]
+
                 result = {
-                    "protocolVersion": "2024-11-05",  # MCP protocol version
+                    "protocolVersion": response_version,
                     "capabilities": {"tools": {}, "prompts": None, "resources": None},
                     "serverInfo": {"name": "kuzu-memory-mcp", "version": "1.0.0"},
                 }
