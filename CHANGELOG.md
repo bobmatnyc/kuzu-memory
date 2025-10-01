@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.9] - 2025-10-01
+
+### Added
+- **Interactive Fix Prompt**: Diagnostic commands now offer interactive fixing
+  - After running diagnostics, users can apply automatic fixes when available
+  - User-friendly prompts guide through configuration repairs
+  - Enhanced user experience for MCP troubleshooting
+
+### Changed
+- **Improved .gitignore**: Updated to exclude Claude MPM session files
+  - Added `.claude-mpm/configuration.yaml` exclusion
+  - Added `.claude-mpm/memories/` directory exclusion
+  - Better separation of session-specific artifacts
+
+### Fixed
+- Code formatting applied to test files for consistency
+
 ## [1.1.8] - 2025-10-01
 
 ### Added - MCP Testing Framework (Phase 5)
@@ -209,7 +226,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.6...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.6...v1.1.9
 [1.1.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.3...v1.1.4
