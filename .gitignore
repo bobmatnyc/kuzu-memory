@@ -233,7 +233,9 @@ $RECYCLE.BIN/
 *.sublime-workspace
 .claude-mpm/*.log
 .claude-mpm/cache/
+.claude-mpm/configuration.yaml
 .claude-mpm/logs/
+.claude-mpm/memories/
 .claude-mpm/sessions/
 .claude-mpm/tmp/
 .claude/agents/
