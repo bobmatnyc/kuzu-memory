@@ -457,7 +457,6 @@ class TestHealthCheckIntegration:
             patch.object(health_checker, "_check_protocol_health") as mock_protocol,
             patch.object(health_checker, "_check_tools_health") as mock_tools,
         ):
-
             mock_protocol.return_value = ComponentHealth(
                 "protocol", HealthStatus.HEALTHY, "OK", latency_ms=10.0
             )
@@ -494,7 +493,6 @@ class TestHealthCheckIntegration:
             patch.object(health_checker, "_check_protocol_health") as mock_protocol,
             patch.object(health_checker, "_check_tools_health") as mock_tools,
         ):
-
             mock_protocol.return_value = ComponentHealth(
                 "protocol", HealthStatus.HEALTHY, "OK"
             )

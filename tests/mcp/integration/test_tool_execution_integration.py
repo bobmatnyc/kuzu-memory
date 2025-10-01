@@ -256,9 +256,9 @@ class TestToolDiscovery:
                 ]
 
                 for tool in expected_tools:
-                    assert (
-                        tool in tool_names
-                    ), f"Missing tool: {tool}, found: {tool_names}"
+                    assert tool in tool_names, (
+                        f"Missing tool: {tool}, found: {tool_names}"
+                    )
 
         finally:
             await client.disconnect()
@@ -349,7 +349,8 @@ class TestToolParameterValidation:
 
             # Call stats with invalid format type
             response = await client.call_tool(
-                "stats", {"format": 123}  # Should be string
+                "stats",
+                {"format": 123},  # Should be string
             )
 
             assert response is not None
@@ -420,7 +421,8 @@ class TestToolErrorHandling:
 
             # Try to cause execution failure with invalid input
             response = await client.call_tool(
-                "recall", {"query": "", "limit": -1}  # Invalid limit
+                "recall",
+                {"query": "", "limit": -1},  # Invalid limit
             )
 
             assert response is not None

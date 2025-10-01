@@ -49,11 +49,11 @@ class TestPerformanceRegression:
         print("\nConnection Latency Regression:")
         print(f"  Baseline: {baseline:.2f}ms")
         print(f"  Current: {avg_latency:.2f}ms")
-        print(f"  Degradation: {degradation*100:.1f}%")
+        print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Connection latency regressed by {degradation*100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Connection latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_tool_call_latency_regression(self, initialized_client):
@@ -73,11 +73,11 @@ class TestPerformanceRegression:
         print("\nTool Call Latency Regression:")
         print(f"  Baseline: {baseline:.2f}ms")
         print(f"  Current: {avg_latency:.2f}ms")
-        print(f"  Degradation: {degradation*100:.1f}%")
+        print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Tool latency regressed by {degradation*100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Tool latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_roundtrip_latency_regression(self, initialized_client):
@@ -97,11 +97,11 @@ class TestPerformanceRegression:
         print("\nRoundtrip Latency Regression:")
         print(f"  Baseline: {baseline:.2f}ms")
         print(f"  Current: {avg_latency:.2f}ms")
-        print(f"  Degradation: {degradation*100:.1f}%")
+        print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Roundtrip latency regressed by {degradation*100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Roundtrip latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_throughput_regression(self, initialized_client):
@@ -120,11 +120,11 @@ class TestPerformanceRegression:
         print("\nThroughput Regression:")
         print(f"  Baseline: {baseline:.2f} ops/sec")
         print(f"  Current: {throughput:.2f} ops/sec")
-        print(f"  Degradation: {degradation*100:.1f}%")
+        print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Throughput regressed by {degradation*100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Throughput regressed by {degradation * 100:.1f}%"
+        )
 
 
 @pytest.mark.performance
@@ -153,7 +153,7 @@ class TestBaselineTracking:
         assert benchmark_file.exists()
 
         # Verify saved data
-        with open(benchmark_file, "r") as f:
+        with open(benchmark_file) as f:
             loaded = json.load(f)
 
         assert loaded["connection_latency_ms"] == 45.5
@@ -171,7 +171,7 @@ class TestBaselineTracking:
             json.dump(baseline, f)
 
         # Load and verify
-        with open(benchmark_file, "r") as f:
+        with open(benchmark_file) as f:
             loaded = json.load(f)
 
         assert loaded["connection_latency_ms"] == 50.0
@@ -199,7 +199,7 @@ class TestBaselineTracking:
         current = sum(latencies) / len(latencies)
 
         # Load baseline
-        with open(benchmark_file, "r") as f:
+        with open(benchmark_file) as f:
             baseline_data = json.load(f)
 
         baseline_value = baseline_data["roundtrip_latency_ms"]
@@ -337,13 +337,15 @@ class TestRegressionReporting:
         results["roundtrip"] = {"degradation": 0.10, "status": "OK"}
 
         # Aggregate
-        num_regressions = sum(1 for r in results.values() if r["status"] == "REGRESSION")
+        num_regressions = sum(
+            1 for r in results.values() if r["status"] == "REGRESSION"
+        )
         max_degradation = max(r["degradation"] for r in results.values())
 
         print("\nRegression Summary:")
         print(f"  Tests run: {len(results)}")
         print(f"  Regressions: {num_regressions}")
-        print(f"  Max degradation: {max_degradation*100:.1f}%")
+        print(f"  Max degradation: {max_degradation * 100:.1f}%")
 
         assert num_regressions == 0, f"Found {num_regressions} performance regressions"
 
@@ -366,7 +368,9 @@ class TestContinuousMonitoring:
             await initialized_client.send_request("ping", {})
             latency = (time.perf_counter() - start) * 1000
 
-            results.append({"check": check, "latency": latency, "timestamp": time.time()})
+            results.append(
+                {"check": check, "latency": latency, "timestamp": time.time()}
+            )
 
             if check < num_checks - 1:
                 import asyncio
@@ -381,6 +385,6 @@ class TestContinuousMonitoring:
             print(f"  Check {r['check']}: {r['latency']:.2f}ms")
         print(f"  Average: {avg_latency:.2f}ms")
 
-        assert all(
-            r["latency"] < 100 for r in results
-        ), "Some checks exceeded threshold"
+        assert all(r["latency"] < 100 for r in results), (
+            "Some checks exceeded threshold"
+        )

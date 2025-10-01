@@ -33,9 +33,9 @@ class TestRequestStructure:
         assert "jsonrpc" in response, "Response must have jsonrpc field"
         assert response["jsonrpc"] == "2.0", "Response must be JSON-RPC 2.0"
         assert "id" in response, "Response must have id field"
-        assert (
-            "result" in response or "error" in response
-        ), "Response must have result or error"
+        assert "result" in response or "error" in response, (
+            "Response must have result or error"
+        )
 
     @pytest.mark.asyncio
     async def test_request_with_params_object(self, initialized_client):
@@ -67,7 +67,9 @@ class TestRequestStructure:
 
         # Wrong version
         with pytest.raises(JSONRPCError) as exc:
-            JSONRPCMessage.parse_request('{"jsonrpc": "1.0", "method": "test", "id": 1}')
+            JSONRPCMessage.parse_request(
+                '{"jsonrpc": "1.0", "method": "test", "id": 1}'
+            )
         assert exc.value.code == error_codes["INVALID_REQUEST"]
 
     @pytest.mark.asyncio
@@ -160,7 +162,9 @@ class TestResponseStructure:
         has_error = "error" in response
 
         # Should have exactly one (XOR)
-        assert has_result != has_error, "Response must have either result or error, not both"
+        assert has_result != has_error, (
+            "Response must have either result or error, not both"
+        )
 
 
 @pytest.mark.compliance
@@ -209,8 +213,12 @@ class TestErrorCodes:
     async def test_server_error_range(self):
         """Test that implementation errors use -32000 to -32099 range."""
         # Server errors should be in the defined range
-        assert -32099 <= JSONRPC_ERROR_CODES.get("TOOL_EXECUTION_ERROR", -32001) <= -32000
-        assert -32099 <= JSONRPC_ERROR_CODES.get("INITIALIZATION_ERROR", -32002) <= -32000
+        assert (
+            -32099 <= JSONRPC_ERROR_CODES.get("TOOL_EXECUTION_ERROR", -32001) <= -32000
+        )
+        assert (
+            -32099 <= JSONRPC_ERROR_CODES.get("INITIALIZATION_ERROR", -32002) <= -32000
+        )
         assert -32099 <= JSONRPC_ERROR_CODES.get("TIMEOUT_ERROR", -32003) <= -32000
 
 
@@ -290,7 +298,9 @@ class TestNotificationHandling:
         """Test notification structure (no id field)."""
         from kuzu_memory.mcp.protocol import JSONRPCMessage
 
-        notification = JSONRPCMessage.create_notification("test_method", {"param": "value"})
+        notification = JSONRPCMessage.create_notification(
+            "test_method", {"param": "value"}
+        )
 
         assert notification["jsonrpc"] == "2.0"
         assert notification["method"] == "test_method"
@@ -345,7 +355,9 @@ class TestProtocolEdgeCases:
         """Test string ids are supported."""
         from kuzu_memory.mcp.protocol import JSONRPCMessage
 
-        response = JSONRPCMessage.create_response("string-id-123", result={"status": "ok"})
+        response = JSONRPCMessage.create_response(
+            "string-id-123", result={"status": "ok"}
+        )
 
         assert response["id"] == "string-id-123"
 

@@ -10,7 +10,10 @@ import time
 
 import pytest
 
-from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator, MCPClientSimulator
+from tests.mcp.fixtures.mock_clients import (
+    ConcurrentClientSimulator,
+    MCPClientSimulator,
+)
 
 # Throughput thresholds
 THROUGHPUT_THRESHOLDS = {
@@ -39,9 +42,9 @@ class TestSequentialThroughput:
         throughput = num_operations / elapsed
 
         print(f"\nPing Throughput: {throughput:.2f} ops/sec")
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
-        ), f"Throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"], (
+            f"Throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
     @pytest.mark.asyncio
     async def test_stats_tool_throughput(self, initialized_client):
@@ -57,9 +60,9 @@ class TestSequentialThroughput:
         throughput = num_operations / elapsed
 
         print(f"\nStats Tool Throughput: {throughput:.2f} ops/sec")
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
-        ), f"Stats throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"], (
+            f"Stats throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
     @pytest.mark.asyncio
     async def test_mixed_operation_throughput(self, initialized_client):
@@ -85,9 +88,9 @@ class TestSequentialThroughput:
         throughput = len(operations) / elapsed
 
         print(f"\nMixed Operations Throughput: {throughput:.2f} ops/sec")
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
-        ), f"Mixed throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"], (
+            f"Mixed throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
     @pytest.mark.asyncio
     async def test_tool_specific_throughput(self, initialized_client):
@@ -118,9 +121,11 @@ class TestSequentialThroughput:
             status = (
                 "✓"
                 if tput >= THROUGHPUT_THRESHOLDS["sequential"]["target"]
-                else "⚠"
-                if tput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
-                else "✗"
+                else (
+                    "⚠"
+                    if tput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
+                    else "✗"
+                )
             )
             print(f"  {tool:15s}: {tput:6.2f} ops/sec {status}")
 
@@ -152,9 +157,9 @@ class TestConcurrentThroughput:
             f"\nConcurrent Ping Throughput ({len(multiple_clients)} clients): "
             f"{throughput:.2f} ops/sec"
         )
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["concurrent"]["critical"]
-        ), f"Concurrent throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["concurrent"]["critical"], (
+            f"Concurrent throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
     @pytest.mark.asyncio
     async def test_concurrent_tool_calls(self, multiple_clients):
@@ -177,9 +182,9 @@ class TestConcurrentThroughput:
             f"\nConcurrent Tool Call Throughput ({len(multiple_clients)} clients): "
             f"{throughput:.2f} ops/sec"
         )
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["concurrent"]["critical"]
-        ), f"Concurrent tool throughput {throughput:.2f} ops/sec below critical"
+        assert throughput >= THROUGHPUT_THRESHOLDS["concurrent"]["critical"], (
+            f"Concurrent tool throughput {throughput:.2f} ops/sec below critical"
+        )
 
     @pytest.mark.asyncio
     async def test_concurrent_mixed_operations(self, concurrent_simulator):
@@ -201,7 +206,7 @@ class TestConcurrentThroughput:
 
         print("\nConcurrent Mixed Operations:")
         print(f"  Throughput: {result['throughput']:.2f} ops/sec")
-        print(f"  Success Rate: {result['success_rate']*100:.1f}%")
+        print(f"  Success Rate: {result['success_rate'] * 100:.1f}%")
         print(f"  Avg Latency: {result['avg_latency']:.2f}ms")
 
 
@@ -241,13 +246,13 @@ class TestSustainedThroughput:
 
         print("\nSustained Load Results (1000 operations):")
         print(f"  Throughput: {throughput:.2f} ops/sec")
-        print(f"  Success Rate: {success_rate*100:.1f}%")
+        print(f"  Success Rate: {success_rate * 100:.1f}%")
         print(f"  Total Time: {elapsed:.2f}s")
 
         assert success_rate >= 0.95, "Should maintain >95% success rate under load"
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["sustained"]["critical"]
-        ), f"Sustained throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["sustained"]["critical"], (
+            f"Sustained throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
     @pytest.mark.asyncio
     async def test_throughput_under_memory_operations(self, initialized_client):
@@ -271,9 +276,9 @@ class TestSustainedThroughput:
         throughput = num_operations / elapsed
 
         print(f"\nMemory Operations Throughput: {throughput:.2f} ops/sec")
-        assert (
-            throughput >= THROUGHPUT_THRESHOLDS["sustained"]["critical"]
-        ), f"Memory ops throughput {throughput:.2f} ops/sec below critical threshold"
+        assert throughput >= THROUGHPUT_THRESHOLDS["sustained"]["critical"], (
+            f"Memory ops throughput {throughput:.2f} ops/sec below critical threshold"
+        )
 
 
 @pytest.mark.performance
@@ -313,9 +318,9 @@ class TestThroughputDegradation:
         print("\nThroughput Degradation Analysis:")
         print(f"  First half avg: {first_half_avg:.2f} ops/sec")
         print(f"  Second half avg: {second_half_avg:.2f} ops/sec")
-        print(f"  Degradation: {degradation*100:.1f}%")
+        print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert degradation < 0.20, f"Throughput degraded by {degradation*100:.1f}%"
+        assert degradation < 0.20, f"Throughput degraded by {degradation * 100:.1f}%"
 
     @pytest.mark.asyncio
     async def test_throughput_recovery(self, initialized_client):
@@ -346,6 +351,6 @@ class TestThroughputDegradation:
 
         # Recovery should be close to baseline
         recovery_ratio = recovery_throughput / baseline_throughput
-        assert (
-            recovery_ratio >= 0.80
-        ), f"Throughput recovered to only {recovery_ratio*100:.1f}% of baseline"
+        assert recovery_ratio >= 0.80, (
+            f"Throughput recovered to only {recovery_ratio * 100:.1f}% of baseline"
+        )
