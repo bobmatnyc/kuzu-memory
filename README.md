@@ -180,11 +180,13 @@ patterns:
 
 ## 🧪 Testing
 
+### Quick Start
+
 ```bash
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run tests
+# Run all tests
 pytest
 
 # Run benchmarks
@@ -193,6 +195,40 @@ pytest tests/ -m benchmark
 # Check coverage
 pytest --cov=kuzu_memory
 ```
+
+### MCP Testing & Diagnostics
+
+KuzuMemory includes comprehensive MCP server testing and diagnostic tools:
+
+```bash
+# Run MCP test suite (151+ tests)
+pytest tests/mcp/ -v
+
+# Run diagnostics
+kuzu-memory mcp diagnose run
+
+# Health check
+kuzu-memory mcp health
+
+# Performance benchmarks
+pytest tests/mcp/performance/ --benchmark-only
+```
+
+**Test Coverage**:
+- **Unit Tests** (51+ tests) - Protocol and component validation
+- **Integration Tests** - Multi-step operations and workflows
+- **E2E Tests** - Complete user scenarios
+- **Performance Tests** (78 tests) - Latency, throughput, memory profiling
+- **Compliance Tests** (73 tests) - JSON-RPC 2.0 and MCP protocol
+
+**Diagnostic Tools**:
+- Configuration validation with auto-fix
+- Connection testing with latency monitoring
+- Tool validation and execution testing
+- Continuous health monitoring
+- Performance regression detection
+
+See [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Reference](docs/MCP_DIAGNOSTICS.md) for complete documentation.
 
 ## 🤝 Contributing
 

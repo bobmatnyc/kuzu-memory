@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kuzu-memory"
-version = "1.1.5"
+version = "1.1.7"
 description = "Lightweight, embedded graph-based memory system for AI applications"
 readme = "README.md"
 license = {text = "MIT"}
@@ -31,7 +31,8 @@ dependencies = [
     "pyyaml>=6.0",          # Configuration
     "python-dateutil>=2.8",  # Date handling
     "typing-extensions>=4.5", # Python 3.11+ compatibility
-    "rich>=13.0.0"          # Rich CLI formatting
+    "rich>=13.0.0",         # Rich CLI formatting
+    "psutil>=5.9.0"         # System and process utilities for health monitoring
 ]
 
 [project.optional-dependencies]
@@ -48,18 +49,22 @@ dev = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
     "pytest-cov>=4.0",
+    "pytest-asyncio>=0.23.0",  # Async test support
+    "pytest-timeout>=2.2.0",   # Test timeout management
+    "pytest-mock>=3.10",
     "black>=23.0",
     "isort>=5.12",
     "ruff>=0.1.0",
     "mypy>=1.0",
     "pre-commit>=3.0",
     "pytest-xdist>=3.0",  # Parallel test execution
-    "pytest-mock>=3.10"
 ]
 test = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
     "pytest-cov>=4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-timeout>=2.2.0",
     "pytest-mock>=3.10"
 ]
 
@@ -134,6 +139,8 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "benchmark: marks tests as benchmarks",
+    "performance: marks tests as performance tests",
+    "compliance: marks tests as compliance tests",
 ]
 
 [tool.coverage.run]

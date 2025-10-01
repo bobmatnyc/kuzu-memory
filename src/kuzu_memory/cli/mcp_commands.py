@@ -10,6 +10,7 @@ import click
 
 from ..mcp import create_mcp_server
 from .cli_utils import rich_panel, rich_print
+from .diagnostic_commands import diagnose
 
 
 @click.group()
@@ -21,6 +22,10 @@ def mcp():
     as tools for Claude Code and other MCP-compatible AI systems.
     """
     pass
+
+
+# Register diagnostic commands as subcommand
+mcp.add_command(diagnose)
 
 
 @mcp.command()
@@ -221,6 +226,202 @@ def config(ctx, output: str | None):
 
     except Exception as e:
         rich_print(f"❌ Failed to generate config: {e}", style="red")
+        if ctx.obj.get("debug"):
+            raise
+        sys.exit(1)
+
+
+@mcp.command()
+@click.option("--detailed", is_flag=True, help="Show detailed component status")
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
+@click.option(
+    "--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)"
+)
+@click.option(
+    "--interval",
+    type=int,
+    default=5,
+    help="Check interval in seconds for continuous mode",
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
+@click.pass_context
+def health(
+    ctx,
+    detailed: bool,
+    json_output: bool,
+    continuous: bool,
+    interval: int,
+    project_root: str | None,
+):
+    """
+    Check MCP server health and component status.
+
+    Performs comprehensive health checks on all MCP server components including
+    CLI, database, protocol, and tools. Supports continuous monitoring mode.
+
+    Examples:
+        # Quick health check
+        kuzu-memory mcp health
+
+        # Detailed component status
+        kuzu-memory mcp health --detailed
+
+        # JSON output for scripting
+        kuzu-memory mcp health --json
+
+        # Continuous monitoring
+        kuzu-memory mcp health --continuous --interval 10
+    """
+    import json as json_module
+    import time
+
+    from rich.console import Console
+    from rich.table import Table
+
+    from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
+
+    try:
+        # Determine project root
+        if project_root:
+            project_path = Path(project_root)
+        else:
+            project_path = Path.cwd()
+
+        # Create health checker
+        health_checker = MCPHealthChecker(project_root=project_path)
+
+        # Define health check function
+        async def perform_check():
+            result = await health_checker.check_health(detailed=detailed, retry=True)
+            return result
+
+        # Define display function
+        def display_health(result):
+            if json_output:
+                # JSON output
+                print(json_module.dumps(result.to_dict(), indent=2))
+            else:
+                # Rich console output
+                console = Console()
+
+                # Status colors
+                status_colors = {
+                    HealthStatus.HEALTHY: "green",
+                    HealthStatus.DEGRADED: "yellow",
+                    HealthStatus.UNHEALTHY: "red",
+                }
+
+                # Status symbols
+                status_symbols = {
+                    HealthStatus.HEALTHY: "✅",
+                    HealthStatus.DEGRADED: "⚠️",
+                    HealthStatus.UNHEALTHY: "❌",
+                }
+
+                # Overall status
+                overall_status = result.health.status
+                color = status_colors[overall_status]
+                symbol = status_symbols[overall_status]
+
+                console.print(
+                    f"\n{symbol} [bold {color}]System Health: {overall_status.value.upper()}[/bold {color}]"
+                )
+                console.print(f"Check Duration: {result.duration_ms:.2f}ms")
+                console.print(f"Timestamp: {result.timestamp}\n")
+
+                # Components table
+                table = Table(title="Component Health")
+                table.add_column("Component", style="cyan")
+                table.add_column("Status", style="bold")
+                table.add_column("Latency", justify="right")
+                table.add_column("Message")
+
+                for component in result.health.components:
+                    comp_color = status_colors[component.status]
+                    comp_symbol = status_symbols[component.status]
+
+                    table.add_row(
+                        component.name,
+                        f"{comp_symbol} [{comp_color}]{component.status.value}[/{comp_color}]",
+                        f"{component.latency_ms:.2f}ms",
+                        component.message,
+                    )
+
+                console.print(table)
+
+                # Performance metrics (if detailed)
+                if detailed and result.health.performance.total_requests > 0:
+                    console.print("\n[bold]Performance Metrics[/bold]")
+                    perf = result.health.performance
+                    console.print(f"  Average Latency: {perf.average_latency_ms:.2f}ms")
+                    console.print(f"  P50 Latency: {perf.latency_p50_ms:.2f}ms")
+                    console.print(f"  P95 Latency: {perf.latency_p95_ms:.2f}ms")
+                    console.print(f"  P99 Latency: {perf.latency_p99_ms:.2f}ms")
+                    console.print(
+                        f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s"
+                    )
+                    console.print(f"  Error Rate: {perf.error_rate * 100:.2f}%")
+
+                # Resource metrics (if detailed)
+                if detailed:
+                    console.print("\n[bold]Resource Usage[/bold]")
+                    res = result.health.resources
+                    console.print(f"  Memory: {res.memory_mb:.2f} MB")
+                    console.print(f"  CPU: {res.cpu_percent:.2f}%")
+                    console.print(f"  Open Connections: {res.open_connections}")
+                    console.print(f"  Active Threads: {res.active_threads}")
+
+                # Summary
+                summary = result.health.to_dict()["summary"]
+                console.print("\n[bold]Component Summary[/bold]")
+                console.print(
+                    f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}"
+                )
+                if summary["degraded"] > 0:
+                    console.print(f"  [yellow]Degraded:[/yellow] {summary['degraded']}")
+                if summary["unhealthy"] > 0:
+                    console.print(f"  [red]Unhealthy:[/red] {summary['unhealthy']}")
+
+                console.print()
+
+        # Run health check(s)
+        if continuous:
+            # Continuous monitoring mode
+            rich_print(
+                f"🔄 Starting continuous health monitoring (interval: {interval}s)",
+                style="blue",
+            )
+            rich_print("Press Ctrl+C to stop\n", style="dim")
+
+            try:
+                while True:
+                    result = asyncio.run(perform_check())
+                    display_health(result)
+
+                    # Wait for next check
+                    if continuous:
+                        time.sleep(interval)
+                    else:
+                        break
+
+            except KeyboardInterrupt:
+                rich_print("\n\n✋ Monitoring stopped", style="yellow")
+
+        else:
+            # Single health check
+            result = asyncio.run(perform_check())
+            display_health(result)
+
+            # Exit with appropriate code
+            if result.health.status == HealthStatus.UNHEALTHY:
+                sys.exit(1)
+            elif result.health.status == HealthStatus.DEGRADED:
+                sys.exit(2)
+
+    except Exception as e:
+        rich_print(f"❌ Health check failed: {e}", style="red")
         if ctx.obj.get("debug"):
             raise
         sys.exit(1)

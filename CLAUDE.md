@@ -180,6 +180,21 @@ pytest tests/unit/          # Unit tests only
 pytest tests/integration/   # Integration tests only
 pytest tests/benchmarks/    # Performance benchmarks only
 
+# 🔌 MCP TESTING & DIAGNOSTICS (NEW - Production Ready)
+make mcp-test              # Complete MCP test suite (151+ tests)
+make mcp-diagnose          # Run MCP diagnostics
+make mcp-health            # MCP server health check
+make mcp-benchmark         # MCP performance benchmarks
+
+pytest tests/mcp/          # All MCP tests (unit + integration + e2e + performance + compliance)
+pytest tests/mcp/unit/     # MCP unit tests (51+ tests)
+pytest tests/mcp/performance/  # MCP performance tests (78 tests)
+pytest tests/mcp/compliance/   # MCP compliance tests (73 tests)
+
+kuzu-memory mcp diagnose run    # Full MCP diagnostics
+kuzu-memory mcp health          # Quick health check
+kuzu-memory mcp health --detailed  # Detailed health status
+
 # 📊 COVERAGE & REPORTING
 make test                   # Includes coverage report (HTML + terminal)
 pytest --cov-report=html    # Detailed HTML coverage report
@@ -192,6 +207,9 @@ pytest --benchmark-sort=mean # Benchmark performance analysis
 - **Type Safety**: Zero mypy errors in strict mode
 - **Linting**: Zero ruff violations
 - **Security**: No known vulnerabilities in dependencies
+- **MCP Compliance**: All MCP protocol and JSON-RPC 2.0 tests must pass
+- **MCP Performance**: Connection <500ms, tool calls <1000ms, roundtrip <200ms
+- **MCP Health**: Diagnostics must pass before deployment
 
 ---
 
@@ -339,6 +357,12 @@ kuzu-memory recall --context "related memories"  # Context retrieval
 - **[docs/CLAUDE_CODE_SETUP.md](docs/CLAUDE_CODE_SETUP.md)** - Claude Code integration guide
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture details
 
+### MCP Testing & Diagnostics (NEW)
+- **[docs/MCP_TESTING_GUIDE.md](docs/MCP_TESTING_GUIDE.md)** - Comprehensive MCP testing guide
+- **[docs/MCP_DIAGNOSTICS.md](docs/MCP_DIAGNOSTICS.md)** - Diagnostic commands reference
+- **[docs/MCP_PHASE5_IMPLEMENTATION_REPORT.md](docs/MCP_PHASE5_IMPLEMENTATION_REPORT.md)** - Phase 5 implementation details
+- **[tests/mcp/README.md](tests/mcp/README.md)** - MCP testing framework overview
+
 ### Setup Guides
 - **[scripts/install-claude-desktop.py](scripts/install-claude-desktop.py)** - MCP installer
 - **[Makefile](Makefile)** - Build system and workflows
@@ -364,6 +388,13 @@ pip install --upgrade kuzu-memory  # Update to latest version
 # 🔄 DEVELOPMENT ISSUES
 make clean && make dev-setup    # Clean rebuild environment
 make quality                    # Run all quality checks
+
+# 🔌 MCP SERVER ISSUES (NEW)
+kuzu-memory mcp diagnose run    # Full diagnostic suite
+kuzu-memory mcp diagnose run --fix  # Auto-fix common issues
+kuzu-memory mcp health          # Quick health check
+kuzu-memory mcp diagnose connection  # Test server connectivity
+kuzu-memory mcp diagnose tools  # Validate tool schemas
 ```
 
 ### Monitoring & Alerting Setup

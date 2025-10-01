@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - MCP Testing Framework (Phase 5)
+- **Comprehensive MCP Testing Suite** (151+ tests across 7 test modules)
+  - Unit tests (51+ tests) - Protocol and component validation
+  - Integration tests - Multi-step operations and workflows
+  - End-to-end tests - Complete user scenarios
+  - Performance tests (78 tests) - Latency, throughput, memory profiling
+  - Compliance tests (73 tests) - JSON-RPC 2.0 and MCP protocol validation
+
+- **MCP Diagnostic Commands**
+  - `kuzu-memory mcp diagnose run` - Complete diagnostic suite
+  - `kuzu-memory mcp diagnose config` - Configuration validation with auto-fix
+  - `kuzu-memory mcp diagnose connection` - Server connectivity testing
+  - `kuzu-memory mcp diagnose tools` - Tool schema and execution validation
+  - Support for text, JSON, and HTML report formats
+  - Automatic fix capabilities for common configuration issues
+
+- **MCP Health Monitoring**
+  - `kuzu-memory mcp health` - Quick health status check
+  - `kuzu-memory mcp health --detailed` - Comprehensive health reporting
+  - `kuzu-memory mcp health --continuous` - Continuous monitoring mode
+  - JSON output for integration with monitoring systems
+  - Exit codes for automation and alerting
+
+- **MCP Performance Benchmarking**
+  - Latency testing (connection, tool calls, roundtrip) with percentile analysis
+  - Throughput testing (sequential, concurrent, sustained load)
+  - Memory usage profiling and leak detection
+  - Concurrent load testing (50+ concurrent clients)
+  - Performance regression detection with baseline tracking
+  - pytest-benchmark integration for detailed performance analysis
+
+- **MCP Protocol Compliance Validation**
+  - JSON-RPC 2.0 specification compliance (36 tests)
+  - MCP protocol compliance (37 tests)
+  - Protocol version negotiation (2025-06-18, 2024-11-05)
+  - Error code validation
+  - Batch request handling
+  - Tool discovery and execution validation
+
+- **Documentation**
+  - [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) - Comprehensive testing procedures
+  - [MCP Diagnostics Reference](docs/MCP_DIAGNOSTICS.md) - Command reference and troubleshooting
+  - [MCP Phase 5 Implementation Report](docs/MCP_PHASE5_IMPLEMENTATION_REPORT.md) - Technical details
+  - Updated README.md with MCP testing section
+  - Updated CLAUDE.md with MCP testing workflows
+
+- **Makefile Targets**
+  - `make mcp-test` - Complete MCP test suite
+  - `make mcp-unit` - Unit tests only
+  - `make mcp-integration` - Integration tests
+  - `make mcp-e2e` - End-to-end tests
+  - `make mcp-performance` - Performance tests
+  - `make mcp-compliance` - Compliance tests
+  - `make mcp-benchmark` - Performance benchmarks
+  - `make mcp-diagnose` - Run diagnostics
+  - `make mcp-health` - Health check
+  - `make mcp-full` - Complete validation suite
+
+### Improved
+- **Test Infrastructure**
+  - MCPConnectionTester framework for server lifecycle testing
+  - MockClientSimulator for realistic client simulation
+  - Comprehensive pytest fixtures for test data and scenarios
+  - pytest markers for test categorization (unit, integration, e2e, performance, compliance)
+  - Benchmark configuration for consistent performance measurement
+
+- **Quality Gates**
+  - MCP protocol compliance required for release
+  - Performance thresholds enforced (connection <500ms, tool calls <1000ms)
+  - Health diagnostics required before deployment
+  - Automated regression detection
+
+### Performance Thresholds (MCP)
+- Connection latency: 100ms target, 500ms critical
+- Tool call latency: 200ms target, 1000ms critical
+- Roundtrip latency: 50ms target, 200ms critical
+- Throughput: 100 ops/sec target, 50 ops/sec critical
+- Memory per connection: 10MB target, 20MB critical
+- Concurrent connections: 10 target, 5 critical
+- Success rate: 95% target, 90% critical
+
 ## [1.1.6] - 2025-09-29
 
 ### Fixed

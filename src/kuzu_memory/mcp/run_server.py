@@ -76,7 +76,7 @@ class MCPProtocolHandler:
 
                 result = {
                     "protocolVersion": response_version,
-                    "capabilities": {"tools": {}, "prompts": None, "resources": None},
+                    "capabilities": {"tools": {}, "prompts": {}, "resources": {}},
                     "serverInfo": {"name": "kuzu-memory-mcp", "version": "1.0.0"},
                 }
                 return JSONRPCMessage.create_response(request_id, result)
@@ -115,8 +115,45 @@ class MCPProtocolHandler:
                 return JSONRPCMessage.create_response(request_id, {})
 
             elif method == "ping":
-                # Health check
-                return JSONRPCMessage.create_response(request_id, {"pong": True})
+                # Health check - support both simple and detailed modes
+                detailed = params.get("detailed", False)
+
+                if detailed:
+                    # Return detailed health information
+                    try:
+                        from .testing.health_checker import MCPHealthChecker
+
+                        health_checker = MCPHealthChecker(
+                            project_root=Path.cwd(), timeout=2.0
+                        )
+                        result = await health_checker.check_health(
+                            detailed=False, retry=False
+                        )
+
+                        return JSONRPCMessage.create_response(
+                            request_id,
+                            {
+                                "pong": True,
+                                "health": result.health.to_dict(),
+                                "duration_ms": result.duration_ms,
+                            },
+                        )
+                    except Exception as e:
+                        logger.warning(f"Detailed health check failed: {e}")
+                        # Fall back to simple ping
+                        return JSONRPCMessage.create_response(
+                            request_id,
+                            {
+                                "pong": True,
+                                "health": {
+                                    "status": "degraded",
+                                    "error": str(e),
+                                },
+                            },
+                        )
+                else:
+                    # Simple ping response (backward compatible)
+                    return JSONRPCMessage.create_response(request_id, {"pong": True})
 
             else:
                 # Unknown method

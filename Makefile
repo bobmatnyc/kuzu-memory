@@ -48,6 +48,18 @@ help:
 	@echo "  make db-perf      Test database performance"
 	@echo "  make memory-profile Memory usage profiling"
 	@echo ""
+	@echo "🔌 MCP TESTING & DIAGNOSTICS (NEW - Phase 5):"
+	@echo "  make mcp-test        Complete MCP test suite (151+ tests)"
+	@echo "  make mcp-unit        MCP unit tests (51+ tests)"
+	@echo "  make mcp-integration MCP integration tests"
+	@echo "  make mcp-e2e         MCP end-to-end tests"
+	@echo "  make mcp-performance MCP performance tests (78 tests)"
+	@echo "  make mcp-compliance  MCP compliance tests (73 tests)"
+	@echo "  make mcp-benchmark   MCP performance benchmarks"
+	@echo "  make mcp-diagnose    Run MCP diagnostics"
+	@echo "  make mcp-health      MCP server health check"
+	@echo "  make mcp-full        Complete MCP validation suite"
+	@echo ""
 	@echo "🎯 COMPLETE WORKFLOW:"
 	@echo "  make all        quality + test + build"
 
@@ -236,3 +248,57 @@ check-tools:
 	@command -v pip >/dev/null 2>&1 || { echo "❌ Pip not found"; exit 1; }
 	@python -c "import sys; print(f'✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
 	@echo "✅ All tools available"
+
+# MCP Testing & Diagnostics (NEW - Phase 5)
+mcp-test: dev
+	@echo "🔌 Running MCP test suite (151+ tests)..."
+	python -m pytest tests/mcp/ -v
+	@echo "✅ MCP tests complete"
+
+mcp-unit: dev
+	@echo "🔬 Running MCP unit tests..."
+	python -m pytest tests/mcp/unit/ -v
+	@echo "✅ MCP unit tests complete"
+
+mcp-integration: dev
+	@echo "🔗 Running MCP integration tests..."
+	python -m pytest tests/mcp/integration/ -v
+	@echo "✅ MCP integration tests complete"
+
+mcp-e2e: dev
+	@echo "🎯 Running MCP end-to-end tests..."
+	python -m pytest tests/mcp/e2e/ -v
+	@echo "✅ MCP e2e tests complete"
+
+mcp-performance: dev
+	@echo "⚡ Running MCP performance tests..."
+	python -m pytest tests/mcp/performance/ -v
+	@echo "✅ MCP performance tests complete"
+
+mcp-compliance: dev
+	@echo "✅ Running MCP compliance tests..."
+	python -m pytest tests/mcp/compliance/ -v
+	@echo "✅ MCP compliance tests complete"
+
+mcp-benchmark: dev
+	@echo "📊 Running MCP performance benchmarks..."
+	python -m pytest tests/mcp/performance/ --benchmark-only --benchmark-sort=mean
+	@echo "✅ MCP benchmarks complete"
+
+mcp-diagnose:
+	@echo "🔍 Running MCP diagnostics..."
+	kuzu-memory mcp diagnose run -v
+	@echo "✅ MCP diagnostics complete"
+
+mcp-health:
+	@echo "💚 Checking MCP server health..."
+	kuzu-memory mcp health --detailed
+	@echo "✅ MCP health check complete"
+
+mcp-full: mcp-test mcp-diagnose mcp-health
+	@echo "🎉 Complete MCP validation suite finished"
+	@echo ""
+	@echo "Summary:"
+	@echo "  ✅ All tests passed"
+	@echo "  ✅ Diagnostics completed"
+	@echo "  ✅ Health check passed"
