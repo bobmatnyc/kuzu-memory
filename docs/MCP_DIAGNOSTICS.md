@@ -56,11 +56,17 @@ kuzu-memory mcp diagnose run [options]
 - Performance metrics
 - Error handling
 
+**Interactive Fix Prompt**: If issues are detected with suggested fixes, you'll be prompted:
+```
+💡 Found 3 issue(s) with suggested fixes available.
+Would you like to attempt automatic fixes? [Y/n]:
+```
+
 **Options**:
 - `--verbose`, `-v` - Show detailed diagnostic information
 - `--output FILE` - Save report to file
 - `--format [text|json|html]` - Report format (default: text)
-- `--fix` - Attempt automatic fixes for detected issues
+- `--fix` - Attempt automatic fixes immediately (skips interactive prompt)
 - `--timeout SECONDS` - Timeout for tests (default: 30)
 
 **Examples**:

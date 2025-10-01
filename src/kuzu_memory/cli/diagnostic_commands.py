@@ -70,14 +70,14 @@ def run(
     Run full MCP diagnostics suite.
 
     Performs comprehensive checks on configuration, connection,
-    tool discovery, and performance. Optionally attempts to fix
-    issues automatically.
+    tool discovery, and performance. If issues are found with
+    suggested fixes, you'll be prompted to attempt automatic repairs.
 
     Examples:
-        # Run full diagnostics
+        # Run full diagnostics (interactive - prompts for auto-fix if needed)
         kuzu-memory mcp diagnose run
 
-        # Run with auto-fix
+        # Run with immediate auto-fix (non-interactive)
         kuzu-memory mcp diagnose run --fix
 
         # Save report to file
@@ -112,6 +112,51 @@ def run(
         else:
             # Print to console
             print(output_content)
+
+        # Check if there are fixable issues and prompt for auto-fix
+        has_failures = report.has_critical_errors or report.failed > 0
+        has_fixable = any(
+            r.fix_suggestion for r in report.results if not r.success
+        )
+
+        if has_failures and has_fixable and not fix:
+            rich_print(
+                f"\n💡 Found {report.failed} issue(s) with suggested fixes available.",
+                style="yellow",
+            )
+
+            if click.confirm("Would you like to attempt automatic fixes?", default=True):
+                rich_print("\n🔧 Attempting automatic fixes...", style="blue")
+
+                # Re-run diagnostics with auto-fix enabled
+                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
+
+                # Show fix results
+                rich_print("\n📊 Fix Results:", style="blue")
+
+                # Generate fix report
+                if format == "json":
+                    fix_output = json.dumps(fix_report.to_dict(), indent=2)
+                elif format == "html":
+                    fix_output = diagnostics.generate_html_report(fix_report)
+                else:
+                    fix_output = diagnostics.generate_text_report(fix_report)
+
+                print(fix_output)
+
+                # Update report for exit code determination
+                report = fix_report
+
+                if fix_report.failed == 0:
+                    rich_print(
+                        "\n✅ All issues fixed successfully!",
+                        style="green",
+                    )
+                else:
+                    rich_print(
+                        f"\n⚠️  {fix_report.failed} issue(s) still remain after auto-fix.",
+                        style="yellow",
+                    )
 
         # Exit with appropriate code
         if report.has_critical_errors:
