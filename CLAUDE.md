@@ -352,12 +352,17 @@ kuzu-memory recall --context "related memories"  # Context retrieval
 - **[docs/FIX_ROADMAP.md](docs/FIX_ROADMAP.md)** - Prioritized fix implementation plan
 - **[docs/PROJECT_ORGANIZATION.md](docs/PROJECT_ORGANIZATION.md)** - Organization completion summary
 
+### User Guides
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - 5-minute quick start guide
+- **[docs/CLAUDE_SETUP.md](docs/CLAUDE_SETUP.md)** - Claude Desktop & Code integration
+- **[docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md)** - Universal AI integration patterns
+- **[docs/MEMORY_SYSTEM.md](docs/MEMORY_SYSTEM.md)** - Memory types and best practices
+
 ### Developer Resources
 - **[docs/developer/](docs/developer/)** - Complete developer documentation
-- **[docs/CLAUDE_CODE_SETUP.md](docs/CLAUDE_CODE_SETUP.md)** - Claude Code integration guide
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture details
 
-### MCP Testing & Diagnostics (NEW)
+### MCP Testing & Diagnostics
 - **[docs/MCP_TESTING_GUIDE.md](docs/MCP_TESTING_GUIDE.md)** - Comprehensive MCP testing guide
 - **[docs/MCP_DIAGNOSTICS.md](docs/MCP_DIAGNOSTICS.md)** - Diagnostic commands reference
 - **[docs/MCP_PHASE5_IMPLEMENTATION_REPORT.md](docs/MCP_PHASE5_IMPLEMENTATION_REPORT.md)** - Phase 5 implementation details

@@ -57,7 +57,7 @@ The installer automatically:
 - Validates the installation
 - Supports async learning with 5-second wait behavior
 
-See [Claude Desktop Setup Guide](docs/CLAUDE_DESKTOP_SETUP.md) for detailed instructions.
+See [Claude Setup Guide](docs/CLAUDE_SETUP.md) for detailed instructions on Claude Desktop and Claude Code integration.
 
 ### Basic Usage
 
