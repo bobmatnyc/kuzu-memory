@@ -128,7 +128,9 @@ class MCPClientSimulator:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=str(self.project_root),
-                text=False,
+                text=True,
+                encoding="utf-8",
+                bufsize=1,  # Line buffered
             )
 
             # Wait for process to start
@@ -224,7 +226,7 @@ class MCPClientSimulator:
         try:
             # Send request
             request_str = json.dumps(request) + "\n"
-            self.process.stdin.write(request_str.encode())
+            self.process.stdin.write(request_str)
             self.process.stdin.flush()
 
             # Read response with timeout
@@ -237,7 +239,7 @@ class MCPClientSimulator:
                 client_request.error = "No response received"
                 return None
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
             client_request.response = response
             client_request.received_at = time.time()
 
@@ -272,7 +274,7 @@ class MCPClientSimulator:
             notification["params"] = params
 
         notification_str = json.dumps(notification) + "\n"
-        self.process.stdin.write(notification_str.encode())
+        self.process.stdin.write(notification_str)
         self.process.stdin.flush()
 
     async def initialize(
@@ -335,7 +337,7 @@ class MCPClientSimulator:
         try:
             # Send batch as JSON array
             batch_str = json.dumps(requests) + "\n"
-            self.process.stdin.write(batch_str.encode())
+            self.process.stdin.write(batch_str)
             self.process.stdin.flush()
 
             # Read batch response
@@ -347,7 +349,7 @@ class MCPClientSimulator:
             if not response_line:
                 return None
 
-            return json.loads(response_line.decode().strip())
+            return json.loads(response_line.strip())
 
         except TimeoutError:
             logger.error("Batch request timeout")

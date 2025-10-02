@@ -115,9 +115,7 @@ def run(
 
         # Check if there are fixable issues and prompt for auto-fix
         has_failures = report.has_critical_errors or report.failed > 0
-        has_fixable = any(
-            r.fix_suggestion for r in report.results if not r.success
-        )
+        has_fixable = any(r.fix_suggestion for r in report.results if not r.success)
 
         if has_failures and has_fixable and not fix:
             rich_print(
@@ -125,11 +123,15 @@ def run(
                 style="yellow",
             )
 
-            if click.confirm("Would you like to attempt automatic fixes?", default=True):
+            if click.confirm(
+                "Would you like to attempt automatic fixes?", default=True
+            ):
                 rich_print("\n🔧 Attempting automatic fixes...", style="blue")
 
                 # Re-run diagnostics with auto-fix enabled
-                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
+                fix_report = asyncio.run(
+                    diagnostics.run_full_diagnostics(auto_fix=True)
+                )
 
                 # Show fix results
                 rich_print("\n📊 Fix Results:", style="blue")

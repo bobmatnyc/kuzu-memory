@@ -26,6 +26,7 @@ from .server import MCPServer
 logging.basicConfig(
     level=logging.WARNING,  # Only show warnings and errors
     format="%(levelname)s: %(message)s",
+    stream=sys.stderr,
 )
 logger = logging.getLogger(__name__)
 

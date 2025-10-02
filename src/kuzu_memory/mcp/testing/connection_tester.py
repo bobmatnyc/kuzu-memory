@@ -137,32 +137,12 @@ class MCPConnectionTester:
         self.stdin_writer: asyncio.StreamWriter | None = None
 
     def _resolve_server_path(self, server_path: str | Path | None) -> str:
-        """Resolve the server path to executable command."""
+        """Resolve the server path to MCP server executable command."""
         if server_path:
             return str(server_path)
 
-        # Try to find kuzu-memory executable
-        candidates = [
-            "kuzu-memory",
-            f"{sys.executable} -m kuzu_memory.cli",
-            str(Path.home() / ".local" / "bin" / "kuzu-memory"),
-        ]
-
-        for candidate in candidates:
-            try:
-                cmd = candidate.split() if " " in candidate else [candidate]
-                result = subprocess.run(
-                    [*cmd, "--version"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2,
-                )
-                if result.returncode == 0:
-                    return candidate
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
-
-        # Default to module execution
+        # Always use the MCP server module directly for testing
+        # This ensures we're testing the actual MCP server, not the CLI
         return f"{sys.executable} -m kuzu_memory.mcp.run_server"
 
     async def start_server(self) -> ConnectionTestResult:
@@ -193,9 +173,9 @@ class MCPConnectionTester:
                 text=False,  # Binary mode for precise control
             )
 
-            # Create async readers/writers
-            # Wait a moment for process to initialize
-            await asyncio.sleep(0.1)
+            # Wait for process to initialize and stabilize
+            # This prevents race conditions on first read
+            await asyncio.sleep(0.2)
 
             # Check if process is still running
             if self.process.poll() is not None:
@@ -268,24 +248,13 @@ class MCPConnectionTester:
             )
 
         try:
-            # Test basic read/write capability
+            # Test basic read/write capability using _send_request with retry logic
             test_msg = {"jsonrpc": "2.0", "method": "ping", "id": 1}
-            message = json.dumps(test_msg) + "\n"
+            response = await self._send_request(test_msg)
 
-            # Write to stdin
-            self.process.stdin.write(message.encode())
-            self.process.stdin.flush()
-
-            # Try to read response with timeout
-            response_line = await asyncio.wait_for(
-                asyncio.to_thread(self.process.stdout.readline),
-                timeout=self.timeout,
-            )
-
-            if not response_line:
+            if not response:
                 raise TimeoutError("No response from server")
 
-            response = json.loads(response_line.decode().strip())
             duration = (time.time() - start_time) * 1000
 
             return ConnectionTestResult(
@@ -298,7 +267,7 @@ class MCPConnectionTester:
                 metadata={"response": response},
             )
 
-        except TimeoutError:
+        except TimeoutError as e:
             duration = (time.time() - start_time) * 1000
             return ConnectionTestResult(
                 test_name=test_name,
@@ -307,7 +276,7 @@ class MCPConnectionTester:
                 duration_ms=duration,
                 severity=TestSeverity.ERROR,
                 message="Stdio connection timeout",
-                error=f"No response after {self.timeout}s",
+                error=str(e),
             )
         except Exception as e:
             duration = (time.time() - start_time) * 1000
@@ -450,17 +419,12 @@ class MCPConnectionTester:
             self.process.stdin.write(malformed.encode())
             self.process.stdin.flush()
 
-            # Server should respond with parse error
-            response_line = await asyncio.wait_for(
-                asyncio.to_thread(self.process.stdout.readline),
-                timeout=self.timeout,
-            )
-
-            response = json.loads(response_line.decode().strip())
+            # Server should respond with parse error - use retry logic
+            response = await self._read_response_with_retry()
             duration = (time.time() - start_time) * 1000
 
             # Check for proper error response
-            if "error" in response and response["error"]["code"] == -32700:
+            if response and "error" in response and response["error"]["code"] == -32700:
                 return ConnectionTestResult(
                     test_name=test_name,
                     success=True,
@@ -614,6 +578,103 @@ class MCPConnectionTester:
                 error=str(e),
             )
 
+    async def _read_response_with_retry(
+        self, max_retries: int = 3, retry_delay: float = 0.1
+    ) -> dict[str, Any] | None:
+        """
+        Read JSON-RPC response with retry logic for empty reads.
+
+        Args:
+            max_retries: Maximum number of retry attempts
+            retry_delay: Delay between retries in seconds
+
+        Returns:
+            Parsed JSON response or None if all retries exhausted
+        """
+        if not self.process:
+            raise RuntimeError("Server not started")
+
+        for attempt in range(max_retries):
+            try:
+                # Try to read response line with timeout
+                response_line = await asyncio.wait_for(
+                    asyncio.to_thread(self.process.stdout.readline),
+                    timeout=self.timeout,
+                )
+
+                # Decode the response
+                decoded = response_line.decode().strip() if response_line else ""
+
+                # Check if we got meaningful data
+                if decoded:
+                    try:
+                        # Parse JSON
+                        return json.loads(decoded)
+                    except json.JSONDecodeError as e:
+                        # If JSON parsing fails and we have retries left, retry
+                        if attempt < max_retries - 1:
+                            logger.debug(
+                                f"JSON decode error on attempt {attempt + 1}, retrying: {e}"
+                            )
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        # Last attempt - raise the error
+                        stderr_output = ""
+                        if self.process.stderr:
+                            try:
+                                stderr_output = self.process.stderr.read(1024).decode()
+                            except Exception:
+                                pass
+                        raise RuntimeError(
+                            f"JSON decode error: {e}. Response: {response_line!r}. "
+                            f"Stderr: {stderr_output}"
+                        )
+
+                # Empty read - check if process is still alive
+                if self.process.poll() is not None:
+                    stderr_output = ""
+                    if self.process.stderr:
+                        try:
+                            stderr_output = self.process.stderr.read().decode()
+                        except Exception:
+                            pass
+                    raise RuntimeError(
+                        f"Server process terminated. Exit code: {self.process.returncode}. "
+                        f"Stderr: {stderr_output}"
+                    )
+
+                # Process alive but no data - retry if attempts remain
+                if attempt < max_retries - 1:
+                    logger.debug(
+                        f"Empty response on attempt {attempt + 1}, retrying..."
+                    )
+                    await asyncio.sleep(retry_delay)
+                    continue
+
+            except TimeoutError:
+                # Timeout - check if we should retry
+                if attempt < max_retries - 1:
+                    logger.debug(f"Timeout on attempt {attempt + 1}, retrying...")
+                    await asyncio.sleep(retry_delay)
+                    continue
+                # Final timeout
+                raise TimeoutError(
+                    f"No response from server after {self.timeout}s "
+                    f"and {max_retries} retries"
+                )
+
+        # All retries exhausted with no valid response
+        stderr_output = ""
+        if self.process and self.process.stderr:
+            try:
+                stderr_output = self.process.stderr.read(1024).decode()
+            except Exception:
+                pass
+        raise RuntimeError(
+            f"Failed to read valid response after {max_retries} attempts. "
+            f"Stderr: {stderr_output}"
+        )
+
     async def _send_request(self, message: dict[str, Any]) -> dict[str, Any] | None:
         """
         Send JSON-RPC request and wait for response.
@@ -632,16 +693,12 @@ class MCPConnectionTester:
         self.process.stdin.write(request_str.encode())
         self.process.stdin.flush()
 
-        # Read response with timeout
-        response_line = await asyncio.wait_for(
-            asyncio.to_thread(self.process.stdout.readline),
-            timeout=self.timeout,
-        )
+        # Small delay to ensure server has time to process and write response
+        # This prevents race conditions where we read before server writes
+        await asyncio.sleep(0.05)
 
-        if not response_line:
-            return None
-
-        return json.loads(response_line.decode().strip())
+        # Read response with retry logic
+        return await self._read_response_with_retry()
 
     async def run_test_suite(
         self, suite_name: str = "MCP Connection Tests"

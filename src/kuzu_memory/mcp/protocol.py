@@ -6,6 +6,7 @@ Claude Code and the KuzuMemory MCP server.
 """
 
 import asyncio
+import io
 import json
 import logging
 import select
@@ -178,8 +179,19 @@ class JSONRPCProtocol:
 
     def __init__(self):
         """Initialize JSON-RPC protocol handler."""
-        self.reader = sys.stdin
-        self.writer = sys.stdout
+        # Ensure text mode for stdin/stdout
+        if isinstance(sys.stdin, io.BufferedReader):
+            self.reader = io.TextIOWrapper(sys.stdin, encoding="utf-8")
+        else:
+            self.reader = sys.stdin
+
+        if isinstance(sys.stdout, io.BufferedWriter):
+            self.writer = io.TextIOWrapper(
+                sys.stdout, encoding="utf-8", line_buffering=True
+            )
+        else:
+            self.writer = sys.stdout
+
         self.running = True
         self._buffer = ""
         self._message_queue = Queue()
@@ -316,8 +328,18 @@ class JSONRPCProtocol:
             json_str = json.dumps(message, separators=(",", ":"))
             self.writer.write(json_str + "\n")
             self.writer.flush()
+
+            # Verify write succeeded
+            if self.writer.closed:
+                logger.error("Cannot write - stdout is closed")
+                raise RuntimeError("stdout closed")
+
+        except BrokenPipeError:
+            logger.error("Broken pipe - client disconnected")
+            self.running = False
         except Exception as e:
             logger.error(f"Error writing message: {e}")
+            raise
 
     async def send_notification(
         self, method: str, params: dict[str, Any] | None = None
