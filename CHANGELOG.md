@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.11] - 2025-10-01
+
+### Fixed
+- **MCP Diagnostics Tool Names**: Corrected tool name mismatch in diagnostics
+  - Removed incorrect 'kuzu_' prefix from tool name checks (tools use 'enhance', not 'kuzu_enhance')
+  - Added test parameters for all 9 MCP tools (enhance, learn, recall, stats, remember, recent, cleanup, project, init)
+  - Fixed 'missing required argument' errors in tool execution tests
+  - All 16 diagnostic tests now pass (100% pass rate)
+    - tool_execution_enhance: PASSING ✅
+    - tool_execution_learn: PASSING ✅
+    - tool_execution_recall: PASSING ✅
+    - tool_execution_stats: PASSING ✅
+    - tool_execution_remember: PASSING ✅
+    - tool_execution_recent: PASSING ✅
+    - tool_execution_cleanup: PASSING ✅
+    - tool_execution_project: PASSING ✅
+    - tool_execution_init: PASSING ✅
+
+### Improved
+- **Diagnostic Test Coverage**: Comprehensive parameter validation for all tools
+- **Error Messages**: Clearer diagnostic output for tool execution failures
+
 ## [1.1.10] - 2025-10-01
 
 ### Fixed
@@ -249,7 +271,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.10...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.11...HEAD
+[1.1.11]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.6...v1.1.9
 [1.1.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...v1.1.6
