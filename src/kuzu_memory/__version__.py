@@ -1,6 +1,6 @@
 """Version information for KuzuMemory."""
 
-__version__ = "1.1.11"
+__version__ = "1.1.12"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Database schema version for migration support
