@@ -14,22 +14,23 @@
 
 ### Choose Your Integration Path
 
-**Claude Desktop Users** (MCP Server - Recommended):
+**Claude Desktop Users** (Global Memory - Recommended for Personal Use):
 ```bash
 # List available installation methods
 kuzu-memory list-installers
 
 # Install Claude Desktop (auto-detects pipx or home directory)
+# Creates ~/.kuzu-memory/config.yaml and global database
 kuzu-memory install claude-desktop
 
 # Verify installation
 kuzu-memory install-status
 ```
 
-**Claude Code Users** (IDE Integration):
+**Claude Code Users** (Project-Specific Memory - Recommended for Teams):
 ```bash
 # Initialize project and install integration
-kuzu-memory init
+# Creates .kuzu-memory/config.yaml and project database
 kuzu-memory install claude-code
 
 # Verify installation
@@ -39,14 +40,61 @@ kuzu-memory install-status
 ---
 
 > **📢 ONE PATH Principle**: There is now a single command for each AI system:
-> - `claude-desktop` - Auto-detects best installation method (pipx or home)
-> - `claude-code` - Claude Code IDE integration
+> - `claude-desktop` - Global memory across all conversations (auto-detects pipx or home)
+> - `claude-code` - Project-specific isolated memory
 >
 > **Migration Note**: Old installer names (`claude-desktop-pipx`, `claude-desktop-home`,
 > `claude`, `claude-mpm`) still work but show deprecation warnings.
 >
 > **Script Migration**: If you previously used `python scripts/install-claude-desktop.py`,
 > that method still works but is **deprecated**. Use `kuzu-memory install claude-desktop` instead.
+
+---
+
+## 🔑 Key Differences: Project vs Global Memory
+
+### Claude Code (`claude-code`) - Project-Specific
+- **Configuration**: `.kuzu-memory/config.yaml` in project directory
+- **Database**: `.kuzu-memory/memorydb/` (project-local)
+- **Memory Scope**: Isolated per-project, each project has separate memories
+- **MCP Hooks**: Use project-specific database automatically
+- **Use Cases**:
+  - Team collaboration (commit memories to git)
+  - Project-specific coding patterns and decisions
+  - Client-specific requirements and context
+  - Multiple projects with different contexts
+- **Sharing**: Configuration and memories can be committed to version control
+- **Initialization**: Automatic during installation
+
+### Claude Desktop (`claude-desktop`) - Global
+- **Configuration**: `~/.kuzu-memory/config.yaml` in home directory
+- **Database**: `~/.kuzu-memory/memorydb/` (user-global)
+- **Memory Scope**: Shared across all Claude Desktop conversations
+- **Installation**: Auto-detects pipx or home directory installation method
+- **Use Cases**:
+  - Personal knowledge base and learnings
+  - User preferences and conventions
+  - Cross-project insights
+  - General-purpose AI assistant
+- **Sharing**: Personal, not version controlled
+- **Initialization**: Automatic during installation
+
+### Configuration Behavior
+
+**Automatic Creation**:
+- Configuration files (`config.yaml`) are created automatically during installation
+- Database is initialized automatically on first install
+- No manual configuration required to get started
+
+**Preservation**:
+- Existing configurations are preserved by default
+- Use `--force` flag to overwrite existing configurations
+- Automatic backups created before overwriting
+
+**Customization**:
+- Edit `config.yaml` after installation to customize behavior
+- Specify custom paths with `--memory-db` flag
+- Override defaults with environment variables
 
 ---
 
@@ -70,28 +118,37 @@ kuzu-memory install-status
 pipx install kuzu-memory
 
 # Install Claude Desktop integration (auto-detects best method)
+# This automatically:
+# - Creates ~/.kuzu-memory/config.yaml configuration file
+# - Initializes global database in ~/.kuzu-memory/memorydb/
+# - Configures Claude Desktop MCP server
+# - Creates backup of existing configuration
 kuzu-memory install claude-desktop
 ```
 
-The installer **automatically detects** the best installation method:
-- If `pipx` is available: Uses pipx installation
-- Otherwise: Uses home directory installation
+The installer **automatically**:
+1. **Detects installation method**: Uses pipx if available, otherwise home directory
+2. **Creates configuration**: Generates `~/.kuzu-memory/config.yaml` with sensible defaults
+3. **Initializes database**: Sets up global memory database in `~/.kuzu-memory/memorydb/`
+4. **Configures MCP**: Updates Claude Desktop's `claude_desktop_config.json`
+5. **Preserves existing**: Backs up any existing configuration before changes
 
 #### Installation Options
 
 All installer commands support these options:
 
-- `--force`: Force reinstall even if already installed
+- `--force`: Force reinstall and overwrite existing configuration (creates backup)
 - `--dry-run`: Preview changes without modifying files
 - `--verbose`: Show detailed installation steps
 - `--mode [auto|pipx|home]`: Override auto-detection (claude-desktop only)
-- `--backup-dir PATH`: Custom backup directory
-- `--memory-db PATH`: Custom memory database location
+- `--backup-dir PATH`: Custom backup directory (default: `~/.kuzu-memory-backups/`)
+- `--memory-db PATH`: Custom memory database location (default: `~/.kuzu-memory/memorydb/`)
 
 #### Examples
 
 ```bash
 # Install with auto-detection (recommended - ONE PATH)
+# Creates config and initializes database automatically
 kuzu-memory install claude-desktop
 
 # Preview what would be changed (dry run)
@@ -102,11 +159,12 @@ kuzu-memory install claude-desktop --mode pipx
 kuzu-memory install claude-desktop --mode home
 
 # Install with custom database path
+# Still creates config.yaml automatically with custom path
 kuzu-memory install claude-desktop \
   --mode home \
   --memory-db ~/my-memories/db
 
-# Force reinstall
+# Force reinstall (overwrites existing config, creates backup)
 kuzu-memory install claude-desktop --force
 
 # Check installation status
@@ -115,6 +173,27 @@ kuzu-memory install-status
 # Uninstall Claude Desktop integration
 kuzu-memory uninstall claude-desktop
 ```
+
+#### What Gets Created
+
+After installation, you'll have:
+
+```
+~/.kuzu-memory/
+├── config.yaml              # Configuration file (auto-created)
+├── memorydb/                # Global memory database (auto-initialized)
+│   ├── kuzu_memory.db       # Main database file
+│   └── ... (other db files)
+└── logs/                    # Optional: log files
+
+~/.kuzu-memory-backups/      # Backup directory
+└── config.yaml.backup_[timestamp]  # Backup of previous config (if any)
+
+~/Library/Application Support/Claude/  # macOS
+└── claude_desktop_config.json         # Updated MCP configuration
+```
+
+You can edit `~/.kuzu-memory/config.yaml` after installation to customize behavior.
 
 ### Manual Installation
 
@@ -209,20 +288,34 @@ Get KuzuMemory statistics and status.
 ### Installation Method (ONE PATH)
 
 ```bash
-# Initialize your project first
+# Navigate to your project directory
 cd your-project
-kuzu-memory init
 
 # Install Claude Code integration (ONE command)
+# This automatically:
+# - Creates .kuzu-memory/config.yaml in project directory
+# - Initializes project database in .kuzu-memory/memorydb/
+# - Configures MCP hooks for Claude Code
+# - Creates project-specific CLAUDE.md context file
 kuzu-memory install claude-code
 
 # Verify installation
 kuzu-memory install-status
 ```
 
+The installer **automatically**:
+1. **Creates project configuration**: Generates `.kuzu-memory/config.yaml` in project root
+2. **Initializes project database**: Sets up isolated database in `.kuzu-memory/memorydb/`
+3. **Configures MCP hooks**: Enables KuzuMemory tools in Claude Code
+4. **Creates CLAUDE.md**: Project-specific context file for Claude
+5. **Preserves existing**: Backs up any existing configuration before changes
+
 #### Installation Options
 
 ```bash
+# Install with auto-configuration (recommended - ONE PATH)
+kuzu-memory install claude-code
+
 # Install with options
 kuzu-memory install claude-code --force --verbose
 
@@ -231,19 +324,43 @@ kuzu-memory install claude-code --dry-run
 
 # Custom configuration
 kuzu-memory install claude-code \
-  --memory-db ~/my-project/memories \
-  --backup-dir ~/backups
+  --memory-db ./custom-memories \
+  --backup-dir ./backups
 ```
 
 > **Note**: Previous commands (`kuzu-memory claude install`, `kuzu-memory install claude`)
 > still work but show deprecation warnings. Use `kuzu-memory install claude-code` instead.
 
+#### What Gets Created
+
+After installation, your project will have:
+
+```
+your-project/
+├── .kuzu-memory/
+│   ├── config.yaml              # Project configuration (auto-created)
+│   ├── memorydb/                # Project database (auto-initialized)
+│   │   ├── kuzu_memory.db       # Main database file
+│   │   └── ... (other db files)
+│   └── logs/                    # Optional: log files
+├── CLAUDE.md                     # Project context for Claude (auto-created)
+├── .claude-mpm/
+│   └── config.json              # MPM configuration
+└── .claude/
+    ├── kuzu-memory-mcp.json     # Local MCP config
+    └── kuzu-memory.sh           # Shell wrapper
+```
+
+All files can be committed to git for team collaboration.
+
 ### What Gets Installed
 
-1. **MCP Server Configuration** - Enables KuzuMemory tools in Claude Code
-2. **Project CLAUDE.md** - Project-specific context and guidelines
-3. **Shell Wrappers** - Compatibility scripts for cross-platform support
-4. **Auto-Enhancement Hooks** - Automatic context injection for all queries
+1. **Project Configuration** - `.kuzu-memory/config.yaml` with project-specific settings
+2. **Project Database** - `.kuzu-memory/memorydb/` isolated from other projects
+3. **MCP Server Configuration** - Enables KuzuMemory tools in Claude Code
+4. **Project CLAUDE.md** - Project-specific context and guidelines
+5. **Shell Wrappers** - Compatibility scripts for cross-platform support
+6. **Auto-Enhancement Hooks** - Automatic context injection for all queries
 
 ### Platform Support
 
@@ -262,44 +379,53 @@ kuzu-memory install claude-code \
 - **Full MCP Support**: ✅
 - **Auto-Detection**: ✅
 
-### File Structure
-
-After installation, your project will have:
-
-```
-your-project/
-├── CLAUDE.md                    # Project context for Claude
-├── .claude-mpm/
-│   └── config.json             # MPM configuration
-├── .claude/
-│   ├── kuzu-memory-mcp.json   # Local MCP config
-│   └── kuzu-memory.sh         # Shell wrapper
-└── kuzu-memories/
-    └── kuzu_memory.db         # Memory database
-```
-
 ### How It Works
 
-#### 1. Automatic Context Enhancement
+#### 1. Project Isolation
 
-When you ask Claude a question, KuzuMemory automatically:
-- Searches relevant project memories
-- Enhances your prompt with context
-- Returns the enriched response
+Each project has completely isolated memory:
+- **Configuration**: `.kuzu-memory/config.yaml` specific to this project
+- **Database**: `.kuzu-memory/memorydb/` separate from other projects
+- **No Cross-Talk**: Memories from Project A never appear in Project B
+- **Independent Settings**: Each project can have different configurations
 
-#### 2. Asynchronous Learning
+#### 2. Automatic Context Enhancement
 
-After each interaction:
+When you ask Claude a question in this project:
+- Searches only this project's memories
+- Enhances your prompt with project-specific context
+- Returns responses based on project conventions
+
+#### 3. Asynchronous Learning
+
+After each interaction in this project:
 - Important information is extracted
-- Stored asynchronously (non-blocking)
-- Available for future queries
+- Stored asynchronously (non-blocking) in project database
+- Available for future queries in this project only
 
-#### 3. Project-Specific Memory
+#### 4. Team Collaboration
 
 All memories are:
-- Stored locally in your project
+- Stored locally in `.kuzu-memory/` directory
 - Git-committable for team sharing
-- Project-scoped (not user-scoped)
+- Project-scoped (shared across team, isolated from other projects)
+- Version-controlled with your codebase
+
+**Example Workflow**:
+```bash
+# Developer A creates memories
+cd my-project
+kuzu-memory install claude-code
+# ... work with Claude, memories are created ...
+git add .kuzu-memory/ CLAUDE.md
+git commit -m "Add project memories"
+git push
+
+# Developer B gets memories
+git pull
+# Memories are automatically available!
+kuzu-memory stats  # See shared memories
+```
 
 ---
 
@@ -346,6 +472,75 @@ After installation, you can verify the integration is working:
 
 ## 🔧 Configuration
 
+### Understanding Configuration Files
+
+KuzuMemory uses different configuration files depending on the integration:
+
+#### Claude Desktop (Global Configuration)
+- **Location**: `~/.kuzu-memory/config.yaml`
+- **Created By**: `kuzu-memory install claude-desktop`
+- **Scope**: All Claude Desktop conversations
+- **Database**: `~/.kuzu-memory/memorydb/`
+
+#### Claude Code (Project Configuration)
+- **Location**: `.kuzu-memory/config.yaml` (in project root)
+- **Created By**: `kuzu-memory install claude-code`
+- **Scope**: This project only
+- **Database**: `.kuzu-memory/memorydb/` (in project)
+
+### Configuration File Structure
+
+Both installers create a `config.yaml` with sensible defaults:
+
+```yaml
+version: 1.0
+
+# Database settings
+storage:
+  database_path: "./memorydb"  # Relative to config location
+  max_size_mb: 50
+  auto_compact: true
+
+# Memory recall settings
+recall:
+  max_memories: 10
+  strategies:
+    - keyword
+    - entity
+    - temporal
+
+# Learning patterns
+patterns:
+  custom_identity: "I am (.*?)(?:\\.|$)"
+  custom_preference: "I always (.*?)(?:\\.|$)"
+
+# Performance thresholds
+performance:
+  max_recall_time_ms: 100
+  max_generation_time_ms: 200
+
+# Content filtering
+learning:
+  min_content_length: 50
+  excluded_patterns: ["password", "secret", "key", "token"]
+```
+
+### Customizing Configuration
+
+After installation, you can edit the `config.yaml` file:
+
+**For Claude Desktop** (global):
+```bash
+# Edit global configuration
+vim ~/.kuzu-memory/config.yaml
+```
+
+**For Claude Code** (project-specific):
+```bash
+# Edit project configuration
+vim .kuzu-memory/config.yaml
+```
+
 ### MCP Server Configuration
 
 The installer automatically configures Claude Desktop with:
@@ -354,37 +549,35 @@ The installer automatically configures Claude Desktop with:
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 **Linux**: `~/.config/claude/claude_desktop_config.json`
 
+**Claude Desktop** (global memory):
 ```json
 {
   "mcpServers": {
     "kuzu-memory": {
       "command": "kuzu-memory",
-      "args": ["claude", "mcp-server"],
+      "args": ["mcp", "serve"],
       "env": {
-        "KUZU_MEMORY_PROJECT": "${workspaceFolder}"
+        "KUZU_MEMORY_DB": "~/.kuzu-memory/memorydb",
+        "KUZU_MEMORY_MODE": "mcp"
       }
     }
   }
 }
 ```
 
-### Project Configuration
-
-Customize memory behavior in `kuzu-config.json`:
-
+**Claude Code** (project-specific memory):
 ```json
 {
-  "performance": {
-    "max_recall_time_ms": 100,
-    "max_generation_time_ms": 200
-  },
-  "memory": {
-    "max_memories_per_project": 10000,
-    "enable_auto_cleanup": true
-  },
-  "learning": {
-    "min_content_length": 50,
-    "excluded_patterns": ["password", "secret", "key"]
+  "mcpServers": {
+    "kuzu-memory": {
+      "command": "kuzu-memory",
+      "args": ["mcp", "serve"],
+      "env": {
+        "KUZU_MEMORY_DB": "${workspaceFolder}/.kuzu-memory/memorydb",
+        "KUZU_MEMORY_MODE": "mcp",
+        "KUZU_MEMORY_PROJECT": "${workspaceFolder}"
+      }
+    }
   }
 }
 ```
@@ -393,29 +586,12 @@ Customize memory behavior in `kuzu-config.json`:
 
 The MCP server respects the following environment variables:
 
-- `KUZU_MEMORY_DB`: Path to the memory database (default: `~/.kuzu-memory/memorydb`)
+- `KUZU_MEMORY_DB`: Path to the memory database
+  - Claude Desktop: `~/.kuzu-memory/memorydb` (global)
+  - Claude Code: `.kuzu-memory/memorydb` (project-specific)
 - `KUZU_MEMORY_MODE`: Operating mode (should be set to "mcp")
-- `KUZU_MEMORY_PROJECT`: Project root directory (auto-detected if not set)
+- `KUZU_MEMORY_PROJECT`: Project root directory (for Claude Code)
 - `KUZU_MEMORY_ASYNC_TIMEOUT`: Async operation timeout in seconds (default: 5)
-
-### Custom MCP Server Configuration
-
-Customize `.claude/kuzu-memory-mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "kuzu-memory": {
-      "command": "python",
-      "args": ["-m", "kuzu_memory.integrations.mcp_server"],
-      "env": {
-        "KUZU_MEMORY_PROJECT": "/path/to/project",
-        "KUZU_MEMORY_MODE": "mcp"
-      }
-    }
-  }
-}
-```
 
 ---
 

@@ -136,10 +136,10 @@ kuzu-memory stats --validate    # Verify system health and performance
 # List all available integrations
 kuzu-memory list-installers
 
-# Install Claude Code integration
+# Install Claude Code integration (project-specific)
 kuzu-memory install claude-code
 
-# Install Claude Desktop integration (auto-detects pipx or home directory)
+# Install Claude Desktop integration (global)
 kuzu-memory install claude-desktop
 
 # Install Auggie integration
@@ -155,18 +155,40 @@ kuzu-memory install-status
 kuzu-memory uninstall <ai-system>
 
 # 📋 PRIMARY INSTALLERS (4 total - ONE path per system)
-claude-code      # Claude Code IDE integration
-claude-desktop   # Claude Desktop app (auto-detects best method)
+claude-code      # Claude Code IDE integration (project-specific memory)
+claude-desktop   # Claude Desktop app (global memory, auto-detects method)
 auggie           # Auggie AI integration
 universal        # Universal integration files
 
+# 🎯 KEY DIFFERENCES: Project-Specific vs Global Memory
+
+# CLAUDE CODE (project-specific):
+# - Creates: .kuzu-memory/config.yaml in project directory
+# - Database: .kuzu-memory/memorydb/ (project-local)
+# - Scope: Isolated per-project memory
+# - Use Case: Project-specific context and team collaboration
+# - Git-friendly: Can be committed for team sharing
+
+# CLAUDE DESKTOP (global):
+# - Creates: ~/.kuzu-memory/config.yaml in home directory
+# - Database: ~/.kuzu-memory/memorydb/ (user-global)
+# - Scope: Shared across all Claude Desktop conversations
+# - Use Case: Personal knowledge base and preferences
+# - Installation: Auto-detects pipx or home directory method
+
 # 📋 INSTALLATION OPTIONS (Available for all installers)
---force          # Force reinstall even if already installed
+--force          # Force reinstall, overwrites existing config (creates backup)
 --dry-run        # Preview changes without modifying files
 --verbose        # Show detailed installation steps
 --mode           # Override auto-detection (auto|pipx|home) - claude-desktop only
 --backup-dir     # Custom backup directory
 --memory-db      # Custom memory database location
+
+# ⚡ AUTOMATIC INITIALIZATION (NEW)
+# - Configuration files created automatically during installation
+# - Database initialized automatically on first install
+# - Existing configurations preserved (use --force to overwrite)
+# - Automatic backups created when overwriting files
 
 # 🎯 EXAMPLE WORKFLOWS
 # Dry run to preview changes
@@ -178,6 +200,9 @@ kuzu-memory install claude-desktop --force --memory-db ~/my-memories
 # Override auto-detection to use specific method
 kuzu-memory install claude-desktop --mode pipx
 kuzu-memory install claude-desktop --mode home
+
+# Project-specific installation with custom config location
+kuzu-memory install claude-code --memory-db ./project-memories
 
 # ⚠️ DEPRECATED (still work but show warnings)
 # claude-desktop-pipx, claude-desktop-home, claude, claude-mpm

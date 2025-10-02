@@ -174,6 +174,83 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
 
         return backup_path
 
+    def _get_global_config_path(self) -> Path:
+        """
+        Get the global configuration file path.
+
+        Returns:
+            Path to global config.yaml in ~/.kuzu-memory/
+        """
+        return Path.home() / ".kuzu-memory" / "config.yaml"
+
+    def _create_global_config(self) -> str:
+        """
+        Create global configuration file content.
+
+        Returns:
+            YAML configuration content for global installation
+        """
+        db_path = self.memory_db
+        return f"""# KuzuMemory Global Configuration
+# For Claude Desktop integration
+
+version: "1.0"
+debug: false
+log_level: "INFO"
+
+# Database location (global)
+database:
+  path: {db_path}
+
+# Storage configuration
+storage:
+  max_size_mb: 50.0
+  auto_compact: true
+  backup_on_corruption: true
+  connection_pool_size: 5
+  query_timeout_ms: 5000
+
+# Memory recall configuration
+recall:
+  max_memories: 10
+  default_strategy: "auto"
+  strategies:
+    - "keyword"
+    - "entity"
+    - "temporal"
+  strategy_weights:
+    keyword: 0.4
+    entity: 0.4
+    temporal: 0.2
+  min_confidence_threshold: 0.1
+  enable_caching: true
+  cache_size: 1000
+  cache_ttl_seconds: 300
+
+# Memory extraction configuration
+extraction:
+  min_memory_length: 5
+  max_memory_length: 1000
+  enable_entity_extraction: true
+  enable_pattern_compilation: true
+  enable_nlp_classification: true
+
+# Performance monitoring
+performance:
+  max_recall_time_ms: 200.0
+  max_generation_time_ms: 1000.0
+  enable_performance_monitoring: true
+  log_slow_operations: true
+  enable_metrics_collection: false
+
+# Memory retention
+retention:
+  enable_auto_cleanup: true
+  cleanup_interval_hours: 24
+  max_total_memories: 100000
+  cleanup_batch_size: 1000
+"""
+
     def _create_mcp_config(self) -> dict[str, Any]:
         """Create the MCP server configuration for KuzuMemory."""
         if self.pipx_venv_path:
@@ -283,20 +360,51 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
             if not self.memory_db.parent.exists() and not self.dry_run:
                 self.memory_db.parent.mkdir(parents=True, exist_ok=True)
 
+            # Create global config.yaml
+            created_files: list[Path] = []
+            modified_files: list[Path] = []
+            global_config_path = self._get_global_config_path()
+
+            if not self.dry_run:
+                if global_config_path.exists():
+                    logger.info(
+                        f"Global config already exists at {global_config_path}, preserving"
+                    )
+                    modified_files.append(global_config_path)
+                else:
+                    global_config_path.parent.mkdir(parents=True, exist_ok=True)
+                    global_config_path.write_text(self._create_global_config())
+                    created_files.append(global_config_path)
+                    logger.info(f"Created global config at {global_config_path}")
+
+            # Initialize global database if needed
+            if not self.dry_run and not (self.memory_db / "memories.db").exists():
+                try:
+                    from ..core.memory import KuzuMemory
+
+                    memory = KuzuMemory(db_path=self.memory_db / "memories.db")
+                    memory.close()
+                    logger.info(f"Initialized global database at {self.memory_db}")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize database: {e}")
+
+            if not self.config_path.exists():
+                created_files.append(self.config_path)
+            else:
+                modified_files.append(self.config_path)
+
             return InstallationResult(
                 success=True,
                 ai_system=self.ai_system_name,
                 message="Claude Desktop MCP integration installed successfully",
-                files_created=(
-                    [str(self.config_path)] if not self.config_path.exists() else []
-                ),
-                files_modified=(
-                    [str(self.config_path)] if self.config_path.exists() else []
-                ),
+                files_created=created_files,
+                files_modified=modified_files,
                 backup_files=[str(backup_path)] if backup_path else [],
                 warnings=[
                     "Restart Claude Desktop to load the new configuration",
                     "Available MCP tools: kuzu_enhance, kuzu_learn, kuzu_recall, kuzu_remember, kuzu_stats",
+                    f"Global config: {global_config_path}",
+                    f"Global database: {self.memory_db}",
                 ],
             )
 
@@ -768,13 +876,11 @@ if __name__ == '__main__':
             # Create launcher scripts
             self._create_launcher_scripts(installation_type)
 
-            # Create configuration file
+            # Create global configuration file
             if not self.dry_run:
-                config_content = f"""# KuzuMemory Configuration
-database:
-  path: {self.db_dir}
-"""
-                self.config_file.write_text(config_content)
+                global_config_path = self._get_global_config_path()
+                global_config_path.write_text(self._create_global_config())
+                logger.info(f"Created global configuration at {global_config_path}")
 
             # Write metadata
             if not self.dry_run:
@@ -791,21 +897,36 @@ database:
             if not self.dry_run:
                 self._update_claude_config()
 
+            global_config_path = self._get_global_config_path()
+
+            # Initialize global database if needed
+            if not self.dry_run and not (self.db_dir / "memories.db").exists():
+                try:
+                    from ..core.memory import KuzuMemory
+
+                    memory = KuzuMemory(db_path=self.db_dir / "memories.db")
+                    memory.close()
+                    logger.info(f"Initialized global database at {self.db_dir}")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize database: {e}")
+
             return InstallationResult(
                 success=True,
                 ai_system=self.ai_system_name,
                 message=f"Installation complete: {self.install_root}",
                 files_created=[
-                    str(self.bin_dir / "kuzu-memory-mcp-server"),
-                    str(self.config_file),
-                    str(self.version_file),
-                    str(self.type_file),
+                    self.bin_dir / "kuzu-memory-mcp-server",
+                    global_config_path,
+                    self.version_file,
+                    self.type_file,
                 ],
                 files_modified=[],
                 backup_files=[],
                 warnings=[
                     f"Installation type: {installation_type}",
                     "Restart Claude Desktop to load the configuration",
+                    f"Global config: {global_config_path}",
+                    f"Global database: {self.db_dir}",
                 ],
             )
 
@@ -820,6 +941,82 @@ database:
                 backup_files=[],
                 warnings=[],
             )
+
+    def _get_global_config_path(self) -> Path:
+        """
+        Get the global configuration file path.
+
+        Returns:
+            Path to global config.yaml in ~/.kuzu-memory/
+        """
+        return self.install_root / "config.yaml"
+
+    def _create_global_config(self) -> str:
+        """
+        Create global configuration file content.
+
+        Returns:
+            YAML configuration content for global installation
+        """
+        return f"""# KuzuMemory Global Configuration
+# For Claude Desktop integration (Home installation)
+
+version: "1.0"
+debug: false
+log_level: "INFO"
+
+# Database location (global)
+database:
+  path: {self.db_dir}
+
+# Storage configuration
+storage:
+  max_size_mb: 50.0
+  auto_compact: true
+  backup_on_corruption: true
+  connection_pool_size: 5
+  query_timeout_ms: 5000
+
+# Memory recall configuration
+recall:
+  max_memories: 10
+  default_strategy: "auto"
+  strategies:
+    - "keyword"
+    - "entity"
+    - "temporal"
+  strategy_weights:
+    keyword: 0.4
+    entity: 0.4
+    temporal: 0.2
+  min_confidence_threshold: 0.1
+  enable_caching: true
+  cache_size: 1000
+  cache_ttl_seconds: 300
+
+# Memory extraction configuration
+extraction:
+  min_memory_length: 5
+  max_memory_length: 1000
+  enable_entity_extraction: true
+  enable_pattern_compilation: true
+  enable_nlp_classification: true
+
+# Performance monitoring
+performance:
+  max_recall_time_ms: 200.0
+  max_generation_time_ms: 1000.0
+  enable_performance_monitoring: true
+  log_slow_operations: true
+  enable_metrics_collection: false
+
+# Memory retention
+retention:
+  enable_auto_cleanup: true
+  cleanup_interval_hours: 24
+  max_total_memories: 100000
+  cleanup_batch_size: 1000
+"""
 
     def _update_claude_config(self) -> None:
         """Update Claude Desktop configuration."""

@@ -46,10 +46,10 @@ KuzuMemory can be integrated with various AI systems following the **ONE PATH** 
 # List available integrations
 kuzu-memory list-installers
 
-# Install Claude Code integration
+# Install Claude Code integration (project-specific memory)
 kuzu-memory install claude-code
 
-# Install Claude Desktop integration (auto-detects pipx or home directory)
+# Install Claude Desktop integration (global memory)
 kuzu-memory install claude-desktop
 
 # Install Auggie integration
@@ -63,18 +63,40 @@ kuzu-memory install-status
 ```
 
 **Primary Installers** (ONE path for each AI system):
-- `claude-code` - Claude Code IDE integration
-- `claude-desktop` - Claude Desktop app (auto-detects best method)
+- `claude-code` - Claude Code IDE integration (project-specific memory isolation)
+- `claude-desktop` - Claude Desktop app (global memory across all conversations)
 - `auggie` - Auggie AI integration
 - `universal` - Universal integration files
 
+**Key Differences**:
+
+**Claude Code** (`claude-code`):
+- **Configuration**: Creates `.kuzu-memory/config.yaml` in project directory
+- **Database**: Initializes project database in `.kuzu-memory/memorydb/`
+- **Memory Scope**: Each project has isolated memory
+- **Use Case**: Project-specific context and memories
+- **Sharing**: Memory can be committed to git for team collaboration
+
+**Claude Desktop** (`claude-desktop`):
+- **Configuration**: Creates `~/.kuzu-memory/config.yaml` in home directory
+- **Database**: Initializes global database in `~/.kuzu-memory/memorydb/`
+- **Memory Scope**: Shared across all Claude Desktop conversations
+- **Use Case**: Personal knowledge base and preferences
+- **Installation**: Auto-detects pipx or home directory installation
+
 **Installation Options:**
-- `--force` - Force reinstall even if already installed
+- `--force` - Force reinstall even if already installed (overwrites existing config)
 - `--dry-run` - Preview changes without modifying files
 - `--verbose` - Show detailed installation steps
 - `--mode [auto|pipx|home]` - Override auto-detection (claude-desktop only)
 - `--backup-dir PATH` - Custom backup directory
 - `--memory-db PATH` - Custom memory database location
+
+**Automatic Initialization**:
+- Configuration files are created automatically during installation
+- Database is initialized automatically
+- Existing configurations are preserved (use `--force` to overwrite)
+- Backups are created when overwriting existing files
 
 See [Claude Setup Guide](docs/CLAUDE_SETUP.md) for detailed instructions on Claude Desktop and Claude Code integration.
 
