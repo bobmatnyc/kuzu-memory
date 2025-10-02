@@ -5,7 +5,7 @@ model: sonnet
 type: memory_manager
 color: indigo
 category: infrastructure
-version: "1.1.1"
+version: "1.1.2"
 created_at: 2025-08-16T00:00:00.000000Z
 updated_at: 2025-08-16T00:00:00.000000Z
 tags: memory,knowledge-management,context-retention,agent-memories,optimization

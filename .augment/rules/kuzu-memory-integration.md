@@ -7,7 +7,7 @@
 When users ask technical questions, ALWAYS enhance them with project context:
 
 **Trigger patterns:**
-- "How do I..." 
+- "How do I..."
 - "What's the best way to..."
 - "How should I..."
 - "How to implement..."

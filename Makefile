@@ -1,7 +1,7 @@
 # KuzuMemory - Single Path Workflows
 # ONE way to do ANYTHING - Agentic Coder Optimizer compliance
 
-.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release
+.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release install-home install-home-wrapper install-home-standalone update-home validate-home uninstall-home test-home-installer install-home-dry install-home-wrapper-dry install-home-standalone-dry
 
 # Default target
 all: quality test build
@@ -59,6 +59,15 @@ help:
 	@echo "  make mcp-diagnose    Run MCP diagnostics"
 	@echo "  make mcp-health      MCP server health check"
 	@echo "  make mcp-full        Complete MCP validation suite"
+	@echo ""
+	@echo "🏠 HOME INSTALLATION (NEW - ~/.kuzu-memory/):"
+	@echo "  make install-home       Install to ~/.kuzu-memory/ (auto mode)"
+	@echo "  make install-home-wrapper  Install as wrapper (uses system package)"
+	@echo "  make install-home-standalone Install standalone (local copy)"
+	@echo "  make update-home        Update home installation"
+	@echo "  make validate-home      Validate home installation"
+	@echo "  make uninstall-home     Remove home installation"
+	@echo "  make test-home-installer Test home installer"
 	@echo ""
 	@echo "🎯 COMPLETE WORKFLOW:"
 	@echo "  make all        quality + test + build"
@@ -302,3 +311,52 @@ mcp-full: mcp-test mcp-diagnose mcp-health
 	@echo "  ✅ All tests passed"
 	@echo "  ✅ Diagnostics completed"
 	@echo "  ✅ Health check passed"
+
+# Home Installation Targets (Using CLI - Recommended)
+install-home:
+	@echo "🏠 Installing KuzuMemory to ~/.kuzu-memory/ (auto mode)..."
+	kuzu-memory install claude-desktop-home --verbose
+	@echo "✅ Home installation complete"
+
+install-home-wrapper:
+	@echo "🏠 Installing KuzuMemory to ~/.kuzu-memory/ (wrapper mode)..."
+	kuzu-memory install claude-desktop-home --mode wrapper --verbose
+	@echo "✅ Home wrapper installation complete"
+
+install-home-standalone:
+	@echo "🏠 Installing KuzuMemory to ~/.kuzu-memory/ (standalone mode)..."
+	kuzu-memory install claude-desktop-home --mode standalone --verbose
+	@echo "✅ Home standalone installation complete"
+
+update-home:
+	@echo "🔄 Updating home installation..."
+	kuzu-memory install claude-desktop-home --force --verbose
+	@echo "✅ Home installation updated"
+
+validate-home:
+	@echo "🔍 Validating home installation..."
+	kuzu-memory install-status --verbose
+	@echo "✅ Home installation validated"
+
+uninstall-home:
+	@echo "🗑️  Removing home installation..."
+	kuzu-memory uninstall claude-desktop-home --verbose
+	@echo "✅ Home installation removed"
+
+test-home-installer: dev
+	@echo "🧪 Testing home installer..."
+	python -m pytest tests/integration/test_home_installer.py -v
+	@echo "✅ Home installer tests complete"
+
+# Dry-run targets for home installation
+install-home-dry:
+	@echo "👀 Previewing home installation (auto mode)..."
+	kuzu-memory install claude-desktop-home --dry-run --verbose
+
+install-home-wrapper-dry:
+	@echo "👀 Previewing home installation (wrapper mode)..."
+	kuzu-memory install claude-desktop-home --mode wrapper --dry-run --verbose
+
+install-home-standalone-dry:
+	@echo "👀 Previewing home installation (standalone mode)..."
+	kuzu-memory install claude-desktop-home --mode standalone --dry-run --verbose

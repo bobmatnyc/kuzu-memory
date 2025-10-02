@@ -10,28 +10,43 @@
 
 ---
 
-## 🎯 Quick Start
+## 🎯 Quick Start (ONE PATH Principle)
 
 ### Choose Your Integration Path
 
-**Claude Desktop Users** (MCP Server):
+**Claude Desktop Users** (MCP Server - Recommended):
 ```bash
-# One-command installation
-python scripts/install-claude-desktop.py
-```
+# List available installation methods
+kuzu-memory list-installers
 
-**Claude Code Users** (Hooks & Integration):
-```bash
-# Initialize project and install hooks
-kuzu-memory init
-kuzu-memory claude install
-```
+# Install Claude Desktop (auto-detects pipx or home directory)
+kuzu-memory install claude-desktop
 
-**Both Platforms**:
-```bash
 # Verify installation
-kuzu-memory claude status
+kuzu-memory install-status
 ```
+
+**Claude Code Users** (IDE Integration):
+```bash
+# Initialize project and install integration
+kuzu-memory init
+kuzu-memory install claude-code
+
+# Verify installation
+kuzu-memory install-status
+```
+
+---
+
+> **📢 ONE PATH Principle**: There is now a single command for each AI system:
+> - `claude-desktop` - Auto-detects best installation method (pipx or home)
+> - `claude-code` - Claude Code IDE integration
+>
+> **Migration Note**: Old installer names (`claude-desktop-pipx`, `claude-desktop-home`,
+> `claude`, `claude-mpm`) still work but show deprecation warnings.
+>
+> **Script Migration**: If you previously used `python scripts/install-claude-desktop.py`,
+> that method still works but is **deprecated**. Use `kuzu-memory install claude-desktop` instead.
 
 ---
 
@@ -48,44 +63,57 @@ kuzu-memory claude status
 
 2. **Claude Desktop**: Installed on your system
 
-### Automatic Installation (Recommended)
+### Automatic Installation (Recommended - ONE PATH)
 
 ```bash
-# Clone the repository (if not already done)
-git clone https://github.com/yourusername/kuzu-memory
-cd kuzu-memory
+# Install KuzuMemory via pipx if not already installed
+pipx install kuzu-memory
 
-# Run the installer
-python scripts/install-claude-desktop.py
+# Install Claude Desktop integration (auto-detects best method)
+kuzu-memory install claude-desktop
 ```
 
-#### Installer Options
+The installer **automatically detects** the best installation method:
+- If `pipx` is available: Uses pipx installation
+- Otherwise: Uses home directory installation
 
-- `--backup-dir PATH`: Custom backup directory (default: `~/.kuzu-memory-backups`)
-- `--memory-db PATH`: Custom memory database path (default: `~/.kuzu-memory/memorydb`)
-- `--force`: Force installation even if configuration exists
-- `--uninstall`: Remove KuzuMemory from Claude Desktop configuration
-- `--validate`: Validate the current installation
-- `--dry-run`: Show what would be done without making changes
-- `--verbose`: Enable verbose output
+#### Installation Options
+
+All installer commands support these options:
+
+- `--force`: Force reinstall even if already installed
+- `--dry-run`: Preview changes without modifying files
+- `--verbose`: Show detailed installation steps
+- `--mode [auto|pipx|home]`: Override auto-detection (claude-desktop only)
+- `--backup-dir PATH`: Custom backup directory
+- `--memory-db PATH`: Custom memory database location
 
 #### Examples
 
 ```bash
-# Install with default settings
-python scripts/install-claude-desktop.py
+# Install with auto-detection (recommended - ONE PATH)
+kuzu-memory install claude-desktop
 
-# Install with custom memory database location
-python scripts/install-claude-desktop.py --memory-db ~/my-memories/db
+# Preview what would be changed (dry run)
+kuzu-memory install claude-desktop --dry-run --verbose
 
-# Validate existing installation
-python scripts/install-claude-desktop.py --validate
+# Override auto-detection to use specific method
+kuzu-memory install claude-desktop --mode pipx
+kuzu-memory install claude-desktop --mode home
 
-# Perform a dry run to see what would be changed
-python scripts/install-claude-desktop.py --dry-run
+# Install with custom database path
+kuzu-memory install claude-desktop \
+  --mode home \
+  --memory-db ~/my-memories/db
 
-# Uninstall KuzuMemory from Claude Desktop
-python scripts/install-claude-desktop.py --uninstall
+# Force reinstall
+kuzu-memory install claude-desktop --force
+
+# Check installation status
+kuzu-memory install-status
+
+# Uninstall Claude Desktop integration
+kuzu-memory uninstall claude-desktop
 ```
 
 ### Manual Installation
@@ -176,41 +204,39 @@ Get KuzuMemory statistics and status.
 
 ---
 
-## 🟡 Claude Code Setup (Hooks & Integration)
+## 🟡 Claude Code Setup (IDE Integration)
 
-### Installation Methods
+### Installation Method (ONE PATH)
 
-#### Method 1: CLI Command (Recommended)
 ```bash
 # Initialize your project first
 cd your-project
 kuzu-memory init
 
-# Install Claude integration
-kuzu-memory claude install
+# Install Claude Code integration (ONE command)
+kuzu-memory install claude-code
 
-# Or use the interactive wizard
-kuzu-memory claude wizard
+# Verify installation
+kuzu-memory install-status
 ```
 
-#### Method 2: Standalone Script
+#### Installation Options
+
 ```bash
-# Download the installer
-curl -O https://raw.githubusercontent.com/yourusername/kuzu-memory/main/scripts/install-claude-hooks.sh
-chmod +x install-claude-hooks.sh
+# Install with options
+kuzu-memory install claude-code --force --verbose
 
-# Run installation
-./install-claude-hooks.sh
+# Preview changes first
+kuzu-memory install claude-code --dry-run
 
-# Or force reinstall
-./install-claude-hooks.sh --force
+# Custom configuration
+kuzu-memory install claude-code \
+  --memory-db ~/my-project/memories \
+  --backup-dir ~/backups
 ```
 
-#### Method 3: Generic Install Command
-```bash
-# Using the generic install command
-kuzu-memory install claude
-```
+> **Note**: Previous commands (`kuzu-memory claude install`, `kuzu-memory install claude`)
+> still work but show deprecation warnings. Use `kuzu-memory install claude-code` instead.
 
 ### What Gets Installed
 

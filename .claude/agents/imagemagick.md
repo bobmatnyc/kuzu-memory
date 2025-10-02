@@ -5,7 +5,7 @@ model: sonnet
 type: imagemagick
 color: purple
 category: optimization
-version: "1.0.1"
+version: "1.0.2"
 author: "Claude MPM Team"
 created_at: 2025-08-23T00:00:00.000000Z
 updated_at: 2025-08-23T00:00:00.000000Z

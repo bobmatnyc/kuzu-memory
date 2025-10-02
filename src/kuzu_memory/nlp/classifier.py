@@ -98,7 +98,7 @@ class MemoryClassifier:
         """
         self.initialized = False
         self.classifier = None
-        self.stemmer = PorterStemmer()
+        self.stemmer = None
         self.sentiment_analyzer = None
         self.stop_words = set()
 
@@ -181,6 +181,14 @@ class MemoryClassifier:
             except Exception as e:
                 logger.warning(f"Failed to initialize sentiment analyzer: {e}")
                 self.sentiment_analyzer = None
+
+            # Initialize stemmer
+            try:
+                self.stemmer = PorterStemmer()
+                logger.info("Porter stemmer initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize stemmer: {e}")
+                self.stemmer = None
 
             self.initialized = True
             logger.info("NLTK components initialized successfully")

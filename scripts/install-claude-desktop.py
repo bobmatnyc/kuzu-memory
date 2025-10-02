@@ -2,6 +2,30 @@
 """
 KuzuMemory Claude Desktop MCP Installer
 
+⚠️  DEPRECATION NOTICE ⚠️
+This standalone script is DEPRECATED and will be REMOVED in v2.0.0 (planned: 2026 Q1).
+
+Please use the integrated CLI command instead:
+    kuzu-memory install claude-desktop [options]
+
+For help with the new command:
+    kuzu-memory install --help
+    kuzu-memory list-installers
+
+Migration Examples:
+    OLD: python scripts/install-claude-desktop.py
+    NEW: kuzu-memory install claude-desktop
+
+    OLD: python scripts/install-claude-desktop.py --dry-run
+    NEW: kuzu-memory install claude-desktop --dry-run
+
+    OLD: python scripts/install-claude-desktop.py --memory-db ~/custom
+    NEW: kuzu-memory install claude-desktop --memory-db ~/custom
+
+REMOVAL TIMELINE: This script will be removed in v2.0.0 (2026 Q1)
+This script still works for backward compatibility but is no longer maintained.
+---
+
 This script configures Claude Desktop to use KuzuMemory via the Model Context Protocol (MCP).
 It automatically detects the pipx-installed kuzu-memory and sets up the JSON-RPC configuration.
 
@@ -570,4 +594,11 @@ Examples:
 
 
 if __name__ == "__main__":
+    # Print deprecation warning
+    print(f"{Colors.YELLOW}{Colors.BOLD}⚠️  DEPRECATION WARNING ⚠️{Colors.RESET}")
+    print(f"{Colors.YELLOW}This standalone script is deprecated. Please use:{Colors.RESET}")
+    print(f"{Colors.CYAN}    kuzu-memory install claude-desktop{Colors.RESET}")
+    print(f"{Colors.YELLOW}For more options: {Colors.CYAN}kuzu-memory install --help{Colors.RESET}")
+    print(f"{Colors.YELLOW}Continuing with legacy installation...{Colors.RESET}\n")
+
     main()

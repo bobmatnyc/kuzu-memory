@@ -5,7 +5,7 @@ model: sonnet
 type: system
 color: indigo
 category: system
-version: "2.0.1"
+version: "2.0.2"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.472561Z
 updated_at: 2025-08-26T12:00:00.000000Z

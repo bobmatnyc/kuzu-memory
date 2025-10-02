@@ -5,7 +5,7 @@ model: sonnet
 type: engineer
 color: indigo
 category: engineering
-version: "1.0.0"
+version: "1.0.1"
 author: "Claude MPM Team"
 created_at: 2025-09-25T00:00:00.000000Z
 updated_at: 2025-09-25T00:00:00.000000Z

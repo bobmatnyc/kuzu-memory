@@ -372,6 +372,41 @@ class ConfigLoader:
         except Exception as e:
             raise ConfigurationError(f"Failed to create example configuration: {e}")
 
+    def get_config_info(self, project_root: Path | None = None) -> dict[str, Any]:
+        """
+        Get information about the loaded configuration.
+
+        Args:
+            project_root: Project root directory to check for config files
+
+        Returns:
+            Dictionary with config information including source and path
+        """
+        info = {"source": "default", "path": None}
+
+        if project_root:
+            # Check for project-specific config
+            project_config_paths = [
+                project_root / ".kuzu-memory" / "config.yaml",
+                project_root / ".kuzu-memory" / "config.yml",
+                project_root / ".kuzu-memory" / "config.json",
+            ]
+
+            for config_path in project_config_paths:
+                if config_path.exists():
+                    info["source"] = "project"
+                    info["path"] = str(config_path)
+                    return info
+
+        # Check default paths
+        for config_path in self.default_config_paths:
+            if config_path.exists():
+                info["source"] = "user"
+                info["path"] = str(config_path)
+                return info
+
+        return info
+
 
 # Global config loader instance
 _global_loader: ConfigLoader | None = None

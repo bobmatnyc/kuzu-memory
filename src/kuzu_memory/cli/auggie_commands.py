@@ -27,8 +27,23 @@ def auggie(ctx):
     """
     # Verify Auggie integration is available
     try:
+        from ..core.memory import KuzuMemory
+        from ..utils.project_setup import get_project_db_path
+
         project_root = ctx.obj.get("project_root") or find_project_root()
-        auggie_integration = AuggieIntegration(project_root)
+
+        # Initialize KuzuMemory instance if not already available
+        db_path = get_project_db_path(project_root)
+        memory_system = None
+        if db_path.exists():
+            try:
+                memory_system = KuzuMemory(db_path=db_path)
+            except Exception as e:
+                logger.warning(f"Could not initialize memory system: {e}")
+
+        auggie_integration = AuggieIntegration(
+            project_root=project_root, memory_system=memory_system
+        )
         ctx.obj["auggie"] = auggie_integration
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -78,7 +93,7 @@ def enhance(ctx, prompt, user_id, verbose):
             rich_print(
                 f"🤖 Auggie Rules Applied: {enhanced_result.get('rules_applied', 0)}"
             )
-            rich_print()
+            rich_print("")
 
         # Display enhanced prompt
         enhanced_prompt = enhanced_result.get("enhanced_prompt", prompt)

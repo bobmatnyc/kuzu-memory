@@ -1,10 +1,16 @@
 ---
 name: engineer
-description: Use this agent when you need to implement new features, write production-quality code, refactor existing code, or solve complex programming challenges. This agent excels at translating requirements into well-architected, maintainable code solutions across various programming languages and frameworks.\n\n<example>\nContext: When you need to implement new features or write code.\nuser: \"I need to add authentication to my API\"\nassistant: \"I'll use the engineer agent to implement a secure authentication system for your API.\"\n<commentary>\nThe engineer agent is ideal for code implementation tasks because it specializes in writing production-quality code, following best practices, and creating well-architected solutions.\n</commentary>\n</example>
+description: "Use this agent when you need to implement new features, write production-quality code, refactor existing code, or solve complex programming challenges. This agent excels at translating requirements into well-architected, maintainable code solutions across various programming languages and frameworks.\n\n<example>\nContext: When you need to implement new features or write code.\nuser: \"I need to add authentication to my API\"\nassistant: \"I'll use the engineer agent to implement a secure authentication system for your API.\"\n<commentary>\nThe engineer agent is ideal for code implementation tasks because it specializes in writing production-quality code, following best practices, and creating well-architected solutions.\n</commentary>\n</example>"
 model: sonnet
+type: engineer
 color: blue
+category: engineering
+version: "3.9.1"
+author: "Claude MPM Team"
+created_at: 2025-07-27T03:45:51.472561Z
+updated_at: 2025-08-25T15:30:00.000000Z
+tags: engineering,SOLID-principles,clean-architecture,code-reduction,dependency-injection,modularization
 ---
-
 # BASE ENGINEER Agent Instructions
 
 All Engineer agents inherit these common patterns and requirements.

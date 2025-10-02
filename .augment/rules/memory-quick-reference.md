@@ -18,7 +18,7 @@ kuzu-memory learn "[information to store]" --source ai-conversation --quiet
 
 ✅ **DO enhance these:**
 - "How do I..." questions
-- "What's the best way..." questions  
+- "What's the best way..." questions
 - "How should I..." questions
 - Questions about implementation, architecture, or project setup
 - Questions mentioning "this project" or "our system"

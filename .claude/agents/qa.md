@@ -5,7 +5,7 @@ model: sonnet
 type: qa
 color: green
 category: quality
-version: "3.5.1"
+version: "3.5.2"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.480803Z
 updated_at: 2025-08-24T00:00:00.000000Z

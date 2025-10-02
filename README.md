@@ -38,26 +38,47 @@ pip install kuzu-memory[dev]
 
 **Now available on PyPI!** KuzuMemory v1.1.0 is published and ready for production use.
 
-### Claude Desktop Integration
+### AI Integration
 
-KuzuMemory can be integrated with Claude Desktop via MCP (Model Context Protocol) for seamless memory operations. The system is also ready for claude-mpm hook integration:
+KuzuMemory can be integrated with various AI systems following the **ONE PATH** principle:
 
 ```bash
-# Automatic setup with pipx detection
-python scripts/install-claude-desktop.py
+# List available integrations
+kuzu-memory list-installers
 
-# Or with custom options
-python scripts/install-claude-desktop.py --memory-db ~/custom-path/memorydb
+# Install Claude Code integration
+kuzu-memory install claude-code
+
+# Install Claude Desktop integration (auto-detects pipx or home directory)
+kuzu-memory install claude-desktop
+
+# Install Auggie integration
+kuzu-memory install auggie
+
+# Install universal integration files
+kuzu-memory install universal
+
+# Check installation status
+kuzu-memory install-status
 ```
 
-The installer automatically:
-- Detects your pipx installation
-- Configures Claude Desktop MCP settings
-- Creates backup of existing configuration
-- Validates the installation
-- Supports async learning with 5-second wait behavior
+**Primary Installers** (ONE path for each AI system):
+- `claude-code` - Claude Code IDE integration
+- `claude-desktop` - Claude Desktop app (auto-detects best method)
+- `auggie` - Auggie AI integration
+- `universal` - Universal integration files
+
+**Installation Options:**
+- `--force` - Force reinstall even if already installed
+- `--dry-run` - Preview changes without modifying files
+- `--verbose` - Show detailed installation steps
+- `--mode [auto|pipx|home]` - Override auto-detection (claude-desktop only)
+- `--backup-dir PATH` - Custom backup directory
+- `--memory-db PATH` - Custom memory database location
 
 See [Claude Setup Guide](docs/CLAUDE_SETUP.md) for detailed instructions on Claude Desktop and Claude Code integration.
+
+> **Note**: Previous installer names (e.g., `claude-desktop-pipx`, `claude-desktop-home`) still work but show deprecation warnings.
 
 ### Basic Usage
 

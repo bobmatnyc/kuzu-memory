@@ -539,7 +539,7 @@ def examples(ctx, topic):
                     title=example_set["title"],
                     style="green",
                 )
-                rich_print()  # Add spacing
+                rich_print("")  # Add spacing
 
     except Exception as e:
         if ctx.obj.get("debug"):

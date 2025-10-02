@@ -78,6 +78,33 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
 
 
 @mcp.command()
+@click.option("--port", type=int, help="Port to run server on (for network mode)")
+@click.option(
+    "--stdio", is_flag=True, default=True, help="Use stdio for communication (default)"
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
+@click.pass_context
+def start(ctx, port: int | None, stdio: bool, project_root: str | None):
+    """
+    Start the MCP server (alias for 'serve').
+
+    This provides all KuzuMemory operations as MCP tools that can be
+    used directly by Claude Code without requiring subprocess calls.
+
+    Examples:
+        # Start MCP server (stdio mode for Claude Code)
+        kuzu-memory mcp start
+
+        # Start with specific project root
+        kuzu-memory mcp start --project-root /path/to/project
+    """
+    # Delegate to serve command
+    ctx.invoke(serve, port=port, stdio=stdio, project_root=project_root)
+
+
+@mcp.command()
 @click.pass_context
 def test(ctx):
     """

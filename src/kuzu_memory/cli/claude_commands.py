@@ -38,7 +38,10 @@ def claude_group(ctx):
 @click.pass_context
 def install_claude_hooks(ctx, project_root, force, no_test):
     """
-    Install Claude Code hooks for KuzuMemory integration.
+    [DEPRECATED] Install Claude Code hooks for KuzuMemory integration.
+
+    ⚠️  DEPRECATION WARNING: This command is deprecated.
+    Please use: kuzu-memory install claude-code
 
     This command sets up:
     • MCP server configuration for Claude Desktop
@@ -48,10 +51,19 @@ def install_claude_hooks(ctx, project_root, force, no_test):
 
     \b
     Example:
-      kuzu-memory claude install
-      kuzu-memory claude install --project-root /path/to/project
+      kuzu-memory install claude-code
+      kuzu-memory install claude-code --project-root /path/to/project
     """
     try:
+        # Show deprecation warning
+        rich_panel(
+            "⚠️  DEPRECATION WARNING\n\n"
+            "The 'kuzu-memory claude install' command is deprecated.\n"
+            "Please use: kuzu-memory install claude-code\n\n"
+            "Continuing with installation for now...",
+            title="Deprecated Command",
+            style="yellow",
+        )
         # Determine project root
         if project_root:
             project_root = Path(project_root).resolve()
@@ -161,11 +173,23 @@ def install_claude_hooks(ctx, project_root, force, no_test):
 @click.pass_context
 def uninstall_claude_hooks(ctx, project_root, force):
     """
-    Uninstall Claude Code hooks.
+    [DEPRECATED] Uninstall Claude Code hooks.
+
+    ⚠️  DEPRECATION WARNING: This command is deprecated.
+    Please use: kuzu-memory uninstall claude-code
 
     Removes all Claude integration files and configurations.
     """
     try:
+        # Show deprecation warning
+        rich_panel(
+            "⚠️  DEPRECATION WARNING\n\n"
+            "The 'kuzu-memory claude uninstall' command is deprecated.\n"
+            "Please use: kuzu-memory uninstall claude-code\n\n"
+            "Continuing with uninstallation for now...",
+            title="Deprecated Command",
+            style="yellow",
+        )
         # Determine project root
         if project_root:
             project_root = Path(project_root).resolve()
@@ -224,11 +248,24 @@ def uninstall_claude_hooks(ctx, project_root, force):
 @click.pass_context
 def claude_status(ctx, project_root, output_json):
     """
-    Check Claude Code hooks installation status.
+    [DEPRECATED] Check Claude Code hooks installation status.
+
+    ⚠️  DEPRECATION WARNING: This command is deprecated.
+    Please use: kuzu-memory status
 
     Shows the current state of Claude integration.
     """
     try:
+        # Show deprecation warning (unless json output)
+        if not output_json:
+            rich_panel(
+                "⚠️  DEPRECATION WARNING\n\n"
+                "The 'kuzu-memory claude status' command is deprecated.\n"
+                "Please use: kuzu-memory status\n\n"
+                "Showing status for now...",
+                title="Deprecated Command",
+                style="yellow",
+            )
         # Determine project root
         if project_root:
             project_root = Path(project_root).resolve()
@@ -396,11 +433,16 @@ def test_claude_integration(ctx, project_root):
 @click.pass_context
 def run_mcp_server(ctx, project_root):
     """
-    Run the MCP server for Claude Desktop integration.
+    [DEPRECATED] Run the MCP server for Claude Desktop integration.
+
+    ⚠️  DEPRECATION WARNING: This command is deprecated.
+    Please use: kuzu-memory mcp serve
 
     This is typically called by Claude Desktop, not manually.
     """
     try:
+        # Note: No visible warning here since this is typically called by Claude Desktop
+        # and we don't want to pollute its logs
         import asyncio
 
         from ..integrations.mcp_server import MCP_AVAILABLE, main

@@ -5,7 +5,7 @@ model: sonnet
 type: documentation
 color: purple
 category: specialized
-version: "2.4.1"
+version: "2.4.2"
 author: "Claude MPM Team"
 created_at: 2025-08-13T00:00:00.000000Z
 updated_at: 2025-08-24T00:00:00.000000Z

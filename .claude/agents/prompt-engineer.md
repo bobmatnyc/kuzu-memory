@@ -1,11 +1,11 @@
 ---
 name: prompt-engineer
 description: "Use this agent when you need specialized assistance with use this agent when you need to analyze, optimize, and refactor instruction sets, prompts, and documentation for clarity and effectiveness. this agent specializes in prompt engineering, instruction optimization, semantic clarity analysis, llm evaluation, and reducing redundancy while maintaining precision. additionally, it provides comprehensive llm testing and comparative analysis across different models.. This agent provides targeted expertise and follows best practices for prompt engineer related tasks.\n\n<example>\nContext: When you need specialized assistance from the prompt-engineer agent.\nuser: \"I need help with prompt engineer tasks\"\nassistant: \"I'll use the prompt-engineer agent to provide specialized assistance.\"\n<commentary>\nThis agent provides targeted expertise for prompt engineer related tasks and follows established best practices.\n</commentary>\n</example>"
-model: opus
+model: sonnet
 type: analysis
 color: yellow
 category: analysis
-version: "1.0.0"
+version: "1.0.1"
 author: "Claude MPM Team"
 created_at: 2025-09-18T00:00:00.000000Z
 updated_at: 2025-09-18T00:00:00.000000Z

@@ -530,10 +530,35 @@ After completing this guide, you should be able to:
 - Update relevant memory files with new patterns
 - Maintain documentation priority system
 
-### For Claude Integration
+### For AI System Integration (ONE PATH)
 - See [CLAUDE_SETUP.md](CLAUDE_SETUP.md) for complete integration guide
-- Install Claude Desktop MCP server or Claude Code hooks
+- List available integrations: `kuzu-memory list-installers`
+- Install integration: `kuzu-memory install <ai-system>`
+- Check status: `kuzu-memory install-status`
 - Configure project-specific memory settings
+
+**Quick Examples (ONE command per system):**
+```bash
+# Claude Desktop (auto-detects best method)
+kuzu-memory install claude-desktop
+
+# Claude Code IDE integration
+kuzu-memory install claude-code
+
+# Auggie integration
+kuzu-memory install auggie
+
+# Universal integration files
+kuzu-memory install universal
+```
+
+**Primary Installers:**
+- `claude-code` - Claude Code IDE integration
+- `claude-desktop` - Claude Desktop (auto-detects pipx or home)
+- `auggie` - Auggie AI integration
+- `universal` - Universal integration files
+
+> **Note**: Old installer names still work but show deprecation warnings.
 
 ---
 

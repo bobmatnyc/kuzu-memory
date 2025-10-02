@@ -175,9 +175,11 @@ class AuggieIntegration:
             # Add memory context if available
             if self.memory_system:
                 try:
-                    relevant_memories = self.memory_system.recall_memories(
+                    # Use attach_memories which returns AttachResult with memories
+                    attach_result = self.memory_system.attach_memories(
                         prompt, max_memories=self.config["max_context_memories"]
                     )
+                    relevant_memories = attach_result.memories if attach_result else []
                     rule_context["memories"] = [
                         {
                             "content": mem.content,

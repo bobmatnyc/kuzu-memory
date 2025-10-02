@@ -9,6 +9,11 @@ from pathlib import Path
 
 from .auggie import AuggieInstaller
 from .base import BaseInstaller
+from .claude_desktop import (
+    ClaudeDesktopHomeInstaller,
+    ClaudeDesktopPipxInstaller,
+    SmartClaudeDesktopInstaller,
+)
 from .claude_hooks import ClaudeHooksInstaller
 from .universal import UniversalInstaller
 
@@ -29,11 +34,25 @@ class InstallerRegistry:
 
     def _register_builtin_installers(self):
         """Register built-in installers."""
+        # AI System Installers (ONE PATH per system)
         self.register("auggie", AuggieInstaller)
-        self.register("claude", ClaudeHooksInstaller)  # Claude Code with MCP
-        self.register("claude-mcp", ClaudeHooksInstaller)  # Explicit MCP version
+        self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
+        self.register(
+            "claude-desktop", SmartClaudeDesktopInstaller
+        )  # Smart auto-detection
         self.register("universal", UniversalInstaller)
-        self.register("generic", UniversalInstaller)  # Alias for Universal
+
+        # Legacy aliases (DEPRECATED - will show warnings)
+        # These are kept for backward compatibility only
+        self.register("claude", ClaudeHooksInstaller)  # DEPRECATED: Use claude-code
+        self.register("claude-mcp", ClaudeHooksInstaller)  # DEPRECATED: Use claude-code
+        self.register(
+            "claude-desktop-pipx", ClaudeDesktopPipxInstaller
+        )  # DEPRECATED: Use claude-desktop
+        self.register(
+            "claude-desktop-home", ClaudeDesktopHomeInstaller
+        )  # DEPRECATED: Use claude-desktop --mode=home
+        self.register("generic", UniversalInstaller)  # DEPRECATED: Use universal
 
     def register(self, name: str, installer_class: type[BaseInstaller]):
         """

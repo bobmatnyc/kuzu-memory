@@ -129,17 +129,59 @@ kuzu-memory stats --validate    # Verify system health and performance
 
 ## 🟢 STANDARD - DEVELOPMENT GUIDELINES
 
-### Claude Desktop MCP Integration (Production Ready)
+### AI System Integration (Production Ready - ONE PATH)
 ```bash
-# 🔌 ONE-COMMAND INSTALLATION
-python scripts/install-claude-desktop.py
+# 🔌 INTEGRATED INSTALLER COMMANDS (ONE path for each AI system)
 
-# Features:
-# - Automatic pipx detection and installation
-# - Claude Desktop MCP configuration
-# - Backup of existing configuration
-# - Installation validation and verification
-# - Compatible with claude-mpm hooks system
+# List all available integrations
+kuzu-memory list-installers
+
+# Install Claude Code integration
+kuzu-memory install claude-code
+
+# Install Claude Desktop integration (auto-detects pipx or home directory)
+kuzu-memory install claude-desktop
+
+# Install Auggie integration
+kuzu-memory install auggie
+
+# Install universal integration files
+kuzu-memory install universal
+
+# Check installation status
+kuzu-memory install-status
+
+# Uninstall integration
+kuzu-memory uninstall <ai-system>
+
+# 📋 PRIMARY INSTALLERS (4 total - ONE path per system)
+claude-code      # Claude Code IDE integration
+claude-desktop   # Claude Desktop app (auto-detects best method)
+auggie           # Auggie AI integration
+universal        # Universal integration files
+
+# 📋 INSTALLATION OPTIONS (Available for all installers)
+--force          # Force reinstall even if already installed
+--dry-run        # Preview changes without modifying files
+--verbose        # Show detailed installation steps
+--mode           # Override auto-detection (auto|pipx|home) - claude-desktop only
+--backup-dir     # Custom backup directory
+--memory-db      # Custom memory database location
+
+# 🎯 EXAMPLE WORKFLOWS
+# Dry run to preview changes
+kuzu-memory install claude-desktop --dry-run --verbose
+
+# Force reinstall with custom database path
+kuzu-memory install claude-desktop --force --memory-db ~/my-memories
+
+# Override auto-detection to use specific method
+kuzu-memory install claude-desktop --mode pipx
+kuzu-memory install claude-desktop --mode home
+
+# ⚠️ DEPRECATED (still work but show warnings)
+# claude-desktop-pipx, claude-desktop-home, claude, claude-mpm
+# Use 'claude-code' or 'claude-desktop' instead
 ```
 
 ### Memory System Operations
@@ -369,8 +411,11 @@ kuzu-memory recall --context "related memories"  # Context retrieval
 - **[tests/mcp/README.md](tests/mcp/README.md)** - MCP testing framework overview
 
 ### Setup Guides
-- **[scripts/install-claude-desktop.py](scripts/install-claude-desktop.py)** - MCP installer
 - **[Makefile](Makefile)** - Build system and workflows
+
+### Deprecated
+- **[scripts/install-claude-desktop.py](scripts/install-claude-desktop.py)** - ⚠️ DEPRECATED (use `kuzu-memory install` instead)
+- **[scripts/install-claude-desktop-home.py](scripts/install-claude-desktop-home.py)** - ⚠️ DEPRECATED (use `kuzu-memory install` instead)
 
 ---
 

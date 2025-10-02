@@ -5,7 +5,7 @@ model: sonnet
 type: security
 color: red
 category: quality
-version: "2.4.0"
+version: "2.4.1"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.489358Z
 updated_at: 2025-08-13T00:00:00.000000Z

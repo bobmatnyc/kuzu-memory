@@ -1,10 +1,10 @@
 ---
 name: code-analyzer
 description: "Use this agent when you need to investigate codebases, analyze system architecture, or gather technical insights. This agent excels at code exploration, pattern identification, and providing comprehensive analysis of existing systems while maintaining strict memory efficiency.\n\n<example>\nContext: When you need to investigate or analyze existing codebases.\nuser: \"I need to understand how the authentication system works in this project\"\nassistant: \"I'll use the code_analyzer agent to analyze the codebase and explain the authentication implementation.\"\n<commentary>\nThe research agent is perfect for code exploration and analysis tasks, providing thorough investigation of existing systems while maintaining memory efficiency.\n</commentary>\n</example>"
-model: opus
+model: sonnet
 type: research
 category: research
-version: "2.6.1"
+version: "2.6.2"
 created_at: 2025-08-12T00:00:00.000000Z
 updated_at: 2025-08-26T00:00:00.000000Z
 tags: code-analysis,ast-analysis,tree-sitter,multi-language,code-quality,pattern-detection,mermaid,visualization,architecture-diagrams
