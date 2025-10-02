@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.10] - 2025-10-01
+
+### Fixed
+- **MCP stdio Communication**: Resolved critical text/binary mode mismatches
+  - Fixed JSON parsing 'Expecting value: line 1 column 1' errors
+  - Implemented text mode with explicit UTF-8 encoding for stdin/stdout
+  - Added explicit stderr logging to prevent stdout pollution
+  - Improved subprocess communication in connection tester
+  - Updated mock clients to use text mode consistently
+
+### Improved
+- **Diagnostics Reliability**: Pass rate improved from 66.7% to 81.2%
+  - Enhanced connection tester with retry logic
+  - Better error handling for subprocess reading
+  - More robust MCP protocol communication
+  - All 101 unit tests passing (100%)
+
+### Verified
+- Core MCP functionality confirmed working
+- `kuzu-memory mcp diagnose run` - 13/16 tests passing
+- `pytest tests/mcp/unit/` - 101/101 tests passing
+- Real-world MCP server communication validated
+
 ## [1.1.9] - 2025-10-01
 
 ### Added
@@ -226,7 +249,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.9...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.10...HEAD
+[1.1.10]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.6...v1.1.9
 [1.1.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.4...v1.1.5
