@@ -510,12 +510,27 @@ class MCPDiagnostics:
                         start = time.time()
 
                         # Create minimal valid parameters based on tool
-                        test_params = {}
-                        if tool_name == "kuzu_enhance":
+                        # Note: Tool names do NOT have kuzu_ prefix
+                        if tool_name == "enhance":
                             test_params = {"prompt": "test"}
-                        elif tool_name == "kuzu_recall":
-                            test_params = {"query": "test"}
-                        elif tool_name == "kuzu_stats":
+                        elif tool_name == "learn":
+                            test_params = {"content": "test"}
+                        elif tool_name == "recall":
+                            test_params = {"query": "test", "limit": 5}
+                        elif tool_name == "stats":
+                            test_params = {}
+                        elif tool_name == "remember":
+                            test_params = {"content": "test memory"}
+                        elif tool_name == "recent":
+                            test_params = {}
+                        elif tool_name == "cleanup":
+                            test_params = {"dry_run": True}  # Safe test mode
+                        elif tool_name == "project":
+                            test_params = {}
+                        elif tool_name == "init":
+                            test_params = {"path": None}
+                        else:
+                            # Default empty params for unknown tools
                             test_params = {}
 
                         tool_msg = {
