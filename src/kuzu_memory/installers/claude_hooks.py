@@ -139,34 +139,30 @@ class ClaudeHooksInstaller(BaseInstaller):
 
     def _get_kuzu_memory_command_path(self) -> str:
         """
-        Get the correct kuzu-memory command path.
+        Get the actual kuzu-memory command path.
 
-        Detects if kuzu-memory was installed via pipx and returns the full path.
-        Otherwise returns the plain command name.
+        Uses shutil.which() to find the exact executable that will be invoked,
+        supporting all installation methods (local, source, pip, pipx, etc.).
 
         Returns:
-            Full path to kuzu-memory command if pipx installed, otherwise 'kuzu-memory'
+            Full path to kuzu-memory executable, or 'kuzu-memory' if not found
         """
         if self._kuzu_command_path is not None:
             return self._kuzu_command_path
 
-        # Check if installed via pipx
+        # Use shutil.which to find actual command path
         try:
-            result = subprocess.run(
-                ["which", "kuzu-memory"], capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0:
-                path = result.stdout.strip()
-                # Check if it's a pipx installation
-                if ".local/bin" in path or "pipx" in path:
-                    self._kuzu_command_path = path
-                    logger.debug(f"Detected pipx installation at: {path}")
-                    return path
+            command_path = shutil.which("kuzu-memory")
+            if command_path:
+                self._kuzu_command_path = command_path
+                logger.debug(f"Found kuzu-memory at: {command_path}")
+                return command_path
         except Exception as e:
-            logger.debug(f"Failed to detect kuzu-memory path: {e}")
+            logger.debug(f"Failed to locate kuzu-memory: {e}")
 
         # Fallback to plain command
         self._kuzu_command_path = "kuzu-memory"
+        logger.debug("Using plain 'kuzu-memory' command")
         return "kuzu-memory"
 
     def _create_claude_code_config(self) -> dict[str, Any]:
@@ -725,14 +721,14 @@ exec {kuzu_cmd} "$@"
         # Test kuzu-memory CLI
         try:
             result = subprocess.run(
-                ["kuzu-memory", "stats", "--format", "json"],
+                ["kuzu-memory", "status", "--format", "json"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=5,
             )
             if result.returncode != 0:
-                warnings.append("kuzu-memory stats command failed")
+                warnings.append("kuzu-memory status command failed")
         except subprocess.SubprocessError as e:
             warnings.append(f"kuzu-memory test failed: {e}")
 
