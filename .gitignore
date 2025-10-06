@@ -268,3 +268,11 @@ tmp/
 virtualenv/
 yarn-debug.log*
 yarn-error.log*
+
+# Claude Code configuration (project-specific, regenerated on install)
+.claude/config.local.json
+.claude/agents/.dependency_cache
+.claude/agents/.mpm_deployment_state
+
+# Kuzu Memory backups (temporary)
+.kuzu-memory-backups/
