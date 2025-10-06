@@ -111,7 +111,7 @@ class MCPServer:
         Returns:
             Enhanced prompt with context
         """
-        args = ["enhance", prompt, "--format", format, "--max-memories", str(limit)]
+        args = ["memory", "enhance", prompt, "--format", format, "--max-memories", str(limit)]
         result = self._run_cli(args)
 
         if result["success"]:
@@ -163,7 +163,7 @@ class MCPServer:
         Returns:
             Relevant memories matching the query
         """
-        args = ["recall", query, "--max-memories", str(limit), "--format", format]
+        args = ["memory", "recall", query, "--max-memories", str(limit), "--format", format]
         result = self._run_cli(args)
 
         if result["success"]:
