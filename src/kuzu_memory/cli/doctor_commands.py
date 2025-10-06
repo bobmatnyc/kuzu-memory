@@ -46,7 +46,7 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
 
     Run comprehensive diagnostics to identify and fix issues with
     PROJECT-LEVEL configurations only:
-    - Project memory database (kuzu-memory/)
+    - Project memory database (kuzu-memories/)
     - Claude Code MCP configuration (.claude/config.local.json)
     - Claude Code hooks (if configured)
 
@@ -299,7 +299,7 @@ def connection(ctx, verbose, output, project_root):
     Test PROJECT database and MCP server connection.
 
     Validates project-level database connectivity and MCP protocol initialization.
-    Uses project memory database (kuzu-memory/), not user-level configurations.
+    Uses project memory database (kuzu-memories/), not user-level configurations.
     """
     try:
         rich_print("🔍 Testing connections...", style="blue")
@@ -379,7 +379,7 @@ def health(ctx, detailed, json_output, continuous, interval, project_root):
     Quick PROJECT health check.
 
     Performs rapid health checks on PROJECT-LEVEL components:
-    - Project memory database (kuzu-memory/)
+    - Project memory database (kuzu-memories/)
     - MCP server (if configured)
     - Tool availability
 

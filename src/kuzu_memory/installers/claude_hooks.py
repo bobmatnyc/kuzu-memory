@@ -125,7 +125,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         Returns:
             Path to project database directory
         """
-        return self.project_root / "kuzu-memory"
+        return self.project_root / "kuzu-memories"
 
     def _get_project_config_path(self) -> Path:
         """

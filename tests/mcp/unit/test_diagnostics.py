@@ -220,7 +220,7 @@ class TestMCPDiagnostics:
 
         assert diagnostics.project_root == Path.cwd()
         assert diagnostics.verbose is False
-        assert diagnostics.claude_config_path is not None
+        assert diagnostics.claude_code_config_path is not None
 
     def test_initialization_with_params(self):
         """Test diagnostics with custom parameters."""
@@ -235,33 +235,38 @@ class TestMCPDiagnostics:
         """Test configuration check when config doesn't exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create diagnostics with non-existent config path
-            diagnostics = MCPDiagnostics()
-            diagnostics.claude_config_path = Path(tmpdir) / "nonexistent.json"
+            diagnostics = MCPDiagnostics(project_root=Path(tmpdir))
 
             results = await diagnostics.check_configuration()
 
             assert len(results) > 0
-            assert results[0].check_name == "claude_config_exists"
+            # First check is memory_database_directory
+            assert results[0].check_name == "memory_database_directory"
+            # It should fail since directory doesn't exist
             assert not results[0].success
-            assert results[0].severity == DiagnosticSeverity.CRITICAL
 
     @pytest.mark.asyncio
     async def test_check_configuration_invalid_json(self):
         """Test configuration check with invalid JSON."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "config.json"
-            config_path.write_text("{ invalid json }")
+            # Set up project structure
+            project_root = Path(tmpdir)
+            claude_config_path = project_root / ".claude" / "config.local.json"
+            claude_config_path.parent.mkdir(parents=True, exist_ok=True)
+            claude_config_path.write_text("{ invalid json }")
 
-            diagnostics = MCPDiagnostics()
-            diagnostics.claude_config_path = config_path
+            diagnostics = MCPDiagnostics(project_root=project_root)
 
             results = await diagnostics.check_configuration()
 
-            # Should pass existence check
-            assert results[0].success
-            # Should fail JSON validation
-            assert not results[1].success
-            assert results[1].check_name == "claude_config_valid_json"
+            # Find the Claude Code config check result
+            config_check = next(
+                (r for r in results if r.check_name == "claude_code_config_valid"),
+                None,
+            )
+            assert config_check is not None
+            assert not config_check.success
+            assert config_check.severity == DiagnosticSeverity.ERROR
 
     @pytest.mark.asyncio
     async def test_check_configuration_valid(self):
@@ -367,16 +372,20 @@ class TestMCPDiagnostics:
     @pytest.mark.asyncio
     async def test_auto_fix_configuration(self):
         """Test auto-fix configuration."""
-        diagnostics = MCPDiagnostics()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            diagnostics = MCPDiagnostics(project_root=Path(tmpdir))
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="Success", stderr="")
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0, stdout="Success", stderr=""
+                )
 
-            result = await diagnostics.auto_fix_configuration()
+                result = await diagnostics.auto_fix_configuration()
 
-            assert result.success
-            assert result.check_name == "auto_fix_configuration"
-            mock_run.assert_called_once()
+                assert result.success
+                assert result.check_name == "auto_fix_configuration"
+                # Should be called twice - once for init, once for install
+                assert mock_run.call_count == 2
 
     @pytest.mark.asyncio
     async def test_auto_fix_database(self):

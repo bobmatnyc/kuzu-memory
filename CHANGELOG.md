@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2025-10-06
+
+### Fixed
+- **Path Bug**: Corrected incorrect path references `kuzu-memory` → `kuzu-memories`
+  - Fixed in `mcp/testing/diagnostics.py` for MCP diagnostics
+  - Fixed in `installers/claude_hooks.py` for hook installation
+- **Doctor Command Enhancement**: Comprehensive checks for all init/install files
+  - Added validation for `.kuzu-memories/config.yaml`
+  - Added validation for `.claude/config.local.json`
+  - Added validation for `.claude-mpm/configuration.yaml`
+  - Improved diagnostic accuracy for installation verification
+
 ### Breaking Changes
 - **CLI Reorganization**: Restructured from 20+ commands to 6 focused command groups
   - `remember` → `memory store`
@@ -327,7 +339,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.13...v1.2.0
 [1.1.13]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.12...v1.1.13

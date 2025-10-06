@@ -124,7 +124,7 @@ class MCPDiagnostics:
     PROJECT-LEVEL MCP diagnostic and troubleshooting framework.
 
     Focuses exclusively on project-scoped diagnostics:
-    - Project memory database (kuzu-memory/)
+    - Project memory database (kuzu-memories/)
     - Claude Code MCP configuration (.claude/config.local.json)
     - Claude Code hooks (if configured)
 
@@ -151,14 +151,14 @@ class MCPDiagnostics:
         self.claude_code_config_path = (
             self.project_root / ".claude" / "config.local.json"
         )
-        self.memory_db_path = self.project_root / "kuzu-memory"
+        self.memory_db_path = self.project_root / "kuzu-memories"
 
     async def check_configuration(self) -> list[DiagnosticResult]:
         """
         Check PROJECT-LEVEL MCP configuration validity.
 
         Checks ONLY:
-        - Project memory database directory (kuzu-memory/)
+        - Project memory database directory (kuzu-memories/)
         - Claude Code MCP config (.claude/config.local.json)
         - Claude Code hooks (if configured)
 
@@ -169,7 +169,7 @@ class MCPDiagnostics:
         """
         results = []
 
-        # 1. CHECK PROJECT MEMORY DATABASE
+        # 1. CHECK PROJECT MEMORY DATABASE DIRECTORY
         start = time.time()
         if self.memory_db_path.exists():
             # Check directory is accessible and writable
@@ -208,7 +208,250 @@ class MCPDiagnostics:
                 )
             )
 
-        # 2. CHECK CLAUDE CODE MCP CONFIG (if exists)
+        # 2. CHECK DATABASE FILE (from kuzu-memory init)
+        start = time.time()
+        db_file_path = self.memory_db_path / "memories.db"
+        if db_file_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="memory_database_file",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"Database file exists: {db_file_path}",
+                    metadata={"size_bytes": db_file_path.stat().st_size},
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+            # 3. VERIFY DATABASE CAN BE OPENED
+            start = time.time()
+            try:
+                # Import here to avoid circular dependencies
+                from ...core.memory import KuzuMemory
+
+                with KuzuMemory(db_path=db_file_path):
+                    # Try opening database to verify it is functional
+                    pass
+                results.append(
+                    DiagnosticResult(
+                        check_name="memory_database_initialization",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="Database can be opened and is properly initialized",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            except Exception as e:
+                results.append(
+                    DiagnosticResult(
+                        check_name="memory_database_initialization",
+                        success=False,
+                        severity=DiagnosticSeverity.CRITICAL,
+                        message="Database exists but cannot be opened",
+                        error=str(e),
+                        fix_suggestion="Run: kuzu-memory init --force",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="memory_database_file",
+                    success=False,
+                    severity=DiagnosticSeverity.CRITICAL,
+                    message="Database file does not exist",
+                    error=f"File not found: {db_file_path}",
+                    fix_suggestion="Run: kuzu-memory init",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 4. CHECK README.md (from kuzu-memory init)
+        start = time.time()
+        readme_path = self.memory_db_path / "README.md"
+        if readme_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="memory_readme_file",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"README.md exists: {readme_path}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="memory_readme_file",
+                    success=False,
+                    severity=DiagnosticSeverity.WARNING,
+                    message="README.md missing from kuzu-memories directory",
+                    error=f"File not found: {readme_path}",
+                    fix_suggestion="Run: kuzu-memory init --force",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 5. CHECK project_info.md (from kuzu-memory init)
+        start = time.time()
+        project_info_path = self.memory_db_path / "project_info.md"
+        if project_info_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="project_info_file",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"project_info.md exists: {project_info_path}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="project_info_file",
+                    success=False,
+                    severity=DiagnosticSeverity.WARNING,
+                    message="project_info.md missing from kuzu-memories directory",
+                    error=f"File not found: {project_info_path}",
+                    fix_suggestion="Run: kuzu-memory init --force",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 6. CHECK .claude/kuzu-memory.sh (from install add claude-code)
+        start = time.time()
+        hook_script_path = self.project_root / ".claude" / "kuzu-memory.sh"
+        if hook_script_path.exists():
+            # Check if executable
+            if os.access(hook_script_path, os.X_OK):
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_hook_script",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Hook script exists and is executable: {hook_script_path}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_hook_script",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Hook script exists but is not executable",
+                        error=f"Missing execute permission: {hook_script_path}",
+                        fix_suggestion=f"Run: chmod +x {hook_script_path}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="claude_hook_script",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Claude hook script not found",
+                    error=f"File not found: {hook_script_path}",
+                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 7. CHECK CLAUDE.md (from install add claude-code) - INFO severity (optional)
+        start = time.time()
+        claude_md_path = self.project_root / "CLAUDE.md"
+        if claude_md_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="claude_instructions_file",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"CLAUDE.md exists: {claude_md_path}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="claude_instructions_file",
+                    success=False,
+                    severity=DiagnosticSeverity.INFO,
+                    message="CLAUDE.md not found (optional)",
+                    error=f"File not found: {claude_md_path}",
+                    fix_suggestion="Optional: Run: kuzu-memory install add claude-code to create instructions file",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 8. CHECK .claude-mpm/config.json (from install add claude-code)
+        start = time.time()
+        claude_mpm_config_path = self.project_root / ".claude-mpm" / "config.json"
+        if claude_mpm_config_path.exists():
+            try:
+                with open(claude_mpm_config_path) as f:
+                    json.load(f)
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_mpm_config",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Claude MPM config is valid: {claude_mpm_config_path}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            except json.JSONDecodeError as e:
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_mpm_config",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Claude MPM config contains invalid JSON",
+                        error=str(e),
+                        fix_suggestion="Run: kuzu-memory install add claude-code --force",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="claude_mpm_config",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Claude MPM config not found",
+                    error=f"File not found: {claude_mpm_config_path}",
+                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 9. CHECK .kuzu-memory/config.yaml (from install add claude-code)
+        start = time.time()
+        kuzu_config_path = self.project_root / ".kuzu-memory" / "config.yaml"
+        if kuzu_config_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="kuzu_memory_config",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"KuzuMemory config exists: {kuzu_config_path}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="kuzu_memory_config",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="KuzuMemory config not found",
+                    error=f"File not found: {kuzu_config_path}",
+                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 10. CHECK CLAUDE CODE MCP CONFIG (if exists)
         start = time.time()
         if self.claude_code_config_path.exists():
             try:
