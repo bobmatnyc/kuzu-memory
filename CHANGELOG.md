@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- **CLI Reorganization**: Restructured from 20+ commands to 6 focused command groups
+  - `remember` → `memory store`
+  - `recall` → `memory recall`
+  - `enhance` → `memory enhance`
+  - `stats` → `status`
+  - `install <system>` → `install add <system>`
+  - `list-installers` → `install list`
+  - `install-status` → `install status`
+  - `uninstall` → `install remove`
+  - `mcp diagnose` → `doctor`
+  - `mcp health` → `doctor health`
+  - `examples` → `help examples`
+  - `tips` → `help tips`
+
+### Added
+- Type-safe enums for CLI parameters (AISystem, OutputFormat, MemoryType, DiagnosticCheck)
+- Hierarchical command structure with 6 top-level groups
+- `doctor` command group for diagnostics and health checks
+- `help` command group with examples and tips
+- `status` command with multiple output formats
+
+### Changed
+- Reorganized CLI modules for better maintainability (30% code reduction)
+- Improved help text consistency across all commands
+- Enhanced error messages with enum validation
+
+### Deprecated
+- Old command modules moved to `_deprecated/` directory
+- Legacy command names (still work with deprecation warnings in transition period)
+
+### Documentation
+- Updated all 8 documentation files with new command structure
+- 156+ command reference updates
+- Archived previous documentation versions
+
 ## [1.1.13] - 2025-10-02
 
 ### Changed
