@@ -22,7 +22,7 @@ from .doctor_commands import doctor
 from .help_commands import help_group
 from .init_commands import init
 from .install_commands_simple import install
-from .memory_commands import memory
+from .memory_commands import enhance, memory, store
 from .status_commands import status
 
 # Set up logging for CLI
@@ -208,7 +208,7 @@ def quickstart(ctx, skip_demo):
                 "Enter something about your project",
                 default="This is a Python project using KuzuMemory for AI memory",
             )
-            ctx.invoke(remember, content=sample_memory, source="quickstart")
+            ctx.invoke(store, content=sample_memory, source="quickstart")
 
         # Step 3: Demo enhancement
         rich_print("\n🚀 Step 3: Prompt Enhancement")
@@ -223,7 +223,7 @@ def quickstart(ctx, skip_demo):
 
         # Step 4: Show stats
         rich_print("\n📊 Step 4: Project Status")
-        ctx.invoke(stats, detailed=False, output_format="text")
+        ctx.invoke(status, detailed=False, output_format="text")
 
         # Completion
         rich_panel(
