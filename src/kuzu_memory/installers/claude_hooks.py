@@ -38,6 +38,7 @@ class ClaudeHooksInstaller(BaseInstaller):
             if self.claude_config_dir
             else None
         )
+        self._kuzu_command_path = None  # Cache for kuzu-memory command path
 
     @property
     def ai_system_name(self) -> str:
@@ -136,6 +137,38 @@ class ClaudeHooksInstaller(BaseInstaller):
         """
         return self.project_root / ".kuzu-memory" / "config.yaml"
 
+    def _get_kuzu_memory_command_path(self) -> str:
+        """
+        Get the correct kuzu-memory command path.
+
+        Detects if kuzu-memory was installed via pipx and returns the full path.
+        Otherwise returns the plain command name.
+
+        Returns:
+            Full path to kuzu-memory command if pipx installed, otherwise 'kuzu-memory'
+        """
+        if self._kuzu_command_path is not None:
+            return self._kuzu_command_path
+
+        # Check if installed via pipx
+        try:
+            result = subprocess.run(
+                ["which", "kuzu-memory"], capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                path = result.stdout.strip()
+                # Check if it's a pipx installation
+                if ".local/bin" in path or "pipx" in path:
+                    self._kuzu_command_path = path
+                    logger.debug(f"Detected pipx installation at: {path}")
+                    return path
+        except Exception as e:
+            logger.debug(f"Failed to detect kuzu-memory path: {e}")
+
+        # Fallback to plain command
+        self._kuzu_command_path = "kuzu-memory"
+        return "kuzu-memory"
+
     def _create_claude_code_config(self) -> dict[str, Any]:
         """
         Create Claude Code configuration with hooks and MCP server.
@@ -144,26 +177,28 @@ class ClaudeHooksInstaller(BaseInstaller):
             Claude Code configuration dict with hooks and MCP server
         """
         db_path = self._get_project_db_path()
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
         config = {
             "hooks": {
                 "user_prompt_submit": [
                     {
                         "handler": "kuzu_memory_enhance",
-                        "command": 'kuzu-memory memory enhance "{{prompt}}"',
+                        "command": f'{kuzu_cmd} memory enhance "{{{{prompt}}}}"',
                         "enabled": True,
                     }
                 ],
                 "assistant_response": [
                     {
                         "handler": "kuzu_memory_learn",
-                        "command": 'kuzu-memory memory learn "{{response}}" --quiet',
+                        "command": f'{kuzu_cmd} memory learn "{{{{response}}}}" --quiet',
                         "enabled": True,
                     }
                 ],
             },
             "mcpServers": {
                 "kuzu-memory": {
-                    "command": "kuzu-memory",
+                    "command": kuzu_cmd,
                     "args": ["mcp"],
                     "env": {
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
@@ -394,6 +429,8 @@ retention:
         Returns:
             MPM configuration dict
         """
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
         return {
             "version": "1.0",
             "memory": {
@@ -403,8 +440,8 @@ retention:
                 "project_root": str(self.project_root),
             },
             "hooks": {
-                "pre_response": ["kuzu-memory enhance"],
-                "post_response": ["kuzu-memory learn --quiet"],
+                "pre_response": [f"{kuzu_cmd} enhance"],
+                "post_response": [f"{kuzu_cmd} learn --quiet"],
             },
             "settings": {
                 "max_context_size": 5,
@@ -420,7 +457,9 @@ retention:
         Returns:
             Shell script content
         """
-        return """#!/bin/bash
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
+        return f"""#!/bin/bash
 # KuzuMemory wrapper for Claude integration
 
 set -e
@@ -429,7 +468,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 # Execute kuzu-memory with all arguments
-exec kuzu-memory "$@"
+exec {kuzu_cmd} "$@"
 """
 
     def install(
@@ -570,10 +609,18 @@ exec kuzu-memory "$@"
 
             # Create shell wrapper
             wrapper_path = claude_dir / "kuzu-memory.sh"
+            if wrapper_path.exists():
+                if not dry_run:
+                    backup_path = self.create_backup(wrapper_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(wrapper_path)
+            else:
+                self.files_created.append(wrapper_path)
+
             if not dry_run:
                 wrapper_path.write_text(self._create_shell_wrapper())
                 wrapper_path.chmod(0o755)  # Make executable
-            self.files_created.append(wrapper_path)
 
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only

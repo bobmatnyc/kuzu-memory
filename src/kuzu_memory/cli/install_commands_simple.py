@@ -184,13 +184,39 @@ def add(
             if result.files_created:
                 print("\n📄 Files created:")
                 for file_path in result.files_created:
-                    print(f"  • {file_path}")
+                    # Add helpful context for specific files
+                    if ".claude-mpm/config.json" in str(file_path):
+                        print(f"  • {file_path} (Claude MPM integration)")
+                    else:
+                        print(f"  • {file_path}")
 
             # Show modified files
             if result.files_modified:
                 print("\n📝 Files modified:")
                 for file_path in result.files_modified:
-                    print(f"  • {file_path}")
+                    # Add helpful context for specific files
+                    if "config.local.json" in str(file_path):
+                        print(f"  • {file_path} (merged with existing config)")
+                    elif ".claude-mpm/config.json" in str(file_path):
+                        print(f"  • {file_path} (Claude MPM integration)")
+                    else:
+                        print(f"  • {file_path}")
+
+            # Add explanation for Claude MPM config if it was created/modified
+            mpm_files = [
+                f
+                for f in (result.files_created + result.files_modified)
+                if ".claude-mpm/config.json" in str(f)
+            ]
+            # Show explanation for both "claude-code" and deprecated "claude" names
+            if mpm_files and ai_system in ["claude-code", "claude", "claude-mcp"]:
+                print("\n💡 Claude MPM Integration:")
+                print(
+                    "   .claude-mpm/config.json enables project-wide memory settings for Claude MPM."
+                )
+                print(
+                    "   This is optional and only used if you're using Claude MPM for project management."
+                )
 
             # Show warnings
             if result.warnings:
