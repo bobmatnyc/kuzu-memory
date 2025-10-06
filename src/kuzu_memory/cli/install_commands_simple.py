@@ -10,10 +10,35 @@ import click
 from ..installers import get_installer, has_installer
 from ..installers.registry import list_installers as registry_list_installers
 from ..utils.project_setup import find_project_root
+from .cli_utils import rich_print
+from .enums import AISystem, InstallationMode
 
 
-@click.command(name="install")
-@click.argument("ai_system")
+@click.group(invoke_without_command=True)
+@click.pass_context
+def install(ctx):
+    """
+    🚀 Manage AI system integrations.
+
+    Install, remove, and manage integrations for various AI systems
+    including Claude Desktop, Claude Code, and Auggie.
+
+    \b
+    🎮 COMMANDS:
+      add        Install integration for an AI system
+      remove     Remove an integration
+      list       List available installers
+      status     Show installation status
+
+    Use 'kuzu-memory install COMMAND --help' for detailed help.
+    """
+    # If no subcommand provided, show help
+    if ctx.invoked_subcommand is None:
+        rich_print(ctx.get_help())
+
+
+@install.command()
+@click.argument("ai_system", type=click.Choice([s.value for s in AISystem]))
 @click.option("--force", is_flag=True, help="Force installation even if files exist")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option(
@@ -22,17 +47,24 @@ from ..utils.project_setup import find_project_root
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
 @click.option(
     "--mode",
-    type=click.Choice(["auto", "pipx", "home", "wrapper", "standalone"]),
-    default="auto",
+    type=click.Choice([m.value for m in InstallationMode]),
+    default=InstallationMode.AUTO.value,
     help="Installation mode (auto=detect, pipx=use pipx, home=home dir)",
 )
 @click.option("--backup-dir", type=click.Path(), help="Custom backup directory")
 @click.option("--memory-db", type=click.Path(), help="Custom memory database path")
-def install_group(
-    ai_system, force, project, dry_run, verbose, mode, backup_dir, memory_db
+def add(
+    ai_system: str,
+    force: bool,
+    project,
+    dry_run: bool,
+    verbose: bool,
+    mode: str,
+    backup_dir,
+    memory_db,
 ):
     """
-    🚀 Install integration for an AI system.
+    Install integration for an AI system.
 
     \b
     🎯 SUPPORTED AI SYSTEMS (ONE PATH):
@@ -44,38 +76,38 @@ def install_group(
     \b
     🎮 EXAMPLES:
       # Install Auggie integration
-      kuzu-memory install auggie
+      kuzu-memory install add auggie
 
       # Install Claude Code integration
-      kuzu-memory install claude-code
+      kuzu-memory install add claude-code
 
       # Install Claude Desktop (auto-detects best method)
-      kuzu-memory install claude-desktop
+      kuzu-memory install add claude-desktop
 
       # Install Claude Desktop with specific mode
-      kuzu-memory install claude-desktop --mode pipx
-      kuzu-memory install claude-desktop --mode home
+      kuzu-memory install add claude-desktop --mode pipx
+      kuzu-memory install add claude-desktop --mode home
 
       # Force reinstall with custom settings
-      kuzu-memory install claude-desktop --force --memory-db ~/my-memories
+      kuzu-memory install add claude-desktop --force --memory-db ~/my-memories
 
       # Dry run to see what would happen
-      kuzu-memory install claude-desktop --dry-run --verbose
+      kuzu-memory install add claude-desktop --dry-run --verbose
     """
     try:
         # Deprecation warnings for old installer names
         deprecated_mappings = {
-            "claude": ("claude-code", "kuzu-memory install claude-code"),
-            "claude-mcp": ("claude-code", "kuzu-memory install claude-code"),
+            "claude": ("claude-code", "kuzu-memory install add claude-code"),
+            "claude-mcp": ("claude-code", "kuzu-memory install add claude-code"),
             "claude-desktop-pipx": (
                 "claude-desktop",
-                "kuzu-memory install claude-desktop",
+                "kuzu-memory install add claude-desktop",
             ),
             "claude-desktop-home": (
                 "claude-desktop --mode=home",
-                "kuzu-memory install claude-desktop --mode home",
+                "kuzu-memory install add claude-desktop --mode home",
             ),
-            "generic": ("universal", "kuzu-memory install universal"),
+            "generic": ("universal", "kuzu-memory install add universal"),
         }
 
         if ai_system in deprecated_mappings:
@@ -199,13 +231,23 @@ def install_group(
         sys.exit(1)
 
 
-@click.command()
-@click.argument("ai_system")
+@install.command()
+@click.argument("ai_system", type=click.Choice([s.value for s in AISystem]))
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
-def uninstall(ai_system, project, confirm):
+def remove(ai_system: str, project, confirm: bool):
     """
-    🗑️  Uninstall AI system integration.
+    Remove an AI system integration.
+
+    Uninstalls the specified integration and cleans up configuration files.
+
+    \b
+    🎮 EXAMPLES:
+      # Remove Claude Desktop integration
+      kuzu-memory install remove claude-desktop
+
+      # Remove without confirmation
+      kuzu-memory install remove claude-code --confirm
     """
     try:
         # Get project root
@@ -252,11 +294,21 @@ def uninstall(ai_system, project, confirm):
         sys.exit(1)
 
 
-@click.command()
+@install.command()
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 def status(project):
     """
-    📊 Show installation status for all AI systems.
+    Show installation status for all AI systems.
+
+    Checks which integrations are installed and their current state.
+
+    \b
+    🎮 EXAMPLES:
+      # Check installation status
+      kuzu-memory install status
+
+      # Check status for specific project
+      kuzu-memory install status --project /path/to/project
     """
     try:
         # Get project root
@@ -286,10 +338,17 @@ def status(project):
         sys.exit(1)
 
 
-@click.command()
-def list_installers():
+@install.command(name="list")
+def list_cmd():
     """
-    📋 List all available installers.
+    List all available installers.
+
+    Shows all AI systems that can be integrated with KuzuMemory.
+
+    \b
+    🎮 EXAMPLES:
+      # List available installers
+      kuzu-memory install list
     """
     print("📋 Available AI System Installers")
     print()
@@ -299,4 +358,7 @@ def list_installers():
         print(f"    {installer_info['description']}")
         print()
 
-    print("💡 Usage: kuzu-memory install <name>")
+    print("💡 Usage: kuzu-memory install add <name>")
+
+
+__all__ = ["install"]

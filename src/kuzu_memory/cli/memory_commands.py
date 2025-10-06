@@ -1,7 +1,7 @@
 """
 Memory-related CLI commands for KuzuMemory.
 
-Contains commands for remember, recall, learn, enhance operations.
+Contains memory command group with subcommands for store, learn, recall, enhance operations.
 """
 
 import json
@@ -14,115 +14,113 @@ import click
 from ..core.memory import KuzuMemory
 from ..utils.project_setup import get_project_db_path
 from .cli_utils import rich_panel, rich_print, rich_table
+from .enums import OutputFormat, RecallStrategy
 
 logger = logging.getLogger(__name__)
 
 
-@click.command()
-@click.argument("prompt", required=True)
-@click.option("--max-memories", default=5, help="Maximum number of memories to include")
-@click.option(
-    "--format",
-    "output_format",
-    default="context",
-    type=click.Choice(["context", "plain", "json"]),
-    help="Output format (context=enhanced prompt, plain=just context, json=raw)",
-)
-@click.pass_context
-def enhance(ctx, prompt, max_memories, output_format):
+@click.group()
+def memory():
     """
-    🚀 Enhance a prompt with relevant memory context.
+    🧠 Memory operations (store, recall, enhance).
 
-    Takes a user prompt and adds relevant context from stored memories
-    to improve AI responses. Perfect for AI integrations!
+    Manage memory storage, retrieval, and context enhancement
+    for AI applications.
+
+    \b
+    🎮 COMMANDS:
+      store      Store a memory (synchronous)
+      learn      Learn from content (async)
+      recall     Query stored memories
+      enhance    Enhance prompts with context
+      recent     Show recent memories
+
+    Use 'kuzu-memory memory COMMAND --help' for detailed help.
+    """
+    pass
+
+
+@memory.command()
+@click.argument("content", required=True)
+@click.option(
+    "--source",
+    default="cli",
+    help='Source of the memory (e.g., "conversation", "document")',
+)
+@click.option("--session-id", help="Session ID to group related memories")
+@click.option("--agent-id", default="cli", help="Agent ID that created this memory")
+@click.option("--metadata", help="Additional metadata as JSON string")
+@click.pass_context
+def store(ctx, content, source, session_id, agent_id, metadata):
+    """
+    💾 Store a memory for future recall (synchronous).
+
+    Immediately stores information in the project memory system.
+    Use this for important information that needs to be stored right away.
 
     \b
     🎮 EXAMPLES:
-      # Basic enhancement
-      kuzu-memory enhance "How do I deploy this application?"
+      # Basic memory storage
+      kuzu-memory memory store "We use FastAPI with PostgreSQL"
 
-      # Plain context only
-      kuzu-memory enhance "What's our coding style?" --format plain
+      # Memory with context
+      kuzu-memory memory store "Deploy using Docker" --source deployment
 
-      # JSON output for scripts
-      kuzu-memory enhance "Database questions" --format json
+      # Memory with session grouping
+      kuzu-memory memory store "Bug fix completed" --session-id bug-123
+
+      # Memory with metadata
+      kuzu-memory memory store "Performance improved 40%" --metadata '{"metric": "response_time"}'
     """
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
+        # Parse metadata if provided
+        parsed_metadata = {}
+        if metadata:
+            try:
+                parsed_metadata = json.loads(metadata)
+            except json.JSONDecodeError as e:
+                rich_print(
+                    f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow"
+                )
+
+        # Add CLI context
+        parsed_metadata.update(
+            {
+                "cli_timestamp": datetime.now().isoformat(),
+                "session_id": session_id,
+                "agent_id": agent_id,
+            }
+        )
+
         with KuzuMemory(db_path=db_path) as memory:
-            # Get relevant memories using the attach_memories API
-            memory_context = memory.attach_memories(prompt, max_memories=max_memories)
-            memories = memory_context.memories
+            memory_id = memory.remember(
+                content=content,
+                source=source,
+                session_id=session_id,
+                agent_id=agent_id,
+                metadata=parsed_metadata,
+            )
 
-            if not memories:
-                if output_format == "json":
-                    result = {
-                        "original_prompt": memory_context.original_prompt,
-                        "enhanced_prompt": memory_context.enhanced_prompt,
-                        "context": "",
-                        "memories_found": 0,
-                        "confidence": memory_context.confidence,
-                    }
-                    rich_print(json.dumps(result, indent=2))
-                else:
-                    rich_print(
-                        f"[i]  No relevant memories found for: '{prompt}'", style="blue"
-                    )
-                    if output_format != "plain":
-                        rich_print(memory_context.enhanced_prompt or prompt)
-                return
-
-            # Build context from memories
-            context_parts = []
-            for i, mem in enumerate(memories, 1):
-                context_parts.append(f"{i}. {mem.content}")
-
-            context = "\n".join(context_parts)
-
-            if output_format == "json":
-                result = {
-                    "original_prompt": memory_context.original_prompt,
-                    "enhanced_prompt": memory_context.enhanced_prompt,
-                    "context": context,
-                    "memories_found": len(memories),
-                    "confidence": memory_context.confidence,
-                    "memories": [
-                        {
-                            "id": mem.id,
-                            "content": mem.content,
-                            "source": getattr(mem, "source_type", "unknown"),
-                            "created_at": mem.created_at.isoformat(),
-                            "relevance": getattr(mem, "relevance_score", 0.0),
-                        }
-                        for mem in memories
-                    ],
-                }
-                rich_print(json.dumps(result, indent=2))
-            elif output_format == "plain":
-                rich_print(memory_context.enhanced_prompt or context)
-            else:
-                # Default context format
-                rich_panel(
-                    f"Found {len(memories)} relevant memories:",
-                    title="📚 Context",
-                    style="green",
-                )
-                rich_print(f"\n{context}\n")
-                rich_panel(
-                    memory_context.enhanced_prompt or prompt,
-                    title="🔍 Enhanced Prompt",
-                    style="blue",
-                )
+            rich_print(
+                f"✅ Stored memory: {content[:100]}{'...' if len(content) > 100 else ''}",
+                style="green",
+            )
+            if memory_id:
+                rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
+            rich_print(f"   Source: {source}", style="dim")
+            if session_id:
+                rich_print(f"   Session: {session_id}", style="dim")
 
     except Exception as e:
         if ctx.obj.get("debug"):
             raise
-        rich_print(f"❌ Enhancement failed: {e}", style="red")
+        rich_print(f"❌ Memory storage failed: {e}", style="red")
         sys.exit(1)
 
 
-@click.command()
+@memory.command()
 @click.argument("content", required=True)
 @click.option("--source", default="ai-conversation", help="Source of the memory")
 @click.option("--metadata", help="Additional metadata as JSON string")
@@ -158,22 +156,19 @@ def learn(ctx, content, source, metadata, quiet, no_wait, timeout):
     \b
     🎮 EXAMPLES:
       # Quick learning (waits for completion)
-      kuzu-memory learn "Remember that the API rate limit is 1000/hour"
+      kuzu-memory memory learn "Remember that the API rate limit is 1000/hour"
 
       # Fire and forget mode
-      kuzu-memory learn "Remember that the API rate limit is 1000/hour" --no-wait
+      kuzu-memory memory learn "API rate limit is 1000/hour" --no-wait
 
       # User preference
-      kuzu-memory learn "I prefer TypeScript over JavaScript for type safety"
+      kuzu-memory memory learn "I prefer TypeScript over JavaScript for type safety"
 
       # Project decision
-      kuzu-memory learn "We decided to use PostgreSQL for our database"
-
-      # Pattern/rule
-      kuzu-memory learn "Always validate user input before processing"
+      kuzu-memory memory learn "We decided to use PostgreSQL for our database"
 
       # With custom timeout
-      kuzu-memory learn "Complex content to process" --timeout 10
+      kuzu-memory memory learn "Complex content to process" --timeout 10
     """
     try:
         # Parse metadata if provided
@@ -259,93 +254,13 @@ def learn(ctx, content, source, metadata, quiet, no_wait, timeout):
         sys.exit(1)
 
 
-@click.command()
-@click.argument("content", required=True)
-@click.option(
-    "--source",
-    default="cli",
-    help='Source of the memory (e.g., "conversation", "document")',
-)
-@click.option("--session-id", help="Session ID to group related memories")
-@click.option("--agent-id", default="cli", help="Agent ID that created this memory")
-@click.option("--metadata", help="Additional metadata as JSON string")
-@click.pass_context
-def remember(ctx, content, source, session_id, agent_id, metadata):
-    """
-    💾 Store a memory for future recall (synchronous).
-
-    Immediately stores information in the project memory system.
-    Use this for important information that needs to be stored right away.
-
-    \b
-    🎮 EXAMPLES:
-      # Basic memory storage
-      kuzu-memory remember "We use FastAPI with PostgreSQL"
-
-      # Memory with context
-      kuzu-memory remember "Deploy using Docker" --source deployment
-
-      # Memory with session grouping
-      kuzu-memory remember "Bug fix completed" --session-id bug-123
-
-      # Memory with metadata
-      kuzu-memory remember "Performance improved 40%" --metadata '{"metric": "response_time"}'
-    """
-    try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
-
-        # Parse metadata if provided
-        parsed_metadata = {}
-        if metadata:
-            try:
-                parsed_metadata = json.loads(metadata)
-            except json.JSONDecodeError as e:
-                rich_print(
-                    f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow"
-                )
-
-        # Add CLI context
-        parsed_metadata.update(
-            {
-                "cli_timestamp": datetime.now().isoformat(),
-                "session_id": session_id,
-                "agent_id": agent_id,
-            }
-        )
-
-        with KuzuMemory(db_path=db_path) as memory:
-            memory_id = memory.remember(
-                content=content,
-                source=source,
-                session_id=session_id,
-                agent_id=agent_id,
-                metadata=parsed_metadata,
-            )
-
-            rich_print(
-                f"✅ Stored memory: {content[:100]}{'...' if len(content) > 100 else ''}",
-                style="green",
-            )
-            if memory_id:
-                rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
-            rich_print(f"   Source: {source}", style="dim")
-            if session_id:
-                rich_print(f"   Session: {session_id}", style="dim")
-
-    except Exception as e:
-        if ctx.obj.get("debug"):
-            raise
-        rich_print(f"❌ Memory storage failed: {e}", style="red")
-        sys.exit(1)
-
-
-@click.command()
+@memory.command()
 @click.argument("prompt", required=True)
 @click.option("--max-memories", default=10, help="Maximum number of memories to recall")
 @click.option(
     "--strategy",
-    default="auto",
-    type=click.Choice(["auto", "keyword", "entity", "temporal"]),
+    default=RecallStrategy.AUTO.value,
+    type=click.Choice([s.value for s in RecallStrategy]),
     help="Recall strategy to use",
 )
 @click.option("--session-id", help="Session ID filter")
@@ -354,7 +269,7 @@ def remember(ctx, content, source, session_id, agent_id, metadata):
     "--format",
     "output_format",
     default="enhanced",
-    type=click.Choice(["enhanced", "simple", "json", "raw"]),
+    type=click.Choice(["enhanced", "simple", OutputFormat.JSON.value, "raw"]),
     help="Output format",
 )
 @click.option(
@@ -382,19 +297,19 @@ def recall(
     \b
     🎮 EXAMPLES:
       # Basic recall
-      kuzu-memory recall "How do we handle authentication?"
+      kuzu-memory memory recall "How do we handle authentication?"
 
       # Recall with specific strategy
-      kuzu-memory recall "database setup" --strategy keyword
+      kuzu-memory memory recall "database setup" --strategy keyword
 
       # Recall from specific session
-      kuzu-memory recall "bug fixes" --session-id bug-123
+      kuzu-memory memory recall "bug fixes" --session-id bug-123
 
       # JSON output for scripts
-      kuzu-memory recall "deployment process" --format json
+      kuzu-memory memory recall "deployment process" --format json
 
       # Show ranking explanation
-      kuzu-memory recall "API design" --explain-ranking
+      kuzu-memory memory recall "API design" --explain-ranking
     """
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
@@ -493,23 +408,121 @@ def recall(
         sys.exit(1)
 
 
-@click.command()
-@click.option("--limit", default=10, help="Number of recent memories to show")
-@click.option(
-    "--recent",
-    "recent_deprecated",
-    type=int,
-    help="(Deprecated: use --limit instead)",
-)
+@memory.command()
+@click.argument("prompt", required=True)
+@click.option("--max-memories", default=5, help="Maximum number of memories to include")
 @click.option(
     "--format",
     "output_format",
-    default="table",
-    type=click.Choice(["table", "json", "list"]),
+    default="context",
+    type=click.Choice(["context", OutputFormat.PLAIN.value, OutputFormat.JSON.value]),
+    help="Output format (context=enhanced prompt, plain=just context, json=raw)",
+)
+@click.pass_context
+def enhance(ctx, prompt, max_memories, output_format):
+    """
+    🚀 Enhance a prompt with relevant memory context.
+
+    Takes a user prompt and adds relevant context from stored memories
+    to improve AI responses. Perfect for AI integrations!
+
+    \b
+    🎮 EXAMPLES:
+      # Basic enhancement
+      kuzu-memory memory enhance "How do I deploy this application?"
+
+      # Plain context only
+      kuzu-memory memory enhance "What's our coding style?" --format plain
+
+      # JSON output for scripts
+      kuzu-memory memory enhance "Database questions" --format json
+    """
+    try:
+        db_path = get_project_db_path(ctx.obj.get("project_root"))
+
+        with KuzuMemory(db_path=db_path) as memory:
+            # Get relevant memories using the attach_memories API
+            memory_context = memory.attach_memories(prompt, max_memories=max_memories)
+            memories = memory_context.memories
+
+            if not memories:
+                if output_format == "json":
+                    result = {
+                        "original_prompt": memory_context.original_prompt,
+                        "enhanced_prompt": memory_context.enhanced_prompt,
+                        "context": "",
+                        "memories_found": 0,
+                        "confidence": memory_context.confidence,
+                    }
+                    rich_print(json.dumps(result, indent=2))
+                else:
+                    rich_print(
+                        f"[i]  No relevant memories found for: '{prompt}'", style="blue"
+                    )
+                    if output_format != "plain":
+                        rich_print(memory_context.enhanced_prompt or prompt)
+                return
+
+            # Build context from memories
+            context_parts = []
+            for i, mem in enumerate(memories, 1):
+                context_parts.append(f"{i}. {mem.content}")
+
+            context = "\n".join(context_parts)
+
+            if output_format == "json":
+                result = {
+                    "original_prompt": memory_context.original_prompt,
+                    "enhanced_prompt": memory_context.enhanced_prompt,
+                    "context": context,
+                    "memories_found": len(memories),
+                    "confidence": memory_context.confidence,
+                    "memories": [
+                        {
+                            "id": mem.id,
+                            "content": mem.content,
+                            "source": getattr(mem, "source_type", "unknown"),
+                            "created_at": mem.created_at.isoformat(),
+                            "relevance": getattr(mem, "relevance_score", 0.0),
+                        }
+                        for mem in memories
+                    ],
+                }
+                rich_print(json.dumps(result, indent=2))
+            elif output_format == "plain":
+                rich_print(memory_context.enhanced_prompt or context)
+            else:
+                # Default context format
+                rich_panel(
+                    f"Found {len(memories)} relevant memories:",
+                    title="📚 Context",
+                    style="green",
+                )
+                rich_print(f"\n{context}\n")
+                rich_panel(
+                    memory_context.enhanced_prompt or prompt,
+                    title="🔍 Enhanced Prompt",
+                    style="blue",
+                )
+
+    except Exception as e:
+        if ctx.obj.get("debug"):
+            raise
+        rich_print(f"❌ Enhancement failed: {e}", style="red")
+        sys.exit(1)
+
+
+@memory.command()
+@click.option("--limit", default=10, help="Number of recent memories to show")
+@click.option(
+    "--format",
+    "output_format",
+    default=OutputFormat.TABLE.value,
+    type=click.Choice([OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]),
     help="Output format",
 )
 @click.pass_context
-def recent(ctx, limit, recent_deprecated, output_format):
+def recent(ctx, limit, output_format):
     """
     🕒 Show recent memories stored in the project.
 
@@ -519,26 +532,18 @@ def recent(ctx, limit, recent_deprecated, output_format):
     \b
     🎮 EXAMPLES:
       # Show last 10 memories
-      kuzu-memory recent
+      kuzu-memory memory recent
 
       # Show last 20 memories
-      kuzu-memory recent --limit 20
+      kuzu-memory memory recent --limit 20
 
       # JSON format for scripts
-      kuzu-memory recent --format json
+      kuzu-memory memory recent --format json
 
       # Simple list format
-      kuzu-memory recent --format list
+      kuzu-memory memory recent --format list
     """
     try:
-        # Handle backward compatibility - use --recent if provided, otherwise use --limit
-        if recent_deprecated is not None:
-            limit = recent_deprecated
-            rich_print(
-                "⚠️  Warning: --recent is deprecated. Please use --limit instead.",
-                style="yellow",
-            )
-
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
         with KuzuMemory(db_path=db_path) as memory:
@@ -595,3 +600,6 @@ def recent(ctx, limit, recent_deprecated, output_format):
             raise
         rich_print(f"❌ Failed to retrieve recent memories: {e}", style="red")
         sys.exit(1)
+
+
+__all__ = ["memory"]

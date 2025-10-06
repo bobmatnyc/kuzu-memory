@@ -15,18 +15,15 @@ from ..__version__ import __version__
 from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
-from .auggie_commands import auggie
-from .claude_commands import claude_group
 from .cli_utils import rich_panel, rich_print
 
-# Import install commands
-from .install_commands_simple import install_group, list_installers, status, uninstall
-from .mcp_commands import mcp
-
-# Import command modules
-from .memory_commands import enhance, learn, recall, recent, remember
-from .project_commands import cleanup, create_config, init, project, stats
-from .utility_commands import examples, optimize, setup, temporal_analysis, tips
+# Import top-level command groups (6 total)
+from .doctor_commands import doctor
+from .help_commands import help_group
+from .init_commands import init
+from .install_commands_simple import install
+from .memory_commands import memory
+from .status_commands import status
 
 # Set up logging for CLI
 logging.basicConfig(
@@ -281,45 +278,17 @@ def demo(ctx):
         sys.exit(1)
 
 
-# Add all commands to the main CLI group
+# Register ONLY 6 top-level commands (clean architecture)
+cli.add_command(init)        # 1. Initialize project
+cli.add_command(install)     # 2. Manage integrations (add, remove, list, status)
+cli.add_command(memory)      # 3. Memory operations (store, learn, recall, enhance, recent)
+cli.add_command(status)      # 4. System status and info
+cli.add_command(doctor)      # 5. Diagnostics and health checks
+cli.add_command(help_group, name="help")  # 6. Help and examples
+
+# Keep quickstart/demo for onboarding
 cli.add_command(quickstart)
 cli.add_command(demo)
-
-# Memory commands
-cli.add_command(enhance)
-cli.add_command(learn)
-cli.add_command(remember)
-cli.add_command(recall)
-cli.add_command(recent)
-
-# Project commands
-cli.add_command(init)
-cli.add_command(project)
-cli.add_command(stats)
-cli.add_command(cleanup)
-cli.add_command(create_config, name="create-config")
-
-# Utility commands
-cli.add_command(optimize)
-cli.add_command(setup)
-cli.add_command(tips)
-cli.add_command(examples)
-cli.add_command(temporal_analysis, name="temporal-analysis")
-
-# Auggie integration
-cli.add_command(auggie)
-
-# Claude integration
-cli.add_command(claude_group, name="claude")
-
-# MCP server commands
-cli.add_command(mcp)
-
-# Install commands
-cli.add_command(install_group)
-cli.add_command(uninstall)
-cli.add_command(status, name="install-status")
-cli.add_command(list_installers, name="list-installers")
 
 
 if __name__ == "__main__":
