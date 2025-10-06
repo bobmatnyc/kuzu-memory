@@ -43,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 156+ command reference updates
 - Archived previous documentation versions
 
+## [1.2.1] - 2025-10-06
+
+### Changed
+- Version bump
+
 ## [1.2.0] - 2025-10-06
 
 ### Changed
@@ -322,7 +327,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.13...v1.2.0
 [1.1.13]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.11...v1.1.12
