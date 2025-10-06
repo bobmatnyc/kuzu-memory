@@ -23,6 +23,26 @@
 
 The MCP diagnostic framework provides automated testing, validation, and troubleshooting for the KuzuMemory MCP server.
 
+### Scope: Project-Level Only
+
+**The `doctor` command checks PROJECT-LEVEL configurations only**:
+
+✅ **What Doctor Checks**:
+- Project memory database (`kuzu-memory/`)
+- Claude Code MCP configuration (`.claude/config.local.json`)
+- MCP server configuration and connectivity
+- Claude Code hooks (if configured)
+
+❌ **What Doctor Does NOT Check**:
+- Claude Desktop configuration (user home directory)
+- Global installations in `~/Library/Application Support/Claude/`
+- User-level configurations
+
+**For Claude Desktop setup issues**, use the install command instead:
+```bash
+kuzu-memory install add claude-desktop
+```
+
 ### Command Structure
 
 ```bash
@@ -50,13 +70,16 @@ kuzu-memory doctor [subcommand] [options]
 kuzu-memory doctor [options]
 ```
 
-**What It Tests**:
-- Configuration file validation
-- Server connectivity
+**What It Tests** (Project-Level Only):
+- Project memory database configuration
+- Claude Code MCP configuration (`.claude/config.local.json`)
+- MCP server connectivity
 - Protocol initialization
 - Tool discovery and execution
 - Performance metrics
 - Error handling
+
+**Note**: Does NOT check Claude Desktop user-level config (`~/Library/Application Support/Claude/`)
 
 **Interactive Fix Prompt**: If issues are detected with suggested fixes, you'll be prompted:
 ```
@@ -138,20 +161,25 @@ All checks passed (4/4)
 
 ### Configuration Diagnostics
 
-**Validate MCP configuration**
+**Validate MCP configuration (Project-Level Only)**
 
 ```bash
 kuzu-memory doctor config [options]
 ```
 
-**What It Checks**:
-- Configuration file exists
+**What It Checks** (Project-Level):
+- Claude Code MCP configuration file (`.claude/config.local.json`)
 - JSON syntax validity
 - Required fields present
 - MCP server path correct
+- Project root path configuration
 - Environment variables set
-- Permissions correct
-- Claude Desktop integration
+- File permissions correct
+
+**Note**: Does NOT check Claude Desktop config. For Claude Desktop, use:
+```bash
+kuzu-memory install add claude-desktop
+```
 
 **Options**:
 - `--verbose`, `-v` - Show detailed configuration
@@ -561,18 +589,17 @@ Monitoring stopped.
 
 ### Configuration File Structure
 
-**Required structure for `~/.config/Claude/claude_desktop_config.json`**:
+**Project-Level Configuration**: `.claude/config.local.json` (Claude Code)
 
+The `doctor` command validates the Claude Code MCP configuration file located at `.claude/config.local.json` in your project root.
+
+**Example structure**:
 ```json
 {
   "mcpServers": {
     "kuzu-memory": {
-      "command": "pipx",
+      "command": "kuzu-memory",
       "args": [
-        "run",
-        "--spec",
-        "kuzu-memory",
-        "kuzu-memory",
         "mcp",
         "serve",
         "--project-root",
@@ -584,11 +611,17 @@ Monitoring stopped.
 }
 ```
 
+**Note**: For Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`), use the install command:
+```bash
+kuzu-memory install add claude-desktop
+```
+
 ### Validation Checks
 
-**File Existence**:
-- Config file must exist at `~/.config/Claude/claude_desktop_config.json`
-- Backup at `~/.config/Claude/claude_desktop_config.json.backup` (optional)
+**File Existence** (Project-Level):
+- Config file at `.claude/config.local.json` (project root)
+- Project memory database directory (`kuzu-memory/`)
+- Backup files if created by doctor command
 
 **JSON Syntax**:
 - Valid JSON format
@@ -604,15 +637,15 @@ Monitoring stopped.
 **Optional Fields**:
 - `env` object (environment variables)
 
-**Path Validation**:
+**Path Validation** (Project-Level):
 - `command` executable exists and is accessible
 - `project-root` directory exists and is writable
-- Database directory exists or can be created
+- Project memory database directory exists or can be created
 
-**Permissions**:
-- Config file readable by user
+**Permissions** (Project-Level):
+- Config file (`.claude/config.local.json`) readable by user
 - Project root writable by user
-- Database directory writable by user
+- Project memory database directory (`kuzu-memory/`) writable by user
 
 ---
 

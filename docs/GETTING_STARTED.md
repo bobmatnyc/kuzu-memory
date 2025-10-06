@@ -366,6 +366,31 @@ kuzu-memory/
 
 ## 🔍 Troubleshooting
 
+### Project Diagnostics (ONE PATH - Recommended)
+
+```bash
+# Run full project-level diagnostics
+kuzu-memory doctor
+
+# Quick health check
+kuzu-memory doctor health
+
+# MCP-specific diagnostics
+kuzu-memory doctor mcp
+
+# Test database connection
+kuzu-memory doctor connection
+
+# Auto-fix common issues
+kuzu-memory doctor --fix
+```
+
+**Note**: The `doctor` command checks PROJECT-LEVEL only:
+- ✅ Project memory database (`kuzu-memory/`)
+- ✅ Claude Code MCP config (`.claude/config.local.json`)
+- ✅ Claude Code hooks (if configured)
+- ❌ Does NOT check Claude Desktop (use `kuzu-memory install add claude-desktop` instead)
+
 ### Setup Issues
 
 ```bash

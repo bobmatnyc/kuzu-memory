@@ -312,7 +312,8 @@ pytest tests/mcp/unit/     # MCP unit tests (51+ tests)
 pytest tests/mcp/performance/  # MCP performance tests (78 tests)
 pytest tests/mcp/compliance/   # MCP compliance tests (73 tests)
 
-kuzu-memory doctor              # Run full diagnostics
+# 🩺 PROJECT-LEVEL DIAGNOSTICS (checks project files only)
+kuzu-memory doctor              # Run full project diagnostics
 kuzu-memory doctor health       # Quick health check
 kuzu-memory doctor mcp          # MCP diagnostics
 kuzu-memory doctor connection   # Test database connection
@@ -557,12 +558,19 @@ pip install --upgrade kuzu-memory  # Update to latest version
 make clean && make dev-setup    # Clean rebuild environment
 make quality                    # Run all quality checks
 
-# 🔌 MCP SERVER ISSUES (NEW)
-kuzu-memory doctor              # Full diagnostic suite
+# 🔌 MCP SERVER ISSUES (PROJECT-LEVEL ONLY)
+kuzu-memory doctor              # Full diagnostic suite (project files only)
 kuzu-memory doctor --fix        # Auto-fix common issues
 kuzu-memory doctor health       # Quick health check
 kuzu-memory doctor connection   # Test database connectivity
 kuzu-memory doctor mcp          # MCP diagnostics
+
+# NOTE: Doctor checks PROJECT-LEVEL only:
+# ✅ Checks: Project memory files (kuzu-memory/)
+# ✅ Checks: Claude Code MCP config (.claude/config.local.json)
+# ✅ Checks: Claude Code hooks (if configured)
+# ❌ Does NOT check: Claude Desktop (user home directory)
+# For Claude Desktop setup, use: kuzu-memory install add claude-desktop
 ```
 
 ### 🟢 STANDARD - Monitoring & Alerting Setup

@@ -70,12 +70,18 @@ pytest tests/mcp/ -v
 ### Quick Diagnostics
 
 ```bash
-# Run full diagnostics
+# Run full project-level diagnostics
 kuzu-memory doctor run
 
 # Quick health check
 kuzu-memory doctor health
 ```
+
+**Note**: The `doctor` command checks PROJECT-LEVEL only:
+- ✅ Project memory database (`kuzu-memory/`)
+- ✅ Claude Code MCP config (`.claude/config.local.json`)
+- ✅ Claude Code hooks (if configured)
+- ❌ Does NOT check Claude Desktop (use `kuzu-memory install add claude-desktop` instead)
 
 ---
 
