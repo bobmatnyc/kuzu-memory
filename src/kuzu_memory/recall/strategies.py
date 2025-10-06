@@ -205,7 +205,7 @@ class KeywordRecallStrategy(RecallStrategy):
         # Base query
         query = """
             MATCH (m:Memory)
-            WHERE (m.valid_to IS NULL OR m.valid_to > $current_time)
+            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
         """
 
         # Add user/session/agent filters
@@ -326,7 +326,7 @@ class EntityRecallStrategy(RecallStrategy):
         query = """
             MATCH (e:Entity)-[:MENTIONS]-(m:Memory)
             WHERE e.normalized_name IN $entity_names
-            AND (m.valid_to IS NULL OR m.valid_to > $current_time)
+            AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
         """
 
         parameters = {
@@ -425,7 +425,7 @@ class TemporalRecallStrategy(RecallStrategy):
         # Build temporal query
         query = """
             MATCH (m:Memory)
-            WHERE (m.valid_to IS NULL OR m.valid_to > $current_time)
+            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
         """
 
         current_time = datetime.now()
@@ -433,7 +433,7 @@ class TemporalRecallStrategy(RecallStrategy):
 
         # Add temporal filter (we know time_range exists now)
         since_time = current_time - time_range
-        query += " AND m.created_at > $since_time"
+        query += " AND m.created_at > TIMESTAMP($since_time)"
         parameters["since_time"] = since_time.isoformat()
 
         # Add user/session/agent filters

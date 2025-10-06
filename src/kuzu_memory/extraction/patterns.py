@@ -441,6 +441,11 @@ class PatternExtractor:
                 # Clean up the content
                 content = self._clean_extracted_content(content)
 
+                # Enrich content with context keywords for better recall
+                content = self._enrich_content_with_context(
+                    content, pattern_name, match.group(0)
+                )
+
                 if content and len(content) >= 5:  # Minimum meaningful length
                     extracted_memory = ExtractedMemory(
                         content=content,
@@ -457,6 +462,50 @@ class PatternExtractor:
                     memories.append(extracted_memory)
 
         return memories
+
+    def _enrich_content_with_context(
+        self, content: str, pattern_name: str, original_match: str
+    ) -> str:
+        """
+        Enrich memory content with context keywords for better recall.
+
+        For identity patterns like "My name is Alice", we want to store
+        "name: Alice" so it can be found when asking "What's my name?".
+
+        Args:
+            content: Extracted content (e.g., "Alice")
+            pattern_name: Name of the pattern that matched (e.g., "name_is")
+            original_match: Full original match (e.g., "My name is Alice")
+
+        Returns:
+            Enriched content with context keywords
+        """
+        # Map pattern names to context prefixes for better keyword matching
+        context_prefixes = {
+            "name_is": "name:",
+            "im_name": "name:",
+            "call_me": "name:",
+            "work_at": "works at",
+            "i_am_role": "role:",
+            "im_role": "role:",
+            "live_in": "location:",
+            "i_prefer": "prefers",
+            "we_use": "uses",
+            "we_decided": "decided to",
+            "i_like": "likes",
+            "i_dislike": "dislikes",
+            "we_should": "should",
+            "we_must": "must",
+        }
+
+        # If pattern has a context prefix, prepend it
+        if pattern_name in context_prefixes:
+            prefix = context_prefixes[pattern_name]
+            # Only add prefix if it's not already in the content
+            if not content.lower().startswith(prefix.lower()):
+                return f"{prefix} {content}"
+
+        return content
 
     def _clean_extracted_content(self, content: str) -> str:
         """Clean and normalize extracted content."""

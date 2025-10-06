@@ -284,10 +284,14 @@ class QueryBuilder:
                 # Generate entity ID
                 entity_id = f"{entity_name}:{entity_type}"
 
+                # Normalize entity name for case-insensitive matching
+                normalized_name = entity_name.lower().strip()
+
                 entity_query = """
                 MERGE (e:Entity {id: $id})
                 ON CREATE SET e.name = $name,
                              e.entity_type = $entity_type,
+                             e.normalized_name = $normalized_name,
                              e.first_seen = TIMESTAMP($created_at),
                              e.last_seen = TIMESTAMP($created_at),
                              e.mention_count = 1
@@ -300,6 +304,7 @@ class QueryBuilder:
                     "id": entity_id,
                     "name": entity_name,
                     "entity_type": entity_type,
+                    "normalized_name": normalized_name,
                     "created_at": datetime.now().isoformat(),
                 }
 
@@ -369,7 +374,7 @@ class QueryBuilder:
                         params[filter_key] = filter_value
 
             # Add expiration filter
-            conditions.append("(m.valid_to IS NULL OR m.valid_to > $now)")
+            conditions.append("(m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))")
             params["now"] = datetime.now().isoformat()
 
             # Construct query
@@ -424,7 +429,7 @@ class QueryBuilder:
 
             query = """
             MATCH (m:Memory {id: $memory_id})
-            WHERE m.valid_to IS NULL OR m.valid_to > $now
+            WHERE m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now)
             RETURN m
             """
 
@@ -465,7 +470,7 @@ class QueryBuilder:
             # Query to find and delete expired memories
             query = """
             MATCH (m:Memory)
-            WHERE m.valid_to IS NOT NULL AND m.valid_to <= $now
+            WHERE m.valid_to IS NOT NULL AND m.valid_to <= TIMESTAMP($now)
             WITH m
             OPTIONAL MATCH (m)-[r]-()
             DELETE r, m
@@ -503,32 +508,44 @@ class QueryBuilder:
 
             # Multiple queries for different statistics
             stats_queries = {
-                "total_memories": """
-                    MATCH (m:Memory)
-                    WHERE m.valid_to IS NULL OR m.valid_to > $now
-                    RETURN count(m) as count
-                """,
-                "memory_by_type": """
-                    MATCH (m:Memory)
-                    WHERE m.valid_to IS NULL OR m.valid_to > $now
-                    RETURN m.memory_type as type, count(m) as count
-                    ORDER BY count DESC
-                """,
-                "memory_by_source": """
-                    MATCH (m:Memory)
-                    WHERE m.valid_to IS NULL OR m.valid_to > $now
-                    RETURN m.source_type as source, count(m) as count
-                    ORDER BY count DESC
-                    LIMIT 10
-                """,
-                "recent_activity": """
-                    MATCH (m:Memory)
-                    WHERE m.created_at >= $week_ago AND (m.valid_to IS NULL OR m.valid_to > $now)
-                    RETURN count(m) as recent_count
-                """,
+                "total_memories": {
+                    "query": """
+                        MATCH (m:Memory)
+                        WHERE m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now)
+                        RETURN count(m) as count
+                    """,
+                    "params": ["now"],
+                },
+                "memory_by_type": {
+                    "query": """
+                        MATCH (m:Memory)
+                        WHERE m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now)
+                        RETURN m.memory_type as type, count(m) as count
+                        ORDER BY count DESC
+                    """,
+                    "params": ["now"],
+                },
+                "memory_by_source": {
+                    "query": """
+                        MATCH (m:Memory)
+                        WHERE m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now)
+                        RETURN m.source_type as source, count(m) as count
+                        ORDER BY count DESC
+                        LIMIT 10
+                    """,
+                    "params": ["now"],
+                },
+                "recent_activity": {
+                    "query": """
+                        MATCH (m:Memory)
+                        WHERE m.created_at >= TIMESTAMP($week_ago) AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))
+                        RETURN count(m) as recent_count
+                    """,
+                    "params": ["now", "week_ago"],
+                },
             }
 
-            params = {
+            all_params = {
                 "now": datetime.now().isoformat(),
                 "week_ago": (datetime.now() - timedelta(days=7)).isoformat(),
             }
@@ -536,14 +553,15 @@ class QueryBuilder:
             stats = {}
 
             # Execute each statistics query
-            for stat_name, query in stats_queries.items():
+            for stat_name, query_info in stats_queries.items():
                 try:
-                    # Debug: Log the query and params
-                    if "week_ago" in query:
-                        logger.debug(
-                            f"Executing {stat_name} with params: {params.keys()}"
-                        )
-                    results = self.db_adapter.execute_query(query, params)
+                    query = query_info["query"]
+                    # Only include parameters that this query needs
+                    query_params = {
+                        k: v for k, v in all_params.items() if k in query_info["params"]
+                    }
+
+                    results = self.db_adapter.execute_query(query, query_params)
 
                     if stat_name == "total_memories":
                         stats[stat_name] = results[0]["count"] if results else 0
@@ -756,22 +774,30 @@ class QueryBuilder:
             start_time = datetime.now()
             stored_ids = []
 
-            # Build batch insert query using UNWIND for efficiency
-            # This executes as a single database transaction
+            # Build batch upsert query using MERGE for efficiency
+            # This executes as a single database transaction and handles duplicates
             batch_query = """
             UNWIND $memories AS mem
-            CREATE (m:Memory {
-                id: mem.id,
-                content: mem.content,
-                source_type: mem.source,
-                memory_type: mem.memory_type,
-                created_at: TIMESTAMP(mem.created_at),
-                valid_to: CASE WHEN mem.expires_at IS NOT NULL THEN TIMESTAMP(mem.expires_at) ELSE NULL END,
-                user_id: mem.user_id,
-                session_id: mem.session_id,
-                agent_id: mem.agent_id,
-                metadata: mem.metadata
-            })
+            MERGE (m:Memory {id: mem.id})
+            ON CREATE SET
+                m.content = mem.content,
+                m.source_type = mem.source,
+                m.memory_type = mem.memory_type,
+                m.created_at = TIMESTAMP(mem.created_at),
+                m.valid_to = CASE WHEN mem.expires_at IS NOT NULL THEN TIMESTAMP(mem.expires_at) ELSE NULL END,
+                m.user_id = mem.user_id,
+                m.session_id = mem.session_id,
+                m.agent_id = mem.agent_id,
+                m.metadata = mem.metadata
+            ON MATCH SET
+                m.content = mem.content,
+                m.source_type = mem.source,
+                m.memory_type = mem.memory_type,
+                m.valid_to = CASE WHEN mem.expires_at IS NOT NULL THEN TIMESTAMP(mem.expires_at) ELSE NULL END,
+                m.user_id = mem.user_id,
+                m.session_id = mem.session_id,
+                m.agent_id = mem.agent_id,
+                m.metadata = mem.metadata
             RETURN m.id as memory_id
             """
 
@@ -848,7 +874,7 @@ class QueryBuilder:
             query = """
             UNWIND $memory_ids AS mid
             MATCH (m:Memory {id: mid})
-            WHERE m.valid_to IS NULL OR m.valid_to > $now
+            WHERE m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now)
             RETURN m
             ORDER BY m.created_at DESC
             """

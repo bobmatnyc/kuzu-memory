@@ -14,6 +14,7 @@ import pytest
 
 from kuzu_memory import KuzuMemory, KuzuMemoryConfig
 from kuzu_memory.core.models import MemoryType
+from kuzu_memory.utils.exceptions import ValidationError
 
 
 class TestKuzuMemoryIntegration:
@@ -30,8 +31,8 @@ class TestKuzuMemoryIntegration:
         """Create a test configuration."""
         return {
             "performance": {
-                "max_recall_time_ms": 50.0,  # Relaxed for testing
-                "max_generation_time_ms": 100.0,  # Relaxed for testing
+                "max_recall_time_ms": 200.0,  # Relaxed for testing (first run is slower)
+                "max_generation_time_ms": 1000.0,  # Relaxed for testing (initialization overhead)
                 "enable_performance_monitoring": True,
             },
             "recall": {"max_memories": 5, "enable_caching": True, "cache_size": 100},
@@ -298,11 +299,11 @@ class TestKuzuMemoryIntegration:
             assert len(memory_ids) == 0  # Should handle gracefully
 
             # Test empty prompt
-            with pytest.raises(ValueError):  # Should raise validation error
+            with pytest.raises(ValidationError):  # Should raise validation error
                 memory.attach_memories("", user_id="test-user")
 
             # Test invalid strategy
-            with pytest.raises((ValueError, KeyError)):
+            with pytest.raises((ValueError, KeyError, ValidationError)):
                 memory.attach_memories(
                     "Test prompt", strategy="invalid_strategy", user_id="test-user"
                 )

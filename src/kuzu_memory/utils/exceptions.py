@@ -253,7 +253,16 @@ class RecallError(KuzuMemoryError):
 class ValidationError(KuzuMemoryError):
     """Input validation error."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, *args, **kwargs):
+        # Handle both old signature (field, value, description) and new signature (message)
+        if len(args) == 3:
+            field, value, description = args
+            message = f"{field} {description}: {value}"
+        elif len(args) == 1:
+            message = args[0]
+        else:
+            message = kwargs.get("message", "Validation error")
+
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.MEMORY_VALIDATION,
