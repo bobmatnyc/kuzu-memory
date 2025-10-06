@@ -50,7 +50,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         files = [
             "CLAUDE.md",
             ".claude-mpm/config.json",
-            ".claude/kuzu-memory-mcp.json",
+            ".claude/config.local.json",
             ".kuzu-memory/config.yaml",
         ]
         return files
@@ -125,7 +125,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         Returns:
             Path to project database directory
         """
-        return self.project_root / ".kuzu-memory" / "memorydb"
+        return self.project_root / "kuzu-memory"
 
     def _get_project_config_path(self) -> Path:
         """
@@ -136,26 +136,41 @@ class ClaudeHooksInstaller(BaseInstaller):
         """
         return self.project_root / ".kuzu-memory" / "config.yaml"
 
-    def _create_mcp_server_config(self) -> dict[str, Any]:
+    def _create_claude_code_config(self) -> dict[str, Any]:
         """
-        Create MCP server configuration for kuzu-memory.
+        Create Claude Code configuration with hooks and MCP server.
 
         Returns:
-            MCP server configuration dict
+            Claude Code configuration dict with hooks and MCP server
         """
         db_path = self._get_project_db_path()
         config = {
+            "hooks": {
+                "user_prompt_submit": [
+                    {
+                        "handler": "kuzu_memory_enhance",
+                        "command": 'kuzu-memory memory enhance "{{prompt}}"',
+                        "enabled": True,
+                    }
+                ],
+                "assistant_response": [
+                    {
+                        "handler": "kuzu_memory_learn",
+                        "command": 'kuzu-memory memory learn "{{response}}" --quiet',
+                        "enabled": True,
+                    }
+                ],
+            },
             "mcpServers": {
                 "kuzu-memory": {
-                    "command": "python",
-                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
+                    "command": "kuzu-memory",
+                    "args": ["mcp"],
                     "env": {
+                        "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(db_path),
-                        "KUZU_MEMORY_PROJECT": str(self.project_root),
-                        "KUZU_MEMORY_MODE": "mcp",
                     },
                 }
-            }
+            },
         }
         return config
 
@@ -489,18 +504,68 @@ exec kuzu-memory "$@"
                 f"{'Would create' if dry_run else 'Created'} MPM config at {mpm_config_path}"
             )
 
-            # Create .claude directory for local MCP config
+            # Create .claude directory for local config
             claude_dir = self.project_root / ".claude"
             if not dry_run:
                 claude_dir.mkdir(exist_ok=True)
 
-            local_mcp_config = claude_dir / "kuzu-memory-mcp.json"
+            # Create or update config.local.json with hooks and MCP server
+            local_config_path = claude_dir / "config.local.json"
+            existing_config = {}
+
+            if local_config_path.exists():
+                try:
+                    with open(local_config_path) as f:
+                        existing_config = json.load(f)
+                    if not dry_run:
+                        backup_path = self.create_backup(local_config_path)
+                        if backup_path:
+                            self.backup_files.append(backup_path)
+                    self.files_modified.append(local_config_path)
+                    logger.info(
+                        f"{'Would merge with' if dry_run else 'Merging with'} existing config.local.json"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to read existing config.local.json: {e}")
+                    self.warnings.append(
+                        f"Could not read existing config.local.json: {e}"
+                    )
+            else:
+                self.files_created.append(local_config_path)
+                logger.info(
+                    f"{'Would create' if dry_run else 'Creating'} config.local.json at {local_config_path}"
+                )
+
+            # Merge kuzu-memory config with existing config
+            kuzu_config = self._create_claude_code_config()
+
+            # Merge hooks
+            if "hooks" not in existing_config:
+                existing_config["hooks"] = {}
+            for hook_type, handlers in kuzu_config["hooks"].items():
+                if hook_type not in existing_config["hooks"]:
+                    existing_config["hooks"][hook_type] = []
+                # Remove existing kuzu-memory handlers
+                existing_config["hooks"][hook_type] = [
+                    h
+                    for h in existing_config["hooks"][hook_type]
+                    if "kuzu_memory" not in h.get("handler", "")
+                ]
+                # Add new kuzu-memory handlers
+                existing_config["hooks"][hook_type].extend(handlers)
+
+            # Merge MCP servers
+            if "mcpServers" not in existing_config:
+                existing_config["mcpServers"] = {}
+            existing_config["mcpServers"]["kuzu-memory"] = kuzu_config["mcpServers"][
+                "kuzu-memory"
+            ]
+
             if not dry_run:
-                with open(local_mcp_config, "w") as f:
-                    json.dump(self._create_mcp_server_config(), f, indent=2)
-            self.files_created.append(local_mcp_config)
+                with open(local_config_path, "w") as f:
+                    json.dump(existing_config, f, indent=2)
             logger.info(
-                f"{'Would create' if dry_run else 'Created'} local MCP config at {local_mcp_config}"
+                f"{'Would configure' if dry_run else 'Configured'} Claude Code hooks and MCP server in config.local.json"
             )
 
             # Create shell wrapper
@@ -702,8 +767,8 @@ exec kuzu-memory "$@"
         mpm_config = self.project_root / ".claude-mpm" / "config.json"
         status["files"]["mpm_config"] = mpm_config.exists()
 
-        local_mcp = self.project_root / ".claude" / "kuzu-memory-mcp.json"
-        status["files"]["local_mcp"] = local_mcp.exists()
+        local_config = self.project_root / ".claude" / "config.local.json"
+        status["files"]["config.local.json"] = local_config.exists()
 
         config_file = self._get_project_config_path()
         status["files"]["config_yaml"] = config_file.exists()
@@ -714,6 +779,7 @@ exec kuzu-memory "$@"
             [
                 status["files"]["CLAUDE.md"],
                 status["files"]["mpm_config"],
+                status["files"]["config.local.json"],
                 status["files"]["config_yaml"],
             ]
         )
