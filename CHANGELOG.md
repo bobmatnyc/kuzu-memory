@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2025-10-06
+
+### Fixed
+- **Claude Code Installer**: Fixed file messaging to correctly show "created" vs "modified"
+- **Claude Code Installer**: Added clarity about Claude MPM config purpose with helpful explanation
+- **Claude Code Installer**: Fixed command paths to use full pipx path instead of plain command name
+  - Added automatic detection of pipx installation using `which kuzu-memory`
+  - Commands now use full path (e.g., `/Users/user/.local/bin/kuzu-memory`) when installed via pipx
+  - Applied to Claude Code hooks, MCP server config, MPM config, and shell wrapper
+- **Installation Output**: Enhanced file listings with contextual information
+  - Shows "(Claude MPM integration)" for MPM config files
+  - Shows "(merged with existing config)" for modified config files
+  - Displays helpful explanation when Claude MPM integration is configured
+
 ## [1.2.2] - 2025-10-06
 
 ### Fixed
@@ -339,7 +353,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.1.13...v1.2.0
