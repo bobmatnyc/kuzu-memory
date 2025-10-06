@@ -120,7 +120,18 @@ class DiagnosticReport:
 
 
 class MCPDiagnostics:
-    """Comprehensive MCP diagnostic and troubleshooting framework."""
+    """
+    PROJECT-LEVEL MCP diagnostic and troubleshooting framework.
+
+    Focuses exclusively on project-scoped diagnostics:
+    - Project memory database (kuzu-memory/)
+    - Claude Code MCP configuration (.claude/config.local.json)
+    - Claude Code hooks (if configured)
+
+    Does NOT check user-level configurations:
+    - Claude Desktop (use install commands instead)
+    - Global home directory configurations
+    """
 
     def __init__(
         self,
@@ -136,206 +147,199 @@ class MCPDiagnostics:
         """
         self.project_root = project_root or Path.cwd()
         self.verbose = verbose
-        self.claude_config_path = self._get_claude_config_path()
-
-    def _get_claude_config_path(self) -> Path:
-        """Get the Claude Desktop configuration file path."""
-        system = platform.system()
-
-        if system == "Darwin":  # macOS
-            return (
-                Path.home()
-                / "Library"
-                / "Application Support"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
-        elif system == "Linux":
-            xdg_config = os.getenv("XDG_CONFIG_HOME", Path.home() / ".config")
-            return Path(xdg_config) / "Claude" / "claude_desktop_config.json"
-        elif system == "Windows":
-            appdata = os.getenv("APPDATA")
-            if appdata:
-                return Path(appdata) / "Claude" / "claude_desktop_config.json"
-            return (
-                Path.home()
-                / "AppData"
-                / "Roaming"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
-        else:
-            raise OSError(f"Unsupported operating system: {system}")
+        # PROJECT-LEVEL CONFIG ONLY
+        self.claude_code_config_path = self.project_root / ".claude" / "config.local.json"
+        self.memory_db_path = self.project_root / "kuzu-memory"
 
     async def check_configuration(self) -> list[DiagnosticResult]:
         """
-        Check MCP configuration validity.
+        Check PROJECT-LEVEL MCP configuration validity.
+
+        Checks ONLY:
+        - Project memory database directory (kuzu-memory/)
+        - Claude Code MCP config (.claude/config.local.json)
+        - Claude Code hooks (if configured)
+
+        Does NOT check Claude Desktop (user-level) configuration.
 
         Returns:
             List of diagnostic results for configuration checks
         """
         results = []
 
-        # Check Claude Desktop config exists
+        # 1. CHECK PROJECT MEMORY DATABASE
         start = time.time()
-        if self.claude_config_path.exists():
-            results.append(
-                DiagnosticResult(
-                    check_name="claude_config_exists",
-                    success=True,
-                    severity=DiagnosticSeverity.SUCCESS,
-                    message=f"Claude Desktop config found at {self.claude_config_path}",
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-        else:
-            results.append(
-                DiagnosticResult(
-                    check_name="claude_config_exists",
-                    success=False,
-                    severity=DiagnosticSeverity.CRITICAL,
-                    message="Claude Desktop config not found",
-                    error=f"File does not exist: {self.claude_config_path}",
-                    fix_suggestion="Run: python scripts/install-claude-desktop.py",
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-            return results  # Cannot proceed without config
-
-        # Check config is valid JSON
-        start = time.time()
-        try:
-            with open(self.claude_config_path) as f:
-                config = json.load(f)
-
-            results.append(
-                DiagnosticResult(
-                    check_name="claude_config_valid_json",
-                    success=True,
-                    severity=DiagnosticSeverity.SUCCESS,
-                    message="Claude Desktop config is valid JSON",
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-        except json.JSONDecodeError as e:
-            results.append(
-                DiagnosticResult(
-                    check_name="claude_config_valid_json",
-                    success=False,
-                    severity=DiagnosticSeverity.CRITICAL,
-                    message="Claude Desktop config contains invalid JSON",
-                    error=str(e),
-                    fix_suggestion=(
-                        "Fix JSON syntax errors in config file or restore from backup"
-                    ),
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-            return results  # Cannot proceed with invalid JSON
-
-        # Check kuzu-memory in mcpServers
-        start = time.time()
-        if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
-            results.append(
-                DiagnosticResult(
-                    check_name="kuzu_memory_configured",
-                    success=True,
-                    severity=DiagnosticSeverity.SUCCESS,
-                    message="kuzu-memory is configured in Claude Desktop",
-                    metadata={"config": config["mcpServers"]["kuzu-memory"]},
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-        else:
-            results.append(
-                DiagnosticResult(
-                    check_name="kuzu_memory_configured",
-                    success=False,
-                    severity=DiagnosticSeverity.CRITICAL,
-                    message="kuzu-memory not found in Claude Desktop config",
-                    error="mcpServers section missing or kuzu-memory not configured",
-                    fix_suggestion="Run: python scripts/install-claude-desktop.py",
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-            return results  # Cannot proceed without kuzu-memory config
-
-        # Check environment variables
-        start = time.time()
-        env_vars = config["mcpServers"]["kuzu-memory"].get("env", {})
-        required_vars = ["KUZU_MEMORY_DB", "KUZU_MEMORY_MODE"]
-        missing_vars = [var for var in required_vars if var not in env_vars]
-
-        if not missing_vars:
-            results.append(
-                DiagnosticResult(
-                    check_name="environment_variables",
-                    success=True,
-                    severity=DiagnosticSeverity.SUCCESS,
-                    message="All required environment variables configured",
-                    metadata={"env_vars": env_vars},
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-        else:
-            results.append(
-                DiagnosticResult(
-                    check_name="environment_variables",
-                    success=False,
-                    severity=DiagnosticSeverity.WARNING,
-                    message="Missing environment variables",
-                    error=f"Missing: {', '.join(missing_vars)}",
-                    fix_suggestion=(
-                        "Add missing variables to config or "
-                        "re-run: python scripts/install-claude-desktop.py --force"
-                    ),
-                    duration_ms=(time.time() - start) * 1000,
-                )
-            )
-
-        # Check database directory
-        start = time.time()
-        db_path_str = env_vars.get("KUZU_MEMORY_DB", "")
-        if db_path_str:
-            db_path = Path(db_path_str)
-            db_dir = db_path.parent
-
-            if db_dir.exists():
-                # Check directory is writable
-                if os.access(db_dir, os.W_OK):
-                    results.append(
-                        DiagnosticResult(
-                            check_name="database_directory",
-                            success=True,
-                            severity=DiagnosticSeverity.SUCCESS,
-                            message=f"Database directory accessible: {db_dir}",
-                            duration_ms=(time.time() - start) * 1000,
-                        )
-                    )
-                else:
-                    results.append(
-                        DiagnosticResult(
-                            check_name="database_directory",
-                            success=False,
-                            severity=DiagnosticSeverity.ERROR,
-                            message="Database directory not writable",
-                            error=f"No write permission for {db_dir}",
-                            fix_suggestion=f"Run: chmod u+w {db_dir}",
-                            duration_ms=(time.time() - start) * 1000,
-                        )
-                    )
-            else:
+        if self.memory_db_path.exists():
+            # Check directory is accessible and writable
+            if os.access(self.memory_db_path, os.R_OK | os.W_OK):
                 results.append(
                     DiagnosticResult(
-                        check_name="database_directory",
-                        success=False,
-                        severity=DiagnosticSeverity.WARNING,
-                        message="Database directory does not exist",
-                        error=f"Directory not found: {db_dir}",
-                        fix_suggestion=f"Run: mkdir -p {db_dir}",
+                        check_name="memory_database_directory",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Memory database directory accessible: {self.memory_db_path}",
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="memory_database_directory",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Memory database directory not accessible",
+                        error=f"No read/write permission for {self.memory_db_path}",
+                        fix_suggestion=f"Run: chmod u+rw {self.memory_db_path}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="memory_database_directory",
+                    success=False,
+                    severity=DiagnosticSeverity.WARNING,
+                    message="Memory database directory does not exist",
+                    error=f"Directory not found: {self.memory_db_path}",
+                    fix_suggestion="Run: kuzu-memory init",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 2. CHECK CLAUDE CODE MCP CONFIG (if exists)
+        start = time.time()
+        if self.claude_code_config_path.exists():
+            try:
+                with open(self.claude_code_config_path) as f:
+                    config = json.load(f)
+
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_code_config_valid",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Claude Code config is valid JSON: {self.claude_code_config_path}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+
+                # Check if kuzu-memory MCP server is configured
+                start = time.time()
+                if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
+                    mcp_config = config["mcpServers"]["kuzu-memory"]
+                    results.append(
+                        DiagnosticResult(
+                            check_name="mcp_server_configured",
+                            success=True,
+                            severity=DiagnosticSeverity.SUCCESS,
+                            message="kuzu-memory MCP server configured in Claude Code",
+                            metadata={"config": mcp_config},
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+
+                    # Check environment variables in MCP config
+                    start = time.time()
+                    env_vars = mcp_config.get("env", {})
+                    required_vars = ["KUZU_MEMORY_DB"]
+                    missing_vars = [var for var in required_vars if var not in env_vars]
+
+                    if not missing_vars:
+                        results.append(
+                            DiagnosticResult(
+                                check_name="mcp_environment_variables",
+                                success=True,
+                                severity=DiagnosticSeverity.SUCCESS,
+                                message="Required MCP environment variables configured",
+                                metadata={"env_vars": env_vars},
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                    else:
+                        results.append(
+                            DiagnosticResult(
+                                check_name="mcp_environment_variables",
+                                success=False,
+                                severity=DiagnosticSeverity.WARNING,
+                                message="Missing MCP environment variables",
+                                error=f"Missing: {', '.join(missing_vars)}",
+                                fix_suggestion="Run: kuzu-memory install add claude-code --force",
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                else:
+                    results.append(
+                        DiagnosticResult(
+                            check_name="mcp_server_configured",
+                            success=False,
+                            severity=DiagnosticSeverity.INFO,
+                            message="kuzu-memory MCP server not configured in Claude Code",
+                            error="mcpServers section missing or kuzu-memory not configured",
+                            fix_suggestion="Run: kuzu-memory install add claude-code",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+
+                # 3. CHECK CLAUDE CODE HOOKS (if configured)
+                start = time.time()
+                if "hooks" in config:
+                    hooks = config["hooks"]
+                    has_enhance_hook = "user_prompt_submit" in hooks
+                    has_learn_hook = "assistant_response" in hooks
+
+                    if has_enhance_hook or has_learn_hook:
+                        hook_info = []
+                        if has_enhance_hook:
+                            hook_info.append("user_prompt_submit (enhance)")
+                        if has_learn_hook:
+                            hook_info.append("assistant_response (learn)")
+
+                        results.append(
+                            DiagnosticResult(
+                                check_name="claude_code_hooks",
+                                success=True,
+                                severity=DiagnosticSeverity.SUCCESS,
+                                message=f"Claude Code hooks configured: {', '.join(hook_info)}",
+                                metadata={"hooks": hooks},
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                    else:
+                        results.append(
+                            DiagnosticResult(
+                                check_name="claude_code_hooks",
+                                success=False,
+                                severity=DiagnosticSeverity.INFO,
+                                message="No Claude Code hooks configured",
+                                fix_suggestion="Run: kuzu-memory install add claude-code to enable hooks",
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+
+            except json.JSONDecodeError as e:
+                results.append(
+                    DiagnosticResult(
+                        check_name="claude_code_config_valid",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Claude Code config contains invalid JSON",
+                        error=str(e),
+                        fix_suggestion="Fix JSON syntax errors in .claude/config.local.json",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="claude_code_config_exists",
+                    success=False,
+                    severity=DiagnosticSeverity.INFO,
+                    message="Claude Code config not found (optional)",
+                    error=f"File not found: {self.claude_code_config_path}",
+                    fix_suggestion="Run: kuzu-memory install add claude-code to create config",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
 
         return results
 
@@ -715,7 +719,13 @@ class MCPDiagnostics:
 
     async def auto_fix_configuration(self) -> DiagnosticResult:
         """
-        Attempt to automatically fix configuration issues.
+        Attempt to automatically fix PROJECT-LEVEL configuration issues.
+
+        Fixes:
+        - Missing memory database directory
+        - Missing Claude Code MCP configuration
+
+        Does NOT fix Claude Desktop (user-level) configuration.
 
         Returns:
             Diagnostic result for auto-fix attempt
@@ -723,34 +733,58 @@ class MCPDiagnostics:
         start = time.time()
 
         try:
-            # Run the installer script
-            result = subprocess.run(
-                ["python", "scripts/install-claude-desktop.py", "--force"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
+            # Fix 1: Initialize memory database if missing
+            if not self.memory_db_path.exists():
+                init_result = subprocess.run(
+                    ["kuzu-memory", "init"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    cwd=str(self.project_root),
+                )
+
+                if init_result.returncode != 0:
+                    return DiagnosticResult(
+                        check_name="auto_fix_configuration",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Failed to initialize memory database",
+                        error=init_result.stderr,
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+
+            # Fix 2: Install Claude Code configuration if missing
+            if not self.claude_code_config_path.exists():
+                install_result = subprocess.run(
+                    ["kuzu-memory", "install", "add", "claude-code"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=str(self.project_root),
+                )
+
+                if install_result.returncode != 0:
+                    return DiagnosticResult(
+                        check_name="auto_fix_configuration",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Failed to install Claude Code configuration",
+                        error=install_result.stderr,
+                        duration_ms=(time.time() - start) * 1000,
+                    )
 
             duration = (time.time() - start) * 1000
-
-            if result.returncode == 0:
-                return DiagnosticResult(
-                    check_name="auto_fix_configuration",
-                    success=True,
-                    severity=DiagnosticSeverity.SUCCESS,
-                    message="Configuration auto-fixed successfully",
-                    metadata={"output": result.stdout},
-                    duration_ms=duration,
-                )
-            else:
-                return DiagnosticResult(
-                    check_name="auto_fix_configuration",
-                    success=False,
-                    severity=DiagnosticSeverity.ERROR,
-                    message="Auto-fix failed",
-                    error=result.stderr,
-                    duration_ms=duration,
-                )
+            return DiagnosticResult(
+                check_name="auto_fix_configuration",
+                success=True,
+                severity=DiagnosticSeverity.SUCCESS,
+                message="Project configuration auto-fixed successfully",
+                metadata={
+                    "memory_db_initialized": not self.memory_db_path.exists(),
+                    "claude_code_config_created": not self.claude_code_config_path.exists(),
+                },
+                duration_ms=duration,
+            )
 
         except Exception as e:
             return DiagnosticResult(

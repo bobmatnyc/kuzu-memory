@@ -42,10 +42,17 @@ from .enums import OutputFormat
 @click.pass_context
 def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
     """
-    🩺 Diagnose and fix system issues.
+    🩺 Diagnose and fix PROJECT issues.
 
     Run comprehensive diagnostics to identify and fix issues with
-    the memory system, MCP server, database, and configuration.
+    PROJECT-LEVEL configurations only:
+    - Project memory database (kuzu-memory/)
+    - Claude Code MCP configuration (.claude/config.local.json)
+    - Claude Code hooks (if configured)
+
+    Does NOT check user-level configurations:
+    - Claude Desktop (use install commands instead)
+    - Global home directory configurations
 
     \b
     🎮 EXAMPLES:
@@ -101,10 +108,12 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
 @click.pass_context
 def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
     """
-    Run full diagnostic suite.
+    Run full PROJECT diagnostic suite.
 
-    Performs comprehensive checks on configuration, connection,
-    tool discovery, and performance.
+    Performs comprehensive checks on project-level configuration,
+    connection, tool discovery, and performance.
+
+    Does NOT check user-level (Claude Desktop) configurations.
     """
     try:
         rich_print("🔍 Running full diagnostics...", style="blue")
@@ -212,10 +221,14 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
 @click.pass_context
 def mcp(ctx, verbose, output, project_root):
     """
-    MCP-specific diagnostics.
+    PROJECT MCP-specific diagnostics.
 
-    Validates MCP server configuration, protocol compliance,
-    and tool functionality.
+    Validates PROJECT-LEVEL MCP server configuration:
+    - Claude Code MCP config (.claude/config.local.json)
+    - Protocol compliance
+    - Tool functionality
+
+    Does NOT check Claude Desktop (user-level) MCP configuration.
     """
     try:
         rich_print("🔍 Running MCP diagnostics...", style="blue")
@@ -283,9 +296,10 @@ def mcp(ctx, verbose, output, project_root):
 @click.pass_context
 def connection(ctx, verbose, output, project_root):
     """
-    Test database and MCP server connection.
+    Test PROJECT database and MCP server connection.
 
-    Validates database connectivity and MCP protocol initialization.
+    Validates project-level database connectivity and MCP protocol initialization.
+    Uses project memory database (kuzu-memory/), not user-level configurations.
     """
     try:
         rich_print("🔍 Testing connections...", style="blue")
@@ -362,10 +376,14 @@ def connection(ctx, verbose, output, project_root):
 @click.pass_context
 def health(ctx, detailed, json_output, continuous, interval, project_root):
     """
-    Quick health check.
+    Quick PROJECT health check.
 
-    Performs rapid health checks on all system components including
-    database, MCP server, and tools.
+    Performs rapid health checks on PROJECT-LEVEL components:
+    - Project memory database (kuzu-memory/)
+    - MCP server (if configured)
+    - Tool availability
+
+    Does NOT check user-level (Claude Desktop) health.
     """
     try:
         # Determine project root
