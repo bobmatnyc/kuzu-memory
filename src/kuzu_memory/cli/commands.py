@@ -279,11 +279,11 @@ def demo(ctx):
 
 
 # Register ONLY 6 top-level commands (clean architecture)
-cli.add_command(init)        # 1. Initialize project
-cli.add_command(install)     # 2. Manage integrations (add, remove, list, status)
-cli.add_command(memory)      # 3. Memory operations (store, learn, recall, enhance, recent)
-cli.add_command(status)      # 4. System status and info
-cli.add_command(doctor)      # 5. Diagnostics and health checks
+cli.add_command(init)  # 1. Initialize project
+cli.add_command(install)  # 2. Manage integrations (add, remove, list, status)
+cli.add_command(memory)  # 3. Memory operations (store, learn, recall, enhance, recent)
+cli.add_command(status)  # 4. System status and info
+cli.add_command(doctor)  # 5. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 6. Help and examples
 
 # Keep quickstart/demo for onboarding

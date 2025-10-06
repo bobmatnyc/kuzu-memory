@@ -72,9 +72,9 @@ class InstallationMode(str, Enum):
 
 __all__ = [
     "AISystem",
-    "OutputFormat",
-    "MemoryType",
     "DiagnosticCheck",
-    "RecallStrategy",
     "InstallationMode",
+    "MemoryType",
+    "OutputFormat",
+    "RecallStrategy",
 ]

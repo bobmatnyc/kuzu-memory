@@ -518,7 +518,9 @@ def enhance(ctx, prompt, max_memories, output_format):
     "--format",
     "output_format",
     default=OutputFormat.TABLE.value,
-    type=click.Choice([OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]),
+    type=click.Choice(
+        [OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]
+    ),
     help="Output format",
 )
 @click.pass_context
