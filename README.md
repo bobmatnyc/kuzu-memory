@@ -44,22 +44,22 @@ KuzuMemory can be integrated with various AI systems following the **ONE PATH** 
 
 ```bash
 # List available integrations
-kuzu-memory list-installers
+kuzu-memory install list
 
 # Install Claude Code integration (project-specific memory)
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 
 # Install Claude Desktop integration (global memory)
-kuzu-memory install claude-desktop
+kuzu-memory install add claude-desktop
 
 # Install Auggie integration
-kuzu-memory install auggie
+kuzu-memory install add auggie
 
 # Install universal integration files
-kuzu-memory install universal
+kuzu-memory install add universal
 
 # Check installation status
-kuzu-memory install-status
+kuzu-memory install status
 ```
 
 **Primary Installers** (ONE path for each AI system):
@@ -130,13 +130,16 @@ print(context.enhanced_prompt)
 kuzu-memory init
 
 # Store a memory
-kuzu-memory remember "I prefer using TypeScript for frontend projects"
+kuzu-memory memory store "I prefer using TypeScript for frontend projects"
 
 # Recall memories
-kuzu-memory recall "What do I prefer for frontend?"
+kuzu-memory memory recall "What do I prefer for frontend?"
+
+# Enhance a prompt
+kuzu-memory memory enhance "What's my coding preference?"
 
 # View statistics
-kuzu-memory stats
+kuzu-memory status
 ```
 
 ## 📖 Core Concepts
@@ -248,10 +251,13 @@ KuzuMemory includes comprehensive MCP server testing and diagnostic tools:
 pytest tests/mcp/ -v
 
 # Run diagnostics
-kuzu-memory mcp diagnose run
+kuzu-memory doctor
 
 # Health check
-kuzu-memory mcp health
+kuzu-memory doctor health
+
+# MCP diagnostics
+kuzu-memory doctor mcp
 
 # Performance benchmarks
 pytest tests/mcp/performance/ --benchmark-only

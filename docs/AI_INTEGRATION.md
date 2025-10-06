@@ -94,7 +94,7 @@ print('✅ Async learning works:', result.returncode == 0)
 
 ```bash
 # Get enhanced prompt with project context
-kuzu-memory enhance "How do I structure this API?"
+kuzu-memory memory enhance "How do I structure this API?"
 
 # Output:
 # 🧠 Enhanced with 3 memories (confidence: 0.85)
@@ -377,7 +377,7 @@ For shell-based AI systems:
 
 enhance_prompt() {
     local prompt="$1"
-    kuzu-memory enhance "$prompt" --format plain 2>/dev/null || echo "$prompt"
+    kuzu-memory memory enhance "$prompt" --format plain 2>/dev/null || echo "$prompt"
 }
 
 store_learning() {
@@ -404,11 +404,11 @@ store_learning "User asked about deployment: $AI_RESPONSE"
 
 ```bash
 kuzu-memory init                    # Initialize project memories
-kuzu-memory enhance "prompt"        # Add context to prompt
+kuzu-memory memory enhance "prompt"        # Add context to prompt
 kuzu-memory learn "content"         # Store learning
 kuzu-memory recent                  # Show recent memories
-kuzu-memory recall "query"          # Find specific memories
-kuzu-memory stats                   # Show statistics
+kuzu-memory memory recall "query"          # Find specific memories
+kuzu-memory status                   # Show statistics
 ```
 
 ### AI-Friendly Options
@@ -590,7 +590,7 @@ export PATH="$PATH:$HOME/.local/bin"
 kuzu-memory optimize --enable-cli
 
 # Monitor performance
-kuzu-memory stats --detailed
+kuzu-memory status --detailed
 
 # Check database size
 du -h kuzu-memories/memories.db

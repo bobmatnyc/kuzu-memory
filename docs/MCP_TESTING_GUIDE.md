@@ -71,10 +71,10 @@ pytest tests/mcp/ -v
 
 ```bash
 # Run full diagnostics
-kuzu-memory mcp diagnose run
+kuzu-memory doctor run
 
 # Quick health check
-kuzu-memory mcp health
+kuzu-memory doctor health
 ```
 
 ---
@@ -301,7 +301,7 @@ pytest tests/mcp/ --durations=10
 The diagnostic framework provides automated validation and troubleshooting:
 
 ```bash
-kuzu-memory mcp diagnose <command> [options]
+kuzu-memory doctor <command> [options]
 ```
 
 ### Available Commands
@@ -310,7 +310,7 @@ kuzu-memory mcp diagnose <command> [options]
 
 **Run complete diagnostic suite**:
 ```bash
-kuzu-memory mcp diagnose run
+kuzu-memory doctor run
 ```
 
 **Options**:
@@ -322,20 +322,20 @@ kuzu-memory mcp diagnose run
 **Example**:
 ```bash
 # Run with verbose output and save report
-kuzu-memory mcp diagnose run -v --output report.txt
+kuzu-memory doctor run -v --output report.txt
 
 # Run with JSON output for automation
-kuzu-memory mcp diagnose run --format json --output report.json
+kuzu-memory doctor run --format json --output report.json
 
 # Run with auto-fix
-kuzu-memory mcp diagnose run --fix
+kuzu-memory doctor run --fix
 ```
 
 #### 2. Configuration Validation
 
 **Validate MCP configuration**:
 ```bash
-kuzu-memory mcp diagnose config
+kuzu-memory doctor config
 ```
 
 **Checks**:
@@ -348,17 +348,17 @@ kuzu-memory mcp diagnose config
 **Example**:
 ```bash
 # Check configuration
-kuzu-memory mcp diagnose config -v
+kuzu-memory doctor config -v
 
 # Check and attempt fixes
-kuzu-memory mcp diagnose config --fix
+kuzu-memory doctor config --fix
 ```
 
 #### 3. Connection Testing
 
 **Test MCP server connectivity**:
 ```bash
-kuzu-memory mcp diagnose connection
+kuzu-memory doctor connection
 ```
 
 **Tests**:
@@ -371,17 +371,17 @@ kuzu-memory mcp diagnose connection
 **Example**:
 ```bash
 # Test connection
-kuzu-memory mcp diagnose connection -v
+kuzu-memory doctor connection -v
 
 # Save connection test results
-kuzu-memory mcp diagnose connection --output connection-test.txt
+kuzu-memory doctor connection --output connection-test.txt
 ```
 
 #### 4. Tool Validation
 
 **Validate MCP tools**:
 ```bash
-kuzu-memory mcp diagnose tools
+kuzu-memory doctor tools
 ```
 
 **Checks**:
@@ -394,10 +394,10 @@ kuzu-memory mcp diagnose tools
 **Example**:
 ```bash
 # Validate all tools
-kuzu-memory mcp diagnose tools -v
+kuzu-memory doctor tools -v
 
 # Check specific tool
-kuzu-memory mcp diagnose tools --tool enhance
+kuzu-memory doctor tools --tool enhance
 ```
 
 ### Diagnostic Reports
@@ -469,7 +469,7 @@ Interactive HTML report with:
 Continuous health monitoring for production deployments:
 
 ```bash
-kuzu-memory mcp health [options]
+kuzu-memory doctor health [options]
 ```
 
 ### Commands
@@ -478,7 +478,7 @@ kuzu-memory mcp health [options]
 
 ```bash
 # Basic health status
-kuzu-memory mcp health
+kuzu-memory doctor health
 ```
 
 **Output**:
@@ -494,7 +494,7 @@ MCP Server Health: ✅ HEALTHY
 
 ```bash
 # Detailed health information
-kuzu-memory mcp health --detailed
+kuzu-memory doctor health --detailed
 ```
 
 **Output**:
@@ -531,7 +531,7 @@ Last Check: 2025-10-01 10:30:45
 
 ```bash
 # JSON format for monitoring systems
-kuzu-memory mcp health --json
+kuzu-memory doctor health --json
 ```
 
 **Output**:
@@ -567,7 +567,7 @@ kuzu-memory mcp health --json
 
 ```bash
 # Monitor health continuously (every 10 seconds)
-kuzu-memory mcp health --continuous
+kuzu-memory doctor health --continuous
 ```
 
 **Output**:
@@ -587,7 +587,7 @@ kuzu-memory mcp health --continuous
 
 ```bash
 # Check exit code
-kuzu-memory mcp health
+kuzu-memory doctor health
 echo $?
 ```
 
@@ -703,7 +703,7 @@ jobs:
 
       - name: Run diagnostics
         run: |
-          kuzu-memory mcp diagnose run --format json --output diagnostics.json
+          kuzu-memory doctor run --format json --output diagnostics.json
 
       - name: Upload diagnostics
         uses: actions/upload-artifact@v3
@@ -728,7 +728,7 @@ repos:
 
       - id: mcp-diagnostics
         name: MCP Diagnostics
-        entry: kuzu-memory mcp diagnose run
+        entry: kuzu-memory doctor run
         language: system
         pass_filenames: false
 ```
@@ -741,10 +741,10 @@ mcp-test:
 	pytest tests/mcp/ -v
 
 mcp-diagnose:
-	kuzu-memory mcp diagnose run -v
+	kuzu-memory doctor run -v
 
 mcp-health:
-	kuzu-memory mcp health --detailed
+	kuzu-memory doctor health --detailed
 
 mcp-benchmark:
 	pytest tests/mcp/performance/ --benchmark-only
@@ -844,7 +844,7 @@ htop
 **Diagnosis**:
 ```bash
 # Run diagnostics with verbose output
-kuzu-memory mcp diagnose run -v --fix
+kuzu-memory doctor run -v --fix
 
 # Check permissions
 ls -la ~/.config/Claude/
@@ -872,7 +872,7 @@ pytest tests/mcp/ -v -s --log-cli-level=DEBUG
 **Collect diagnostic information**:
 ```bash
 # Generate full diagnostic report
-kuzu-memory mcp diagnose run -v --output diagnostic-report.txt
+kuzu-memory doctor run -v --output diagnostic-report.txt
 
 # Get system information
 python --version

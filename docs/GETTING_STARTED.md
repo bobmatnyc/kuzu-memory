@@ -53,13 +53,13 @@ make test && make quality
 
 ```bash
 # Store a memory
-kuzu-memory remember "I'm working on KuzuMemory, an AI memory system"
+kuzu-memory memory store "I'm working on KuzuMemory, an AI memory system"
 
 # Recall memories
-kuzu-memory recall "What am I working on?"
+kuzu-memory memory recall "What am I working on?"
 
 # AI-style enhancement
-kuzu-memory enhance "How do I improve performance?" --format plain
+kuzu-memory memory enhance "How do I improve performance?" --format plain
 ```
 
 ### Step 4: Instant Demo (Optional)
@@ -83,29 +83,29 @@ kuzu-memory quickstart
 kuzu-memory init
 
 # Store information
-kuzu-memory remember "Project uses Python 3.11+ with Kuzu database"
+kuzu-memory memory store "Project uses Python 3.11+ with Kuzu database"
 
 # Find relevant info
-kuzu-memory recall "What technology stack do we use?"
+kuzu-memory memory recall "What technology stack do we use?"
 
 # Enhance AI prompts (fast, <100ms)
-kuzu-memory enhance "How should I structure the code?" --format plain
+kuzu-memory memory enhance "How should I structure the code?" --format plain
 
-# Learn from conversations (async, non-blocking)
-kuzu-memory learn "User prefers FastAPI over Flask" --quiet
+# Show recent memories
+kuzu-memory memory recent
 ```
 
 ### Monitoring & Stats
 
 ```bash
-# Project health
-kuzu-memory project --verbose
+# Project health and stats
+kuzu-memory status --project --verbose
 
 # Performance stats
-kuzu-memory stats --detailed
+kuzu-memory status --detailed
 
 # Recent memories
-kuzu-memory recent --format json
+kuzu-memory memory recent --format json
 ```
 
 ### Development Commands (ONE command each)
@@ -134,15 +134,15 @@ import subprocess
 def enhance_with_memory(prompt: str) -> str:
     """Enhance prompt with project memories"""
     result = subprocess.run([
-        'kuzu-memory', 'enhance', prompt, '--format', 'plain'
+        'kuzu-memory', 'memory', 'enhance', prompt, '--format', 'plain'
     ], capture_output=True, text=True, timeout=5)
     return result.stdout.strip() if result.returncode == 0 else prompt
 
-def learn_async(content: str, source: str = "ai-conversation") -> None:
-    """Store learning asynchronously (non-blocking)"""
+def store_memory(content: str, source: str = "ai-conversation") -> None:
+    """Store memory"""
     subprocess.run([
-        'kuzu-memory', 'learn', content,
-        '--source', source, '--quiet'
+        'kuzu-memory', 'memory', 'store', content,
+        '--source', source
     ], check=False)  # Fire and forget
 
 # Usage in AI workflow
@@ -240,26 +240,21 @@ Every command is self-documenting with rich help and examples:
 
 ```bash
 kuzu-memory --help           # Beautiful overview with examples
-kuzu-memory examples         # Comprehensive tutorials
-kuzu-memory examples workflow # Complete workflow examples
+kuzu-memory help examples    # Comprehensive tutorials
 kuzu-memory COMMAND --help   # Detailed help for any command
 ```
 
-### Examples for Everything
+### Examples and Tips
 
 ```bash
-kuzu-memory examples remember   # Memory storage examples
-kuzu-memory examples recall     # Query examples
-kuzu-memory examples auggie     # AI integration examples
-kuzu-memory examples workflow   # Complete workflows
-kuzu-memory examples patterns   # What works best
+kuzu-memory help examples    # Show usage examples
+kuzu-memory help tips        # Best practices and optimization
 ```
 
 ### Interactive Guidance
 
 ```bash
 kuzu-memory setup      # Interactive configuration wizard
-kuzu-memory tips       # Best practices and optimization
 kuzu-memory quickstart # Full guided setup
 ```
 
@@ -288,27 +283,26 @@ Rich formatting with colors, emojis, and structured layouts:
 
 ```bash
 # 1. Store your context
-kuzu-memory remember "I'm Alex, a senior Python developer" --user-id alex
-kuzu-memory remember "I prefer FastAPI and PostgreSQL" --user-id alex
+kuzu-memory memory store "I'm Alex, a senior Python developer" --user-id alex
+kuzu-memory memory store "I prefer FastAPI and PostgreSQL" --user-id alex
 
 # 2. Get personalized help
-kuzu-memory enhance "How do I build a REST API?" --user-id alex
+kuzu-memory memory enhance "How do I build a REST API?" --user-id alex
 # Result: Enhanced with Alex's FastAPI and PostgreSQL preferences
 
-# 3. Learn from interactions
-kuzu-memory learn "What framework?" "Use Django" \
-  --feedback "I prefer FastAPI" --user-id alex
+# 3. Store learned preferences
+kuzu-memory memory store "I prefer FastAPI over Django for APIs" --user-id alex
 ```
 
 ### Team Knowledge Base Workflow
 
 ```bash
 # Store team decisions
-kuzu-memory remember "We use microservices with Docker" --user-id team
-kuzu-memory remember "PostgreSQL for data, Redis for cache" --user-id team
+kuzu-memory memory store "We use microservices with Docker" --user-id team
+kuzu-memory memory store "PostgreSQL for data, Redis for cache" --user-id team
 
 # Query team knowledge
-kuzu-memory recall "What's our architecture?" --user-id team
+kuzu-memory memory recall "What's our architecture?" --user-id team
 ```
 
 ---
@@ -325,7 +319,7 @@ kuzu --version
 kuzu-memory optimize --enable-cli
 
 # Test performance improvement
-time kuzu-memory recall "performance test"
+time kuzu-memory memory recall "performance test"
 ```
 
 ### Monitor Performance
@@ -335,11 +329,11 @@ time kuzu-memory recall "performance test"
 make memory-test
 
 # Detailed performance stats
-kuzu-memory stats --detailed
+kuzu-memory status --detailed
 
 # Profile specific operations
-time kuzu-memory enhance "test prompt"
-time kuzu-memory learn "test content" --quiet
+time kuzu-memory memory enhance "test prompt"
+time kuzu-memory memory store "test content"
 ```
 
 ---
@@ -532,24 +526,24 @@ After completing this guide, you should be able to:
 
 ### For AI System Integration (ONE PATH)
 - See [CLAUDE_SETUP.md](CLAUDE_SETUP.md) for complete integration guide
-- List available integrations: `kuzu-memory list-installers`
-- Install integration: `kuzu-memory install <ai-system>`
-- Check status: `kuzu-memory install-status`
+- List available integrations: `kuzu-memory install list`
+- Install integration: `kuzu-memory install add <ai-system>`
+- Check status: `kuzu-memory install status`
 - Configure project-specific memory settings
 
 **Quick Examples (ONE command per system):**
 ```bash
 # Claude Desktop (auto-detects best method)
-kuzu-memory install claude-desktop
+kuzu-memory install add claude-desktop
 
 # Claude Code IDE integration
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 
 # Auggie integration
-kuzu-memory install auggie
+kuzu-memory install add auggie
 
 # Universal integration files
-kuzu-memory install universal
+kuzu-memory install add universal
 ```
 
 **Primary Installers:**
@@ -591,8 +585,8 @@ Every command has comprehensive help:
 ```bash
 kuzu-memory --help              # Main overview
 kuzu-memory COMMAND --help      # Command-specific help
-kuzu-memory examples TOPIC      # Examples and tutorials
-kuzu-memory tips                # Best practices
+kuzu-memory help examples       # Show usage examples
+kuzu-memory help tips           # Best practices
 ```
 
 **No external documentation needed** - everything is built into the CLI!

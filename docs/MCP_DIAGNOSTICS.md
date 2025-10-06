@@ -26,15 +26,17 @@ The MCP diagnostic framework provides automated testing, validation, and trouble
 ### Command Structure
 
 ```bash
-kuzu-memory mcp <command> <subcommand> [options]
+kuzu-memory doctor [subcommand] [options]
 ```
 
 ### Available Commands
 
 | Command | Purpose | Usage |
 |---------|---------|-------|
-| `diagnose` | Run diagnostic tests | `kuzu-memory mcp diagnose <subcommand>` |
-| `health` | Check server health | `kuzu-memory mcp health [options]` |
+| `doctor` | Run diagnostic tests | `kuzu-memory doctor [subcommand]` |
+| `doctor health` | Check server health | `kuzu-memory doctor health [options]` |
+| `doctor mcp` | MCP diagnostics | `kuzu-memory doctor mcp [options]` |
+| `doctor connection` | Test connections | `kuzu-memory doctor connection [options]` |
 
 ---
 
@@ -45,7 +47,7 @@ kuzu-memory mcp <command> <subcommand> [options]
 **Run complete diagnostic suite**
 
 ```bash
-kuzu-memory mcp diagnose run [options]
+kuzu-memory doctor [options]
 ```
 
 **What It Tests**:
@@ -72,25 +74,25 @@ Would you like to attempt automatic fixes? [Y/n]:
 **Examples**:
 ```bash
 # Basic diagnostics
-kuzu-memory mcp diagnose run
+kuzu-memory doctor
 
 # Verbose output
-kuzu-memory mcp diagnose run -v
+kuzu-memory doctor -v
 
 # Save report to file
-kuzu-memory mcp diagnose run --output diagnostics.txt
+kuzu-memory doctor --output diagnostics.txt
 
 # JSON format for automation
-kuzu-memory mcp diagnose run --format json --output diagnostics.json
+kuzu-memory doctor --format json --output diagnostics.json
 
 # HTML report
-kuzu-memory mcp diagnose run --format html --output report.html
+kuzu-memory doctor --format html --output report.html
 
 # Run with auto-fix
-kuzu-memory mcp diagnose run --fix
+kuzu-memory doctor --fix
 
 # Increase timeout
-kuzu-memory mcp diagnose run --timeout 60
+kuzu-memory doctor --timeout 60
 ```
 
 **Output**:
@@ -139,7 +141,7 @@ All checks passed (4/4)
 **Validate MCP configuration**
 
 ```bash
-kuzu-memory mcp diagnose config [options]
+kuzu-memory doctor config [options]
 ```
 
 **What It Checks**:
@@ -160,16 +162,16 @@ kuzu-memory mcp diagnose config [options]
 **Examples**:
 ```bash
 # Check configuration
-kuzu-memory mcp diagnose config
+kuzu-memory doctor config
 
 # Verbose output
-kuzu-memory mcp diagnose config -v
+kuzu-memory doctor config -v
 
 # Fix configuration issues
-kuzu-memory mcp diagnose config --fix
+kuzu-memory doctor config --fix
 
 # Export configuration report
-kuzu-memory mcp diagnose config --format json --output config-status.json
+kuzu-memory doctor config --format json --output config-status.json
 ```
 
 **Output**:
@@ -220,7 +222,7 @@ Result: ✅ PASS (all checks passed)
 **Test MCP server connectivity**
 
 ```bash
-kuzu-memory mcp diagnose connection [options]
+kuzu-memory doctor connection [options]
 ```
 
 **What It Tests**:
@@ -241,19 +243,19 @@ kuzu-memory mcp diagnose connection [options]
 **Examples**:
 ```bash
 # Test connection
-kuzu-memory mcp diagnose connection
+kuzu-memory doctor connection
 
 # With verbose logging
-kuzu-memory mcp diagnose connection -v
+kuzu-memory doctor connection -v
 
 # Custom timeout
-kuzu-memory mcp diagnose connection --timeout 20
+kuzu-memory doctor connection --timeout 20
 
 # With retries
-kuzu-memory mcp diagnose connection --retries 5
+kuzu-memory doctor connection --retries 5
 
 # Save test results
-kuzu-memory mcp diagnose connection --output connection-test.txt
+kuzu-memory doctor connection --output connection-test.txt
 ```
 
 **Output**:
@@ -308,7 +310,7 @@ Result: ✅ PASS (all tests passed)
 **Validate MCP tools**
 
 ```bash
-kuzu-memory mcp diagnose tools [options]
+kuzu-memory doctor tools [options]
 ```
 
 **What It Tests**:
@@ -329,19 +331,19 @@ kuzu-memory mcp diagnose tools [options]
 **Examples**:
 ```bash
 # Validate all tools
-kuzu-memory mcp diagnose tools
+kuzu-memory doctor tools
 
 # Test specific tool
-kuzu-memory mcp diagnose tools --tool enhance
+kuzu-memory doctor tools --tool enhance
 
 # Skip execution (schema only)
-kuzu-memory mcp diagnose tools --skip-execution
+kuzu-memory doctor tools --skip-execution
 
 # Verbose output
-kuzu-memory mcp diagnose tools -v
+kuzu-memory doctor tools -v
 
 # Save report
-kuzu-memory mcp diagnose tools --output tool-validation.txt
+kuzu-memory doctor tools --output tool-validation.txt
 ```
 
 **Output**:
@@ -412,7 +414,7 @@ Result: ✅ PASS (all tools valid and executable)
 **Check server health status**
 
 ```bash
-kuzu-memory mcp health [options]
+kuzu-memory doctor health [options]
 ```
 
 **What It Checks**:
@@ -434,25 +436,25 @@ kuzu-memory mcp health [options]
 **Examples**:
 ```bash
 # Quick health check
-kuzu-memory mcp health
+kuzu-memory doctor health
 
 # Detailed status
-kuzu-memory mcp health --detailed
+kuzu-memory doctor health --detailed
 
 # JSON output
-kuzu-memory mcp health --json
+kuzu-memory doctor health --json
 
 # Continuous monitoring (every 10 seconds)
-kuzu-memory mcp health --continuous
+kuzu-memory doctor health --continuous
 
 # Custom interval (every 5 seconds)
-kuzu-memory mcp health --continuous --interval 5
+kuzu-memory doctor health --continuous --interval 5
 
 # Log to file
-kuzu-memory mcp health --continuous --log-file health.log
+kuzu-memory doctor health --continuous --log-file health.log
 
 # Alert on failure
-kuzu-memory mcp health --alert-on-failure
+kuzu-memory doctor health --alert-on-failure
 ```
 
 **Output (Basic)**:
@@ -799,7 +801,7 @@ Overall: ✅ HEALTHY
 
 | Code | Status | Meaning | Example |
 |------|--------|---------|---------|
-| 0 | Success | All checks passed | `kuzu-memory mcp diagnose run` |
+| 0 | Success | All checks passed | `kuzu-memory doctor` |
 | 1 | Warning | Some checks failed, non-critical | Latency exceeds target |
 | 2 | Error | Critical checks failed | Server won't start |
 | 3 | Usage Error | Invalid command/options | Unknown option |
@@ -811,7 +813,7 @@ Overall: ✅ HEALTHY
 #!/bin/bash
 
 # Run diagnostics
-kuzu-memory mcp diagnose run
+kuzu-memory doctor
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
@@ -830,7 +832,7 @@ fi
 ```yaml
 - name: Run MCP Diagnostics
   run: |
-    kuzu-memory mcp diagnose run
+    kuzu-memory doctor
     # Will fail pipeline if exit code != 0
 ```
 
@@ -838,7 +840,7 @@ fi
 ```bash
 # Continuous monitoring with alerting
 while true; do
-    kuzu-memory mcp health --json > health.json
+    kuzu-memory doctor health --json > health.json
     if [ $? -ne 0 ]; then
         # Send alert
         curl -X POST https://alerts.example.com \
@@ -892,28 +894,28 @@ done
 **Interactive Mode**:
 ```bash
 # Prompt before each fix
-kuzu-memory mcp diagnose run --fix --interactive
+kuzu-memory doctor --fix --interactive
 ```
 
 **Automatic Mode**:
 ```bash
 # Apply all fixes automatically
-kuzu-memory mcp diagnose run --fix
+kuzu-memory doctor --fix
 ```
 
 **Dry Run**:
 ```bash
 # Show what would be fixed without applying
-kuzu-memory mcp diagnose run --fix --dry-run
+kuzu-memory doctor --fix --dry-run
 ```
 
 **Selective Fixes**:
 ```bash
 # Fix only configuration issues
-kuzu-memory mcp diagnose config --fix
+kuzu-memory doctor config --fix
 
 # Fix only connection issues
-kuzu-memory mcp diagnose connection --fix
+kuzu-memory doctor connection --fix
 ```
 
 ---
@@ -924,7 +926,7 @@ kuzu-memory mcp diagnose connection --fix
 
 ```bash
 # Run full diagnostics with verbose output and save report
-kuzu-memory mcp diagnose run -v --output full-diagnostics.txt
+kuzu-memory doctor -v --output full-diagnostics.txt
 
 # Check exit code
 if [ $? -eq 0 ]; then
@@ -938,7 +940,7 @@ fi
 
 ```bash
 # Monitor health every 30 seconds and log to file
-kuzu-memory mcp health --continuous --interval 30 --log-file health-monitor.log
+kuzu-memory doctor health --continuous --interval 30 --log-file health-monitor.log
 ```
 
 ### Example 3: CI/CD Pipeline
@@ -947,7 +949,7 @@ kuzu-memory mcp health --continuous --interval 30 --log-file health-monitor.log
 # In .github/workflows/test.yml
 - name: MCP Diagnostics
   run: |
-    kuzu-memory mcp diagnose run --format json --output diagnostics.json
+    kuzu-memory doctor --format json --output diagnostics.json
 
 - name: Upload Diagnostics
   uses: actions/upload-artifact@v3
@@ -960,28 +962,28 @@ kuzu-memory mcp health --continuous --interval 30 --log-file health-monitor.log
 
 ```bash
 # Step 1: Check configuration
-kuzu-memory mcp diagnose config -v
+kuzu-memory doctor config -v
 
 # Step 2: Test connection
-kuzu-memory mcp diagnose connection -v
+kuzu-memory doctor connection -v
 
 # Step 3: Validate tools
-kuzu-memory mcp diagnose tools -v
+kuzu-memory doctor tools -v
 
 # Step 4: Run full diagnostics with fix
-kuzu-memory mcp diagnose run --fix -v --output troubleshooting.txt
+kuzu-memory doctor --fix -v --output troubleshooting.txt
 ```
 
 ### Example 5: Performance Validation
 
 ```bash
 # Check health and validate performance
-kuzu-memory mcp health --detailed
+kuzu-memory doctor health --detailed
 
 # If latency is high, run full diagnostics
-if kuzu-memory mcp health --json | jq '.connection.latency_ms > 100'; then
+if kuzu-memory doctor health --json | jq '.connection.latency_ms > 100'; then
     echo "High latency detected - running diagnostics"
-    kuzu-memory mcp diagnose run -v
+    kuzu-memory doctor -v
 fi
 ```
 

@@ -17,24 +17,24 @@
 **Claude Desktop Users** (Global Memory - Recommended for Personal Use):
 ```bash
 # List available installation methods
-kuzu-memory list-installers
+kuzu-memory install list
 
 # Install Claude Desktop (auto-detects pipx or home directory)
 # Creates ~/.kuzu-memory/config.yaml and global database
-kuzu-memory install claude-desktop
+kuzu-memory install add claude-desktop
 
 # Verify installation
-kuzu-memory install-status
+kuzu-memory install status
 ```
 
 **Claude Code Users** (Project-Specific Memory - Recommended for Teams):
 ```bash
 # Initialize project and install integration
 # Creates .kuzu-memory/config.yaml and project database
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 
 # Verify installation
-kuzu-memory install-status
+kuzu-memory install status
 ```
 
 ---
@@ -47,7 +47,7 @@ kuzu-memory install-status
 > `claude`, `claude-mpm`) still work but show deprecation warnings.
 >
 > **Script Migration**: If you previously used `python scripts/install-claude-desktop.py`,
-> that method still works but is **deprecated**. Use `kuzu-memory install claude-desktop` instead.
+> that method still works but is **deprecated**. Use `kuzu-memory install add claude-desktop` instead.
 
 ---
 
@@ -123,7 +123,7 @@ pipx install kuzu-memory
 # - Initializes global database in ~/.kuzu-memory/memorydb/
 # - Configures Claude Desktop MCP server
 # - Creates backup of existing configuration
-kuzu-memory install claude-desktop
+kuzu-memory install add claude-desktop
 ```
 
 The installer **automatically**:
@@ -149,29 +149,29 @@ All installer commands support these options:
 ```bash
 # Install with auto-detection (recommended - ONE PATH)
 # Creates config and initializes database automatically
-kuzu-memory install claude-desktop
+kuzu-memory install add claude-desktop
 
 # Preview what would be changed (dry run)
-kuzu-memory install claude-desktop --dry-run --verbose
+kuzu-memory install add claude-desktop --dry-run --verbose
 
 # Override auto-detection to use specific method
-kuzu-memory install claude-desktop --mode pipx
-kuzu-memory install claude-desktop --mode home
+kuzu-memory install add claude-desktop --mode pipx
+kuzu-memory install add claude-desktop --mode home
 
 # Install with custom database path
 # Still creates config.yaml automatically with custom path
-kuzu-memory install claude-desktop \
+kuzu-memory install add claude-desktop \
   --mode home \
   --memory-db ~/my-memories/db
 
 # Force reinstall (overwrites existing config, creates backup)
-kuzu-memory install claude-desktop --force
+kuzu-memory install add claude-desktop --force
 
 # Check installation status
-kuzu-memory install-status
+kuzu-memory install status
 
 # Uninstall Claude Desktop integration
-kuzu-memory uninstall claude-desktop
+kuzu-memory install remove claude-desktop
 ```
 
 #### What Gets Created
@@ -297,10 +297,10 @@ cd your-project
 # - Initializes project database in .kuzu-memory/memorydb/
 # - Configures MCP hooks for Claude Code
 # - Creates project-specific CLAUDE.md context file
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 
 # Verify installation
-kuzu-memory install-status
+kuzu-memory install status
 ```
 
 The installer **automatically**:
@@ -314,22 +314,22 @@ The installer **automatically**:
 
 ```bash
 # Install with auto-configuration (recommended - ONE PATH)
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 
 # Install with options
-kuzu-memory install claude-code --force --verbose
+kuzu-memory install add claude-code --force --verbose
 
 # Preview changes first
-kuzu-memory install claude-code --dry-run
+kuzu-memory install add claude-code --dry-run
 
 # Custom configuration
-kuzu-memory install claude-code \
+kuzu-memory install add claude-code \
   --memory-db ./custom-memories \
   --backup-dir ./backups
 ```
 
 > **Note**: Previous commands (`kuzu-memory claude install`, `kuzu-memory install claude`)
-> still work but show deprecation warnings. Use `kuzu-memory install claude-code` instead.
+> still work but show deprecation warnings. Use `kuzu-memory install add claude-code` instead.
 
 #### What Gets Created
 
@@ -415,7 +415,7 @@ All memories are:
 ```bash
 # Developer A creates memories
 cd my-project
-kuzu-memory install claude-code
+kuzu-memory install add claude-code
 # ... work with Claude, memories are created ...
 git add .kuzu-memory/ CLAUDE.md
 git commit -m "Add project memories"
@@ -424,7 +424,7 @@ git push
 # Developer B gets memories
 git pull
 # Memories are automatically available!
-kuzu-memory stats  # See shared memories
+kuzu-memory status  # See shared memories
 ```
 
 ---
@@ -448,8 +448,8 @@ kuzu-memory claude status --json
 kuzu-memory claude test
 
 # Test specific components
-kuzu-memory enhance "test prompt"
-kuzu-memory stats
+kuzu-memory memory enhance "test prompt"
+kuzu-memory status
 ```
 
 ### Manual MCP Server Test
@@ -478,13 +478,13 @@ KuzuMemory uses different configuration files depending on the integration:
 
 #### Claude Desktop (Global Configuration)
 - **Location**: `~/.kuzu-memory/config.yaml`
-- **Created By**: `kuzu-memory install claude-desktop`
+- **Created By**: `kuzu-memory install add claude-desktop`
 - **Scope**: All Claude Desktop conversations
 - **Database**: `~/.kuzu-memory/memorydb/`
 
 #### Claude Code (Project Configuration)
 - **Location**: `.kuzu-memory/config.yaml` (in project root)
-- **Created By**: `kuzu-memory install claude-code`
+- **Created By**: `kuzu-memory install add claude-code`
 - **Scope**: This project only
 - **Database**: `.kuzu-memory/memorydb/` (in project)
 
@@ -829,7 +829,7 @@ git pull
 kuzu-memory claude install
 
 # Memories are already available!
-kuzu-memory stats
+kuzu-memory status
 ```
 
 ---

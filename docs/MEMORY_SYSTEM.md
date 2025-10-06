@@ -38,9 +38,9 @@ All memory types are standardized across Python and TypeScript implementations:
 
 **Examples**:
 ```bash
-kuzu-memory remember "This project is KuzuMemory, an AI memory system"
-kuzu-memory remember "KuzuMemory uses Python 3.11+ and Kuzu database"
-kuzu-memory remember "Alice works at TechCorp as Python developer"
+kuzu-memory memory store "This project is KuzuMemory, an AI memory system"
+kuzu-memory memory store "KuzuMemory uses Python 3.11+ and Kuzu database"
+kuzu-memory memory store "Alice works at TechCorp as Python developer"
 ```
 
 **Storage**:
@@ -61,9 +61,9 @@ memory.learn("This is a FastAPI-based microservice architecture")
 
 **Examples**:
 ```bash
-kuzu-memory remember "Always use type hints in Python code"
-kuzu-memory remember "Run make test before committing code"
-kuzu-memory remember "Follow PEP 8 style guide for Python"
+kuzu-memory memory store "Always use type hints in Python code"
+kuzu-memory memory store "Run make test before committing code"
+kuzu-memory memory store "Follow PEP 8 style guide for Python"
 ```
 
 **Storage**:
@@ -84,9 +84,9 @@ memory.learn("Use async/await patterns for all I/O operations")
 
 **Examples**:
 ```bash
-kuzu-memory remember "Team prefers pytest over unittest"
-kuzu-memory remember "Use FastAPI instead of Flask for APIs"
-kuzu-memory remember "Prefer composition over inheritance"
+kuzu-memory memory store "Team prefers pytest over unittest"
+kuzu-memory memory store "Use FastAPI instead of Flask for APIs"
+kuzu-memory memory store "Prefer composition over inheritance"
 ```
 
 **Storage**:
@@ -107,9 +107,9 @@ memory.learn("User prefers dark mode for all interfaces")
 
 **Examples**:
 ```bash
-kuzu-memory remember "Decided to use Kuzu database for graph storage"
-kuzu-memory remember "Resolved performance issue by adding connection pooling"
-kuzu-memory remember "Migration to Python 3.11 completed on 2024-03-15"
+kuzu-memory memory store "Decided to use Kuzu database for graph storage"
+kuzu-memory memory store "Resolved performance issue by adding connection pooling"
+kuzu-memory memory store "Migration to Python 3.11 completed on 2024-03-15"
 ```
 
 **Storage**:
@@ -130,9 +130,9 @@ memory.learn("Decided to migrate from REST to GraphQL for API")
 
 **Examples**:
 ```bash
-kuzu-memory remember "Currently debugging the async learning system"
-kuzu-memory remember "Working on MCP server integration feature"
-kuzu-memory remember "Need to fix test failures in CI pipeline"
+kuzu-memory memory store "Currently debugging the async learning system"
+kuzu-memory memory store "Working on MCP server integration feature"
+kuzu-memory memory store "Need to fix test failures in CI pipeline"
 ```
 
 **Storage**:
@@ -153,9 +153,9 @@ memory.learn("Currently implementing authentication system")
 
 **Examples**:
 ```bash
-kuzu-memory remember "The CLI response feels slow during testing"
-kuzu-memory remember "UI button placement seems awkward on mobile"
-kuzu-memory remember "Database query taking longer than expected"
+kuzu-memory memory store "The CLI response feels slow during testing"
+kuzu-memory memory store "UI button placement seems awkward on mobile"
+kuzu-memory memory store "Database query taking longer than expected"
 ```
 
 **Storage**:
@@ -172,7 +172,7 @@ memory.learn("Page load time is noticeably slow on dashboard")
 
 ```bash
 # Explicit creation
-kuzu-memory remember "content" --type SEMANTIC
+kuzu-memory memory store "content" --type SEMANTIC
 
 # Automatic classification
 kuzu-memory learn "content"  # AI determines type
@@ -182,10 +182,10 @@ kuzu-memory learn "content"  # AI determines type
 
 ```bash
 # Query-based recall
-kuzu-memory recall "what are my preferences?"
+kuzu-memory memory recall "what are my preferences?"
 
 # Type-filtered recall
-kuzu-memory recall "decisions" --type EPISODIC
+kuzu-memory memory recall "decisions" --type EPISODIC
 
 # Recent memories
 kuzu-memory recent --limit 10
@@ -460,13 +460,13 @@ Performance Optimization Workflow:
 
 ```bash
 # Basic stats
-kuzu-memory stats
+kuzu-memory status
 
 # Detailed statistics
-kuzu-memory stats --detailed
+kuzu-memory status --detailed
 
 # JSON output
-kuzu-memory stats --format json
+kuzu-memory status --format json
 ```
 
 ### Statistics Include
@@ -509,13 +509,13 @@ kuzu-memory stats --format json
 **Check if memory exists**:
 ```bash
 kuzu-memory recent --limit 50
-kuzu-memory recall "exact search term"
+kuzu-memory memory recall "exact search term"
 ```
 
 **Verify memory type**:
 ```bash
 # May have expired if WORKING or SENSORY
-kuzu-memory stats
+kuzu-memory status
 ```
 
 **Check configuration**:
@@ -591,7 +591,7 @@ git pull
 kuzu-memory init  # Database already exists from git
 
 # Memories are immediately available!
-kuzu-memory stats
+kuzu-memory status
 kuzu-memory recent
 ```
 
