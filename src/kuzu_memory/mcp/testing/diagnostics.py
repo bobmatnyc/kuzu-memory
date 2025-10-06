@@ -148,7 +148,9 @@ class MCPDiagnostics:
         self.project_root = project_root or Path.cwd()
         self.verbose = verbose
         # PROJECT-LEVEL CONFIG ONLY
-        self.claude_code_config_path = self.project_root / ".claude" / "config.local.json"
+        self.claude_code_config_path = (
+            self.project_root / ".claude" / "config.local.json"
+        )
         self.memory_db_path = self.project_root / "kuzu-memory"
 
     async def check_configuration(self) -> list[DiagnosticResult]:
