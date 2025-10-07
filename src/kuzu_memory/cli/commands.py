@@ -19,6 +19,7 @@ from .cli_utils import rich_panel, rich_print
 
 # Import top-level command groups (6 total)
 from .doctor_commands import doctor
+from .enums import OutputFormat
 from .help_commands import help_group
 from .init_commands import init
 from .install_commands_simple import install
@@ -133,7 +134,7 @@ def cli(ctx, debug, config, db_path, project_root):
                         "KuzuMemory is ready! 🎉\n\n"
                         "Try these commands:\n"
                         "• kuzu-memory recent        # Show recent memories\n"
-                        "• kuzu-memory stats         # System statistics\n"
+                        "• kuzu-memory status        # System statistics\n"
                         "• kuzu-memory remember      # Store new memory\n"
                         "• kuzu-memory enhance       # Enhance prompts\n"
                         "\nFor all commands: kuzu-memory --help",
@@ -196,7 +197,7 @@ def quickstart(ctx, skip_demo):
             rich_print("\n🎉 Setup complete! Try these commands:")
             rich_print("• kuzu-memory remember 'Your project info'")
             rich_print("• kuzu-memory enhance 'Your question'")
-            rich_print("• kuzu-memory stats")
+            rich_print("• kuzu-memory status")
             return
 
         # Interactive demo continues...
@@ -289,6 +290,51 @@ cli.add_command(help_group, name="help")  # 6. Help and examples
 # Keep quickstart/demo for onboarding
 cli.add_command(quickstart)
 cli.add_command(demo)
+
+
+# Backward compatibility: 'stats' command as alias to 'status'
+@click.command()
+@click.option("--validate", is_flag=True, help="Run health validation checks")
+@click.option(
+    "--project", "show_project", is_flag=True, help="Show detailed project information"
+)
+@click.option("--detailed", is_flag=True, help="Show detailed statistics")
+@click.option(
+    "--format",
+    "output_format",
+    default=OutputFormat.TEXT.value,
+    type=click.Choice([OutputFormat.TEXT.value, OutputFormat.JSON.value]),
+    help="Output format",
+)
+@click.pass_context
+def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str):
+    """
+    📊 Display system statistics (deprecated - use 'status' instead).
+
+    ⚠️  DEPRECATED: This command is deprecated. Please use 'kuzu-memory status' instead.
+
+    Shows memory system status and statistics. This is an alias to the 'status' command
+    maintained for backward compatibility.
+    """
+    # Show deprecation warning (unless JSON output)
+    if output_format != OutputFormat.JSON.value:
+        rich_print(
+            "⚠️  Warning: 'stats' is deprecated. Please use 'kuzu-memory status' instead.",
+            style="yellow",
+        )
+
+    # Forward to status command
+    ctx.invoke(
+        status,
+        validate=validate,
+        show_project=show_project,
+        detailed=detailed,
+        output_format=output_format,
+    )
+
+
+# Register deprecated 'stats' alias
+cli.add_command(stats)
 
 
 if __name__ == "__main__":
