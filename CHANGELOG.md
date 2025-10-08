@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] - 2025-10-07
+
+### Fixed
+- **Project Root Detection**: Fixed critical bug where `kuzu-memory init` would incorrectly use home directory as project root
+  - Added safety check to never use home directory as project root
+  - Stops search at home directory boundary
+  - Defaults to current directory when no project root found
+  - Added comprehensive test coverage with 18 new tests
+
 ## [1.2.4] - 2025-10-06
 
 ### Changed
@@ -358,7 +367,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.4...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...HEAD
+[1.2.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.1...v1.2.2
