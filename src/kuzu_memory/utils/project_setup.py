@@ -12,20 +12,36 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-def find_project_root(start_path: Path | None = None) -> Path | None:
+def find_project_root(
+    start_path: Path | None = None, _home_dir: Path | None = None
+) -> Path | None:
     """
     Find the project root by looking for common project indicators.
 
     Args:
         start_path: Starting directory (default: current directory)
+        _home_dir: Home directory override (for testing only)
 
     Returns:
         Path to project root or None if not found
+
+    Logic:
+        1. Check if current directory has project indicators - if yes, use it
+        2. Only walk up if current directory has no indicators
+        3. Never use home directory as project root (safety check)
+        4. Stop walking at home directory boundary
+        5. Fall back to current directory if no valid project root found
     """
     if start_path is None:
         start_path = Path.cwd()
 
     current = Path(start_path).resolve()
+
+    # Get home directory (allow override for testing)
+    if _home_dir is None:
+        home_dir = Path.home().resolve()
+    else:
+        home_dir = Path(_home_dir).resolve()
 
     # Look for common project root indicators
     project_indicators = [
@@ -44,13 +60,46 @@ def find_project_root(start_path: Path | None = None) -> Path | None:
         "Makefile",
     ]
 
-    # Walk up the directory tree
-    for parent in [current, *list(current.parents)]:
+    def has_project_indicator(path: Path) -> str | None:
+        """Check if path has any project indicator. Returns indicator name if found."""
         for indicator in project_indicators:
-            if (parent / indicator).exists():
-                logger.debug(f"Found project root at {parent} (indicator: {indicator})")
-                return parent
+            if (path / indicator).exists():
+                return indicator
+        return None
 
+    # STEP 1: Check current directory first
+    current_indicator = has_project_indicator(current)
+    if current_indicator:
+        logger.debug(
+            f"Found project root at current directory {current} (indicator: {current_indicator})"
+        )
+        return current
+
+    # STEP 2: Walk up the directory tree, but with safety checks
+    for parent in current.parents:
+        # Safety check: NEVER use home directory as project root
+        if parent == home_dir:
+            logger.debug(
+                f"Reached home directory {home_dir}, stopping search. Using current directory {current}"
+            )
+            return current
+
+        # Safety check: Stop if we've gone above home directory
+        if home_dir in parent.parents:
+            logger.debug(
+                f"Passed home directory boundary at {parent}, stopping search. Using current directory {current}"
+            )
+            return current
+
+        # Check if this parent has project indicators
+        parent_indicator = has_project_indicator(parent)
+        if parent_indicator:
+            logger.debug(
+                f"Found project root at {parent} (indicator: {parent_indicator})"
+            )
+            return parent
+
+    # STEP 3: No project root found, use current directory
     logger.debug("No project root found, using current directory")
     return current
 
