@@ -163,7 +163,9 @@ class CorruptedDatabaseError(DatabaseError):
 class DatabaseVersionError(DatabaseError):
     """Database version is incompatible."""
 
-    def __init__(self, current_version: str, expected_version: str, **kwargs: Any) -> None:
+    def __init__(
+        self, current_version: str, expected_version: str, **kwargs: Any
+    ) -> None:
         message = f"Database version mismatch: current={current_version}, expected={expected_version}"
         super().__init__(
             message=message,
@@ -181,7 +183,9 @@ class DatabaseVersionError(DatabaseError):
 class DatabaseConnectionError(DatabaseError):
     """Failed to connect to database."""
 
-    def __init__(self, message: str = "Failed to connect to database", **kwargs: Any) -> None:
+    def __init__(
+        self, message: str = "Failed to connect to database", **kwargs: Any
+    ) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.DATABASE_CONNECTION,
@@ -292,7 +296,9 @@ class PerformanceError(KuzuMemoryError):
 class PerformanceThresholdError(PerformanceError):
     """Specific performance threshold violation."""
 
-    def __init__(self, operation: str, actual_time: float, threshold: float, **kwargs: Any) -> None:
+    def __init__(
+        self, operation: str, actual_time: float, threshold: float, **kwargs: Any
+    ) -> None:
         message = f"Performance threshold exceeded for {operation}: {actual_time:.3f}s > {threshold:.3f}s"
         super().__init__(
             message=message,
@@ -332,7 +338,9 @@ class CacheFullError(CacheError):
 class CacheCorruptionError(CacheError):
     """Cache data is corrupted."""
 
-    def __init__(self, message: str = "Cache corruption detected", **kwargs: Any) -> None:
+    def __init__(
+        self, message: str = "Cache corruption detected", **kwargs: Any
+    ) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.CACHE_CORRUPTION,
@@ -370,7 +378,9 @@ class ConnectionPoolError(KuzuMemoryError):
 class PoolExhaustedError(ConnectionPoolError):
     """Connection pool has no available connections."""
 
-    def __init__(self, message: str = "Connection pool exhausted", **kwargs: Any) -> None:
+    def __init__(
+        self, message: str = "Connection pool exhausted", **kwargs: Any
+    ) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.POOL_EXHAUSTED,
@@ -404,7 +414,9 @@ class PoolTimeoutError(ConnectionPoolError):
 class PoolConnectionFailedError(ConnectionPoolError):
     """Failed to create connection in pool."""
 
-    def __init__(self, message: str = "Failed to create connection", **kwargs: Any) -> None:
+    def __init__(
+        self, message: str = "Failed to create connection", **kwargs: Any
+    ) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.POOL_CONNECTION_FAILED,

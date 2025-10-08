@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.7] - 2025-10-08
+
 ### Fixed
 - **Memory Generation Performance**: Restored optimal performance by disabling NLP classification by default
   - Generation time improved from ~630ms to ~80ms (87% faster)

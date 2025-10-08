@@ -73,7 +73,9 @@ def exponential_backoff(
             if last_exception:
                 raise last_exception
             # If somehow we get here with no exception, raise a runtime error
-            raise RuntimeError(f"{func.__name__} failed all retries without capturing exception")
+            raise RuntimeError(
+                f"{func.__name__} failed all retries without capturing exception"
+            )
 
         return wrapper
 

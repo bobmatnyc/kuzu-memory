@@ -316,9 +316,7 @@ class PerformanceMonitor:
                                 operation
                             ),
                             "priority": (
-                                "high"
-                                if avg_time_ms > threshold * 2
-                                else "medium"
+                                "high" if avg_time_ms > threshold * 2 else "medium"
                             ),
                         }
                     )
@@ -399,7 +397,9 @@ def get_performance_monitor() -> PerformanceMonitor:
     return _global_monitor
 
 
-def performance_timer(operation: str, metadata: dict[str, Any] | None = None) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def performance_timer(
+    operation: str, metadata: dict[str, Any] | None = None
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for timing operations.
 

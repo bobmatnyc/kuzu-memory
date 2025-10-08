@@ -7,11 +7,10 @@ and monitoring system health throughout KuzuMemory.
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager, asynccontextmanager, contextmanager
-from contextvars import ContextVar
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, ContextManager
+from typing import Any
 
 
 class MetricType(str, Enum):
@@ -114,7 +113,7 @@ class IPerformanceMonitor(ABC):
     @abstractmethod
     def time_operation(
         self, name: str, tags: dict[str, str] | None = None
-    ) -> ContextManager[None]:
+    ) -> AbstractContextManager[None]:
         """
         Time a synchronous operation using context manager.
 

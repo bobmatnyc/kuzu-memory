@@ -6,7 +6,7 @@ with pooling, health checks, and resource management.
 """
 
 from abc import ABC, abstractmethod
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import AbstractAsyncContextManager
 from typing import Any
 
 
