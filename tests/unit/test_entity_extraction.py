@@ -83,9 +83,9 @@ class TestEntityExtractor:
 
             found_languages = {e.text for e in language_entities}
             for expected_lang in expected_languages:
-                assert expected_lang in found_languages, (
-                    f"Expected language '{expected_lang}' not found"
-                )
+                assert (
+                    expected_lang in found_languages
+                ), f"Expected language '{expected_lang}' not found"
 
     def test_technology_framework_extraction(self, entity_extractor):
         """Test extraction of technologies and frameworks."""
@@ -156,9 +156,9 @@ class TestEntityExtractor:
                     expected_compound.lower() in found_compound.lower()
                     for found_compound in found_compounds
                 )
-                assert found_match, (
-                    f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
-                )
+                assert (
+                    found_match
+                ), f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
 
     def test_person_name_extraction(self, entity_extractor):
         """Test extraction of person names."""
@@ -214,9 +214,9 @@ class TestEntityExtractor:
                         expected_org.lower() in found_org.lower()
                         for found_org in found_orgs
                     )
-                    assert found_match, (
-                        f"Expected organization '{expected_org}' not found"
-                    )
+                    assert (
+                        found_match
+                    ), f"Expected organization '{expected_org}' not found"
 
     # Test File and URL Extraction
     def test_file_extraction(self, entity_extractor):
@@ -243,9 +243,9 @@ class TestEntityExtractor:
 
             found_files = {e.text for e in file_entities}
             for expected_file in expected_files:
-                assert expected_file in found_files, (
-                    f"Expected file '{expected_file}' not found"
-                )
+                assert (
+                    expected_file in found_files
+                ), f"Expected file '{expected_file}' not found"
 
     def test_url_extraction(self, entity_extractor):
         """Test extraction of URLs and domains."""
@@ -292,9 +292,9 @@ class TestEntityExtractor:
 
                 found_versions = {e.text for e in version_entities}
                 for expected_version in expected_versions:
-                    assert expected_version in found_versions, (
-                        f"Expected version '{expected_version}' not found"
-                    )
+                    assert (
+                        expected_version in found_versions
+                    ), f"Expected version '{expected_version}' not found"
 
     def test_date_extraction(self, entity_extractor):
         """Test extraction of dates and times."""
@@ -350,9 +350,9 @@ class TestEntityExtractor:
 
         # Should filter out single-character entities
         for entity in entities:
-            assert len(entity.text) >= 2, (
-                f"Single character entity found: {entity.text}"
-            )
+            assert (
+                len(entity.text) >= 2
+            ), f"Single character entity found: {entity.text}"
 
     # Test Entity Relationships
     def test_entity_relationship_detection(self, entity_extractor):

@@ -8,10 +8,10 @@
   },
   "hooks": {
     "pre_response": [
-      "kuzu-memory enhance"
+      "/Users/masa/Projects/managed/kuzu-memory/.venv/bin/kuzu-memory enhance"
     ],
     "post_response": [
-      "kuzu-memory learn --quiet"
+      "/Users/masa/Projects/managed/kuzu-memory/.venv/bin/kuzu-memory learn --quiet"
     ]
   },
   "settings": {

@@ -144,26 +144,85 @@ class ClaudeHooksInstaller(BaseInstaller):
         Uses shutil.which() to find the exact executable that will be invoked,
         supporting all installation methods (local, source, pip, pipx, etc.).
 
+        Priority order:
+        1. pipx installation (supports MCP server)
+        2. Local development installation (supports MCP server)
+        3. System-wide installation (may not support MCP server)
+
         Returns:
             Full path to kuzu-memory executable, or 'kuzu-memory' if not found
         """
         if self._kuzu_command_path is not None:
             return self._kuzu_command_path
 
-        # Use shutil.which to find actual command path
+        # Priority 1: Check for pipx installation (most reliable for MCP server)
+        pipx_paths = [
+            Path.home() / ".local" / "pipx" / "venvs" / "kuzu-memory" / "bin" / "kuzu-memory",
+            Path.home() / ".local" / "bin" / "kuzu-memory",  # pipx ensurepath location
+        ]
+
+        for pipx_path in pipx_paths:
+            if pipx_path.exists() and self._verify_mcp_support(pipx_path):
+                self._kuzu_command_path = str(pipx_path)
+                logger.info(f"Using pipx installation at: {pipx_path}")
+                return str(pipx_path)
+
+        # Priority 2: Check for local development installation
+        dev_paths = [
+            self.project_root / "venv" / "bin" / "kuzu-memory",
+            self.project_root / ".venv" / "bin" / "kuzu-memory",
+        ]
+
+        for dev_path in dev_paths:
+            if dev_path.exists() and self._verify_mcp_support(dev_path):
+                self._kuzu_command_path = str(dev_path)
+                logger.info(f"Using development installation at: {dev_path}")
+                return str(dev_path)
+
+        # Priority 3: Use shutil.which to find any kuzu-memory in PATH
         try:
             command_path = shutil.which("kuzu-memory")
             if command_path:
-                self._kuzu_command_path = command_path
-                logger.debug(f"Found kuzu-memory at: {command_path}")
-                return command_path
+                # Verify MCP support before using
+                if self._verify_mcp_support(command_path):
+                    self._kuzu_command_path = command_path
+                    logger.info(f"Found kuzu-memory with MCP support at: {command_path}")
+                    return command_path
+                else:
+                    logger.warning(
+                        f"Found kuzu-memory at {command_path} but it doesn't support MCP server. "
+                        "Please reinstall with: pip uninstall kuzu-memory && pipx install kuzu-memory"
+                    )
         except Exception as e:
             logger.debug(f"Failed to locate kuzu-memory: {e}")
 
-        # Fallback to plain command
+        # Fallback to plain command (will likely fail if MCP server is needed)
         self._kuzu_command_path = "kuzu-memory"
-        logger.debug("Using plain 'kuzu-memory' command")
+        logger.warning("Using plain 'kuzu-memory' command - MCP server may not work")
         return "kuzu-memory"
+
+    def _verify_mcp_support(self, command_path: str | Path) -> bool:
+        """
+        Verify that the kuzu-memory installation supports MCP server.
+
+        Args:
+            command_path: Path to kuzu-memory executable
+
+        Returns:
+            True if MCP server is supported, False otherwise
+        """
+        try:
+            result = subprocess.run(
+                [str(command_path), "--help"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            # Check if "mcp" command is in the help output
+            return "mcp" in result.stdout.lower()
+        except Exception as e:
+            logger.debug(f"Failed to verify MCP support for {command_path}: {e}")
+            return False
 
     def _create_claude_code_config(self) -> dict[str, Any]:
         """

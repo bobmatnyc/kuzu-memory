@@ -16,7 +16,7 @@ When users ask technical questions, ALWAYS enhance them with project context:
 
 **Action:**
 ```bash
-kuzu-memory enhance "[user's question]" --format plain
+kuzu-memory memory enhance "[user's question]" --format plain
 ```
 
 **Use the enhanced output as the actual prompt for your response.**
@@ -34,7 +34,7 @@ When users provide project information, ALWAYS store it:
 
 **Action (ASYNC BY DEFAULT - NON-BLOCKING):**
 ```bash
-kuzu-memory learn "[extracted information]" --source ai-conversation --quiet
+kuzu-memory memory learn "[extracted information]" --source ai-conversation --quiet
 ```
 
 **IMPORTANT: Learning is async by default and won't block AI responses!**
@@ -45,27 +45,27 @@ kuzu-memory learn "[extracted information]" --source ai-conversation --quiet
 
 **User**: "How do I create a REST endpoint?"
 
-**Step 1**: Run `kuzu-memory enhance "How do I create a REST endpoint?" --format plain`
+**Step 1**: Run `kuzu-memory memory enhance "How do I create a REST endpoint?" --format plain`
 
 **Step 2**: If enhanced prompt includes FastAPI context, respond with FastAPI-specific guidance
 
-**Step 3**: If user adds "We're using async handlers", store: `kuzu-memory learn "Project uses async handlers for API endpoints" --quiet`
+**Step 3**: If user adds "We're using async handlers", store: `kuzu-memory memory learn "Project uses async handlers for API endpoints" --quiet`
 
 ### Example 2: Database Question
 
 **User**: "What's the best database for this project?"
 
-**Step 1**: Run `kuzu-memory enhance "What's the best database for this project?" --format plain`
+**Step 1**: Run `kuzu-memory memory enhance "What's the best database for this project?" --format plain`
 
 **Step 2**: If enhanced prompt shows existing database choice, recommend consistency
 
-**Step 3**: If user says "We decided on PostgreSQL", store: `kuzu-memory learn "Project uses PostgreSQL as the database" --quiet`
+**Step 3**: If user says "We decided on PostgreSQL", store: `kuzu-memory memory learn "Project uses PostgreSQL as the database" --quiet`
 
 ### Example 3: Testing Question
 
 **User**: "How should I write tests?"
 
-**Step 1**: Run `kuzu-memory enhance "How should I write tests?" --format plain`
+**Step 1**: Run `kuzu-memory memory enhance "How should I write tests?" --format plain`
 
 **Step 2**: If enhanced prompt includes pytest context, provide pytest-specific advice
 
@@ -76,37 +76,37 @@ kuzu-memory learn "[extracted information]" --source ai-conversation --quiet
 ### Enhancement Commands
 ```bash
 # Basic enhancement
-kuzu-memory enhance "user question" --format plain
+kuzu-memory memory enhance "user question" --format plain
 
 # Check what context would be added
-kuzu-memory enhance "user question" --format json
+kuzu-memory memory enhance "user question" --format json
 
 # Limit context size
-kuzu-memory enhance "user question" --max-memories 3 --format plain
+kuzu-memory memory enhance "user question" --max-memories 3 --format plain
 ```
 
 ### Storage Commands
 ```bash
 # Store general information (async by default)
-kuzu-memory learn "information to store" --quiet
+kuzu-memory memory learn "information to store" --quiet
 
 # Store with specific source
-kuzu-memory learn "user preference" --source user-preference --quiet
+kuzu-memory memory learn "user preference" --source user-preference --quiet
 
 # Store with metadata
-kuzu-memory learn "technical decision" --metadata '{"type":"architecture"}' --quiet
+kuzu-memory memory learn "technical decision" --metadata '{"type":"architecture"}' --quiet
 ```
 
 ### Monitoring Commands
 ```bash
 # Check recent memories
-kuzu-memory recent --format list
+kuzu-memory memory recent --format list
 
 # Search for specific information
-kuzu-memory recall "database setup"
+kuzu-memory memory recall "database setup"
 
 # View project status
-kuzu-memory project
+kuzu-memory status
 ```
 
 ## Error Handling

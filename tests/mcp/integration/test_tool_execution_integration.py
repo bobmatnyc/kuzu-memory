@@ -256,9 +256,9 @@ class TestToolDiscovery:
                 ]
 
                 for tool in expected_tools:
-                    assert tool in tool_names, (
-                        f"Missing tool: {tool}, found: {tool_names}"
-                    )
+                    assert (
+                        tool in tool_names
+                    ), f"Missing tool: {tool}, found: {tool_names}"
 
         finally:
             await client.disconnect()

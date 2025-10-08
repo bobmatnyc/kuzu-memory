@@ -10,7 +10,7 @@ This project uses KuzuMemory for intelligent project memory and context manageme
 
 1. For technical questions, implementation queries, or project-specific questions, run:
    ```bash
-   kuzu-memory enhance "[user's question]" --format plain
+   kuzu-memory memory enhance "[user's question]" --format plain
    ```
 
 2. Use the enhanced prompt (which includes relevant project context) instead of the original user question
@@ -23,7 +23,7 @@ This project uses KuzuMemory for intelligent project memory and context manageme
 
 1. If the user provides project information, decisions, preferences, or corrections, run:
    ```bash
-   kuzu-memory learn "[information to store]" --source ai-conversation --quiet
+   kuzu-memory memory learn "[information to store]" --source ai-conversation --quiet
    ```
 
 2. Store information like:
@@ -58,33 +58,32 @@ Enhance prompts for:
 
 **User asks**: "How should I structure an API endpoint?"
 
-**Step 1 - Enhance (SYNC)**: Run `kuzu-memory enhance "How should I structure an API endpoint?" --format plain`
+**Step 1 - Enhance (SYNC)**: Run `kuzu-memory memory enhance "How should I structure an API endpoint?" --format plain`
 - This is **synchronous** and fast (<100ms) - needed for immediate response
 
 **Step 2 - Respond**: Use the enhanced prompt (which might include context like "This project uses FastAPI with PostgreSQL") to provide a project-specific answer
 
-**Step 3 - Learn (ASYNC BY DEFAULT)**: If the user provides additional context in their response, store it with `kuzu-memory learn`
+**Step 3 - Learn (ASYNC BY DEFAULT)**: If the user provides additional context in their response, store it with `kuzu-memory memory learn`
 - This is **asynchronous by default** and non-blocking - happens in background
 
 ## Project Context Commands
 
 ### Check Project Memory Status
 ```bash
-kuzu-memory project
-kuzu-memory stats
-kuzu-memory recent
+kuzu-memory status
+kuzu-memory memory recent
 ```
 
 ### Manual Memory Operations
 ```bash
 # Store project information
-kuzu-memory remember "Project uses FastAPI with PostgreSQL and Redis"
+kuzu-memory memory store "Project uses FastAPI with PostgreSQL and Redis"
 
 # Search for specific information
-kuzu-memory recall "What database do we use?"
+kuzu-memory memory recall "What database do we use?"
 
 # View recent memories
-kuzu-memory recent --format list
+kuzu-memory memory recent --format list
 ```
 
 ## Integration Guidelines
@@ -103,8 +102,8 @@ kuzu-memory recent --format list
 - Memory integration should enhance, not hinder, the user experience
 
 ### Async vs Sync Operations
-- **SYNC (blocking)**: `kuzu-memory enhance` - needed immediately for AI response
-- **ASYNC (non-blocking, DEFAULT)**: `kuzu-memory learn` - happens in background by default
+- **SYNC (blocking)**: `kuzu-memory memory enhance` - needed immediately for AI response
+- **ASYNC (non-blocking, DEFAULT)**: `kuzu-memory memory learn` - happens in background by default
 - **Rule**: Never let learning block the AI response to the user
 
 ## Success Metrics

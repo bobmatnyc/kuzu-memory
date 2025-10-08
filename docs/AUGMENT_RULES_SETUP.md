@@ -191,13 +191,13 @@ The enhancement rule activates for:
 ### **Check What's Being Stored**
 ```bash
 # View recent memories
-kuzu-memory recent
+kuzu-memory memory recent
 
 # Search for specific memories
-kuzu-memory recall "team conventions"
+kuzu-memory memory recall "team conventions"
 
 # View project statistics
-kuzu-memory stats
+kuzu-memory status
 ```
 
 ### **Debug Rule Behavior**
@@ -249,16 +249,16 @@ python augment_rules/kuzu_memory_integration.py
 ### **No Context Being Added**
 ```bash
 # Check if memories exist
-kuzu-memory stats
+kuzu-memory status
 
 # Add some test memories
-kuzu-memory learn "This project uses FastAPI"
+kuzu-memory memory learn "This project uses FastAPI"
 ```
 
 ### **Storage Failing**
 ```bash
 # Check project structure
-kuzu-memory project
+kuzu-memory status
 
 # Reinitialize if needed
 kuzu-memory init --force

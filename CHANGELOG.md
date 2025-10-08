@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] - 2025-10-08
+
+### Fixed
+- **MCP Server Integration**: Fixed installer to detect correct kuzu-memory path with MCP support
+  - Added priority-based path detection (pipx → dev → system)
+  - Added `_verify_mcp_support()` to check if installation supports MCP server
+  - Registered MCP command group in main CLI (7 total command groups)
+  - Fixed import paths to use absolute imports following PEP 8 (improved maintainability)
+  - Enhanced error messages when MCP server is not available
+
+### Improved
+- **Installer Reliability**: Enhanced Claude hooks installer with better path detection
+  - Warns when kuzu-memory installation doesn't support MCP server
+  - Provides clear guidance for reinstalling with pipx for MCP support
+  - Better logging for troubleshooting installation issues
+  - Improved development environment detection
+
 ## [1.2.5] - 2025-10-07
 
 ### Fixed

@@ -8,9 +8,8 @@ from pathlib import Path
 
 import click
 
-from ..mcp import create_mcp_server
-from .cli_utils import rich_panel, rich_print
-from .diagnostic_commands import diagnose
+from kuzu_memory.cli.cli_utils import rich_panel, rich_print
+from kuzu_memory.mcp import create_mcp_server
 
 
 @click.group()
@@ -22,10 +21,6 @@ def mcp():
     as tools for Claude Code and other MCP-compatible AI systems.
     """
     pass
-
-
-# Register diagnostic commands as subcommand
-mcp.add_command(diagnose)
 
 
 @mcp.command()
@@ -62,7 +57,7 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
         print(f"Starting MCP server for project: {project_path}", file=sys.stderr)
 
         # Import the run_server module
-        from ..mcp.run_server import main
+        from kuzu_memory.mcp.run_server import main
 
         # Run the async main function
         asyncio.run(main())
@@ -307,7 +302,7 @@ def health(
     from rich.console import Console
     from rich.table import Table
 
-    from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
+    from kuzu_memory.mcp.testing.health_checker import HealthStatus, MCPHealthChecker
 
     try:
         # Determine project root

@@ -77,14 +77,14 @@ The integration happens automatically! Auggie will:
 **For technical questions:**
 ```bash
 # User asks: "How do I structure an API endpoint?"
-# Auggie automatically runs: kuzu-memory enhance "How do I structure an API endpoint?" --format plain
+# Auggie automatically runs: kuzu-memory memory enhance "How do I structure an API endpoint?" --format plain
 # Auggie uses enhanced prompt for response
 ```
 
 **For project information:**
 ```bash
 # User says: "We decided to use FastAPI for this project"
-# Auggie automatically runs: kuzu-memory learn "We decided to use FastAPI for this project" --source ai-conversation --quiet
+# Auggie automatically runs: kuzu-memory memory learn "We decided to use FastAPI for this project" --source ai-conversation --quiet
 ```
 
 ---
@@ -96,7 +96,7 @@ The integration happens automatically! Auggie will:
 👤 User: "How should I handle database connections?"
 
 🧠 Auggie (behind the scenes):
-   1. Runs: kuzu-memory enhance "How should I handle database connections?" --format plain
+   1. Runs: kuzu-memory memory enhance "How should I handle database connections?" --format plain
    2. Gets enhanced prompt with project context (e.g., "This project uses PostgreSQL...")
    3. Responds with project-specific advice
 
@@ -109,7 +109,7 @@ The integration happens automatically! Auggie will:
 
 🧠 Auggie (behind the scenes):
    1. Recognizes project information
-   2. Runs: kuzu-memory learn "Project uses Redis for caching" --source ai-conversation --quiet
+   2. Runs: kuzu-memory memory learn "Project uses Redis for caching" --source ai-conversation --quiet
    3. Stores for future context
 
 🤖 Auggie: "Great choice! Redis is excellent for caching. I'll remember this for future questions."
@@ -119,7 +119,7 @@ Later...
 👤 User: "What caching solution should I use?"
 
 🧠 Auggie (behind the scenes):
-   1. Runs: kuzu-memory enhance "What caching solution should I use?" --format plain
+   1. Runs: kuzu-memory memory enhance "What caching solution should I use?" --format plain
    2. Gets enhanced prompt: "What caching solution should I use? [Context: Project uses Redis for caching]"
 
 🤖 Auggie: "Since your project already uses Redis for caching, I recommend continuing with Redis..."
@@ -158,38 +158,37 @@ Auggie **doesn't** enhance/store:
 ### **Enhancement Commands**
 ```bash
 # Basic enhancement (what Auggie runs automatically)
-kuzu-memory enhance "user question" --format plain
+kuzu-memory memory enhance "user question" --format plain
 
 # Check what context would be added
-kuzu-memory enhance "user question" --format json
+kuzu-memory memory enhance "user question" --format json
 
 # Limit context size if needed
-kuzu-memory enhance "user question" --max-memories 3 --format plain
+kuzu-memory memory enhance "user question" --max-memories 3 --format plain
 ```
 
 ### **Storage Commands**
 ```bash
 # Store information (what Auggie runs automatically)
-kuzu-memory learn "information to store" --source ai-conversation --quiet
+kuzu-memory memory learn "information to store" --source ai-conversation --quiet
 
 # Store with specific source
-kuzu-memory learn "user preference" --source user-preference --quiet
+kuzu-memory memory learn "user preference" --source user-preference --quiet
 
 # Store with metadata
-kuzu-memory learn "technical decision" --metadata '{"type":"architecture"}' --quiet
+kuzu-memory memory learn "technical decision" --metadata '{"type":"architecture"}' --quiet
 ```
 
 ### **Monitoring Commands**
 ```bash
 # Check what's being stored
-kuzu-memory recent --format list
+kuzu-memory memory recent --format list
 
 # Search for specific information
-kuzu-memory recall "database setup"
+kuzu-memory memory recall "database setup"
 
 # View project status
-kuzu-memory project
-kuzu-memory stats
+kuzu-memory status
 ```
 
 ---
@@ -231,22 +230,22 @@ kuzu-memory --help
 ### **No Context Being Added?**
 ```bash
 # Check if memories exist
-kuzu-memory stats
-kuzu-memory recent
+kuzu-memory status
+kuzu-memory memory recent
 
 # Add some test memories
-kuzu-memory learn "This project uses FastAPI"
-kuzu-memory learn "Team prefers pytest for testing"
+kuzu-memory memory learn "This project uses FastAPI"
+kuzu-memory memory learn "Team prefers pytest for testing"
 ```
 
 ### **Commands Failing?**
 ```bash
 # Test commands manually
-kuzu-memory enhance "How do I build an API?" --format plain
-kuzu-memory learn "Test memory" --quiet
+kuzu-memory memory enhance "How do I build an API?" --format plain
+kuzu-memory memory learn "Test memory" --quiet
 
 # Check project setup
-kuzu-memory project
+kuzu-memory status
 ```
 
 ---
@@ -271,6 +270,6 @@ Just start using Auggie normally and the memory integration will happen automati
 1. Ask: "How should I structure an API endpoint?"
 2. Say: "We're using FastAPI for this project"
 3. Ask: "What's the best way to handle database connections?"
-4. Check: `kuzu-memory recent` to see what was stored
+4. Check: `kuzu-memory memory recent` to see what was stored
 
 **The integration should be seamless and invisible - you'll just notice that Auggie's responses become more project-specific over time!** 🎯✨

@@ -17,7 +17,8 @@ from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 from .cli_utils import rich_panel, rich_print
 
-# Import top-level command groups (6 total)
+# Import top-level command groups (7 total)
+from ._deprecated.mcp_commands import mcp
 from .doctor_commands import doctor
 from .enums import OutputFormat
 from .help_commands import help_group
@@ -279,13 +280,14 @@ def demo(ctx):
         sys.exit(1)
 
 
-# Register ONLY 6 top-level commands (clean architecture)
+# Register ONLY 7 top-level commands (clean architecture)
 cli.add_command(init)  # 1. Initialize project
 cli.add_command(install)  # 2. Manage integrations (add, remove, list, status)
 cli.add_command(memory)  # 3. Memory operations (store, learn, recall, enhance, recent)
 cli.add_command(status)  # 4. System status and info
 cli.add_command(doctor)  # 5. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 6. Help and examples
+cli.add_command(mcp)  # 7. MCP server for Claude Code integration
 
 # Keep quickstart/demo for onboarding
 cli.add_command(quickstart)

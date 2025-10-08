@@ -228,9 +228,11 @@ def add(
             if ai_system.lower() in ["auggie", "claude"]:
                 print("\n🎯 Next Steps:")
                 print(
-                    "1. Test: kuzu-memory enhance 'How do I deploy this?' --format plain"
+                    "1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain"
                 )
-                print("2. Store info: kuzu-memory remember 'This project uses FastAPI'")
+                print(
+                    "2. Store info: kuzu-memory memory store 'This project uses FastAPI'"
+                )
                 print("3. Start using Auggie with enhanced context!")
             elif "claude-desktop" in ai_system.lower():
                 print("\n🎯 Next Steps:")

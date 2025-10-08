@@ -4,13 +4,13 @@
 
 ### Step 1: Enhance Questions (Before Responding)
 ```bash
-kuzu-memory enhance "[user's question]" --format plain
+kuzu-memory memory enhance "[user's question]" --format plain
 ```
 **Use the enhanced output as your actual prompt.**
 
 ### Step 2: Store Information (After User Provides Context - ASYNC BY DEFAULT)
 ```bash
-kuzu-memory learn "[information to store]" --source ai-conversation --quiet
+kuzu-memory memory learn "[information to store]" --source ai-conversation --quiet
 ```
 **Note: Learning is async by default and won't block your response!**
 
@@ -49,26 +49,26 @@ kuzu-memory learn "[information to store]" --source ai-conversation --quiet
 ### For Questions About Implementation
 ```bash
 # User: "How do I build an API endpoint?"
-kuzu-memory enhance "How do I build an API endpoint?" --format plain
+kuzu-memory memory enhance "How do I build an API endpoint?" --format plain
 # Use enhanced output for response
 ```
 
 ### For Project Information
 ```bash
 # User: "We're using PostgreSQL for the database"
-kuzu-memory learn "Project uses PostgreSQL for the database" --source ai-conversation --quiet
+kuzu-memory memory learn "Project uses PostgreSQL for the database" --source ai-conversation --quiet
 ```
 
 ### For User Preferences
 ```bash
 # User: "I prefer async/await over callbacks"
-kuzu-memory learn "User prefers async/await over callbacks" --source user-preference --quiet
+kuzu-memory memory learn "User prefers async/await over callbacks" --source user-preference --quiet
 ```
 
 ### For Team Conventions
 ```bash
 # User: "Our team always uses pytest for testing"
-kuzu-memory learn "Team convention: use pytest for all testing" --source team-convention --quiet
+kuzu-memory memory learn "Team convention: use pytest for all testing" --source team-convention --quiet
 ```
 
 ## Error Handling
