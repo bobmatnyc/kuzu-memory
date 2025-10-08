@@ -131,7 +131,7 @@ class DatabaseError(KuzuMemoryError):
 class DatabaseLockError(DatabaseError):
     """Database is locked and cannot be accessed."""
 
-    def __init__(self, message: str = "Database is locked", **kwargs):
+    def __init__(self, message: str = "Database is locked", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.DATABASE_LOCK,
@@ -147,7 +147,7 @@ class DatabaseLockError(DatabaseError):
 class CorruptedDatabaseError(DatabaseError):
     """Database file is corrupted or unreadable."""
 
-    def __init__(self, message: str = "Database is corrupted", **kwargs):
+    def __init__(self, message: str = "Database is corrupted", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.DATABASE_CORRUPTED,
@@ -163,7 +163,7 @@ class CorruptedDatabaseError(DatabaseError):
 class DatabaseVersionError(DatabaseError):
     """Database version is incompatible."""
 
-    def __init__(self, current_version: str, expected_version: str, **kwargs):
+    def __init__(self, current_version: str, expected_version: str, **kwargs: Any) -> None:
         message = f"Database version mismatch: current={current_version}, expected={expected_version}"
         super().__init__(
             message=message,
@@ -181,7 +181,7 @@ class DatabaseVersionError(DatabaseError):
 class DatabaseConnectionError(DatabaseError):
     """Failed to connect to database."""
 
-    def __init__(self, message: str = "Failed to connect to database", **kwargs):
+    def __init__(self, message: str = "Failed to connect to database", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.DATABASE_CONNECTION,
@@ -194,7 +194,7 @@ class DatabaseConnectionError(DatabaseError):
 class DatabaseTimeoutError(DatabaseError):
     """Database operation timed out."""
 
-    def __init__(self, operation: str, timeout: float, **kwargs):
+    def __init__(self, operation: str, timeout: float, **kwargs: Any) -> None:
         message = f"Database operation '{operation}' timed out after {timeout}s"
         super().__init__(
             message=message,
@@ -213,7 +213,7 @@ class DatabaseTimeoutError(DatabaseError):
 class ConfigurationError(KuzuMemoryError):
     """Configuration-related error."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.CONFIG_INVALID,
@@ -227,7 +227,7 @@ class ConfigurationError(KuzuMemoryError):
 class ExtractionError(KuzuMemoryError):
     """Error during memory extraction."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.MEMORY_EXTRACTION,
@@ -240,7 +240,7 @@ class ExtractionError(KuzuMemoryError):
 class RecallError(KuzuMemoryError):
     """Error during memory recall."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.MEMORY_RECALL,
@@ -253,7 +253,7 @@ class RecallError(KuzuMemoryError):
 class ValidationError(KuzuMemoryError):
     """Input validation error."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Handle both old signature (field, value, description) and new signature (message)
         if len(args) == 3:
             field, value, description = args
@@ -276,7 +276,7 @@ class ValidationError(KuzuMemoryError):
 class PerformanceError(KuzuMemoryError):
     """Performance threshold exceeded."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
@@ -292,7 +292,7 @@ class PerformanceError(KuzuMemoryError):
 class PerformanceThresholdError(PerformanceError):
     """Specific performance threshold violation."""
 
-    def __init__(self, operation: str, actual_time: float, threshold: float, **kwargs):
+    def __init__(self, operation: str, actual_time: float, threshold: float, **kwargs: Any) -> None:
         message = f"Performance threshold exceeded for {operation}: {actual_time:.3f}s > {threshold:.3f}s"
         super().__init__(
             message=message,
@@ -316,7 +316,7 @@ class CacheError(KuzuMemoryError):
 class CacheFullError(CacheError):
     """Cache is full and cannot store more entries."""
 
-    def __init__(self, message: str = "Cache is full", **kwargs):
+    def __init__(self, message: str = "Cache is full", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.CACHE_FULL,
@@ -332,7 +332,7 @@ class CacheFullError(CacheError):
 class CacheCorruptionError(CacheError):
     """Cache data is corrupted."""
 
-    def __init__(self, message: str = "Cache corruption detected", **kwargs):
+    def __init__(self, message: str = "Cache corruption detected", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.CACHE_CORRUPTION,
@@ -345,7 +345,7 @@ class CacheCorruptionError(CacheError):
 class CacheTimeoutError(CacheError):
     """Cache operation timed out."""
 
-    def __init__(self, operation: str, timeout: float, **kwargs):
+    def __init__(self, operation: str, timeout: float, **kwargs: Any) -> None:
         message = f"Cache operation '{operation}' timed out after {timeout}s"
         super().__init__(
             message=message,
@@ -370,7 +370,7 @@ class ConnectionPoolError(KuzuMemoryError):
 class PoolExhaustedError(ConnectionPoolError):
     """Connection pool has no available connections."""
 
-    def __init__(self, message: str = "Connection pool exhausted", **kwargs):
+    def __init__(self, message: str = "Connection pool exhausted", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.POOL_EXHAUSTED,
@@ -386,7 +386,7 @@ class PoolExhaustedError(ConnectionPoolError):
 class PoolTimeoutError(ConnectionPoolError):
     """Timed out waiting for connection from pool."""
 
-    def __init__(self, timeout: float, **kwargs):
+    def __init__(self, timeout: float, **kwargs: Any) -> None:
         message = f"Connection pool timeout after {timeout}s"
         super().__init__(
             message=message,
@@ -404,7 +404,7 @@ class PoolTimeoutError(ConnectionPoolError):
 class PoolConnectionFailedError(ConnectionPoolError):
     """Failed to create connection in pool."""
 
-    def __init__(self, message: str = "Failed to create connection", **kwargs):
+    def __init__(self, message: str = "Failed to create connection", **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.POOL_CONNECTION_FAILED,
@@ -418,7 +418,7 @@ class PoolConnectionFailedError(ConnectionPoolError):
 class AsyncOperationError(KuzuMemoryError):
     """Error in asynchronous operation."""
 
-    def __init__(self, operation: str, **kwargs):
+    def __init__(self, operation: str, **kwargs: Any) -> None:
         message = f"Asynchronous operation failed: {operation}"
         super().__init__(
             message=message,
@@ -433,7 +433,7 @@ class AsyncOperationError(KuzuMemoryError):
 class AIIntegrationError(KuzuMemoryError):
     """Error in AI system integration."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(
             message=message,
             error_code=MemoryErrorCode.AI_INTEGRATION,
@@ -446,7 +446,7 @@ class AIIntegrationError(KuzuMemoryError):
 class CLIIntegrationError(KuzuMemoryError):
     """Error in CLI integration."""
 
-    def __init__(self, command: str, exit_code: int, **kwargs):
+    def __init__(self, command: str, exit_code: int, **kwargs: Any) -> None:
         message = f"CLI command failed: {command} (exit code: {exit_code})"
         super().__init__(
             message=message,

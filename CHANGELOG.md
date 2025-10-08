@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Memory Generation Performance**: Restored optimal performance by disabling NLP classification by default
+  - Generation time improved from ~630ms to ~80ms (87% faster)
+  - Mean generation time: 3.94ms (within ~8ms target)
+  - NLP classification can still be enabled via config: `extraction.enable_nlp_classification: true`
+  - Performance now meets documented thresholds: <200ms generation, <100ms recall
+
 ## [1.2.6] - 2025-10-08
 
 ### Fixed

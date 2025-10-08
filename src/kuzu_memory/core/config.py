@@ -60,7 +60,7 @@ class ExtractionConfig:
     max_memory_length: int = 1000
     enable_entity_extraction: bool = True
     enable_pattern_compilation: bool = True
-    enable_nlp_classification: bool = True  # Enable NLP-based classification
+    enable_nlp_classification: bool = False  # NLP adds ~90ms, disabled by default for performance
     custom_patterns: dict[str, str] = field(default_factory=dict)
     pattern_weights: dict[str, float] = field(
         default_factory=lambda: {

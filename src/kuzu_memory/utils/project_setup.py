@@ -114,10 +114,10 @@ def get_project_memories_dir(project_root: Path | None = None) -> Path:
     Returns:
         Path to kuzu-memories directory
     """
-    if project_root is None:
-        project_root = find_project_root()
-
-    return project_root / "kuzu-memories"
+    root = project_root if project_root is not None else find_project_root()
+    if root is None:
+        raise ValueError("Could not determine project root directory")
+    return root / "kuzu-memories"
 
 
 def get_project_db_path(project_root: Path | None = None) -> Path:
@@ -147,14 +147,15 @@ def create_project_memories_structure(
     Returns:
         Dictionary with creation results
     """
-    if project_root is None:
-        project_root = find_project_root()
+    root = project_root if project_root is not None else find_project_root()
+    if root is None:
+        raise ValueError("Could not determine project root directory")
 
-    memories_dir = get_project_memories_dir(project_root)
-    db_path = get_project_db_path(project_root)
+    memories_dir = get_project_memories_dir(root)
+    db_path = get_project_db_path(root)
 
-    result = {
-        "project_root": str(project_root),
+    result: dict[str, Any] = {
+        "project_root": str(root),
         "memories_dir": str(memories_dir),
         "db_path": str(db_path),
         "created": False,
@@ -174,13 +175,15 @@ def create_project_memories_structure(
     try:
         # Create memories directory
         memories_dir.mkdir(parents=True, exist_ok=True)
-        result["files_created"].append(str(memories_dir))
+        files_created = result["files_created"]
+        assert isinstance(files_created, list)
+        files_created.append(str(memories_dir))
 
         # Create README.md
-        readme_content = create_memories_readme(project_root)
+        readme_content = create_memories_readme(root)
         readme_path = memories_dir / "README.md"
         readme_path.write_text(readme_content)
-        result["files_created"].append(str(readme_path))
+        files_created.append(str(readme_path))
 
         # Create .gitignore (initially empty - we want to commit the DB)
         gitignore_path = memories_dir / ".gitignore"
@@ -190,13 +193,13 @@ def create_project_memories_structure(
 .DS_Store
 """
         gitignore_path.write_text(gitignore_content)
-        result["files_created"].append(str(gitignore_path))
+        files_created.append(str(gitignore_path))
 
         # Create project_info.md template
         project_info_path = memories_dir / "project_info.md"
-        project_info_content = create_project_info_template(project_root)
+        project_info_content = create_project_info_template(root)
         project_info_path.write_text(project_info_content)
-        result["files_created"].append(str(project_info_path))
+        files_created.append(str(project_info_path))
 
         result["created"] = True
         logger.info(f"Created project memories structure at {memories_dir}")
@@ -412,20 +415,21 @@ def should_commit_memories(project_root: Path) -> bool:
 
 def get_project_context_summary(project_root: Path | None = None) -> dict[str, Any]:
     """Get a summary of the project context."""
-    if project_root is None:
-        project_root = find_project_root()
+    root = project_root if project_root is not None else find_project_root()
+    if root is None:
+        raise ValueError("Could not determine project root directory")
 
-    memories_dir = get_project_memories_dir(project_root)
-    db_path = get_project_db_path(project_root)
+    memories_dir = get_project_memories_dir(root)
+    db_path = get_project_db_path(root)
 
     return {
-        "project_name": project_root.name,
-        "project_root": str(project_root),
+        "project_name": root.name,
+        "project_root": str(root),
         "memories_dir": str(memories_dir),
         "db_path": str(db_path),
         "memories_exist": memories_dir.exists(),
         "db_exists": db_path.exists(),
-        "is_git_repo": is_git_repository(project_root),
-        "should_commit": should_commit_memories(project_root),
+        "is_git_repo": is_git_repository(root),
+        "should_commit": should_commit_memories(root),
         "db_size_mb": db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0,
     }

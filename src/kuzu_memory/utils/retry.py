@@ -24,7 +24,7 @@ def exponential_backoff(
     exponential_base: float = 2.0,
     jitter: bool = True,
     exceptions: tuple[type[Exception], ...] = (Exception,),
-):
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Decorator for exponential backoff retry logic.
 
@@ -39,8 +39,8 @@ def exponential_backoff(
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
-        def wrapper(*args, **kwargs) -> T:
-            last_exception = None
+        def wrapper(*args: object, **kwargs: object) -> T:
+            last_exception: Exception | None = None
 
             for attempt in range(max_retries + 1):
                 try:
@@ -72,6 +72,8 @@ def exponential_backoff(
             # This shouldn't be reached, but just in case
             if last_exception:
                 raise last_exception
+            # If somehow we get here with no exception, raise a runtime error
+            raise RuntimeError(f"{func.__name__} failed all retries without capturing exception")
 
         return wrapper
 
@@ -122,12 +124,12 @@ class CircuitBreaker:
         """Decorator to apply circuit breaker to a function."""
 
         @wraps(func)
-        def wrapper(*args, **kwargs) -> T:
+        def wrapper(*args: object, **kwargs: object) -> T:
             return self.call(func, *args, **kwargs)
 
         return wrapper
 
-    def call(self, func: Callable[..., T], *args, **kwargs) -> T:
+    def call(self, func: Callable[..., T], *args: object, **kwargs: object) -> T:
         """
         Call function with circuit breaker protection.
 
@@ -165,14 +167,14 @@ class CircuitBreaker:
             datetime.now() - self.last_failure_time
         ).total_seconds() >= self.recovery_timeout
 
-    def _on_success(self):
+    def _on_success(self) -> None:
         """Handle successful call."""
         if self.state == self.State.HALF_OPEN:
             logger.info(f"{self.name}: Circuit breaker reset (CLOSED)")
         self.failure_count = 0
         self.state = self.State.CLOSED
 
-    def _on_failure(self):
+    def _on_failure(self) -> None:
         """Handle failed call."""
         self.failure_count += 1
         self.last_failure_time = datetime.now()
@@ -183,14 +185,14 @@ class CircuitBreaker:
                 f"{self.name}: Circuit breaker opened after {self.failure_count} failures"
             )
 
-    def reset(self):
+    def reset(self) -> None:
         """Manually reset the circuit breaker."""
         self.failure_count = 0
         self.last_failure_time = None
         self.state = self.State.CLOSED
         logger.info(f"{self.name}: Manually reset")
 
-    def get_state(self) -> dict:
+    def get_state(self) -> dict[str, object]:
         """Get current state information."""
         return {
             "state": self.state,
@@ -221,7 +223,7 @@ def retry_with_fallback(
     """
 
     @wraps(primary_func)
-    def wrapper(*args, **kwargs) -> T:
+    def wrapper(*args: object, **kwargs: object) -> T:
         # Try primary function with retries
         for attempt in range(max_retries):
             try:

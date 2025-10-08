@@ -14,10 +14,26 @@ from typing import Any
 import pytest
 
 from kuzu_memory import KuzuMemory, KuzuMemoryConfig
+from kuzu_memory.core.dependencies import reset_container
 
 # Configure logging for tests
 logging.basicConfig(level=logging.WARNING)
 logging.getLogger("kuzu_memory").setLevel(logging.INFO)
+
+
+@pytest.fixture(autouse=True)
+def reset_dependency_container():
+    """
+    Reset the global dependency container before each test.
+
+    This ensures that each test gets a fresh container without
+    shared state from previous tests, preventing database adapter
+    reuse across different test database paths.
+    """
+    reset_container()
+    yield
+    # Clean up after test
+    reset_container()
 
 
 @pytest.fixture(scope="session")
@@ -203,9 +219,9 @@ class MemoryTestHelper:
     @staticmethod
     def assert_enhanced_prompt_contains(context, expected_content: str):
         """Assert that enhanced prompt contains expected content."""
-        assert (
-            expected_content.lower() in context.enhanced_prompt.lower()
-        ), f"Enhanced prompt does not contain '{expected_content}'"
+        assert expected_content.lower() in context.enhanced_prompt.lower(), (
+            f"Enhanced prompt does not contain '{expected_content}'"
+        )
 
     @staticmethod
     def count_memories_by_type(memories: list, memory_type) -> int:
@@ -222,9 +238,9 @@ class MemoryTestHelper:
         actual_time_ms: float, limit_ms: float, operation: str
     ):
         """Assert that operation time is within performance limit."""
-        assert (
-            actual_time_ms <= limit_ms
-        ), f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        assert actual_time_ms <= limit_ms, (
+            f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        )
 
     @staticmethod
     def create_test_memory_content(

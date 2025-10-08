@@ -25,9 +25,9 @@ class PerformanceMetric:
     duration_ms: float
     timestamp: datetime
     success: bool
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.metadata is None:
             self.metadata = {}
 
@@ -55,8 +55,8 @@ class PerformanceMonitor:
         self._lock = threading.RLock()
 
         # Metrics storage
-        self._metrics_history = deque(maxlen=max_history)
-        self._operation_stats = defaultdict(
+        self._metrics_history: deque[PerformanceMetric] = deque(maxlen=max_history)
+        self._operation_stats: defaultdict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "count": 0,
                 "total_time_ms": 0.0,
@@ -80,7 +80,7 @@ class PerformanceMonitor:
         }
 
         # Alerts
-        self._alerts = []
+        self._alerts: list[dict[str, Any]] = []
         self._alert_thresholds = {
             "slow_operation_count": 10,  # Alert if >10 slow operations in window
             "error_rate_threshold": 0.1,  # Alert if error rate >10%
@@ -118,17 +118,21 @@ class PerformanceMonitor:
 
             # Update operation statistics
             stats = self._operation_stats[operation]
-            stats["count"] += 1
-            stats["total_time_ms"] += duration_ms
-            stats["avg_time_ms"] = stats["total_time_ms"] / stats["count"]
-            stats["min_time_ms"] = min(stats["min_time_ms"], duration_ms)
-            stats["max_time_ms"] = max(stats["max_time_ms"], duration_ms)
-            stats["recent_times"].append(duration_ms)
+            count = int(stats["count"]) + 1
+            total_time_ms = float(stats["total_time_ms"]) + duration_ms
+            stats["count"] = count
+            stats["total_time_ms"] = total_time_ms
+            stats["avg_time_ms"] = total_time_ms / count
+            stats["min_time_ms"] = min(float(stats["min_time_ms"]), duration_ms)
+            stats["max_time_ms"] = max(float(stats["max_time_ms"]), duration_ms)
+            recent_times = stats["recent_times"]
+            assert isinstance(recent_times, deque)
+            recent_times.append(duration_ms)
 
             if success:
-                stats["success_count"] += 1
+                stats["success_count"] = int(stats["success_count"]) + 1
             else:
-                stats["error_count"] += 1
+                stats["error_count"] = int(stats["error_count"]) + 1
 
             # Check for performance issues
             self._check_performance_alerts(operation, duration_ms, success)
@@ -158,7 +162,7 @@ class PerformanceMonitor:
         # Check error rate
         if not success:
             stats = self._operation_stats[operation]
-            error_rate = stats["error_count"] / stats["count"]
+            error_rate = float(stats["error_count"]) / float(stats["count"])
 
             if error_rate > self._alert_thresholds["error_rate_threshold"]:
                 alert = {
@@ -180,8 +184,10 @@ class PerformanceMonitor:
             stats = self._operation_stats[operation].copy()
 
             # Calculate additional metrics
-            if stats["recent_times"]:
-                recent_times = list(stats["recent_times"])
+            recent_times_obj = stats["recent_times"]
+            if recent_times_obj:
+                assert isinstance(recent_times_obj, deque)
+                recent_times = list(recent_times_obj)
                 stats["recent_avg_ms"] = sum(recent_times) / len(recent_times)
                 stats["recent_min_ms"] = min(recent_times)
                 stats["recent_max_ms"] = max(recent_times)
@@ -194,9 +200,10 @@ class PerformanceMonitor:
                 stats["p99_ms"] = sorted_times[int(n * 0.99)]
 
             # Calculate success rate
-            if stats["count"] > 0:
-                stats["success_rate"] = stats["success_count"] / stats["count"]
-                stats["error_rate"] = stats["error_count"] / stats["count"]
+            count = int(stats["count"])
+            if count > 0:
+                stats["success_rate"] = float(stats["success_count"]) / count
+                stats["error_rate"] = float(stats["error_count"]) / count
 
             return stats
 
@@ -250,13 +257,14 @@ class PerformanceMonitor:
             for operation, threshold in self.thresholds.items():
                 if operation in self._operation_stats:
                     stats = self._operation_stats[operation]
-                    if stats["avg_time_ms"] > threshold:
+                    avg_time_ms = float(stats["avg_time_ms"])
+                    if avg_time_ms > threshold:
                         slow_operations.append(
                             {
                                 "operation": operation,
-                                "avg_time_ms": stats["avg_time_ms"],
+                                "avg_time_ms": avg_time_ms,
                                 "threshold_ms": threshold,
-                                "slowdown_factor": stats["avg_time_ms"] / threshold,
+                                "slowdown_factor": avg_time_ms / threshold,
                             }
                         )
 
@@ -288,33 +296,35 @@ class PerformanceMonitor:
 
         with self._lock:
             for operation, stats in self._operation_stats.items():
-                if stats["count"] < 10:  # Need sufficient data
+                count = int(stats["count"])
+                if count < 10:  # Need sufficient data
                     continue
 
                 threshold = self.thresholds.get(operation)
                 if not threshold:
                     continue
 
+                avg_time_ms = float(stats["avg_time_ms"])
                 # Check if operation is consistently slow
-                if stats["avg_time_ms"] > threshold * 1.5:
+                if avg_time_ms > threshold * 1.5:
                     recommendations.append(
                         {
                             "type": "slow_operation",
                             "operation": operation,
-                            "issue": f"Average time ({stats['avg_time_ms']:.1f}ms) exceeds threshold ({threshold}ms)",
+                            "issue": f"Average time ({avg_time_ms:.1f}ms) exceeds threshold ({threshold}ms)",
                             "recommendation": self._get_operation_recommendation(
                                 operation
                             ),
                             "priority": (
                                 "high"
-                                if stats["avg_time_ms"] > threshold * 2
+                                if avg_time_ms > threshold * 2
                                 else "medium"
                             ),
                         }
                     )
 
                 # Check for high error rates
-                error_rate = stats["error_count"] / stats["count"]
+                error_rate = float(stats["error_count"]) / count
                 if error_rate > 0.05:  # >5% error rate
                     recommendations.append(
                         {
@@ -327,8 +337,10 @@ class PerformanceMonitor:
                     )
 
                 # Check for high variance in execution times
-                if len(stats["recent_times"]) > 10:
-                    recent_times = list(stats["recent_times"])
+                recent_times_obj = stats["recent_times"]
+                assert isinstance(recent_times_obj, deque)
+                if len(recent_times_obj) > 10:
+                    recent_times = list(recent_times_obj)
                     avg_time = sum(recent_times) / len(recent_times)
                     variance = sum((t - avg_time) ** 2 for t in recent_times) / len(
                         recent_times
@@ -387,7 +399,7 @@ def get_performance_monitor() -> PerformanceMonitor:
     return _global_monitor
 
 
-def performance_timer(operation: str, metadata: dict[str, Any] | None = None):
+def performance_timer(operation: str, metadata: dict[str, Any] | None = None) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for timing operations.
 
@@ -396,8 +408,8 @@ def performance_timer(operation: str, metadata: dict[str, Any] | None = None):
         metadata: Additional metadata to record
     """
 
-    def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             success = True
             error = None

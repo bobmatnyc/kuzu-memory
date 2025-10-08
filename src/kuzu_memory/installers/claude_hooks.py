@@ -157,7 +157,13 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         # Priority 1: Check for pipx installation (most reliable for MCP server)
         pipx_paths = [
-            Path.home() / ".local" / "pipx" / "venvs" / "kuzu-memory" / "bin" / "kuzu-memory",
+            Path.home()
+            / ".local"
+            / "pipx"
+            / "venvs"
+            / "kuzu-memory"
+            / "bin"
+            / "kuzu-memory",
             Path.home() / ".local" / "bin" / "kuzu-memory",  # pipx ensurepath location
         ]
 
@@ -186,7 +192,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                 # Verify MCP support before using
                 if self._verify_mcp_support(command_path):
                     self._kuzu_command_path = command_path
-                    logger.info(f"Found kuzu-memory with MCP support at: {command_path}")
+                    logger.info(
+                        f"Found kuzu-memory with MCP support at: {command_path}"
+                    )
                     return command_path
                 else:
                     logger.warning(
@@ -213,10 +221,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         """
         try:
             result = subprocess.run(
-                [str(command_path), "--help"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                [str(command_path), "--help"], capture_output=True, text=True, timeout=5
             )
             # Check if "mcp" command is in the help output
             return "mcp" in result.stdout.lower()

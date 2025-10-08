@@ -409,18 +409,18 @@ class TestCompleteWorkflows:
             print(f"Max generation time: {max_generation_time:.2f}ms")
 
             # Performance assertions (relaxed for E2E)
-            assert (
-                avg_recall_time < 50.0
-            ), f"Average recall time too high: {avg_recall_time:.2f}ms"
-            assert (
-                avg_generation_time < 100.0
-            ), f"Average generation time too high: {avg_generation_time:.2f}ms"
-            assert (
-                max_recall_time < 200.0
-            ), f"Max recall time too high: {max_recall_time:.2f}ms"
-            assert (
-                max_generation_time < 400.0
-            ), f"Max generation time too high: {max_generation_time:.2f}ms"
+            assert avg_recall_time < 50.0, (
+                f"Average recall time too high: {avg_recall_time:.2f}ms"
+            )
+            assert avg_generation_time < 100.0, (
+                f"Average generation time too high: {avg_generation_time:.2f}ms"
+            )
+            assert max_recall_time < 200.0, (
+                f"Max recall time too high: {max_recall_time:.2f}ms"
+            )
+            assert max_generation_time < 400.0, (
+                f"Max generation time too high: {max_generation_time:.2f}ms"
+            )
 
     @pytest.mark.skip(
         reason="Entity extraction patterns need tuning for test content alignment"

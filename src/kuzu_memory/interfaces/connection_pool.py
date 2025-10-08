@@ -87,7 +87,6 @@ class IConnectionPool(ABC):
         pass
 
     @abstractmethod
-    @asynccontextmanager
     async def get_connection(self) -> AbstractAsyncContextManager[IConnection]:
         """
         Get a connection from the pool.

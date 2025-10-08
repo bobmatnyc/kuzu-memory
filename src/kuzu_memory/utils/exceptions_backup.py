@@ -269,7 +269,12 @@ class ConfigurationError(KuzuMemoryError):
     def __init__(self, config_issue: str):
         message = f"Configuration error: {config_issue}"
         suggestion = "Check your configuration file or initialization parameters"
-        super().__init__(message, suggestion)
+        super().__init__(
+            message=message,
+            error_code=MemoryErrorCode.CONFIG_INVALID,
+            suggestion=suggestion,
+            recovery_actions=[RecoveryAction.CHECK_CONFIG],
+        )
 
 
 class ExtractionError(KuzuMemoryError):
@@ -278,7 +283,13 @@ class ExtractionError(KuzuMemoryError):
     def __init__(self, text_length: int, error_details: str):
         message = f"Failed to extract memories from text ({text_length} chars): {error_details}"
         suggestion = "Check input text encoding and length limits"
-        super().__init__(message, suggestion)
+        super().__init__(
+            message=message,
+            error_code=MemoryErrorCode.MEMORY_EXTRACTION,
+            suggestion=suggestion,
+            recovery_actions=[RecoveryAction.RETRY, RecoveryAction.CHECK_CONFIG],
+            context={"text_length": text_length},
+        )
 
 
 class RecallError(KuzuMemoryError):
@@ -289,7 +300,13 @@ class RecallError(KuzuMemoryError):
             f"Failed to recall memories for query '{query[:50]}...': {error_details}"
         )
         suggestion = "Try a simpler query or check database connectivity"
-        super().__init__(message, suggestion)
+        super().__init__(
+            message=message,
+            error_code=MemoryErrorCode.MEMORY_RECALL,
+            suggestion=suggestion,
+            recovery_actions=[RecoveryAction.RETRY, RecoveryAction.OPTIMIZE_QUERY],
+            context={"query": query[:50]},
+        )
 
 
 class PerformanceError(KuzuMemoryError):
@@ -300,7 +317,20 @@ class PerformanceError(KuzuMemoryError):
             f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
         )
         suggestion = "Consider optimizing database indices or reducing query complexity"
-        super().__init__(message, suggestion)
+        super().__init__(
+            message=message,
+            error_code=MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
+            suggestion=suggestion,
+            recovery_actions=[
+                RecoveryAction.OPTIMIZE_QUERY,
+                RecoveryAction.INCREASE_RESOURCES,
+            ],
+            context={
+                "operation": operation,
+                "actual_time": actual_time,
+                "max_time": max_time,
+            },
+        )
 
 
 class ValidationError(KuzuMemoryError):
@@ -309,7 +339,13 @@ class ValidationError(KuzuMemoryError):
     def __init__(self, field: str, value: str, requirement: str):
         message = f"Validation failed for {field}='{value}': {requirement}"
         suggestion = "Check input parameters and their constraints"
-        super().__init__(message, suggestion)
+        super().__init__(
+            message=message,
+            error_code=MemoryErrorCode.MEMORY_VALIDATION,
+            suggestion=suggestion,
+            recovery_actions=[RecoveryAction.CHECK_CONFIG],
+            context={"field": field, "value": value},
+        )
 
 
 # Convenience functions for common error scenarios
@@ -502,39 +538,23 @@ class PerformanceThresholdError(PerformanceError):
         severity: str = "warning",
         recommendations: list[str] | None = None,
     ):
-        message = f"Performance threshold exceeded: {operation} took {actual_time:.1f}ms (threshold: {threshold:.1f}ms)"
-        suggestion = "Consider performance optimization"
+        # Call PerformanceError's __init__ which expects (operation, actual_time, max_time)
+        # PerformanceError will handle calling KuzuMemoryError.__init__ with proper args
+        super().__init__(operation, actual_time, threshold)
 
+        # Update context with additional fields
         if recommendations:
-            suggestion += f": {', '.join(recommendations)}"
+            self.context["recommendations"] = recommendations
+        self.context["severity"] = severity
+        self.context["performance_ratio"] = actual_time / threshold
 
-        error_code = (
-            MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT
-            if "recall" in operation.lower()
-            else (
-                MemoryErrorCode.PERFORMANCE_GENERATION_TIMEOUT
-                if "generation" in operation.lower()
-                else MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
-            )
-        )
-
-        super().__init__(
-            message=message,
-            error_code=error_code,
-            suggestion=suggestion,
-            recovery_actions=[
-                RecoveryAction.OPTIMIZE_QUERY,
-                RecoveryAction.INCREASE_RESOURCES,
-            ],
-            context={
-                "operation": operation,
-                "actual_time_ms": actual_time,
-                "threshold_ms": threshold,
-                "severity": severity,
-                "performance_ratio": actual_time / threshold,
-                "recommendations": recommendations or [],
-            },
-        )
+        # Update error code based on operation type
+        if "recall" in operation.lower():
+            self.error_code = MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT
+        elif "generation" in operation.lower():
+            self.error_code = MemoryErrorCode.PERFORMANCE_GENERATION_TIMEOUT
+        else:
+            self.error_code = MemoryErrorCode.PERFORMANCE_DATABASE_SLOW
 
 
 class AsyncOperationError(KuzuMemoryError):
@@ -643,14 +663,14 @@ class ErrorRecoveryManager:
             MemoryErrorCode.POOL_TIMEOUT,
             MemoryErrorCode.CACHE_TIMEOUT,
         ]:
-            return base_delay * (2**attempt)
+            return float(base_delay * (2**attempt))
 
         # Linear backoff for performance issues
         if error.error_code in [
             MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
             MemoryErrorCode.PERFORMANCE_DATABASE_SLOW,
         ]:
-            return base_delay * attempt
+            return float(base_delay * attempt)
 
         return base_delay
 
@@ -671,7 +691,7 @@ class ErrorRecoveryManager:
             MemoryErrorCode.PERFORMANCE_RECALL_TIMEOUT,
             MemoryErrorCode.PERFORMANCE_DATABASE_SLOW,
         ]:
-            suggestions["performance.enable_caching"] = True
+            suggestions["performance.enable_caching"] = "true"
             suggestions["database.connection_pool_size"] = "increase"
 
         return suggestions

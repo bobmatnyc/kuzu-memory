@@ -15,10 +15,10 @@ from ..__version__ import __version__
 from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
-from .cli_utils import rich_panel, rich_print
 
 # Import top-level command groups (7 total)
 from ._deprecated.mcp_commands import mcp
+from .cli_utils import rich_panel, rich_print
 from .doctor_commands import doctor
 from .enums import OutputFormat
 from .help_commands import help_group
