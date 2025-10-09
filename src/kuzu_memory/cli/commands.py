@@ -16,11 +16,12 @@ from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
-# Import top-level command groups (7 total)
+# Import top-level command groups (8 total)
 from ._deprecated.mcp_commands import mcp
 from .cli_utils import rich_panel, rich_print
 from .doctor_commands import doctor
 from .enums import OutputFormat
+from .git_commands import git
 from .help_commands import help_group
 from .init_commands import init
 from .install_commands_simple import install
@@ -280,7 +281,7 @@ def demo(ctx):
         sys.exit(1)
 
 
-# Register ONLY 7 top-level commands (clean architecture)
+# Register 8 top-level commands (clean architecture)
 cli.add_command(init)  # 1. Initialize project
 cli.add_command(install)  # 2. Manage integrations (add, remove, list, status)
 cli.add_command(memory)  # 3. Memory operations (store, learn, recall, enhance, recent)
@@ -288,6 +289,7 @@ cli.add_command(status)  # 4. System status and info
 cli.add_command(doctor)  # 5. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 6. Help and examples
 cli.add_command(mcp)  # 7. MCP server for Claude Code integration
+cli.add_command(git)  # 8. Git commit history synchronization
 
 # Keep quickstart/demo for onboarding
 cli.add_command(quickstart)

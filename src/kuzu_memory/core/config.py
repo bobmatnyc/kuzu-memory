@@ -102,6 +102,36 @@ class RetentionConfig:
 
 
 @dataclass
+class GitSyncConfig:
+    """Git commit history synchronization configuration."""
+
+    enabled: bool = True
+    last_sync_timestamp: str | None = None  # ISO8601 timestamp
+    last_commit_sha: str | None = None
+    branch_include_patterns: list[str] = field(
+        default_factory=lambda: ["main", "master", "develop", "feature/*", "bugfix/*"]
+    )
+    branch_exclude_patterns: list[str] = field(
+        default_factory=lambda: ["tmp/*", "test/*", "experiment/*"]
+    )
+    significant_prefixes: list[str] = field(
+        default_factory=lambda: [
+            "feat:",
+            "fix:",
+            "refactor:",
+            "perf:",
+            "BREAKING CHANGE",
+        ]
+    )
+    skip_patterns: list[str] = field(
+        default_factory=lambda: ["wip", "tmp", "chore:", "style:", "docs:"]
+    )
+    min_message_length: int = 5  # Allow concise conventional commits like "fix: auth"
+    include_merge_commits: bool = True
+    auto_sync_on_push: bool = True
+
+
+@dataclass
 class KuzuMemoryConfig:
     """
     Main configuration class for KuzuMemory.
@@ -116,6 +146,7 @@ class KuzuMemoryConfig:
     extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     retention: RetentionConfig = field(default_factory=RetentionConfig)
+    git_sync: GitSyncConfig = field(default_factory=GitSyncConfig)
 
     # Global settings
     version: str = "1.0"
@@ -178,6 +209,13 @@ class KuzuMemoryConfig:
                     if hasattr(retention_config, key):
                         setattr(retention_config, key, value)
 
+            git_sync_config = GitSyncConfig()
+            if "git_sync" in validated_config:
+                git_sync_data = validated_config["git_sync"]
+                for key, value in git_sync_data.items():
+                    if hasattr(git_sync_config, key):
+                        setattr(git_sync_config, key, value)
+
             # Create main configuration
             return cls(
                 storage=storage_config,
@@ -185,6 +223,7 @@ class KuzuMemoryConfig:
                 extraction=extraction_config,
                 performance=performance_config,
                 retention=retention_config,
+                git_sync=git_sync_config,
                 version=validated_config.get("version", "1.0"),
                 debug=validated_config.get("debug", False),
                 log_level=validated_config.get("log_level", "INFO"),
@@ -277,6 +316,18 @@ class KuzuMemoryConfig:
                 "custom_retention": self.retention.custom_retention,
                 "max_total_memories": self.retention.max_total_memories,
                 "cleanup_batch_size": self.retention.cleanup_batch_size,
+            },
+            "git_sync": {
+                "enabled": self.git_sync.enabled,
+                "last_sync_timestamp": self.git_sync.last_sync_timestamp,
+                "last_commit_sha": self.git_sync.last_commit_sha,
+                "branch_include_patterns": self.git_sync.branch_include_patterns,
+                "branch_exclude_patterns": self.git_sync.branch_exclude_patterns,
+                "significant_prefixes": self.git_sync.significant_prefixes,
+                "skip_patterns": self.git_sync.skip_patterns,
+                "min_message_length": self.git_sync.min_message_length,
+                "include_merge_commits": self.git_sync.include_merge_commits,
+                "auto_sync_on_push": self.git_sync.auto_sync_on_push,
             },
         }
 

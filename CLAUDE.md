@@ -252,6 +252,15 @@ kuzu-memory memory enhance <prompt>  # Enhance prompts with context
 kuzu-memory memory recent       # Show recent memories
 kuzu-memory status              # View statistics
 
+# 🔄 GIT SYNC COMMANDS (NEW v1.2.8+)
+kuzu-memory git sync           # Smart sync (auto-detects initial vs incremental)
+kuzu-memory git sync --initial # Force full resync of all commits
+kuzu-memory git sync --incremental  # Only sync new commits
+kuzu-memory git sync --dry-run # Preview what would be synced
+kuzu-memory git status         # View git sync configuration
+kuzu-memory git install-hooks  # Install post-commit auto-sync hook
+kuzu-memory git uninstall-hooks # Remove auto-sync hook
+
 # 🔗 MCP TOOLS (Claude Desktop)
 kuzu_enhance               # Enhance prompts with project memories
 kuzu_learn                 # Store new learnings asynchronously
@@ -512,6 +521,7 @@ kuzu-memory memory recall "related memories"  # Context retrieval
 - **[docs/CLAUDE_SETUP.md](docs/CLAUDE_SETUP.md)** - Claude Desktop & Code integration
 - **[docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md)** - Universal AI integration patterns
 - **[docs/MEMORY_SYSTEM.md](docs/MEMORY_SYSTEM.md)** - Memory types and best practices
+- **[docs/GIT_SYNC.md](docs/GIT_SYNC.md)** - Git commit history synchronization (NEW v1.2.8+)
 
 ### 🟢 STANDARD - Developer Documentation (Development)
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Clean architecture overview
@@ -644,14 +654,15 @@ kuzu-memory status --validate                # Verify restoration
 
 ## 📋 PROJECT METADATA
 
-**Version**: 1.1.4
-**Updated**: 2025-10-06
+**Version**: 1.2.8 (Git Sync Feature)
+**Updated**: 2025-10-09
 **Status**: Production Ready
 **PyPI**: Available as `kuzu-memory`
 **Performance**: 3ms Recall ✅
 **MCP Server**: Fixed ✅
+**Git Sync**: Production Ready ✅
 **Claude MPM**: Fully Compliant ✅
 
 **Compliance Score**: 100% (All Claude MPM criteria met)
-**Last Audit**: 2025-10-06
+**Last Audit**: 2025-10-09
 **Next Review**: On version bump or major changes

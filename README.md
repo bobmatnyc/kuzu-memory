@@ -142,6 +142,35 @@ kuzu-memory memory enhance "What's my coding preference?"
 kuzu-memory status
 ```
 
+### Git History Sync
+
+Automatically import project commit history as memories:
+
+```bash
+# Smart sync (auto-detects initial vs incremental)
+kuzu-memory git sync
+
+# Force full resync
+kuzu-memory git sync --initial
+
+# Preview without storing
+kuzu-memory git sync --dry-run
+
+# View sync configuration
+kuzu-memory git status
+
+# Install automatic sync hook
+kuzu-memory git install-hooks
+```
+
+**What gets synced**: Commits with semantic prefixes (feat:, fix:, refactor:, perf:) from main, master, develop, feature/*, bugfix/* branches.
+
+**Retention**: Git commits are stored as EPISODIC memories (30-day retention).
+
+**Deduplication**: Running sync multiple times won't create duplicates - each commit SHA is stored once.
+
+See [Git Sync Guide](docs/GIT_SYNC.md) for detailed documentation.
+
 ## 📖 Core Concepts
 
 ### Cognitive Memory Types

@@ -1,0 +1,14 @@
+#!/bin/sh
+# KuzuMemory git post-commit hook
+# Automatically sync significant commits to memory system
+#
+# Installation:
+#   kuzu-memory git install-hooks
+#
+# Or manually:
+#   cp examples/git-hooks/post-commit .git/hooks/post-commit
+#   chmod +x .git/hooks/post-commit
+
+# Run incremental sync (quiet mode for minimal output)
+# The '2>/dev/null || true' ensures the hook doesn't fail if kuzu-memory isn't available
+kuzu-memory git sync --incremental --quiet 2>/dev/null || true

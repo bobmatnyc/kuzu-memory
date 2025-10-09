@@ -32,7 +32,8 @@ dependencies = [
     "python-dateutil>=2.8",  # Date handling
     "typing-extensions>=4.5", # Python 3.11+ compatibility
     "rich>=13.0.0",         # Rich CLI formatting
-    "psutil>=5.9.0"         # System and process utilities for health monitoring
+    "psutil>=5.9.0",        # System and process utilities for health monitoring
+    "gitpython>=3.1.0"      # Git repository integration
 ]
 
 [project.optional-dependencies]
