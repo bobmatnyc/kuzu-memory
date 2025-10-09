@@ -15,7 +15,10 @@ from .claude_desktop import (
     SmartClaudeDesktopInstaller,
 )
 from .claude_hooks import ClaudeHooksInstaller
+from .cursor_installer import CursorInstaller
 from .universal import UniversalInstaller
+from .vscode_installer import VSCodeInstaller
+from .windsurf_installer import WindsurfInstaller
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,11 @@ class InstallerRegistry:
             "claude-desktop", SmartClaudeDesktopInstaller
         )  # Smart auto-detection
         self.register("universal", UniversalInstaller)
+
+        # MCP-specific installers (Priority 1)
+        self.register("cursor", CursorInstaller)  # Cursor IDE MCP
+        self.register("vscode", VSCodeInstaller)  # VS Code with Claude extension MCP
+        self.register("windsurf", WindsurfInstaller)  # Windsurf IDE MCP
 
         # Legacy aliases (DEPRECATED - will show warnings)
         # These are kept for backward compatibility only
