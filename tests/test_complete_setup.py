@@ -144,7 +144,7 @@ def test_functionality():
 
     dev_passed = 0
     for cmd, desc in dev_tests:
-        success, output = run_command(cmd, desc, timeout=60)
+        success, _output = run_command(cmd, desc, timeout=60)
         if success:
             dev_passed += 1
 
@@ -164,7 +164,7 @@ def test_functionality():
 
     prod_passed = 0
     for cmd, desc in prod_tests:
-        success, output = run_command(cmd, desc, timeout=60)
+        success, _output = run_command(cmd, desc, timeout=60)
         if success:
             prod_passed += 1
 

@@ -64,7 +64,9 @@ class WindsurfInstaller(BaseInstaller):
             }
         }
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
+    def install(
+        self, force: bool = False, dry_run: bool = False, **kwargs
+    ) -> InstallationResult:
         """
         Install MCP configuration for Windsurf IDE.
 
@@ -95,7 +97,9 @@ class WindsurfInstaller(BaseInstaller):
                 )
 
             # Load existing configuration
-            existing_config = load_json_config(config_path) if config_path.exists() else {}
+            existing_config = (
+                load_json_config(config_path) if config_path.exists() else {}
+            )
 
             # Create KuzuMemory server config
             kuzu_config = self._create_kuzu_server_config()
@@ -117,12 +121,16 @@ class WindsurfInstaller(BaseInstaller):
                 merged_config = merge_json_configs(existing_config, kuzu_config)
                 if verbose:
                     logger.info("Merging with existing configuration")
-                    logger.info(f"Existing servers: {list(existing_config.get('mcpServers', {}).keys())}")
+                    logger.info(
+                        f"Existing servers: {list(existing_config.get('mcpServers', {}).keys())}"
+                    )
             else:
                 # Use new config (force mode or no existing config)
                 merged_config = kuzu_config
                 if force and existing_config:
-                    self.warnings.append("Force mode: existing configuration will be backed up")
+                    self.warnings.append(
+                        "Force mode: existing configuration will be backed up"
+                    )
 
             # Validate merged configuration
             validation_errors = validate_mcp_config(merged_config)
@@ -153,28 +161,29 @@ class WindsurfInstaller(BaseInstaller):
                     warnings=self.warnings,
                 )
 
+            # Track whether file existed before
+            file_existed = config_path.exists()
+
             # Create backup if file exists
-            if config_path.exists():
+            if file_existed:
                 # For global install, use home directory for backups
                 self.backup_dir = Path.home() / ".kuzu-memory-backups"
                 backup_path = self.create_backup(config_path)
                 if backup_path:
                     if verbose:
                         logger.info(f"Created backup: {backup_path}")
+                self.files_modified.append(config_path)
+            else:
+                self.files_created.append(config_path)
 
             # Save merged configuration
             save_json_config(config_path, merged_config)
 
-            # Track files
-            if config_path in self.files_modified:
-                # Already tracked by create_backup
-                pass
-            else:
-                self.files_created.append(config_path)
-
             # Success message
             server_count = len(merged_config.get("mcpServers", {}))
-            message = f"Successfully installed MCP configuration for {self.ai_system_name}"
+            message = (
+                f"Successfully installed MCP configuration for {self.ai_system_name}"
+            )
             message += f"\nConfiguration file: {config_path}"
             message += f"\nMCP servers configured: {server_count}"
             message += "\n\nNote: This is a GLOBAL installation (user-wide)"

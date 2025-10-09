@@ -9,16 +9,31 @@ from pathlib import Path
 import click
 
 from kuzu_memory.cli.cli_utils import rich_panel, rich_print
+from kuzu_memory.cli.mcp_install_commands import (
+    detect_systems,
+    install_mcp,
+    list_mcp_installers,
+)
 from kuzu_memory.mcp import create_mcp_server
 
 
 @click.group()
 def mcp():
     """
-    🤖 MCP server commands for Claude Code integration.
+    🤖 MCP server commands and integrations.
 
-    Run the Model Context Protocol server to provide memory operations
-    as tools for Claude Code and other MCP-compatible AI systems.
+    \b
+    🎮 COMMANDS:
+      serve      Run MCP server for Claude Code integration
+      install    Install MCP configurations for AI systems
+      detect     Detect installed AI systems
+      list       List available MCP installers
+      health     Check MCP server health
+      info       Show MCP server information
+      config     Generate MCP configuration
+      test       Test MCP server functionality
+
+    Use 'kuzu-memory mcp COMMAND --help' for detailed help.
     """
     pass
 
@@ -447,3 +462,9 @@ def health(
         if ctx.obj.get("debug"):
             raise
         sys.exit(1)
+
+
+# Register the new commands with the mcp group
+mcp.add_command(detect_systems, name="detect")
+mcp.add_command(install_mcp, name="install")
+mcp.add_command(list_mcp_installers, name="list")

@@ -113,7 +113,7 @@ class TestCursorInstaller:
 
         # Install (will modify existing)
         installer = CursorInstaller(tmp_path)
-        result = installer.install()
+        installer.install()
 
         # Check backup was created
         backup_dir = tmp_path / ".kuzu-memory-backups"

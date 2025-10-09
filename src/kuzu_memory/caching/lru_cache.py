@@ -94,7 +94,7 @@ class LRUCache(ICache):
 
             # Evict if necessary
             while len(self._cache) > self._max_size:
-                oldest_key, _ = self._cache.popitem(last=False)
+                _oldest_key, _ = self._cache.popitem(last=False)
                 self._evictions += 1
 
         # Periodic cleanup
@@ -216,7 +216,7 @@ class LRUCache(ICache):
 
             # Evict if necessary
             while len(self._cache) > self._max_size:
-                oldest_key, _ = self._cache.popitem(last=False)
+                _oldest_key, _ = self._cache.popitem(last=False)
                 self._evictions += 1
 
     async def _maybe_cleanup(self) -> None:

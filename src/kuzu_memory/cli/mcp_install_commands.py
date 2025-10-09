@@ -12,7 +12,6 @@ import click
 from ..installers.detection import AISystemDetector, DetectedSystem
 from ..installers.registry import get_installer, has_installer
 from ..utils.project_setup import find_project_root
-from .cli_utils import rich_print
 
 
 @click.group(name="mcp")
@@ -109,7 +108,9 @@ def detect_systems(project, verbose: bool, available: bool, installed: bool):
 
 @mcp_install_group.command(name="install")
 @click.option("--system", help="Install specific system only (e.g., cursor, vscode)")
-@click.option("--all", "install_all", is_flag=True, help="Install all available systems")
+@click.option(
+    "--all", "install_all", is_flag=True, help="Install all available systems"
+)
 @click.option("--force", is_flag=True, help="Force installation (overwrite existing)")
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
@@ -176,7 +177,9 @@ def install_mcp(
             recommended = detector.get_recommended_systems()
             if not recommended:
                 print("✅ All available AI systems already have MCP configurations!")
-                print("\nUse --force to reinstall, or --system to install specific system.")
+                print(
+                    "\nUse --force to reinstall, or --system to install specific system."
+                )
                 return
 
             print("💡 Recommended systems to install:")

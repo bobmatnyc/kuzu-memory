@@ -224,7 +224,10 @@ class TestValidateMcpConfig:
     def test_validate_valid_config(self):
         """Test validating a valid MCP configuration."""
         config = {
-            "mcpServers": {"server1": {"command": "cmd"}, "server2": {"command": "cmd2"}}
+            "mcpServers": {
+                "server1": {"command": "cmd"},
+                "server2": {"command": "cmd2"},
+            }
         }
 
         errors = validate_mcp_config(config)

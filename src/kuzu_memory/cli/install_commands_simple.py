@@ -111,7 +111,7 @@ def add(
         }
 
         if ai_system in deprecated_mappings:
-            new_name, new_command = deprecated_mappings[ai_system]
+            _new_name, new_command = deprecated_mappings[ai_system]
             print(f"⚠️  DEPRECATION WARNING: '{ai_system}' is deprecated.")
             print(f"   Please use: {new_command}")
             print(f"   Continuing with installation using '{ai_system}' for now...\n")

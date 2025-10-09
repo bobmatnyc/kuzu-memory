@@ -225,7 +225,7 @@ def test_json_rpc_communication_clean():
         assert response["id"] == 2, "Mismatched request id"
 
         # Capture any additional output
-        stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
+        stdout_lines, _stderr_lines = test.capture_all_output(timeout=0.5)
 
         # Verify stdout is clean (empty or only JSON-RPC)
         for line in stdout_lines:
@@ -276,7 +276,7 @@ def test_error_messages_go_to_stderr():
             ), "Expected parse error code"
 
         # Capture any logging output
-        stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
+        stdout_lines, _stderr_lines = test.capture_all_output(timeout=0.5)
 
         # Verify stdout only has JSON-RPC
         for line in stdout_lines:
@@ -319,7 +319,7 @@ def test_batch_requests_clean_stdout():
                 assert "id" in response, "Missing id in response"
 
         # Capture any additional output
-        stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
+        stdout_lines, _stderr_lines = test.capture_all_output(timeout=0.5)
 
         # Verify stdout is clean
         for line in stdout_lines:
@@ -406,7 +406,7 @@ def test_long_running_compliance():
             time.sleep(0.1)
 
         # Capture accumulated output
-        stdout_lines, stderr_lines = test.capture_all_output(timeout=0.5)
+        stdout_lines, _stderr_lines = test.capture_all_output(timeout=0.5)
 
         # Final check - stdout should be clean
         for line in stdout_lines:
