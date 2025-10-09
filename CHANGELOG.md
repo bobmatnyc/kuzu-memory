@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-10-09
+
+### Added
+- **Unified MCP Installer**: Multi-AI system support for modern coding assistants
+  - Auto-detection of Cursor, VS Code with Continue, and Windsurf
+  - Smart configuration merging preserves existing MCP server configs
+  - CLI commands: `kuzu-memory mcp detect`, `mcp install`, `mcp list`
+  - Supports both global and project-specific installations
+  - Automatic path resolution and verification
+  - Dry-run mode for safe testing before installation
+
+### Fixed
+- **Git Sync API Compatibility**: Fixed critical MemoryStore API mismatch (100% → 0% failure rate)
+  - Fixed `recall_memories()` → `get_recent_memories()` API call
+  - Fixed `store_memory()` → `batch_store_memories()` API call
+  - Added deduplication via commit SHA checking
+  - All 30 commits now sync successfully
+- **Quality Improvements**: Resolved formatting, linting, and installer file tracking issues
+  - Fixed code formatting compliance
+  - Resolved linting violations
+  - Improved installer metadata tracking
+
+### Documentation
+- **Git Sync Guide**: Comprehensive documentation for git history synchronization
+  - Setup instructions and configuration options
+  - Hook installation and auto-sync setup
+  - Performance benchmarks and best practices
+  - Troubleshooting guide
+- **API Fix Summary**: Detailed technical documentation of git sync fixes
+- **Hook Examples**: Reference implementations for post-commit hooks
+
 ## [1.2.8] - 2025-10-09
 
 ### Added
@@ -421,7 +452,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...v1.3.0
 [1.2.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.2...v1.2.3
