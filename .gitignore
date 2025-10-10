@@ -276,3 +276,7 @@ yarn-error.log*
 
 # Kuzu Memory backups (temporary)
 .kuzu-memory-backups/
+
+# Changelog fragments (preserve)
+!changelog.d/*.md
+!changelog.d/*.rst

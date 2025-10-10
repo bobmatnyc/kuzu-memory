@@ -88,10 +88,18 @@ make release                # Complete release workflow
 make clean                  # Clean build artifacts
 
 # 🏷️ VERSION MANAGEMENT (ONE command each)
-make version-patch          # Bump patch version (1.1.0 -> 1.1.1)
-make version-minor          # Bump minor version (1.1.0 -> 1.2.0)
-make version-major          # Bump major version (1.1.0 -> 2.0.0)
-make changelog              # Update changelog with current changes
+make version-patch          # Bump patch version (1.1.0 -> 1.1.1) + auto-build changelog
+make version-minor          # Bump minor version (1.1.0 -> 1.2.0) + auto-build changelog
+make version-major          # Bump major version (1.1.0 -> 2.0.0) + auto-build changelog
+make changelog              # Legacy - DEPRECATED (use changelog-build)
+
+# ✅ NEW: Automatic Changelog Building
+# Version bump commands now automatically:
+# 1. Validate changelog fragments exist
+# 2. Build changelog from fragments
+# 3. Consume (delete) fragments
+# 4. Update VERSION file
+# 5. Commit changes
 
 # 🏎️ PERFORMANCE VALIDATION (NEW)
 make perf-validate          # Validate performance thresholds
@@ -106,6 +114,54 @@ make ci                     # Complete CI pipeline
 make pre-commit             # Pre-commit checks with performance validation
 make quick                  # Quick development cycle with validation
 ```
+
+### 🟡 IMPORTANT - Changelog Management (Single Path Only)
+```bash
+# 📝 CHANGELOG FRAGMENT MANAGEMENT (ONE command path)
+make changelog-fragment ISSUE=123 TYPE=feature   # Create fragment (required for changes)
+make changelog-preview                           # Preview changelog (dry-run)
+make changelog-validate                          # Validate fragments before release
+make changelog-build                             # Build changelog from fragments
+
+# 🎯 FRAGMENT TYPES (Use exactly one per change)
+feature       # New features → "Added" section
+enhancement   # Changes to existing features → "Changed" section
+bugfix        # Bug fixes → "Fixed" section
+doc           # Documentation updates → "Documentation" section
+deprecation   # Deprecations → "Deprecated" section
+removal       # Removals → "Removed" section
+performance   # Performance improvements → "Performance" section
+security      # Security fixes → "Security" section
+misc          # Miscellaneous (won't appear in changelog)
+
+# 🔄 DEVELOPER WORKFLOW (ONE path for all changes)
+# 1. Make code changes
+# 2. Create changelog fragment
+make changelog-fragment ISSUE=<issue-number> TYPE=<type>
+# 3. Write user-facing description (NOT implementation details)
+# 4. Commit code + fragment together
+git add src/ changelog.d/<issue>.<type>.md
+git commit -m "feat: description (#<issue>)"
+
+# 🚀 RELEASE WORKFLOW (Fully automated)
+make version-patch    # Automatically validates fragments → builds changelog → bumps version
+make version-minor    # Same automation for minor version
+make version-major    # Same automation for major version
+
+# ⚠️ IMPORTANT: Fragment Required for Code Changes
+# - All changes to src/ MUST include a changelog fragment
+# - Fragment describes user-facing impact, not implementation
+# - Good: "Add git sync command for automatic commit import"
+# - Bad: "Refactored GitSyncService to use new API"
+```
+
+### Why Changelog Fragments Matter
+- **Zero Conflicts**: Each change in separate file prevents merge conflicts
+- **Better Quality**: Written when context is fresh, not at release time
+- **Automated**: Version bump automatically builds changelog
+- **Reviewable**: Fragments reviewed in PRs alongside code
+- **Team-Friendly**: Multiple developers work independently
+- **Battle-Tested**: Used by pytest, pip, attrs (6,200+ projects)
 
 ### 🟡 IMPORTANT - Performance Standards (v1.1.0)
 **All thresholds validated in CI/CD pipeline with `make perf-validate`**
@@ -141,6 +197,17 @@ kuzu-memory memory enhance "prompt"      # Enhance prompts with context
 
 # 🔧 DEVELOPMENT INSTALLATION (ONE command - full setup)
 git clone <repo> && cd kuzu-memory && make dev-setup
+
+# 📝 MAKING CHANGES (Developer workflow)
+# 1. Create feature
+vim src/kuzu_memory/feature.py
+
+# 2. Create changelog fragment
+make changelog-fragment ISSUE=123 TYPE=feature
+
+# 3. Commit together
+git add src/ changelog.d/123.feature.md
+git commit -m "feat: add new feature (#123)"
 
 # 🔍 HEALTH VERIFICATION (ONE command - comprehensive check)
 kuzu-memory status --validate    # Verify system health and performance
@@ -522,6 +589,7 @@ kuzu-memory memory recall "related memories"  # Context retrieval
 - **[docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md)** - Universal AI integration patterns
 - **[docs/MEMORY_SYSTEM.md](docs/MEMORY_SYSTEM.md)** - Memory types and best practices
 - **[docs/GIT_SYNC.md](docs/GIT_SYNC.md)** - Git commit history synchronization (NEW v1.2.8+)
+- **[changelog.d/README.md](changelog.d/README.md)** - Changelog fragment guide
 
 ### 🟢 STANDARD - Developer Documentation (Development)
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Clean architecture overview
@@ -581,6 +649,22 @@ kuzu-memory doctor mcp          # MCP diagnostics
 # ✅ Checks: Claude Code hooks (if configured)
 # ❌ Does NOT check: Claude Desktop (user home directory)
 # For Claude Desktop setup, use: kuzu-memory install add claude-desktop
+
+# 📝 CHANGELOG FRAGMENT ISSUES
+make changelog-validate              # Validate fragment format
+make changelog-preview               # Preview without building
+
+# Missing fragment error
+# Solution: Create fragment before release
+make changelog-fragment ISSUE=<number> TYPE=<type>
+
+# Invalid fragment format
+# Solution: Check fragment follows template format
+cat changelog.d/<issue>.<type>.md
+
+# No fragments found warning
+# Solution: Expected if no unreleased changes
+# Or create fragments for existing changes
 ```
 
 ### 🟢 STANDARD - Monitoring & Alerting Setup
@@ -617,6 +701,9 @@ kuzu-memory status --validate                # Verify restoration
 
 ### ✅ Single Path Principle (ENFORCED)
 - **ONE command** for each operation type (no alternatives)
+- **Changelog management**: ONE path - towncrier fragments (no manual CHANGELOG.md edits)
+- **Version bumping**: ONE path - make version-* (auto-builds changelog)
+- **Fragment creation**: ONE path - make changelog-fragment
 - **NO alternative methods** documented or supported
 - **Clear hierarchical priority** (🔴→🟡→🟢→⚪)
 - **Discoverable workflows** from README.md → CLAUDE.md

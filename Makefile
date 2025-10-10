@@ -1,7 +1,7 @@
 # KuzuMemory - Single Path Workflows
 # ONE way to do ANYTHING - Agentic Coder Optimizer compliance
 
-.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release install-home install-home-wrapper install-home-standalone update-home validate-home uninstall-home test-home-installer install-home-dry install-home-wrapper-dry install-home-standalone-dry
+.PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release install-home install-home-wrapper install-home-standalone update-home validate-home uninstall-home test-home-installer install-home-dry install-home-wrapper-dry install-home-standalone-dry changelog-fragment changelog-preview changelog-validate changelog-build
 
 # Default target
 all: quality test build
@@ -34,6 +34,13 @@ help:
 	@echo "  make version-major   Bump major version (1.0.1 -> 2.0.0)"
 	@echo "  make changelog       Update changelog with current changes"
 	@echo "  make release         Full release workflow (quality -> test -> version -> build -> tag)"
+	@echo ""
+	@echo "📝 CHANGELOG MANAGEMENT (Towncrier):"
+	@echo "  make changelog-fragment ISSUE=N TYPE=type  Create changelog fragment"
+	@echo "    Types: feature, enhancement, bugfix, doc, deprecation, removal, performance, security, misc"
+	@echo "  make changelog-preview   Preview changelog from fragments"
+	@echo "  make changelog-validate  Validate changelog fragments"
+	@echo "  make changelog-build     Build changelog from fragments"
 	@echo ""
 	@echo "📚 UTILITIES:"
 	@echo "  make docs       Build documentation"
@@ -117,43 +124,72 @@ quality: format lint typecheck
 	python -m mypy src/kuzu_memory --strict --ignore-missing-imports
 	@echo "✅ All quality checks passed"
 
-# Version management targets
-version-patch:
+# Changelog fragment management (Towncrier)
+changelog-fragment:
+	@echo "📝 Creating changelog fragment..."
+	@if [ -z "$(ISSUE)" ] || [ -z "$(TYPE)" ]; then \
+		echo "Usage: make changelog-fragment ISSUE=<number> TYPE=<type>"; \
+		echo "Types: feature, enhancement, bugfix, doc, deprecation, removal, performance, security, misc"; \
+		exit 1; \
+	fi
+	@mkdir -p changelog.d
+	@towncrier create $(ISSUE).$(TYPE) --edit
+	@echo "✅ Fragment created: changelog.d/$(ISSUE).$(TYPE).md"
+
+changelog-preview:
+	@echo "👀 Previewing changelog..."
+	@python3 scripts/version.py preview-changelog
+
+changelog-validate:
+	@echo "🔍 Validating changelog fragments..."
+	@python3 scripts/version.py validate-fragments
+
+changelog-build:
+	@echo "📋 Building changelog from fragments..."
+	@VERSION=$$(python3 scripts/version.py current); \
+	python3 scripts/version.py build-changelog --version $$VERSION --yes
+	@echo "✅ Changelog updated"
+
+# Version management targets (updated to include changelog validation)
+version-patch: changelog-validate
 	@echo "🏷️  Bumping patch version..."
-	@python scripts/version.py bump --type patch
-	@echo "✅ Patch version bumped"
+	@python3 scripts/version.py bump --type patch
+	@$(MAKE) changelog-build
+	@echo "✅ Patch version bumped with changelog"
 
-version-minor:
+version-minor: changelog-validate
 	@echo "🏷️  Bumping minor version..."
-	@python scripts/version.py bump --type minor
-	@echo "✅ Minor version bumped"
+	@python3 scripts/version.py bump --type minor
+	@$(MAKE) changelog-build
+	@echo "✅ Minor version bumped with changelog"
 
-version-major:
+version-major: changelog-validate
 	@echo "🏷️  Bumping major version..."
-	@python scripts/version.py bump --type major
-	@echo "✅ Major version bumped"
+	@python3 scripts/version.py bump --type major
+	@$(MAKE) changelog-build
+	@echo "✅ Major version bumped with changelog"
 
 changelog:
 	@echo "📝 Updating changelog..."
-	@python scripts/version.py build-info
+	@python3 scripts/version.py build-info
 	@echo "✅ Changelog updated"
 
 release: quality test
 	@echo "🚀 Starting release workflow..."
-	@python scripts/version.py bump --type patch
+	@python3 scripts/version.py bump --type patch
 	@$(MAKE) build
 	@echo "✅ Release complete"
 
 # Build and deployment targets
 build: quality
 	@echo "🔨 Building package..."
-	@python scripts/version.py build-info
-	python -m build
+	@python3 scripts/version.py build-info
+	python3 -m build
 	@echo "✅ Package built successfully"
 
 publish: build
 	@echo "📤 Publishing to PyPI..."
-	python -m twine upload dist/*
+	python3 -m twine upload dist/*
 	@echo "✅ Package published"
 
 clean:

@@ -59,6 +59,7 @@ dev = [
     "mypy>=1.0",
     "pre-commit>=3.0",
     "pytest-xdist>=3.0",  # Parallel test execution
+    "towncrier>=23.11.0",  # Changelog fragment management
 ]
 test = [
     "pytest>=7.0",
@@ -206,3 +207,57 @@ skips = ["B101", "B601"]  # Skip assert statements and shell injection (handled 
 
 [tool.bandit.assert_used]
 skips = ["*_test.py", "*test*.py"]
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+template = "changelog.d/template.md"
+title_format = "## [{version}] - {project_date}"
+issue_format = "[#{issue}](https://github.com/bobmatnyc/kuzu-memory/issues/{issue})"
+underlines = ["", "", ""]
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "enhancement"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecation"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removal"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "performance"
+name = "Performance"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Miscellaneous"
+showcontent = false

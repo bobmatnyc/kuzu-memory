@@ -27,6 +27,7 @@ class VersionManager:
         self.project_root = project_root or Path(__file__).parent.parent
         self.version_file = self.project_root / "VERSION"
         self.changelog_file = self.project_root / "CHANGELOG.md"
+        self.changelog_dir = self.project_root / "changelog.d"
         self.build_info_file = self.project_root / "BUILD_INFO"
         self.pyproject_file = self.project_root / "pyproject.toml"
 
@@ -207,11 +208,81 @@ class VersionManager:
         except subprocess.CalledProcessError:
             print("Warning: Could not check git status")
 
+    def validate_fragments(self) -> bool:
+        """Validate changelog fragments exist and are properly formatted."""
+        if not self.changelog_dir.exists():
+            print("ℹ️  No changelog.d directory found (will be created)")
+            return True  # Not an error
+
+        fragments = list(self.changelog_dir.glob("*.md"))
+        fragments = [f for f in fragments if f.name != "template.md" and f.name != ".gitkeep"]
+
+        if not fragments:
+            print("⚠️  No changelog fragments found")
+            print("   Create one with: make changelog-fragment ISSUE=<number> TYPE=<type>")
+            return False
+
+        print(f"✅ Found {len(fragments)} changelog fragment(s)")
+
+        # Validate fragments can be built (only if towncrier is available)
+        try:
+            result = subprocess.run(
+                ["towncrier", "build", "--draft", "--version", "test"],
+                cwd=self.project_root,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            print("✅ Fragment format validation passed")
+            return True
+        except FileNotFoundError:
+            print("ℹ️  towncrier not installed, skipping format validation")
+            print("   Install with: pip install towncrier>=23.11.0")
+            return True  # Don't fail if towncrier isn't installed yet
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Fragment validation failed: {e.stderr}")
+            return False
+
+    def preview_changelog(self, version: str = "preview") -> None:
+        """Preview changelog without consuming fragments."""
+        try:
+            result = subprocess.run(
+                ["towncrier", "build", "--draft", "--version", version],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to preview changelog: {e.stderr}")
+            raise
+
+    def build_changelog(self, version: str, yes: bool = False) -> None:
+        """Build changelog from fragments using towncrier."""
+        cmd = ["towncrier", "build", "--version", version]
+        if yes:
+            cmd.append("--yes")
+
+        try:
+            subprocess.run(
+                cmd,
+                cwd=self.project_root,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            print(f"✅ Built changelog for version {version}")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to build changelog: {e.stderr}")
+            raise
+
 
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(description="KuzuMemory version management")
-    parser.add_argument("action", choices=["current", "bump", "build-info", "tag"],
+    parser.add_argument("action", choices=["current", "bump", "build-info", "tag",
+                                          "preview-changelog", "build-changelog", "validate-fragments"],
                        help="Action to perform")
     parser.add_argument("--type", choices=["major", "minor", "patch"],
                        help="Version bump type (for bump action)")
@@ -221,6 +292,10 @@ def main():
                        help="Force operation even with dirty working tree")
     parser.add_argument("--changelog", nargs="*",
                        help="Custom changelog entries")
+    parser.add_argument("--version",
+                       help="Version to use (for preview-changelog, build-changelog)")
+    parser.add_argument("--yes", action="store_true",
+                       help="Auto-confirm fragment deletion (for build-changelog)")
 
     args = parser.parse_args()
 
@@ -257,6 +332,23 @@ def main():
     elif args.action == "tag":
         version = vm.get_current_version()
         vm.create_git_tag(version)
+
+    elif args.action == "preview-changelog":
+        version = args.version or "preview"
+        vm.preview_changelog(version)
+
+    elif args.action == "build-changelog":
+        if not args.version:
+            version = vm.get_current_version()
+        else:
+            version = args.version
+        vm.build_changelog(version, yes=args.yes)
+
+    elif args.action == "validate-fragments":
+        if vm.validate_fragments():
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
