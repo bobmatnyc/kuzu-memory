@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.3.1] - 2025-10-10
+
+### Added
+
+- Unified MCP Installer with auto-detection for Cursor, VS Code with Continue, and Windsurf ([#200](https://github.com/bobmatnyc/kuzu-memory/issues/200))
+- Implemented towncrier-based changelog fragment management system for better release notes ([#203](https://github.com/bobmatnyc/kuzu-memory/issues/203))
+
+### Fixed
+
+- Fixed installer file tracking logic to correctly populate files_created list ([#201](https://github.com/bobmatnyc/kuzu-memory/issues/201))
+- Resolved Git Sync API integration issues including MemoryStore API mismatches ([#202](https://github.com/bobmatnyc/kuzu-memory/issues/202))
 ## [1.3.0] - 2025-10-09
 
 ### Added
