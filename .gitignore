@@ -238,6 +238,7 @@ $RECYCLE.BIN/
 .claude-mpm/memories/
 .claude-mpm/sessions/
 .claude-mpm/tmp/
+.claude-mpm/mcp_auto_config_preference.json
 .claude/agents/
 .claude/cache/
 .claude/sessions/
