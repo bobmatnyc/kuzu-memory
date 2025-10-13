@@ -62,12 +62,12 @@ class TestConcurrentConnections:
         print(f"  Success rate: {success_rate * 100:.1f}%")
         print(f"  Time: {elapsed:.2f}s")
 
-        assert (
-            success_count >= CONCURRENCY_THRESHOLDS["max_connections"]["critical"]
-        ), f"Only {success_count}/{num_clients} connections succeeded"
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"]
-        ), f"Connection success rate {success_rate * 100:.1f}% below critical"
+        assert success_count >= CONCURRENCY_THRESHOLDS["max_connections"]["critical"], (
+            f"Only {success_count}/{num_clients} connections succeeded"
+        )
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"], (
+            f"Connection success rate {success_rate * 100:.1f}% below critical"
+        )
 
     @pytest.mark.asyncio
     async def test_concurrent_initialization(self, project_root):
@@ -98,9 +98,9 @@ class TestConcurrentConnections:
         print(f"  Success rate: {success_rate * 100:.1f}%")
         print(f"  Time: {elapsed:.2f}s")
 
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"]
-        ), f"Initialization success rate {success_rate * 100:.1f}% below target"
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"], (
+            f"Initialization success rate {success_rate * 100:.1f}% below target"
+        )
 
 
 @pytest.mark.performance
@@ -139,9 +139,9 @@ class TestConcurrentExecution:
         print(f"  Success rate: {success_rate * 100:.1f}%")
         print(f"  Throughput: {throughput:.2f} ops/sec")
 
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"]
-        ), f"Concurrent execution success rate {success_rate * 100:.1f}% below critical"
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"], (
+            f"Concurrent execution success rate {success_rate * 100:.1f}% below critical"
+        )
 
     @pytest.mark.asyncio
     async def test_concurrent_mixed_operations(self, multiple_clients):
@@ -180,9 +180,9 @@ class TestConcurrentExecution:
         print(f"  Successful: {total_successes}")
         print(f"  Success rate: {success_rate * 100:.1f}%")
 
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"]
-        ), f"Mixed operation success rate {success_rate * 100:.1f}% below target"
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"], (
+            f"Mixed operation success rate {success_rate * 100:.1f}% below target"
+        )
 
 
 @pytest.mark.performance
@@ -226,9 +226,9 @@ class TestLoadBalancing:
         print(f"  Success rate: {success_rate * 100:.1f}%")
         print(f"  Time: {elapsed:.2f}s")
 
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"]
-        ), f"Success rate under contention {success_rate * 100:.1f}% below critical"
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"], (
+            f"Success rate under contention {success_rate * 100:.1f}% below critical"
+        )
 
     @pytest.mark.asyncio
     async def test_load_distribution(self, concurrent_simulator):
@@ -290,9 +290,9 @@ class TestSessionIsolation:
         print(f"  Successful: {success_count}")
         print(f"  Success rate: {success_rate * 100:.1f}%")
 
-        assert (
-            success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"]
-        ), f"Session isolation success rate {success_rate * 100:.1f}% below target"
+        assert success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["target"], (
+            f"Session isolation success rate {success_rate * 100:.1f}% below target"
+        )
 
 
 @pytest.mark.performance
@@ -347,9 +347,9 @@ class TestStressLoad:
         print(f"  Time: {elapsed:.2f}s")
 
         # Under stress, we accept lower success rate
-        assert (
-            success_rate >= 0.70
-        ), f"Stress test success rate {success_rate * 100:.1f}% too low"
+        assert success_rate >= 0.70, (
+            f"Stress test success rate {success_rate * 100:.1f}% too low"
+        )
 
     @pytest.mark.asyncio
     async def test_burst_load(self, project_root):
@@ -389,6 +389,6 @@ class TestStressLoad:
         avg_success_rate = sum(burst_results) / len(burst_results)
         print(f"\nOverall burst success rate: {avg_success_rate * 100:.1f}%")
 
-        assert (
-            avg_success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"]
-        ), f"Burst success rate {avg_success_rate * 100:.1f}% below critical"
+        assert avg_success_rate >= CONCURRENCY_THRESHOLDS["success_rate"]["critical"], (
+            f"Burst success rate {avg_success_rate * 100:.1f}% below critical"
+        )

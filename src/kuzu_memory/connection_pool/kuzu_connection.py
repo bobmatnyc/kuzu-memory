@@ -132,7 +132,9 @@ class KuzuConnection(IConnection):
 
             def _create_database():
                 # Note: Kuzu uses max_num_threads parameter name
-                return kuzu.Database(self.database_path, max_num_threads=self.num_threads)
+                return kuzu.Database(
+                    self.database_path, max_num_threads=self.num_threads
+                )
 
             db = await loop.run_in_executor(None, _create_database)
 
