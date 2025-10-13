@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.3.2] - 2025-10-12
+
+### Fixed
+
+- Fixed concurrent database access errors that occurred when 3+ Claude Desktop sessions accessed the same database simultaneously. The issue was caused by the async connection pool creating separate Database instances per connection, leading to file lock conflicts. Implemented shared Database instance pattern with retry logic (10 attempts, exponential backoff) and corrected Kuzu Python API method names. All concurrent access tests now pass (7/7) with no performance degradation. ([#concurrent-access](https://github.com/bobmatnyc/kuzu-memory/issues/concurrent-access))
 ## [1.3.1] - 2025-10-10
 
 ### Added
@@ -465,7 +470,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.0...v1.3.2
 [1.3.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...v1.3.0
 [1.2.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.3...v1.2.4
