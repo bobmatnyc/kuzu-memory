@@ -20,9 +20,6 @@ from kuzu_memory import KuzuMemory
 from kuzu_memory.core.models import MemoryType
 
 
-@pytest.mark.skip(
-    reason="Stress tests showing 0% success rate - memory extraction/concurrency issues need investigation"
-)
 class TestConcurrentOperations:
     """Stress tests for concurrent memory operations."""
 

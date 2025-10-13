@@ -32,6 +32,8 @@ class StorageConfig:
     connection_pool_size: int = 5
     query_timeout_ms: int = 5000
     use_cli_adapter: bool = False  # Use Kuzu CLI adapter for better performance
+    max_write_retries: int = 10  # Increased from 3 to handle higher concurrency (Kuzu single-write limitation)
+    write_retry_backoff_ms: int = 100  # Base backoff time in ms (exponential increase)
 
 
 @dataclass
@@ -284,6 +286,8 @@ class KuzuMemoryConfig:
                 "backup_on_corruption": self.storage.backup_on_corruption,
                 "connection_pool_size": self.storage.connection_pool_size,
                 "query_timeout_ms": self.storage.query_timeout_ms,
+                "max_write_retries": self.storage.max_write_retries,
+                "write_retry_backoff_ms": self.storage.write_retry_backoff_ms,
             },
             "recall": {
                 "max_memories": self.recall.max_memories,

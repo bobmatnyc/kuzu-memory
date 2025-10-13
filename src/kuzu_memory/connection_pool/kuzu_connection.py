@@ -30,7 +30,15 @@ class KuzuConnection(IConnection):
 
     Provides async interface over Kuzu's synchronous operations
     and manages connection lifecycle.
+
+    Uses shared Database instances to avoid file lock conflicts when
+    multiple connections access the same database.
     """
+
+    # Class-level storage for shared Database instances (keyed by database path)
+    _shared_databases: dict[str, Any] = {}
+    _db_locks: dict[str, asyncio.Lock] = {}
+    _db_ref_counts: dict[str, int] = {}  # Track number of connections using each DB
 
     def __init__(self, database_path: str, num_threads: int = 4):
         """
@@ -47,7 +55,7 @@ class KuzuConnection(IConnection):
         self.num_threads = num_threads
 
         # Connection objects (initialized lazily)
-        self._db: kuzu.Database | None = None
+        # Note: _db is now retrieved from shared storage, not stored per-instance
         self._conn: kuzu.Connection | None = None
 
         # Connection state
@@ -66,65 +74,164 @@ class KuzuConnection(IConnection):
             await self._connect()
 
     async def _connect(self) -> None:
-        """Establish database connection."""
+        """Establish database connection using shared Database instance."""
         try:
-            # Run connection setup in thread pool to avoid blocking
+            # Get or create shared Database instance
+            db = await self._get_or_create_shared_database()
+
+            # Run connection creation in thread pool to avoid blocking
             loop = asyncio.get_running_loop()
 
             def _create_connection():
-                db = kuzu.Database(self.database_path, num_threads=self.num_threads)
+                # Create connection using shared Database instance
                 conn = kuzu.Connection(db)
-                return db, conn
+                return conn
 
-            self._db, self._conn = await loop.run_in_executor(None, _create_connection)
+            self._conn = await loop.run_in_executor(None, _create_connection)
             self._is_connected = True
 
-            logger.debug(f"Connected to Kuzu database at {self.database_path}")
+            logger.debug(
+                f"Connected to Kuzu database at {self.database_path} "
+                f"(using shared Database instance)"
+            )
 
         except Exception as e:
             logger.error(f"Failed to connect to Kuzu database: {e}")
             self._is_connected = False
             raise
 
-    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
+    async def _get_or_create_shared_database(self) -> Any:
         """
-        Execute a query on this connection.
+        Get or create shared Database instance for this database path.
+
+        Uses class-level dictionary to store shared instances, ensuring
+        multiple connections to the same database reuse the same Database object.
+
+        Returns:
+            Shared Database instance
+        """
+        # Ensure lock exists for this database path
+        if self.database_path not in self._db_locks:
+            self._db_locks[self.database_path] = asyncio.Lock()
+
+        # Acquire lock to safely check/create shared database
+        async with self._db_locks[self.database_path]:
+            # Check if shared database already exists
+            if self.database_path in self._shared_databases:
+                self._db_ref_counts[self.database_path] = (
+                    self._db_ref_counts.get(self.database_path, 0) + 1
+                )
+                logger.debug(
+                    f"Reusing shared Database instance for {self.database_path} "
+                    f"(ref_count: {self._db_ref_counts[self.database_path]})"
+                )
+                return self._shared_databases[self.database_path]
+
+            # Create new shared database instance
+            loop = asyncio.get_running_loop()
+
+            def _create_database():
+                # Note: Kuzu uses max_num_threads parameter name
+                return kuzu.Database(self.database_path, max_num_threads=self.num_threads)
+
+            db = await loop.run_in_executor(None, _create_database)
+
+            # Store in shared storage
+            self._shared_databases[self.database_path] = db
+            self._db_ref_counts[self.database_path] = 1
+
+            logger.debug(
+                f"Created new shared Database instance for {self.database_path}"
+            )
+
+            return db
+
+    async def execute(
+        self,
+        query: str,
+        params: dict[str, Any] | None = None,
+        max_retries: int = 3,
+        retry_backoff_ms: int = 100,
+    ) -> Any:
+        """
+        Execute a query on this connection with retry logic.
 
         Args:
             query: Cypher query to execute
             params: Query parameters (currently not used by Kuzu)
+            max_retries: Maximum number of retry attempts for lock/busy errors
+            retry_backoff_ms: Base backoff time in milliseconds (doubles each retry)
 
         Returns:
             Query result
+
+        Raises:
+            Exception: If query fails after all retries
         """
         async with self._lock:
             await self._ensure_connected()
 
-            try:
-                self._last_used = datetime.now()
-                self._query_count += 1
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    self._last_used = datetime.now()
+                    self._query_count += 1
 
-                # Execute query in thread pool
-                loop = asyncio.get_running_loop()
+                    # Execute query in thread pool
+                    loop = asyncio.get_running_loop()
 
-                def _execute_query():
-                    if params:
-                        # Kuzu doesn't support parameterized queries yet
-                        # In practice, you'd need to format the query safely
-                        logger.warning("Kuzu doesn't support parameterized queries yet")
+                    def _execute_query():
+                        if params:
+                            # Kuzu doesn't support parameterized queries yet
+                            # In practice, you'd need to format the query safely
+                            logger.warning(
+                                "Kuzu doesn't support parameterized queries yet"
+                            )
 
-                    return self._conn.execute(query)
+                        return self._conn.execute(query)
 
-                result = await loop.run_in_executor(None, _execute_query)
+                    result = await loop.run_in_executor(None, _execute_query)
 
-                # Convert result to standard format
-                return self._process_result(result)
+                    # Convert result to standard format
+                    return self._process_result(result)
 
-            except Exception as e:
-                logger.error(f"Query execution failed: {e}")
-                # Mark connection as potentially broken
-                self._is_connected = False
-                raise
+                except Exception as e:
+                    last_error = e
+                    error_msg = str(e).lower()
+
+                    # Check if this is a retryable error (lock/busy/write transaction)
+                    is_retryable = (
+                        "locked" in error_msg
+                        or "busy" in error_msg
+                        or "write transaction" in error_msg
+                    )
+
+                    if is_retryable and attempt < max_retries - 1:
+                        # Calculate backoff with exponential increase
+                        backoff_ms = retry_backoff_ms * (2**attempt)
+                        logger.warning(
+                            f"Query failed with retryable error (attempt {attempt + 1}/{max_retries}): {e}. "
+                            f"Retrying in {backoff_ms}ms..."
+                        )
+
+                        # Wait before retry
+                        await asyncio.sleep(backoff_ms / 1000.0)
+                        continue
+                    else:
+                        # Non-retryable error or max retries reached
+                        if is_retryable:
+                            logger.error(
+                                f"Query failed after {max_retries} retries with lock/busy error: {e}"
+                            )
+                        else:
+                            logger.error(f"Query execution failed: {e}")
+
+                        # Mark connection as potentially broken
+                        self._is_connected = False
+                        raise
+
+            # Should never reach here, but raise last error if we do
+            raise last_error
 
     async def execute_many(
         self, queries: list[tuple[str, dict[str, Any] | None]]
@@ -178,7 +285,7 @@ class KuzuConnection(IConnection):
             logger.debug("Transaction rolled back (placeholder)")
 
     async def close(self) -> None:
-        """Close this connection."""
+        """Close this connection and cleanup shared Database if no longer needed."""
         async with self._lock:
             if self._is_connected and self._conn:
                 # Close connection in thread pool
@@ -193,10 +300,45 @@ class KuzuConnection(IConnection):
                 await loop.run_in_executor(None, _close_connection)
 
                 self._conn = None
-                self._db = None
                 self._is_connected = False
 
+                # Decrement reference count and cleanup shared Database if needed
+                await self._cleanup_shared_database()
+
             logger.debug("Connection closed")
+
+    async def _cleanup_shared_database(self) -> None:
+        """
+        Cleanup shared Database instance if no connections remain.
+
+        Decrements reference count and removes shared Database if this
+        was the last connection using it.
+        """
+        if self.database_path not in self._db_locks:
+            return
+
+        async with self._db_locks[self.database_path]:
+            if self.database_path not in self._db_ref_counts:
+                return
+
+            # Decrement reference count
+            self._db_ref_counts[self.database_path] -= 1
+
+            logger.debug(
+                f"Decremented ref_count for {self.database_path} "
+                f"(now: {self._db_ref_counts[self.database_path]})"
+            )
+
+            # If no more connections, cleanup shared database
+            if self._db_ref_counts[self.database_path] <= 0:
+                if self.database_path in self._shared_databases:
+                    del self._shared_databases[self.database_path]
+                    logger.debug(
+                        f"Removed shared Database instance for {self.database_path}"
+                    )
+
+                del self._db_ref_counts[self.database_path]
+                # Note: Keep lock around for future connections
 
     async def is_alive(self) -> bool:
         """Check if connection is still alive and responsive."""
@@ -208,27 +350,49 @@ class KuzuConnection(IConnection):
             return False
 
     def _process_result(self, result) -> Any:
-        """Process Kuzu query result into standard format."""
+        """
+        Process Kuzu query result into standard format (list of dicts).
+
+        Note: Kuzu Python API uses snake_case method names (has_next, get_next, get_all),
+        not camelCase (hasNext, getNext). See: https://kuzudb.com/api-docs/python/
+
+        Kuzu's get_all() returns list of lists, so we convert to list of dicts
+        for easier consumption by the rest of the application.
+        """
         if result is None:
             return None
 
-        # Handle different result types
-        if hasattr(result, "getNext"):
-            # Result is a query result with rows
+        # Use Kuzu's built-in get_all() method (most efficient)
+        # get_all() returns list of lists like [[1, 'foo'], [2, 'bar']]
+        if hasattr(result, "get_all"):
+            rows = result.get_all()
+
+            # Convert list of lists to list of dicts for easier consumption
+            if rows and hasattr(result, "get_column_names"):
+                column_names = result.get_column_names()
+                if column_names:
+                    return [dict(zip(column_names, row, strict=False)) for row in rows]
+
+            # If no column names or empty result, return as-is
+            return rows
+
+        # Fallback: Manual iteration using snake_case API (if get_all not available)
+        # Fixed: Kuzu Python API uses snake_case (has_next, get_next), not camelCase
+        if hasattr(result, "has_next"):
             rows = []
-            while result.hasNext():
-                row_data = result.getNext()
+            # Get column names once at the start
+            column_names = getattr(result, "get_column_names", lambda: [])()
+
+            while result.has_next():  # Fixed: snake_case (was hasNext)
+                row_data = result.get_next()  # Fixed: snake_case (was getNext)
+
                 # Convert row data to dictionary format
-                if isinstance(row_data, list):
-                    # Get column names if available
-                    column_names = getattr(result, "getColumnNames", lambda: [])()
-                    if column_names:
-                        row_dict = dict(zip(column_names, row_data, strict=False))
-                        rows.append(row_dict)
-                    else:
-                        rows.append(row_data)
+                if isinstance(row_data, list) and column_names:
+                    row_dict = dict(zip(column_names, row_data, strict=False))
+                    rows.append(row_dict)
                 else:
                     rows.append(row_data)
+
             return rows
 
         # For other result types, return as-is
