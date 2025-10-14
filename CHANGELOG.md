@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.3.3] - 2025-10-14
+
+### Added
+- Implemented complete automated demo command showcasing all KuzuMemory features in 8 steps: initialization, memory storage (all 6 types), recall, prompt enhancement, statistics, recent memories, and next steps guidance.
+
+### Changed
+- Enhanced quickstart command with 3 new interactive steps: view recent memories, try semantic search recall, and learn about the 6 cognitive memory types (SEMANTIC, PROCEDURAL, PREFERENCE, EPISODIC, WORKING, SENSORY).
+
+### Fixed
+- Fixed critical JSON serialization bug that prevented memory storage when metadata contained Pydantic Sentinel values. This resolves the "the JSON object must be str, bytes or bytearray, not Sentinel" error that blocked all memory operations.
+- Fixed 8 Click Sentinel parameter bugs in demo and quickstart commands that caused crashes when invoking subcommands. All ctx.invoke() calls now provide explicit parameters to prevent Sentinel object propagation.
+
 ## [1.3.2] - 2025-10-12
 
 ### Fixed
@@ -470,7 +482,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.0...v1.3.2
 [1.3.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...v1.3.0
 [1.2.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.4...v1.2.5
