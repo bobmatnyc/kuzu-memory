@@ -1,0 +1,1 @@
+Fixed 8 Click Sentinel parameter bugs in demo and quickstart commands that caused crashes when invoking subcommands. All ctx.invoke() calls now provide explicit parameters to prevent Sentinel object propagation.

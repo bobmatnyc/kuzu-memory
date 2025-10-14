@@ -1,0 +1,1 @@
+Fixed critical JSON serialization bug that prevented memory storage when metadata contained Pydantic Sentinel values. This resolves the "the JSON object must be str, bytes or bytearray, not Sentinel" error that blocked all memory operations.

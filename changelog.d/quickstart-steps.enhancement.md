@@ -1,0 +1,1 @@
+Enhanced quickstart command with 3 new interactive steps: view recent memories, try semantic search recall, and learn about the 6 cognitive memory types (SEMANTIC, PROCEDURAL, PREFERENCE, EPISODIC, WORKING, SENSORY).
