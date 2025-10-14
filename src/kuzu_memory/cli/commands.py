@@ -18,14 +18,14 @@ from ..utils.project_setup import find_project_root, get_project_db_path
 
 # Import top-level command groups (8 total)
 from ._deprecated.mcp_commands import mcp
-from .cli_utils import rich_panel, rich_print
+from .cli_utils import rich_panel, rich_print, rich_table
 from .doctor_commands import doctor
 from .enums import OutputFormat
 from .git_commands import git
 from .help_commands import help_group
 from .init_commands import init
 from .install_commands_simple import install
-from .memory_commands import enhance, memory, store
+from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
 
 # Set up logging for CLI
@@ -168,6 +168,10 @@ def quickstart(ctx, skip_demo):
 
     Perfect for first-time users!
     """
+    import time
+
+    from .cli_utils import rich_confirm, rich_prompt
+
     try:
         rich_panel(
             "Welcome to KuzuMemory! 🧠✨\n\n"
@@ -191,7 +195,7 @@ def quickstart(ctx, skip_demo):
         db_path = get_project_db_path(project_root)
         if not db_path.exists():
             rich_print("Initializing KuzuMemory for this project...")
-            ctx.invoke(init)
+            ctx.invoke(init, force=False, config_path=None)
         else:
             rich_print("✅ Project already initialized!")
 
@@ -204,14 +208,20 @@ def quickstart(ctx, skip_demo):
 
         # Interactive demo continues...
         rich_print("\n🧠 Step 2: Storing Memories")
-        from .cli_utils import rich_confirm, rich_prompt
 
         if rich_confirm("Would you like to store your first memory?", default=True):
             sample_memory = rich_prompt(
                 "Enter something about your project",
                 default="This is a Python project using KuzuMemory for AI memory",
             )
-            ctx.invoke(store, content=sample_memory, source="quickstart")
+            ctx.invoke(
+                store,
+                content=sample_memory,
+                source="quickstart",
+                session_id=None,
+                agent_id="quickstart",
+                metadata=None,
+            )
 
         # Step 3: Demo enhancement
         rich_print("\n🚀 Step 3: Prompt Enhancement")
@@ -226,20 +236,116 @@ def quickstart(ctx, skip_demo):
 
         # Step 4: Show stats
         rich_print("\n📊 Step 4: Project Status")
-        ctx.invoke(status, detailed=False, output_format="text")
+        ctx.invoke(
+            status,
+            validate=False,
+            show_project=False,
+            detailed=False,
+            output_format="text",
+        )
+
+        # Step 5: Recent Memories
+        rich_print("\n" + "─" * 50)
+        rich_print("📚 [bold magenta]Step 5: View Recent Memories[/bold magenta]")
+
+        if rich_confirm("Would you like to view your recent memories?", default=True):
+            ctx.invoke(recent, limit=5, output_format="list")
+            time.sleep(1)
+
+        # Step 6: Memory Recall
+        rich_print("\n" + "─" * 50)
+        rich_print("🔍 [bold magenta]Step 6: Try Memory Recall[/bold magenta]")
+        rich_print(
+            "Recall uses semantic search to find relevant memories based on your query.\n"
+        )
+        if rich_confirm("Would you like to try querying your memories?", default=True):
+            query = rich_prompt(
+                "Enter a search query", default="Python project structure"
+            )
+            ctx.invoke(
+                recall,
+                prompt=query,
+                max_memories=5,
+                strategy="auto",
+                session_id=None,
+                agent_id="cli",
+                output_format="simple",
+                explain_ranking=False,
+            )
+            time.sleep(1)
+
+        # Step 7: Memory Types
+        rich_print("\n" + "─" * 50)
+        rich_print("🧠 [bold magenta]Step 7: Understanding Memory Types[/bold magenta]")
+        if rich_confirm("Want to learn about different memory types?", default=True):
+            memory_types_data = [
+                [
+                    "SEMANTIC",
+                    "Facts & Specifications",
+                    "Never expires",
+                    "Alice works at TechCorp",
+                ],
+                [
+                    "PROCEDURAL",
+                    "How-to & Instructions",
+                    "Never expires",
+                    "Always use type hints",
+                ],
+                [
+                    "PREFERENCE",
+                    "User/Team Preferences",
+                    "Never expires",
+                    "Team prefers pytest",
+                ],
+                [
+                    "EPISODIC",
+                    "Decisions & Events",
+                    "30 days",
+                    "Decided to use Kuzu DB",
+                ],
+                [
+                    "WORKING",
+                    "Current Tasks",
+                    "1 day",
+                    "Currently debugging async",
+                ],
+                [
+                    "SENSORY",
+                    "Observations & Feedback",
+                    "6 hours",
+                    "CLI feels slow during testing",
+                ],
+            ]
+            table = rich_table(
+                ["Type", "Description", "Retention", "Example"],
+                memory_types_data,
+                title="🧠 Cognitive Memory Types",
+            )
+            from rich.console import Console
+
+            console = Console()
+            console.print(table)
+            rich_print(
+                "\n💡 [italic]KuzuMemory automatically classifies memories based on content![/italic]",
+                style="blue",
+            )
+            time.sleep(1)
 
         # Completion
         rich_panel(
             "Quickstart Complete! 🎉\n\n"
             "You now know how to:\n"
-            "• Store memories with 'remember'\n"
-            "• Enhance prompts with 'enhance'\n"
-            "• Learn async with 'learn'\n"
-            "• Check stats and project info\n\n"
+            "• Store memories with 'kuzu-memory memory store'\n"
+            "• Enhance prompts with 'kuzu-memory memory enhance'\n"
+            "• Query memories with 'kuzu-memory memory recall'\n"
+            "• View recent memories\n"
+            "• Understand memory types\n\n"
             "Next steps:\n"
-            "• Explore: kuzu-memory examples\n"
-            "• Get tips: kuzu-memory tips\n"
-            "• Read docs: See project documentation",
+            "• Try the demo: kuzu-memory demo\n"
+            "• Get examples: kuzu-memory help examples\n"
+            "• Get tips: kuzu-memory help tips\n"
+            "• Read docs: docs/GETTING_STARTED.md\n"
+            "• Claude integration: docs/CLAUDE_SETUP.md",
             title="🎯 Ready to Go!",
             style="green",
         )
@@ -255,29 +361,187 @@ def quickstart(ctx, skip_demo):
 @click.pass_context
 def demo(ctx):
     """
-    🎮 Interactive demo of KuzuMemory features.
+    🎮 Automated demo of KuzuMemory features.
 
-    Provides a hands-on demonstration of core functionality
-    including memory storage, recall, and enhancement features.
+    Provides a complete walkthrough of all major features with
+    automated demonstrations including memory storage, recall,
+    enhancement, and statistics.
     """
+    import time
+
     try:
+        # Step 1: Welcome & Introduction
         rich_panel(
-            "KuzuMemory Interactive Demo! 🎮\n\n"
-            "This demo will show you how KuzuMemory works with real examples.\n"
-            "Follow along to learn the key features.",
-            title="🎮 Demo Mode",
+            "Welcome to KuzuMemory! 🧠✨\n\n"
+            "This automated demo will showcase:\n"
+            "• Database initialization\n"
+            "• Storing diverse memory types\n"
+            "• Memory recall capabilities\n"
+            "• Prompt enhancement with context\n"
+            "• System statistics and insights\n"
+            "• Recent memory browsing\n\n"
+            "Sit back and watch the magic! ✨",
+            title="🎮 KuzuMemory Interactive Demo",
             style="magenta",
         )
+        time.sleep(1.5)
 
-        # Demo implementation would go here
-        # For brevity, redirecting to quickstart
-        rich_print("For now, try the quickstart guide:")
-        rich_print("kuzu-memory quickstart")
+        # Step 2: Initialize Database
+        rich_print("\n📁 Step 1: Initializing Memory Database", style="bold cyan")
+        rich_print("Creating project memory structure...")
+        time.sleep(0.5)
+
+        try:
+            ctx.invoke(init, force=False, config_path=None)
+        except SystemExit:
+            # Already initialized, that's fine
+            rich_print("✅ Database already initialized!", style="green")
+
+        time.sleep(1)
+
+        # Step 3: Store Sample Memories
+        rich_print(
+            "\n💾 Step 2: Storing Sample Memories (All Types)", style="bold cyan"
+        )
+        rich_print("Demonstrating all cognitive memory types...\n")
+        time.sleep(0.5)
+
+        # Sample memories covering all types
+        sample_memories = [
+            (
+                "KuzuMemory is a graph-based memory system for AI applications built with Kuzu database",
+                "demo-semantic",
+            ),
+            (
+                "To store a memory, use: kuzu-memory memory store <text>. To recall memories, use: kuzu-memory memory recall <query>",
+                "demo-procedural",
+            ),
+            (
+                "I prefer to use Python 3.11+ for development and follow PEP 8 style guidelines",
+                "demo-preference",
+            ),
+            (
+                "We decided to use Kuzu database for this project on 2025-01-15 because of its performance and graph capabilities",
+                "demo-episodic",
+            ),
+            (
+                "Currently working on implementing the interactive demo feature for the CLI interface",
+                "demo-working",
+            ),
+            (
+                "The CLI interface feels responsive and fast with sub-100ms response times",
+                "demo-sensory",
+            ),
+        ]
+
+        for i, (content, source) in enumerate(sample_memories, 1):
+            rich_print(f"{i}. Storing: {content[:80]}...", style="dim")
+            ctx.invoke(
+                store,
+                content=content,
+                source=source,
+                session_id=None,
+                agent_id="demo",
+                metadata=None,
+            )
+            time.sleep(0.3)
+
+        rich_print(
+            f"\n✅ Stored {len(sample_memories)} diverse memories!", style="green"
+        )
+        time.sleep(1)
+
+        # Step 4: Demonstrate Memory Recall
+        rich_print("\n🔍 Step 3: Testing Memory Recall", style="bold cyan")
+        query = "How do I store a memory?"
+        rich_print(f"Querying: '{query}'\n")
+        time.sleep(0.5)
+
+        ctx.invoke(
+            recall,
+            prompt=query,
+            max_memories=3,
+            strategy="auto",
+            session_id=None,
+            agent_id="cli",
+            output_format="simple",
+            explain_ranking=False,
+        )
+        time.sleep(1.5)
+
+        # Step 5: Prompt Enhancement
+        rich_print("\n✨ Step 4: Prompt Enhancement Demo", style="bold cyan")
+        original_prompt = "Write a Python function for memory management"
+        rich_print(f"Original prompt: '{original_prompt}'\n")
+        time.sleep(0.5)
+
+        rich_panel(
+            f"Original: {original_prompt}",
+            title="📝 Before Enhancement",
+            style="yellow",
+        )
+        time.sleep(0.5)
+
+        ctx.invoke(
+            enhance, prompt=original_prompt, max_memories=3, output_format="context"
+        )
+        time.sleep(1.5)
+
+        # Step 6: View Statistics
+        rich_print("\n📊 Step 5: System Statistics", style="bold cyan")
+        rich_print("Viewing memory system statistics...\n")
+        time.sleep(0.5)
+
+        ctx.invoke(
+            status,
+            validate=False,
+            show_project=False,
+            detailed=False,
+            output_format="text",
+        )
+        time.sleep(1.5)
+
+        # Step 7: Recent Memories
+        rich_print("\n📚 Step 6: Recent Memories", style="bold cyan")
+        rich_print("Showing last 5 memories stored...\n")
+        time.sleep(0.5)
+
+        ctx.invoke(recent, limit=5, output_format="table")
+        time.sleep(1.5)
+
+        # Step 8: Next Steps & Resources
+        rich_panel(
+            "Demo Complete! 🎉\n\n"
+            "You've seen all major KuzuMemory features in action!\n\n"
+            "📚 Next Steps:\n"
+            "• Full reference: kuzu-memory help\n"
+            "• Practical examples: kuzu-memory help examples\n"
+            "• Best practices: kuzu-memory help tips\n"
+            "• Interactive setup: kuzu-memory quickstart\n\n"
+            "📖 Documentation:\n"
+            "• Quick Start: docs/GETTING_STARTED.md\n"
+            "• Memory Types: docs/MEMORY_SYSTEM.md\n"
+            "• AI Integration: docs/AI_INTEGRATION.md\n\n"
+            "🚀 Ready to use KuzuMemory in your project!\n"
+            "   Start with: kuzu-memory memory store 'Your first real memory'",
+            title="🎯 Demo Complete",
+            style="green",
+        )
 
     except Exception as e:
         if ctx.obj.get("debug"):
             raise
-        rich_print(f"❌ Demo failed: {e}", style="red")
+        rich_panel(
+            f"Demo encountered an error:\n{e}\n\n"
+            "This might happen if:\n"
+            "• Database is not initialized (run: kuzu-memory init)\n"
+            "• Project root cannot be detected\n"
+            "• Permissions issue with database files\n\n"
+            "Try running with --debug flag for more details:\n"
+            "kuzu-memory --debug demo",
+            title="❌ Demo Error",
+            style="red",
+        )
         sys.exit(1)
 
 

@@ -181,11 +181,7 @@ class QueryBuilder:
                 "user_id": memory.user_id,
                 "session_id": memory.session_id,
                 "agent_id": memory.agent_id,
-                "metadata": (
-                    json.dumps(memory.metadata, default=str)
-                    if memory.metadata
-                    else "{}"
-                ),
+                "metadata": (json.dumps(memory.metadata or {}, default=str)),
             }
 
             if is_update:
@@ -822,11 +818,7 @@ class QueryBuilder:
                     "user_id": memory.user_id,
                     "session_id": memory.session_id,
                     "agent_id": memory.agent_id,
-                    "metadata": (
-                        json.dumps(memory.metadata, default=str)
-                        if memory.metadata
-                        else "{}"
-                    ),
+                    "metadata": (json.dumps(memory.metadata or {}, default=str)),
                 }
                 batch_data.append(memory_data)
 
