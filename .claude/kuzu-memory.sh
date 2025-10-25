@@ -7,4 +7,4 @@ set -e
 cd "$(dirname "$0")/.."
 
 # Execute kuzu-memory with all arguments
-exec /Users/masa/Projects/managed/kuzu-memory/.venv/bin/kuzu-memory "$@"
+exec /Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory "$@"

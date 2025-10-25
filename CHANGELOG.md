@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.0] - 2025-10-25
+
+### Added
+
+- Production-ready Claude Code hooks with comprehensive type hints and mypy configuration for type safety
+- Comprehensive test suite with 30+ test cases covering both enhance and learn hooks
+- Log rotation infrastructure with both automatic (logrotate) and manual (rotate_logs.sh) options
+- Detailed testing and QA documentation in README_TESTING.md
+
+### Fixed
+
+- Critical fix for duplicate memory creation when PostToolUse hook fires multiple times for parallel tool calls. Implemented SHA256-based content deduplication with 5-minute TTL cache to prevent storing the same assistant response multiple times ([#duplicate-memories](https://github.com/bobmatnyc/kuzu-memory/issues/duplicate-memories))
+
+### Changed
+
+- Enhanced kuzu_enhance.py and kuzu_learn.py hooks with full type hints for Python 3.11+ compatibility
+- Improved logging infrastructure with configurable log directories and proper error handling
+- Added robust transcript file finding logic to handle continued Claude Code sessions
+
 ## [1.3.4] - 2025-10-25
 
 ### Fixed
