@@ -529,15 +529,19 @@ class MCPDiagnostics:
                 start = time.time()
                 if "hooks" in config:
                     hooks = config["hooks"]
-                    has_enhance_hook = "user_prompt_submit" in hooks
-                    has_learn_hook = "assistant_response" in hooks
+                    # Check for correct camelCase event names
+                    has_enhance_hook = "UserPromptSubmit" in hooks
+                    has_learn_hook = "Stop" in hooks
+                    # Check for old incorrect snake_case event names
+                    has_old_enhance = "user_prompt_submit" in hooks
+                    has_old_learn = "assistant_response" in hooks
 
                     if has_enhance_hook or has_learn_hook:
                         hook_info = []
                         if has_enhance_hook:
-                            hook_info.append("user_prompt_submit (enhance)")
+                            hook_info.append("UserPromptSubmit (enhance)")
                         if has_learn_hook:
-                            hook_info.append("assistant_response (learn)")
+                            hook_info.append("Stop (learn)")
 
                         results.append(
                             DiagnosticResult(
@@ -546,6 +550,25 @@ class MCPDiagnostics:
                                 severity=DiagnosticSeverity.SUCCESS,
                                 message=f"Claude Code hooks configured: {', '.join(hook_info)}",
                                 metadata={"hooks": hooks},
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                    elif has_old_enhance or has_old_learn:
+                        # Old incorrect event names detected
+                        old_hooks = []
+                        if has_old_enhance:
+                            old_hooks.append("user_prompt_submit")
+                        if has_old_learn:
+                            old_hooks.append("assistant_response")
+
+                        results.append(
+                            DiagnosticResult(
+                                check_name="claude_code_hooks",
+                                success=False,
+                                severity=DiagnosticSeverity.ERROR,
+                                message=f"Incorrect hook event names detected: {', '.join(old_hooks)}",
+                                error="Using snake_case event names instead of camelCase",
+                                fix_suggestion="Run: kuzu-memory install add claude-code --force to update hook event names",
                                 duration_ms=(time.time() - start) * 1000,
                             )
                         )
