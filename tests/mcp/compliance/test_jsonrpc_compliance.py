@@ -33,9 +33,9 @@ class TestRequestStructure:
         assert "jsonrpc" in response, "Response must have jsonrpc field"
         assert response["jsonrpc"] == "2.0", "Response must be JSON-RPC 2.0"
         assert "id" in response, "Response must have id field"
-        assert "result" in response or "error" in response, (
-            "Response must have result or error"
-        )
+        assert (
+            "result" in response or "error" in response
+        ), "Response must have result or error"
 
     @pytest.mark.asyncio
     async def test_request_with_params_object(self, initialized_client):
@@ -162,9 +162,9 @@ class TestResponseStructure:
         has_error = "error" in response
 
         # Should have exactly one (XOR)
-        assert has_result != has_error, (
-            "Response must have either result or error, not both"
-        )
+        assert (
+            has_result != has_error
+        ), "Response must have either result or error, not both"
 
 
 @pytest.mark.compliance

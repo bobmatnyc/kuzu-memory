@@ -21,14 +21,14 @@ logger = logging.getLogger(__name__)
 # Reference: Claude Code uses camelCase event names, not snake_case
 VALID_CLAUDE_CODE_EVENTS = {
     "UserPromptSubmit",  # Fires when user submits a prompt
-    "PreToolUse",        # Fires before a tool is used
-    "PostToolUse",       # Fires after a tool is used
-    "Stop",              # Fires when Claude finishes responding
-    "SubagentStop",      # Fires when a subagent stops
-    "Notification",      # Fires on notifications
-    "SessionStart",      # Fires at session start
-    "SessionEnd",        # Fires at session end
-    "PreCompact",        # Fires before compaction
+    "PreToolUse",  # Fires before a tool is used
+    "PostToolUse",  # Fires after a tool is used
+    "Stop",  # Fires when Claude finishes responding
+    "SubagentStop",  # Fires when a subagent stops
+    "Notification",  # Fires on notifications
+    "SessionStart",  # Fires at session start
+    "SessionEnd",  # Fires at session end
+    "PreCompact",  # Fires before compaction
 }
 
 
@@ -286,6 +286,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         # Get package version for comment
         try:
             from importlib.metadata import version
+
             pkg_version = version("kuzu-memory")
         except Exception:
             pkg_version = "1.3.3+"
