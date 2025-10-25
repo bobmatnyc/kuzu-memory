@@ -87,6 +87,9 @@ def init(ctx, force: bool, config_path):
                     },
                 )
 
+            # Note: Auto git sync already triggered during KuzuMemory.__init__()
+            # via _auto_git_sync("init") call
+
         rich_print(f"✅ Initialized database: {db_path}")
 
         # Create example config if requested

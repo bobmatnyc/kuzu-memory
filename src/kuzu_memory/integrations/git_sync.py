@@ -194,15 +194,35 @@ class GitSyncManager:
                 except Exception:
                     pass
 
+        # Use commit author's email as user_id for namespacing
+        # Priority: committer.email > author.email
+        # (committer is who actually committed, author is who wrote the code)
+        user_id = None
+        try:
+            # Prefer committer email (who actually committed)
+            if hasattr(commit, "committer") and hasattr(commit.committer, "email"):
+                user_id = commit.committer.email
+            # Fallback to author email (who wrote the code)
+            elif hasattr(commit, "author") and hasattr(commit.author, "email"):
+                user_id = commit.author.email
+        except Exception as e:
+            logger.debug(f"Failed to extract user_id from commit: {e}")
+
         # Create memory with EPISODIC type (30-day retention)
         # Note: valid_to is auto-set by Memory model based on memory_type
         memory = Memory(
             content=content,
             memory_type=MemoryType.EPISODIC,
             source_type="git_sync",
+            user_id=user_id,  # Tag with commit author/committer
             metadata={
                 "commit_sha": commit.hexsha,
                 "commit_author": f"{commit.author.name} <{commit.author.email}>",
+                "commit_committer": (
+                    f"{commit.committer.name} <{commit.committer.email}>"
+                    if hasattr(commit, "committer")
+                    else None
+                ),
                 "commit_timestamp": commit.committed_datetime.isoformat(),
                 "branch": branch_name,
                 "changed_files": changed_files,

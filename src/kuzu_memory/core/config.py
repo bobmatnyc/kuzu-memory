@@ -57,6 +57,15 @@ class RecallConfig:
 
 
 @dataclass
+class MemoryConfig:
+    """Memory creation and user tagging configuration."""
+
+    auto_tag_git_user: bool = True  # Auto-populate user_id from git
+    user_id_override: str | None = None  # Manual override for user_id
+    enable_multi_user: bool = True  # Enable multi-user features
+
+
+@dataclass
 class ExtractionConfig:
     """Memory extraction configuration."""
 
@@ -134,6 +143,15 @@ class GitSyncConfig:
     include_merge_commits: bool = True
     auto_sync_on_push: bool = True
 
+    # Automatic sync configuration
+    auto_sync_enabled: bool = True  # Enable automatic sync
+    auto_sync_on_enhance: bool = True  # Sync when enhance is called
+    auto_sync_on_learn: bool = (
+        False  # Sync when learn is called (optional, may be slow)
+    )
+    auto_sync_interval_hours: int = 24  # How often to sync (0 = never, periodic only)
+    auto_sync_max_commits: int = 50  # Max commits per auto-sync to prevent blocking
+
 
 @dataclass
 class KuzuMemoryConfig:
@@ -147,6 +165,7 @@ class KuzuMemoryConfig:
     # Sub-configurations
     storage: StorageConfig = field(default_factory=StorageConfig)
     recall: RecallConfig = field(default_factory=RecallConfig)
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
     extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     retention: RetentionConfig = field(default_factory=RetentionConfig)
@@ -192,6 +211,13 @@ class KuzuMemoryConfig:
                     if hasattr(recall_config, key):
                         setattr(recall_config, key, value)
 
+            memory_config = MemoryConfig()
+            if "memory" in validated_config:
+                memory_data = validated_config["memory"]
+                for key, value in memory_data.items():
+                    if hasattr(memory_config, key):
+                        setattr(memory_config, key, value)
+
             extraction_config = ExtractionConfig()
             if "extraction" in validated_config:
                 extraction_data = validated_config["extraction"]
@@ -224,6 +250,7 @@ class KuzuMemoryConfig:
             return cls(
                 storage=storage_config,
                 recall=recall_config,
+                memory=memory_config,
                 extraction=extraction_config,
                 performance=performance_config,
                 retention=retention_config,
@@ -301,6 +328,11 @@ class KuzuMemoryConfig:
                 "cache_size": self.recall.cache_size,
                 "cache_ttl_seconds": self.recall.cache_ttl_seconds,
             },
+            "memory": {
+                "auto_tag_git_user": self.memory.auto_tag_git_user,
+                "user_id_override": self.memory.user_id_override,
+                "enable_multi_user": self.memory.enable_multi_user,
+            },
             "extraction": {
                 "min_memory_length": self.extraction.min_memory_length,
                 "max_memory_length": self.extraction.max_memory_length,
@@ -334,6 +366,11 @@ class KuzuMemoryConfig:
                 "min_message_length": self.git_sync.min_message_length,
                 "include_merge_commits": self.git_sync.include_merge_commits,
                 "auto_sync_on_push": self.git_sync.auto_sync_on_push,
+                "auto_sync_enabled": self.git_sync.auto_sync_enabled,
+                "auto_sync_on_enhance": self.git_sync.auto_sync_on_enhance,
+                "auto_sync_on_learn": self.git_sync.auto_sync_on_learn,
+                "auto_sync_interval_hours": self.git_sync.auto_sync_interval_hours,
+                "auto_sync_max_commits": self.git_sync.auto_sync_max_commits,
             },
         }
 

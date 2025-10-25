@@ -110,17 +110,35 @@ class TemporalDecayEngine:
                 logger.warning(f"Unknown memory type in config: {memory_type_str}")
 
     def calculate_temporal_score(
-        self, memory: Memory, current_time: datetime | None = None
+        self,
+        memory: Memory,
+        current_time: datetime | None = None,
+        project_last_activity: datetime | None = None,
     ) -> float:
         """
-        Calculate temporal decay score for a memory.
+        Calculate temporal decay score for a memory with activity-aware recency.
+
+        When project_last_activity is provided, memories from before the last
+        activity period are scored relative to that activity time instead of
+        absolute current time. This prevents old memories from appearing stale
+        when resuming projects after gaps.
 
         Args:
             memory: Memory to calculate score for
             current_time: Current time (defaults to now)
+            project_last_activity: Last project activity time for activity-aware decay.
+                If provided, memories before this time are scored relative to it.
+                Memories after this time use normal absolute time scoring.
 
         Returns:
             Temporal decay score between 0.0 and 1.0
+
+        Example:
+            # Project last active: Jan 1, 2025
+            # Resume project: Feb 1, 2025 (1 month gap)
+            # Memory from Dec 25, 2024:
+            #   - Without activity-aware: 37 days old (stale)
+            #   - With activity-aware: 7 days before last activity (recent)
         """
         if current_time is None:
             current_time = datetime.now()
@@ -136,9 +154,28 @@ class TemporalDecayEngine:
                 f"Memory {memory.id} has None created_at, using current time"
             )
             memory.created_at = current_time
-        age = current_time - memory.created_at
-        age_days = age.total_seconds() / (24 * 3600)
-        age_hours = age.total_seconds() / 3600
+
+        # Activity-aware age calculation
+        # For memories created BEFORE last activity: use relative time
+        # For memories created AFTER last activity: use absolute time (normal)
+        if (
+            project_last_activity is not None
+            and memory.created_at < project_last_activity
+        ):
+            # Memory from before project gap - calculate age relative to last activity
+            age = project_last_activity - memory.created_at
+            age_days = age.total_seconds() / (24 * 3600)
+            age_hours = age.total_seconds() / 3600
+            activity_aware_mode = True
+        else:
+            # Recent memory (after resume) or no activity tracking - use absolute time
+            age = current_time - memory.created_at
+            age_days = age.total_seconds() / (24 * 3600)
+            age_hours = age.total_seconds() / 3600
+            activity_aware_mode = False
+
+        # Store mode for explanation
+        self._last_activity_aware_mode = activity_aware_mode
 
         # Calculate base decay score
         decay_score = self._calculate_decay_score(age_days, params)
@@ -227,7 +264,10 @@ class TemporalDecayEngine:
             return 0.1
 
     def get_decay_explanation(
-        self, memory: Memory, current_time: datetime | None = None
+        self,
+        memory: Memory,
+        current_time: datetime | None = None,
+        project_last_activity: datetime | None = None,
     ) -> dict[str, Any]:
         """
         Get detailed explanation of temporal decay calculation.
@@ -235,9 +275,10 @@ class TemporalDecayEngine:
         Args:
             memory: Memory to explain
             current_time: Current time (defaults to now)
+            project_last_activity: Last project activity time for activity-aware explanation
 
         Returns:
-            Dictionary with decay calculation details
+            Dictionary with decay calculation details including activity-aware mode
         """
         if current_time is None:
             current_time = datetime.now()
@@ -245,12 +286,32 @@ class TemporalDecayEngine:
         params = self.type_decay_params.get(
             memory.memory_type, self.type_decay_params[MemoryType.PROCEDURAL]
         )
-        age = current_time - memory.created_at
-        age_days = age.total_seconds() / (24 * 3600)
-        age_hours = age.total_seconds() / 3600
+
+        # Calculate both absolute and activity-aware ages for comparison
+        absolute_age = current_time - memory.created_at
+        absolute_age_days = absolute_age.total_seconds() / (24 * 3600)
+        absolute_age_hours = absolute_age.total_seconds() / 3600
+
+        # Determine which mode was/will be used
+        activity_aware_mode = (
+            project_last_activity is not None
+            and memory.created_at < project_last_activity
+        )
+
+        if activity_aware_mode:
+            # Calculate relative age (to last activity)
+            relative_age = project_last_activity - memory.created_at
+            age_days = relative_age.total_seconds() / (24 * 3600)
+            age_hours = relative_age.total_seconds() / 3600
+        else:
+            # Use absolute age
+            age_days = absolute_age_days
+            age_hours = absolute_age_hours
 
         base_score = self._calculate_decay_score(age_days, params)
-        final_score = self.calculate_temporal_score(memory, current_time)
+        final_score = self.calculate_temporal_score(
+            memory, current_time, project_last_activity
+        )
 
         # Check if recent boost was applied
         recent_boost_applied = (
@@ -258,9 +319,10 @@ class TemporalDecayEngine:
             and age_hours < self.decay_config["boost_recent_threshold_hours"]
         )
 
-        return {
+        explanation = {
             "memory_id": memory.id,
             "memory_type": memory.memory_type.value,
+            "activity_aware_mode": activity_aware_mode,
             "age_days": round(age_days, 2),
             "age_hours": round(age_hours, 2),
             "decay_function": params.get(
@@ -274,6 +336,24 @@ class TemporalDecayEngine:
             "boost_multiplier": params.get("boost_multiplier", 1.0),
             "parameters_used": params,
         }
+
+        # Add activity-aware context if applicable
+        if activity_aware_mode and project_last_activity:
+            gap_duration = current_time - project_last_activity
+            gap_days = gap_duration.total_seconds() / (24 * 3600)
+            explanation["activity_aware_context"] = {
+                "project_last_activity": project_last_activity.isoformat(),
+                "gap_duration_days": round(gap_days, 2),
+                "absolute_age_days": round(absolute_age_days, 2),
+                "relative_age_days": round(age_days, 2),
+                "age_reduction_days": round(absolute_age_days - age_days, 2),
+                "explanation": (
+                    f"Memory scored relative to last activity ({age_days:.1f} days before) "
+                    f"instead of absolute time ({absolute_age_days:.1f} days ago)"
+                ),
+            }
+
+        return explanation
 
     def configure_memory_type_decay(self, memory_type: MemoryType, **kwargs):
         """
@@ -290,7 +370,10 @@ class TemporalDecayEngine:
         logger.info(f"Updated decay parameters for {memory_type.value}: {kwargs}")
 
     def get_effective_weight(
-        self, memory: Memory, current_time: datetime | None = None
+        self,
+        memory: Memory,
+        current_time: datetime | None = None,
+        project_last_activity: datetime | None = None,
     ) -> float:
         """
         Get the effective temporal weight for a memory in ranking.
@@ -300,11 +383,46 @@ class TemporalDecayEngine:
         Args:
             memory: Memory to calculate weight for
             current_time: Current time (defaults to now)
+            project_last_activity: Last project activity time for activity-aware decay
 
         Returns:
             Effective temporal weight for ranking
         """
-        temporal_score = self.calculate_temporal_score(memory, current_time)
+        temporal_score = self.calculate_temporal_score(
+            memory, current_time, project_last_activity
+        )
         base_weight = self.decay_config["base_weight"]
 
         return base_weight * temporal_score
+
+    @staticmethod
+    def get_project_last_activity(memories: list[Memory]) -> datetime | None:
+        """
+        Get the last activity time from a collection of memories.
+
+        This finds the most recent created_at timestamp, representing when
+        the project was last actively worked on.
+
+        Args:
+            memories: List of memories to analyze
+
+        Returns:
+            Most recent created_at datetime, or None if no valid memories
+
+        Example:
+            memories = get_all_project_memories()
+            last_activity = TemporalDecayEngine.get_project_last_activity(memories)
+            score = engine.calculate_temporal_score(
+                memory, current_time, project_last_activity=last_activity
+            )
+        """
+        if not memories:
+            return None
+
+        # Filter out memories with None created_at and find the maximum
+        valid_memories = [m for m in memories if m.created_at is not None]
+
+        if not valid_memories:
+            return None
+
+        return max(m.created_at for m in valid_memories)

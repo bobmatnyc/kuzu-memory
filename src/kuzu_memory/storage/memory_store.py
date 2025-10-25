@@ -629,3 +629,92 @@ class MemoryStore:
         except Exception as e:
             logger.error(f"Error batch retrieving memories: {e}")
             raise DatabaseError(f"Failed to batch get memories: {e}")
+
+    def get_memories_by_user(self, user_id: str, limit: int = 100) -> list[Memory]:
+        """
+        Get all memories created by a specific user.
+
+        Args:
+            user_id: User ID to filter by
+            limit: Maximum number of memories to return
+
+        Returns:
+            List of memories created by the user
+        """
+        try:
+            # Check cache first
+            if self.cache:
+                cache_key = f"user_memories:{user_id}:{limit}"
+                cached_result = self.cache.get(cache_key)
+                if cached_result is not None:
+                    return cached_result
+
+            # Query database with user_id filter
+            query = """
+                MATCH (m:Memory)
+                WHERE m.user_id = $user_id
+                  AND (m.valid_to IS NULL OR m.valid_to > $now)
+                RETURN m
+                ORDER BY m.created_at DESC
+                LIMIT $limit
+            """
+            params = {"user_id": user_id, "now": datetime.now(), "limit": limit}
+            results = self.query_builder.db_adapter.execute_query(query, params)
+
+            # Convert results to Memory objects
+            memories = []
+            for row in results:
+                if "m" in row:
+                    memory = Memory.from_dict(row["m"])
+                    memories.append(memory)
+
+            # Cache result
+            if self.cache and memories:
+                cache_key = f"user_memories:{user_id}:{limit}"
+                self.cache.put(cache_key, memories)
+
+            logger.debug(f"Found {len(memories)} memories for user {user_id}")
+            return memories
+
+        except Exception as e:
+            logger.error(f"Error getting memories by user: {e}")
+            raise DatabaseError(f"Failed to get memories by user: {e}")
+
+    def get_users(self) -> list[str]:
+        """
+        Get list of all user IDs that have created memories.
+
+        Returns:
+            List of unique user IDs (excluding null values)
+        """
+        try:
+            # Check cache first
+            if self.cache:
+                cached_result = self.cache.get("all_users")
+                if cached_result is not None:
+                    return cached_result
+
+            # Query database for unique user IDs
+            query = """
+                MATCH (m:Memory)
+                WHERE m.user_id IS NOT NULL
+                  AND (m.valid_to IS NULL OR m.valid_to > $now)
+                RETURN DISTINCT m.user_id as user_id
+                ORDER BY user_id
+            """
+            params = {"now": datetime.now()}
+            results = self.query_builder.db_adapter.execute_query(query, params)
+
+            # Extract user IDs
+            users = [row["user_id"] for row in results if "user_id" in row]
+
+            # Cache result
+            if self.cache:
+                self.cache.put("all_users", users)
+
+            logger.debug(f"Found {len(users)} unique users")
+            return users
+
+        except Exception as e:
+            logger.error(f"Error getting users: {e}")
+            raise DatabaseError(f"Failed to get users: {e}")

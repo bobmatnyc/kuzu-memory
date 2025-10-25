@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.2] - 2025-10-25
+
+### Added
+
+- **Activity-Aware Temporal Decay** for fair recency scoring after project gaps
+  - New `project_last_activity` parameter in `calculate_temporal_score()`
+  - Memories from before project gaps scored relative to last activity instead of absolute time
+  - Prevents old memories from appearing stale when resuming projects after breaks
+  - Fully backward compatible (optional parameter)
+  - Static helper method `get_project_last_activity()` to automatically detect last activity
+  - Enhanced `get_decay_explanation()` with activity-aware context
+  - 15 comprehensive tests covering all scenarios
+  - Complete documentation in `docs/ACTIVITY_AWARE_TEMPORAL_DECAY.md`
+
+- **Automatic Git Commit Indexing** for seamless commit history tracking
+  - New `AutoGitSyncManager` for interval-based and trigger-based git sync
+  - Auto-syncs on enhance, learn, and init (configurable)
+  - Persistent state tracking in `.kuzu-memory/git_sync_state.json`
+  - Incremental sync after first run for performance
+  - Configuration options: `auto_sync_enabled`, `auto_sync_on_enhance`, `auto_sync_on_learn`, `auto_sync_interval_hours`, `auto_sync_max_commits`
+  - Silent operation with graceful error handling
+  - Performance impact <100ms, non-blocking
+  - 22 comprehensive tests covering all trigger modes
+  - Complete documentation in `docs/AUTO_GIT_SYNC.md`
+
+- **Git Username Tagging** for multi-user memory namespacing
+  - New `GitUserProvider` utility for reliable git user detection
+  - Auto-populates `user_id` field with git username (email → name → system username fallback)
+  - All new memories automatically tagged with current git user
+  - Git commits tagged with commit author/committer email
+  - New methods: `get_current_user_id()`, `get_users()`, `get_memories_by_user()`
+  - User filtering in queries and statistics
+  - Configuration options: `auto_tag_git_user`, `user_id_override`, `enable_multi_user`
+  - Fully backward compatible (existing memories with `user_id=None` work)
+  - Caching for performance (one git call per session)
+  - 20 comprehensive tests covering detection, tagging, and filtering
+  - Complete documentation in `docs/GIT_USER_TAGGING.md`
+
+### Changed
+
+- Git sync now includes both author and committer information in memory metadata
+- Memory statistics now include user breakdown when multi-user features enabled
+- Temporal decay explanations now show activity-aware mode when applicable
+
 ## [1.4.1] - 2025-10-25
 
 ### Added

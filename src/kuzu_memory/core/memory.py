@@ -23,6 +23,7 @@ from ..utils.exceptions import (
     PerformanceError,
     ValidationError,
 )
+from ..utils.git_user import GitUserProvider
 from .config import KuzuMemoryConfig
 from .constants import (
     DEFAULT_AGENT_ID,
@@ -175,6 +176,32 @@ class KuzuMemory:
             # Track initialization time
             self._initialized_at = datetime.now()
 
+            # Determine project root from db_path (go up from .kuzu-memory/memories.db)
+            self.project_root = self.db_path.parent.parent
+
+            # Auto-detect git user for memory namespacing
+            self._user_id: str | None = None
+            if self.config.memory.auto_tag_git_user:
+                if self.config.memory.user_id_override:
+                    # Use manual override if provided
+                    self._user_id = self.config.memory.user_id_override
+                    logger.info(f"Using manual user_id override: {self._user_id}")
+                else:
+                    # Auto-detect from git
+                    try:
+                        git_user_info = GitUserProvider.get_git_user_info(
+                            self.project_root
+                        )
+                        self._user_id = git_user_info.user_id
+                        logger.info(
+                            f"Auto-detected git user_id: {self._user_id} (source: {git_user_info.source})"
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to auto-detect git user, memories will not be tagged with user_id: {e}"
+                        )
+                        self._user_id = None
+
             logger.info(f"KuzuMemory initialized with database at {self.db_path}")
 
         except Exception as e:
@@ -210,6 +237,9 @@ class KuzuMemory:
             self.memory_store = self.container.get_memory_store()
             self.recall_coordinator = self.container.get_recall_coordinator()
 
+            # Initialize git sync components
+            self._initialize_git_sync()
+
             # Performance tracking
             self._performance_stats = {
                 "attach_memories_calls": 0,
@@ -220,8 +250,77 @@ class KuzuMemory:
                 "total_memories_recalled": 0,
             }
 
+            # Run initial auto-sync if enabled (periodic check)
+            self._auto_git_sync("init")
+
         except Exception as e:
             raise DatabaseError(f"Failed to initialize components: {e}")
+
+    def _initialize_git_sync(self) -> None:
+        """
+        Initialize git sync components if enabled.
+
+        Sets up GitSyncManager and AutoGitSyncManager for automatic
+        git commit indexing.
+        """
+        try:
+            from ..integrations.auto_git_sync import AutoGitSyncManager
+            from ..integrations.git_sync import GitSyncManager
+
+            # Determine repository path (use project root or current directory)
+            repo_path = (
+                self.db_path.parent.parent
+            )  # Go up from .kuzu-memory/memories.db
+
+            # Create git sync manager
+            git_sync = GitSyncManager(
+                repo_path=repo_path,
+                config=self.config.git_sync,
+                memory_store=self.memory_store,
+            )
+
+            # Create auto git sync manager
+            state_path = self.db_path.parent / "git_sync_state.json"
+            self.auto_git_sync = AutoGitSyncManager(
+                git_sync_manager=git_sync,
+                config=self.config.git_sync,
+                state_path=state_path,
+            )
+
+            logger.debug("Git sync components initialized")
+
+        except Exception as e:
+            # Git sync is optional, log warning but don't fail initialization
+            logger.warning(f"Failed to initialize git sync: {e}")
+            self.auto_git_sync = None
+
+    def _auto_git_sync(self, trigger: str = "periodic") -> None:
+        """
+        Trigger automatic git sync if enabled and conditions are met.
+
+        Args:
+            trigger: Sync trigger type ("enhance", "learn", "init", "periodic")
+        """
+        if not hasattr(self, "auto_git_sync") or self.auto_git_sync is None:
+            return
+
+        try:
+            # Run auto-sync in background (non-blocking)
+            # Only log on init trigger, others are silent by default
+            verbose = trigger == "init"
+            result = self.auto_git_sync.auto_sync_if_needed(
+                trigger=trigger, verbose=verbose
+            )
+
+            # Log only if sync actually happened
+            if result.get("success") and not result.get("skipped"):
+                commits_synced = result.get("commits_synced", 0)
+                if commits_synced > 0:
+                    logger.info(f"Auto-synced {commits_synced} git commits ({trigger})")
+
+        except Exception as e:
+            # Don't let git sync failures block main operations
+            logger.debug(f"Auto git sync failed ({trigger}): {e}")
 
     @cached_method()  # Uses default cache settings from constants
     def attach_memories(
@@ -306,6 +405,9 @@ class KuzuMemory:
                 f"attach_memories completed in {execution_time_ms:.1f}ms with {len(context.memories)} memories"
             )
 
+            # Trigger auto-sync after attach (if enabled)
+            self._auto_git_sync("enhance")
+
             return context
 
         except Exception as e:
@@ -344,6 +446,11 @@ class KuzuMemory:
 
         from .models import Memory, MemoryType
 
+        # Auto-populate user_id from git if not provided in metadata
+        user_id = metadata.get("user_id") if metadata else None
+        if user_id is None and self._user_id is not None:
+            user_id = self._user_id
+
         memory = Memory(
             id=str(uuid.uuid4()),
             content=content,
@@ -352,7 +459,7 @@ class KuzuMemory:
             importance=0.8,  # Default importance for direct memories
             confidence=1.0,  # High confidence since it's explicit
             created_at=datetime.now(),  # Keep as datetime object
-            user_id=metadata.get("user_id") if metadata else None,
+            user_id=user_id,
             session_id=session_id,
             agent_id=agent_id or "default",
             metadata=metadata or {},
@@ -382,7 +489,7 @@ class KuzuMemory:
             content: Text to extract memories from (usually LLM response)
             metadata: Additional context (user_id, session_id, etc.)
             source: Origin of content
-            user_id: Optional user ID
+            user_id: Optional user ID (auto-populated from git if None)
             session_id: Optional session ID
             agent_id: Agent ID
 
@@ -407,12 +514,17 @@ class KuzuMemory:
             if len(content) > 100000:  # 100KB limit
                 raise ValidationError("Content exceeds maximum length")
 
+            # Auto-populate user_id from git if not provided
+            effective_user_id = user_id
+            if effective_user_id is None and self._user_id is not None:
+                effective_user_id = self._user_id
+
             # Execute memory generation
             memory_ids = self.memory_store.generate_memories(
                 content=content,
                 metadata=metadata,
                 source=source,
-                user_id=user_id,
+                user_id=effective_user_id,
                 session_id=session_id,
                 agent_id=agent_id,
             )
@@ -435,6 +547,9 @@ class KuzuMemory:
             logger.debug(
                 f"generate_memories completed in {execution_time_ms:.1f}ms with {len(memory_ids)} memories"
             )
+
+            # Trigger auto-sync after generate (if enabled)
+            self._auto_git_sync("learn")
 
             return memory_ids
 
@@ -679,6 +794,45 @@ class KuzuMemory:
             logger.error(f"Failed to batch get memories: {e}")
             raise KuzuMemoryError(f"batch_get_memories_by_ids failed: {e}")
 
+    def get_memories_by_user(self, user_id: str, limit: int = 100) -> list[Memory]:
+        """
+        Get all memories created by a specific user.
+
+        Args:
+            user_id: User ID to filter by
+            limit: Maximum number of memories to return
+
+        Returns:
+            List of memories created by the user
+        """
+        try:
+            return self.memory_store.get_memories_by_user(user_id, limit)
+        except Exception as e:
+            logger.error(f"Failed to get memories by user {user_id}: {e}")
+            return []
+
+    def get_users(self) -> list[str]:
+        """
+        Get list of all user IDs that have created memories.
+
+        Returns:
+            List of unique user IDs
+        """
+        try:
+            return self.memory_store.get_users()
+        except Exception as e:
+            logger.error(f"Failed to get users: {e}")
+            return []
+
+    def get_current_user_id(self) -> str | None:
+        """
+        Get the current user ID used for tagging new memories.
+
+        Returns:
+            Current user ID or None if not configured
+        """
+        return self._user_id
+
     def get_statistics(self) -> dict[str, Any]:
         """
         Get comprehensive statistics about the memory system.
@@ -687,16 +841,31 @@ class KuzuMemory:
             Dictionary with statistics from all components
         """
         try:
-            return {
+            stats = {
                 "system_info": {
                     "initialized_at": self._initialized_at.isoformat(),
                     "db_path": str(self.db_path),
                     "config_version": self.config.version,
+                    "current_user_id": self._user_id,
                 },
                 "performance_stats": self._performance_stats.copy(),
                 "storage_stats": self.memory_store.get_storage_statistics(),
                 "recall_stats": self.recall_coordinator.get_recall_statistics(),
             }
+
+            # Add user statistics if multi-user is enabled
+            if self.config.memory.enable_multi_user:
+                try:
+                    users = self.get_users()
+                    stats["user_stats"] = {
+                        "total_users": len(users),
+                        "users": users,
+                        "current_user": self._user_id,
+                    }
+                except Exception as e:
+                    logger.warning(f"Failed to get user statistics: {e}")
+
+            return stats
         except Exception as e:
             logger.error(f"Failed to get statistics: {e}")
             return {"error": str(e)}
