@@ -4,14 +4,16 @@ Unit tests for Claude Code hooks.
 
 Tests both kuzu_enhance.py and kuzu_learn.py hook functions.
 """
+
 import json
-import pytest
-import tempfile
-from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import Mock, patch, MagicMock
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add hooks directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / ".claude" / "hooks"))
@@ -67,14 +69,10 @@ class TestKuzuEnhanceHook:
         assert result is not None
         assert len(result) == 100000  # Should be truncated
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_enhance_with_memory_success(self, mock_run):
         """Test successful memory enhancement."""
-        mock_run.return_value = Mock(
-            returncode=0,
-            stdout="Enhanced context",
-            stderr=""
-        )
+        mock_run.return_value = Mock(returncode=0, stdout="Enhanced context", stderr="")
 
         result = kuzu_enhance.enhance_with_memory("test prompt")
         assert result == "Enhanced context"
@@ -84,19 +82,15 @@ class TestKuzuEnhanceHook:
         assert "kuzu-memory" in call_args[0][0]
         assert "enhance" in call_args[0][0]
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_enhance_with_memory_failure(self, mock_run):
         """Test failed memory enhancement."""
-        mock_run.return_value = Mock(
-            returncode=1,
-            stdout="",
-            stderr="Error message"
-        )
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Error message")
 
         result = kuzu_enhance.enhance_with_memory("test prompt")
         assert result is None
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_enhance_with_memory_timeout(self, mock_run):
         """Test memory enhancement timeout."""
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 2)
@@ -104,7 +98,7 @@ class TestKuzuEnhanceHook:
         result = kuzu_enhance.enhance_with_memory("test prompt")
         assert result is None
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_enhance_with_memory_command_not_found(self, mock_run):
         """Test when kuzu-memory command is not found."""
         mock_run.side_effect = FileNotFoundError()
@@ -159,8 +153,8 @@ class TestKuzuLearnHook:
                 "role": "assistant",
                 "content": [
                     {"type": "text", "text": "Hello"},
-                    {"type": "text", "text": "World"}
-                ]
+                    {"type": "text", "text": "World"},
+                ],
             }
         }
         result = kuzu_learn.extract_assistant_text(entry)
@@ -174,8 +168,8 @@ class TestKuzuLearnHook:
                 "content": [
                     {"type": "text", "text": "Let me check"},
                     {"type": "tool_use", "name": "bash", "input": "ls"},
-                    {"type": "text", "text": "Found files"}
-                ]
+                    {"type": "text", "text": "Found files"},
+                ],
             }
         }
         result = kuzu_learn.extract_assistant_text(entry)
@@ -184,22 +178,14 @@ class TestKuzuLearnHook:
     def test_extract_assistant_text_not_assistant(self):
         """Test extracting from non-assistant message."""
         entry = {
-            "message": {
-                "role": "user",
-                "content": [{"type": "text", "text": "Hello"}]
-            }
+            "message": {"role": "user", "content": [{"type": "text", "text": "Hello"}]}
         }
         result = kuzu_learn.extract_assistant_text(entry)
         assert result is None
 
     def test_extract_assistant_text_empty_content(self):
         """Test extracting from message with no text."""
-        entry = {
-            "message": {
-                "role": "assistant",
-                "content": []
-            }
-        }
+        entry = {"message": {"role": "assistant", "content": []}}
         result = kuzu_learn.extract_assistant_text(entry)
         assert result is None
 
@@ -237,14 +223,10 @@ class TestKuzuLearnHook:
         result = kuzu_learn.find_last_assistant_message(transcript)
         assert result is None
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_store_memory_success(self, mock_run):
         """Test successful memory storage."""
-        mock_run.return_value = Mock(
-            returncode=0,
-            stdout="",
-            stderr=""
-        )
+        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
         result = kuzu_learn.store_memory("Test memory content")
         assert result is True
@@ -255,19 +237,15 @@ class TestKuzuLearnHook:
         assert "store" in call_args[0][0]
         assert "Test memory content" in call_args[0][0]
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_store_memory_failure(self, mock_run):
         """Test failed memory storage."""
-        mock_run.return_value = Mock(
-            returncode=1,
-            stdout="",
-            stderr="Storage failed"
-        )
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Storage failed")
 
         result = kuzu_learn.store_memory("Test memory")
         assert result is False
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_store_memory_timeout(self, mock_run):
         """Test memory storage timeout."""
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 5)
@@ -275,7 +253,7 @@ class TestKuzuLearnHook:
         result = kuzu_learn.store_memory("Test memory")
         assert result is False
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_store_memory_command_not_found(self, mock_run):
         """Test when kuzu-memory command is not found."""
         mock_run.side_effect = FileNotFoundError()
@@ -302,9 +280,9 @@ class TestEdgeCases:
         """Test transcript with mix of valid and invalid lines."""
         transcript = tmp_path / "mixed.jsonl"
         content = [
-            'invalid json line',
+            "invalid json line",
             '{"message": {"role": "assistant", "content": [{"type": "text", "text": "Valid"}]}}',
-            '',  # empty line
+            "",  # empty line
             '{"incomplete": ',
         ]
         transcript.write_text("\n".join(content))
