@@ -318,6 +318,33 @@ auggie_memory.store_conversation(user_msg, ai_response, user_feedback)
 
 ### Claude Integration
 
+#### Claude Desktop and Claude Code
+
+For Claude Desktop and Claude Code, KuzuMemory provides native integrations:
+
+```bash
+# Claude Desktop (global memory across all conversations)
+kuzu-memory install add claude-desktop
+
+# Claude Code (project-specific memory with hooks)
+kuzu-memory install add claude-code
+```
+
+**Claude Code Hook System**: The `claude-code` installer configures automatic hooks that:
+- Enhance prompts using `UserPromptSubmit` event
+- Learn from responses using `Stop` event
+- No manual subprocess calls needed - works automatically!
+
+See [CLAUDE_SETUP.md](CLAUDE_SETUP.md) for complete documentation including:
+- Hook event names (`UserPromptSubmit`, `Stop`)
+- Performance expectations (350-450ms CLI, <100ms core DB)
+- Troubleshooting and testing
+- Available hook events reference
+
+#### Manual Claude Integration (via subprocess)
+
+For custom integrations or other Claude-based tools:
+
 ```python
 # Claude-specific integration (via subprocess)
 def claude_with_memory(prompt: str) -> str:

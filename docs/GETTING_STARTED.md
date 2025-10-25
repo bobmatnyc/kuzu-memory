@@ -561,7 +561,7 @@ After completing this guide, you should be able to:
 # Claude Desktop (auto-detects best method)
 kuzu-memory install add claude-desktop
 
-# Claude Code IDE integration
+# Claude Code IDE integration (includes automatic hooks)
 kuzu-memory install add claude-code
 
 # Auggie integration
@@ -572,10 +572,16 @@ kuzu-memory install add universal
 ```
 
 **Primary Installers:**
-- `claude-code` - Claude Code IDE integration
+- `claude-code` - Claude Code IDE integration with automatic hooks (`UserPromptSubmit`, `Stop`)
 - `claude-desktop` - Claude Desktop (auto-detects pipx or home)
 - `auggie` - Auggie AI integration
 - `universal` - Universal integration files
+
+**Claude Code Hook System**: The `claude-code` installer automatically configures hooks that enhance prompts and learn from conversations. See [Hook System documentation](CLAUDE_SETUP.md#-claude-code-hook-system) for:
+- Correct event names (`UserPromptSubmit`, `Stop`)
+- Performance expectations (350-450ms CLI, <100ms core DB)
+- Testing and troubleshooting
+- Available hook events reference
 
 > **Note**: Old installer names still work but show deprecation warnings.
 

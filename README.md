@@ -19,7 +19,7 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 - **🌐 Cross-Platform** - Standardized cognitive types shared with TypeScript implementation
 - **📱 Offline First** - Works completely without internet connection
 - **🔧 MCP Ready** - Native Claude Desktop integration with async learning support
-- **🤖 Hook Compatible** - Ready for claude-mpm hook integration
+- **🤖 Hook System** - Automatic Claude Code integration using hooks (`UserPromptSubmit`, `Stop`)
 
 ## 🚀 Quick Start
 
@@ -63,7 +63,7 @@ kuzu-memory install status
 ```
 
 **Primary Installers** (ONE path for each AI system):
-- `claude-code` - Claude Code IDE integration (project-specific memory isolation)
+- `claude-code` - Claude Code IDE integration with automatic hooks (project-specific memory isolation)
 - `claude-desktop` - Claude Desktop app (global memory across all conversations)
 - `auggie` - Auggie AI integration
 - `universal` - Universal integration files
@@ -74,6 +74,7 @@ kuzu-memory install status
 - **Configuration**: Creates `.kuzu-memory/config.yaml` in project directory
 - **Database**: Initializes project database in `.kuzu-memory/memorydb/`
 - **Memory Scope**: Each project has isolated memory
+- **Hook System**: Automatic enhancement (`UserPromptSubmit`) and learning (`Stop`)
 - **Use Case**: Project-specific context and memories
 - **Sharing**: Memory can be committed to git for team collaboration
 
