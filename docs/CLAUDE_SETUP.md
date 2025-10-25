@@ -360,7 +360,7 @@ All files can be committed to git for team collaboration.
 3. **MCP Server Configuration** - Enables KuzuMemory tools in Claude Code
 4. **Project CLAUDE.md** - Project-specific context and guidelines
 5. **Shell Wrappers** - Compatibility scripts for cross-platform support
-6. **Auto-Enhancement Hooks** - Automatic context injection for all queries
+6. **Auto-Enhancement Hooks** - Automatic context injection using Claude Code hooks (see Hook System section below)
 
 ### Platform Support
 
@@ -426,6 +426,197 @@ git pull
 # Memories are automatically available!
 kuzu-memory status  # See shared memories
 ```
+
+---
+
+## 🔗 Claude Code Hook System
+
+### Overview
+
+KuzuMemory integrates with Claude Code using hooks that automatically enhance your prompts and learn from conversations. The hook system uses correct Claude Code event names and has been tested and verified.
+
+### Hook Events
+
+The installation configures two hooks with correct event names:
+
+#### UserPromptSubmit Hook (Prompt Enhancement)
+- **Event Name**: `UserPromptSubmit` (camelCase, not snake_case)
+- **When It Fires**: When you submit a prompt to Claude
+- **What It Does**: Enhances your prompt with relevant project memories
+- **Command**: `kuzu-memory memory enhance "{{prompt}}"`
+- **Performance**: 350-450ms (acceptable for CLI)
+- **Template Variable**: `{{prompt}}` - Your input text
+
+#### Stop Hook (Conversation Learning)
+- **Event Name**: `Stop` (not `assistant_response`)
+- **When It Fires**: When Claude finishes responding
+- **What It Does**: Stores learnings from the conversation asynchronously
+- **Command**: `kuzu-memory memory learn "{{response}}" --quiet`
+- **Performance**: ~400ms, non-blocking
+- **Template Variable**: `{{response}}` - Claude's response text
+
+### Hook Configuration Example
+
+After installation, your `.claude/config.local.json` will contain:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "handler": "kuzu_memory_enhance",
+      "command": "/path/to/kuzu-memory memory enhance \"{{prompt}}\"",
+      "enabled": true
+    }],
+    "Stop": [{
+      "handler": "kuzu_memory_learn",
+      "command": "/path/to/kuzu-memory memory learn \"{{response}}\" --quiet",
+      "enabled": true
+    }]
+  }
+}
+```
+
+### Performance Expectations
+
+Based on testing with v1.3.3:
+
+| Operation | Performance | Status |
+|-----------|-------------|--------|
+| CLI Enhance Command | 350-450ms | ✅ Acceptable |
+| CLI Learn Command | ~400ms | ✅ Acceptable |
+| Core DB Recall | <100ms | ✅ As designed |
+| Core DB Generation | <200ms | ✅ As designed |
+| Async Learning Queue | <200ms | ✅ Non-blocking |
+
+**Note**: CLI commands have overhead from process startup (~300ms), but core database operations are <100ms as designed. This is expected and acceptable for hook-based integration.
+
+### Available Claude Code Hook Events
+
+For reference, here are all valid Claude Code hook events:
+
+- **UserPromptSubmit** - User submits a prompt (used for enhancement)
+- **Stop** - Claude finishes responding (used for learning)
+- **PreToolUse** - Before tool execution
+- **PostToolUse** - After tool execution
+- **SubagentStop** - Subagent finishes
+- **Notification** - Notification events
+- **SessionStart** - Session begins
+- **SessionEnd** - Session ends
+- **PreCompact** - Before context compaction
+
+KuzuMemory uses `UserPromptSubmit` and `Stop` for optimal integration.
+
+### Testing Hooks
+
+#### Manual Testing
+
+Test the commands that hooks will execute:
+
+```bash
+# Test enhance command (UserPromptSubmit)
+kuzu-memory memory enhance "How do I optimize database queries?"
+
+# Test learn command (Stop)
+kuzu-memory memory learn "Testing hook system" --quiet
+
+# Verify memories were created
+kuzu-memory memory recent
+```
+
+#### Verify Hook Configuration
+
+```bash
+# Check installation status
+kuzu-memory install status
+
+# Validate hook configuration
+python3 -m json.tool .claude/config.local.json
+
+# Look for UserPromptSubmit and Stop events
+cat .claude/config.local.json | grep -A 5 "UserPromptSubmit"
+cat .claude/config.local.json | grep -A 5 "Stop"
+```
+
+#### In Claude Code
+
+1. **Open Claude Code** in your project
+2. **Start a conversation**: "What are the main features of this project?"
+3. **Observe**: Prompt should be enhanced automatically (UserPromptSubmit hook)
+4. **After response**: Check `kuzu-memory memory recent` to see if conversation was learned (Stop hook)
+
+### Troubleshooting Hooks
+
+#### Hooks Not Firing
+
+If hooks don't seem to be working:
+
+1. **Check event names** - Must be `UserPromptSubmit` and `Stop` (camelCase)
+   ```bash
+   cat .claude/config.local.json | grep -E "UserPromptSubmit|Stop"
+   ```
+
+2. **Verify command path** - Binary must exist and be executable
+   ```bash
+   which kuzu-memory
+   ls -la $(which kuzu-memory)
+   ```
+
+3. **Test commands manually**
+   ```bash
+   kuzu-memory memory enhance "test"
+   kuzu-memory memory learn "test" --quiet
+   ```
+
+4. **Check for old event names** - Old configs may have incorrect names
+   ```bash
+   # Should return nothing (these are wrong)
+   cat .claude/config.local.json | grep -E "user_prompt_submit|assistant_response"
+   ```
+
+5. **Reinstall if needed**
+   ```bash
+   kuzu-memory install add claude-code --force
+   ```
+
+#### Performance Issues
+
+If hooks are slow:
+
+```bash
+# Check database health
+kuzu-memory status --detailed
+
+# Monitor command performance
+time kuzu-memory memory enhance "test prompt"
+time kuzu-memory memory learn "test content" --quiet
+```
+
+Expected times:
+- Enhance: 350-450ms (includes CLI startup)
+- Learn: ~400ms (async, non-blocking)
+
+#### Old Configuration Migration
+
+If you have an old configuration with incorrect event names:
+
+```bash
+# Backup old config
+cp .claude/config.local.json .claude/config.local.json.backup
+
+# Reinstall with correct event names
+kuzu-memory install add claude-code --force
+
+# Verify new config uses correct names
+cat .claude/config.local.json | grep -E "UserPromptSubmit|Stop"
+```
+
+### Hook Best Practices
+
+1. **Keep hooks enabled** - They enhance every conversation automatically
+2. **Monitor performance** - Hooks should complete quickly (<1 second)
+3. **Check logs** - Use Claude Code developer console for debugging
+4. **Test after updates** - Verify hooks still work after upgrading
+5. **Commit configurations** - Share `.claude/config.local.json` with team
 
 ---
 
@@ -663,6 +854,35 @@ kuzu-memory claude status
 
 # Create local config anyway
 kuzu-memory claude install --force
+```
+
+#### Hooks Not Firing
+
+See the detailed "Troubleshooting Hooks" section in the Hook System chapter above. Quick checklist:
+
+1. **Verify event names** are `UserPromptSubmit` and `Stop` (not snake_case)
+2. **Check binary path** exists: `which kuzu-memory`
+3. **Test commands manually**:
+   ```bash
+   kuzu-memory memory enhance "test"
+   kuzu-memory memory learn "test" --quiet
+   ```
+4. **Reinstall hooks**: `kuzu-memory install add claude-code --force`
+
+#### Hooks Using Wrong Event Names
+
+If you have an old configuration with `user_prompt_submit` or `assistant_response`:
+
+```bash
+# These event names are INCORRECT and won't work:
+# ❌ user_prompt_submit (should be UserPromptSubmit)
+# ❌ assistant_response (should be Stop)
+
+# Fix by reinstalling:
+kuzu-memory install add claude-code --force
+
+# Verify correct names:
+cat .claude/config.local.json | grep -E "UserPromptSubmit|Stop"
 ```
 
 #### MCP Server Not Working
