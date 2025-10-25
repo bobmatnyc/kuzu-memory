@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.3.4] - 2025-10-25
+
+### Fixed
+
+- Fixed critical bug in Claude Code hook event names. The v1.3.3 installer used incorrect event names (`user_prompt_submit`, `assistant_response`) that never fired in Claude Code. Updated to correct event names (`UserPromptSubmit`, `Stop`). Users must run `kuzu-memory install add claude-code --force` to update existing configurations. Added diagnostic checks to detect and warn about incorrect event names. ([#claude-hooks-event-fix](https://github.com/bobmatnyc/kuzu-memory/issues/claude-hooks-event-fix))
 ## [1.3.3] - 2025-10-14
 
 ### Added
@@ -482,7 +487,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.4...HEAD
+[1.3.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.3.0...v1.3.2
 [1.3.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.2.5...v1.3.0
