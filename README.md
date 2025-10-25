@@ -85,6 +85,21 @@ kuzu-memory install status
 - **Use Case**: Personal knowledge base and preferences
 - **Installation**: Auto-detects pipx or home directory installation
 
+**Auggie** (`auggie`):
+- **Configuration**: Creates `.augment/rules/` directory with enhanced integration rules
+- **Version**: v2.0.0 with automatic version detection and migration
+- **Auto-Migration**: Automatically upgrades from v1.0.0 to v2.0.0 with backup
+- **Backup**: Creates backup at `.augment/backups/v{version}_{timestamp}/` before upgrade
+- **Rules**: Enhanced rules based on Claude Code hooks v1.4.0 insights including:
+  - Success metrics (2-5 memories per query, <100ms response)
+  - Decision tree for when to store vs skip information
+  - Deduplication patterns (SHA256 hashing, TTL caching)
+  - Performance optimization (batching, targeted filtering)
+  - Failure recovery protocols (graceful degradation)
+- **Files Created**: `AGENTS.md`, `.augment/rules/kuzu-memory-integration.md`, `.augment/rules/memory-quick-reference.md`
+- **Version Tracking**: Maintains version at `.augment/.kuzu-version`
+- **Use Case**: Rules-based AI instruction integration (Auggie reads rules and decides when to act)
+
 **Installation Options:**
 - `--force` - Force reinstall even if already installed (overwrites existing config)
 - `--dry-run` - Preview changes without modifying files

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auggie Integration v2.0.0** with automatic version detection and migration system
+  - New `AuggieVersionDetector` for detecting installed versions from `.augment/.kuzu-version` or content patterns
+  - New `AuggieRuleMigrator` for seamless upgrades with automatic backup to `.augment/backups/`
+  - Enhanced rules incorporating 8 key improvements from Claude Code hooks v1.4.0:
+    * Concrete success metrics (2-5 memories per query, <100ms response)
+    * Enhanced trigger patterns with negative examples (what NOT to enhance)
+    * Decision tree for storage logic (project-specific, different, corrections)
+    * Deduplication patterns (SHA256 hashing, TTL caching)
+    * Performance optimization (batching, targeted filtering)
+    * Real-world examples from v1.4.0 testing
+    * Monitoring and health checks
+    * Failure recovery protocols (graceful degradation)
+  - Backward compatible: Existing `AuggieInstaller` now wraps `AuggieInstallerV2`
+  - Automatic migration: Running `kuzu-memory install add auggie` automatically upgrades v1.0.0 to v2.0.0 with backup
+  - Comprehensive test suite: 14 tests covering version detection, installation, migration, and backups
+
 <!-- towncrier release notes start -->
 
 ## [1.4.0] - 2025-10-25
