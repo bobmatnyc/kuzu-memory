@@ -1,0 +1,255 @@
+"""
+Auggie/Claude Installer for KuzuMemory v2.0
+
+Enhanced installer with version detection and auto-migration support.
+Incorporates insights from Claude Code hooks v1.4.0.
+"""
+
+import logging
+from pathlib import Path
+
+from .auggie_rules_v2 import (
+    get_agents_md_v2,
+    get_integration_rules_v2,
+    get_quick_reference_v2,
+)
+from .auggie_versions import (
+    CURRENT_VERSION,
+    AuggieRuleMigrator,
+    AuggieVersionDetector,
+)
+from .base import BaseInstaller, InstallationError, InstallationResult
+
+logger = logging.getLogger(__name__)
+
+
+class AuggieInstallerV2(BaseInstaller):
+    """
+    Enhanced Auggie installer with version detection and auto-migration.
+
+    Features:
+    - Detects existing installations
+    - Automatic backup before upgrade
+    - Seamless migration from v1.0.0 to v2.0.0
+    - Improved rules based on Claude Code hooks insights
+    """
+
+    @property
+    def ai_system_name(self) -> str:
+        return "Auggie/Claude"
+
+    @property
+    def required_files(self) -> list[str]:
+        return [
+            "AGENTS.md",
+            ".augment/rules/kuzu-memory-integration.md",
+            ".augment/rules/memory-quick-reference.md",
+        ]
+
+    @property
+    def description(self) -> str:
+        return (
+            "Sets up enhanced Augment rules for KuzuMemory integration (v2.0.0). "
+            "Includes performance patterns, decision trees, and real-world examples."
+        )
+
+    def check_prerequisites(self) -> list[str]:
+        """Check Auggie-specific prerequisites."""
+        errors = super().check_prerequisites()
+
+        # Check if KuzuMemory is initialized
+        kuzu_dir = self.project_root / "kuzu-memories"
+        if not kuzu_dir.exists():
+            errors.append("KuzuMemory not initialized. Run 'kuzu-memory init' first.")
+
+        return errors
+
+    def install(
+        self, force: bool = False, auto_migrate: bool = True, **kwargs
+    ) -> InstallationResult:
+        """
+        Install or upgrade Auggie integration.
+
+        Args:
+            force: Force installation even if files exist
+            auto_migrate: Automatically migrate from older versions (default: True)
+            **kwargs: Additional options
+
+        Returns:
+            InstallationResult with installation/upgrade details
+        """
+        try:
+            # Check prerequisites
+            errors = self.check_prerequisites()
+            if errors:
+                raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
+
+            # Check for existing installation and version
+            detector = AuggieVersionDetector(self.project_root)
+            installed_version = detector.get_installed_version()
+
+            # Handle upgrade scenario
+            if installed_version and not force:
+                if installed_version >= CURRENT_VERSION:
+                    # Already at latest version
+                    return InstallationResult(
+                        success=True,
+                        ai_system=self.ai_system_name,
+                        files_created=[],
+                        files_modified=[],
+                        backup_files=[],
+                        message=f"Already at latest version {CURRENT_VERSION}. Use --force to reinstall.",
+                        warnings=[],
+                    )
+
+                # Upgrade needed
+                if auto_migrate:
+                    logger.info(
+                        f"Detected v{installed_version}, upgrading to v{CURRENT_VERSION}"
+                    )
+                    return self._upgrade_installation(installed_version, detector)
+                else:
+                    return InstallationResult(
+                        success=False,
+                        ai_system=self.ai_system_name,
+                        files_created=[],
+                        files_modified=[],
+                        backup_files=[],
+                        message=f"Upgrade available ({installed_version} → {CURRENT_VERSION}). "
+                        f"Run with --auto-migrate or use --force to reinstall.",
+                        warnings=[],
+                    )
+
+            # Fresh install or forced reinstall
+            if not installed_version and not force:
+                # Check if files exist without version
+                existing_files = []
+                for file_pattern in self.required_files:
+                    file_path = self.project_root / file_pattern
+                    if file_path.exists():
+                        existing_files.append(str(file_path))
+
+                if existing_files:
+                    raise InstallationError(
+                        f"Auggie integration files exist but no version detected. "
+                        f"Use --force to overwrite. Files: {', '.join(existing_files)}"
+                    )
+
+            # Perform installation
+            self._install_agents_md()
+            self._install_integration_rules()
+            self._install_quick_reference()
+
+            # Write version file
+            detector.write_version(CURRENT_VERSION)
+
+            return InstallationResult(
+                success=True,
+                ai_system=self.ai_system_name,
+                files_created=self.files_created,
+                files_modified=self.files_modified,
+                backup_files=self.backup_files,
+                message=f"Successfully installed Auggie integration v{CURRENT_VERSION}",
+                warnings=self.warnings,
+            )
+
+        except Exception as e:
+            return InstallationResult(
+                success=False,
+                ai_system=self.ai_system_name,
+                files_created=self.files_created,
+                files_modified=self.files_modified,
+                backup_files=self.backup_files,
+                message=f"Installation failed: {e}",
+                warnings=self.warnings,
+            )
+
+    def _upgrade_installation(
+        self, from_version, detector: AuggieVersionDetector
+    ) -> InstallationResult:
+        """
+        Upgrade from existing version to current version.
+
+        Args:
+            from_version: Version being upgraded from
+            detector: Version detector instance
+
+        Returns:
+            InstallationResult with upgrade details
+        """
+        try:
+            logger.info(f"Starting upgrade from {from_version} to {CURRENT_VERSION}")
+
+            # Create migrator and backup
+            migrator = AuggieRuleMigrator(self.project_root)
+            migration_info = migrator.migrate()
+
+            if not migration_info.get("success"):
+                raise InstallationError(migration_info.get("message", "Migration failed"))
+
+            backup_path = Path(migration_info.get("backup_path", ""))
+
+            # Install new version
+            self._install_agents_md()
+            self._install_integration_rules()
+            self._install_quick_reference()
+
+            # Update version file
+            detector.write_version(CURRENT_VERSION)
+
+            changes = migration_info.get("changes", [])
+            changes_summary = "\n  • ".join(changes) if changes else "See documentation"
+
+            return InstallationResult(
+                success=True,
+                ai_system=self.ai_system_name,
+                files_created=self.files_created,
+                files_modified=self.files_modified,
+                backup_files=[str(backup_path)] if backup_path else [],
+                message=f"Successfully upgraded from v{from_version} to v{CURRENT_VERSION}\n\n"
+                f"Backup created at: {backup_path}\n\n"
+                f"What's New:\n  • {changes_summary}",
+                warnings=self.warnings,
+            )
+
+        except Exception as e:
+            logger.error(f"Upgrade failed: {e}")
+            return InstallationResult(
+                success=False,
+                ai_system=self.ai_system_name,
+                files_created=self.files_created,
+                files_modified=self.files_modified,
+                backup_files=self.backup_files,
+                message=f"Upgrade failed: {e}. Your original files are backed up.",
+                warnings=self.warnings,
+            )
+
+    def _install_agents_md(self):
+        """Install the main AGENTS.md file with v2.0.0 content."""
+        agents_path = self.project_root / "AGENTS.md"
+        if not self.write_file(agents_path, get_agents_md_v2()):
+            raise InstallationError("Failed to create AGENTS.md")
+
+    def _install_integration_rules(self):
+        """Install detailed integration rules with v2.0.0 content."""
+        rules_dir = self.project_root / ".augment" / "rules"
+        rules_path = rules_dir / "kuzu-memory-integration.md"
+        if not self.write_file(rules_path, get_integration_rules_v2()):
+            raise InstallationError("Failed to create integration rules")
+
+    def _install_quick_reference(self):
+        """Install quick reference guide with v2.0.0 content."""
+        rules_dir = self.project_root / ".augment" / "rules"
+        reference_path = rules_dir / "memory-quick-reference.md"
+        if not self.write_file(reference_path, get_quick_reference_v2()):
+            raise InstallationError("Failed to create quick reference")
+
+    def check_upgrade_available(self) -> dict:
+        """
+        Check if an upgrade is available.
+
+        Returns:
+            Dictionary with upgrade information
+        """
+        detector = AuggieVersionDetector(self.project_root)
+        return detector.get_upgrade_info()
