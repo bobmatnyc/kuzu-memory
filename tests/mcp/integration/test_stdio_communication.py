@@ -136,9 +136,9 @@ class TestStdioCommunication:
 
             # Verify all received
             successful = sum(1 for r in responses if r is not None)
-            assert successful >= num_requests * 0.8, (
-                f"Only {successful}/{num_requests} succeeded"
-            )
+            assert (
+                successful >= num_requests * 0.8
+            ), f"Only {successful}/{num_requests} succeeded"
 
         finally:
             await client.disconnect()
