@@ -108,7 +108,8 @@ def mcp_status(project, verbose: bool, available: bool, installed: bool):
 
 @mcp_install_group.command(name="install")
 @click.argument(
-    "system", type=click.Choice(["claude-desktop", "cursor", "vscode", "windsurf"])
+    "system",
+    type=click.Choice(["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]),
 )
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
@@ -128,12 +129,16 @@ def install_mcp(
     \b
     🎯 MCP SYSTEMS:
       claude-desktop  Claude Desktop MCP server
+      claude-code     Claude Code MCP server (also installs hooks)
       cursor          Cursor IDE MCP configuration
       vscode          VS Code with Claude extension
       windsurf        Windsurf IDE MCP configuration
 
     \b
     🎯 EXAMPLES:
+      # Install for Claude Code (MCP + hooks)
+      kuzu-memory mcp install claude-code
+
       # Install for Cursor
       kuzu-memory mcp install cursor
 
@@ -150,6 +155,9 @@ def install_mcp(
     📝 NOTE:
       MCP servers are always updated if they exist. No --force flag is needed.
       Previous configurations are automatically backed up before updating.
+
+      Claude Code installs both MCP server and hooks. You can also use:
+        kuzu-memory hooks install claude-code
     """
     try:
         # Determine project root
@@ -167,6 +175,7 @@ def install_mcp(
             print(f"❌ No installer available for {system}")
             print("\nAvailable MCP systems:")
             print("  • claude-desktop - Claude Desktop")
+            print("  • claude-code    - Claude Code (MCP + hooks)")
             print("  • cursor         - Cursor IDE")
             print("  • vscode         - VS Code with Claude")
             print("  • windsurf       - Windsurf IDE")
@@ -221,6 +230,10 @@ def install_mcp(
                 print("1. Restart Claude Desktop application")
                 print("2. Open a new conversation")
                 print("3. KuzuMemory MCP tools will be available")
+            elif system == "claude-code":
+                print("1. Reload Claude Code window or restart")
+                print("2. MCP tools + hooks active for enhanced context")
+                print("3. Check .claude/config.local.json for configuration")
             elif system in ["cursor", "vscode", "windsurf"]:
                 print(f"1. Reload or restart {installer.ai_system_name}")
                 print("2. KuzuMemory MCP server will be active")
@@ -273,17 +286,18 @@ def list_mcp_installers(verbose: bool):
 
     \b
     🎯 PRIORITY 1 INSTALLERS (Implemented):
-      • cursor    - Cursor IDE (.cursor/mcp.json)
-      • vscode    - VS Code with Claude (.vscode/mcp.json)
-      • windsurf  - Windsurf IDE (~/.codeium/windsurf/mcp_config.json)
+      • claude-code - Claude Code (.claude/config.local.json) with MCP + hooks
+      • cursor      - Cursor IDE (.cursor/mcp.json)
+      • vscode      - VS Code with Claude (.vscode/mcp.json)
+      • windsurf    - Windsurf IDE (~/.codeium/windsurf/mcp_config.json)
 
     \b
     🚧 COMING SOON:
-      • roo-code  - Roo Code (.roo/mcp.json)
-      • continue  - Continue (.continue/config.yaml)
-      • junie     - JetBrains Junie (.junie/mcp/mcp.json)
+      • roo-code    - Roo Code (.roo/mcp.json)
+      • continue    - Continue (.continue/config.yaml)
+      • junie       - JetBrains Junie (.junie/mcp/mcp.json)
     """
-    implemented = ["cursor", "vscode", "windsurf"]
+    implemented = ["claude-code", "cursor", "vscode", "windsurf"]
 
     print("\n🔌 Available MCP Installers:")
     print("=" * 70)
