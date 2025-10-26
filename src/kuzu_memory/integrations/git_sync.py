@@ -163,6 +163,134 @@ class GitSyncManager:
             logger.warning(f"Failed to get changed files: {e}")
             return []
 
+    def _get_file_stats(self, commit: Any) -> dict[str, dict[str, int]]:
+        """
+        Get diff statistics for each changed file.
+
+        Args:
+            commit: Git commit object
+
+        Returns:
+            Dict mapping file paths to {"insertions": int, "deletions": int}
+        """
+        stats: dict[str, dict[str, int]] = {}
+        try:
+            if not commit.parents:
+                # Initial commit - no diff stats available
+                return stats
+
+            parent = commit.parents[0]
+            diffs = parent.diff(commit, create_patch=True)
+
+            for diff in diffs:
+                file_path = diff.b_path or diff.a_path
+                if file_path:
+                    # Count insertions and deletions from diff text
+                    insertions = 0
+                    deletions = 0
+                    if hasattr(diff, "diff") and diff.diff:
+                        diff_text = diff.diff.decode("utf-8", errors="ignore")
+                        for line in diff_text.split("\n"):
+                            if line.startswith("+") and not line.startswith("+++"):
+                                insertions += 1
+                            elif line.startswith("-") and not line.startswith("---"):
+                                deletions += 1
+
+                    stats[file_path] = {
+                        "insertions": insertions,
+                        "deletions": deletions,
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to get file stats: {e}")
+
+        return stats
+
+    def _categorize_files(self, file_paths: list[str]) -> dict[str, list[str]]:
+        """
+        Categorize files by type.
+
+        Args:
+            file_paths: List of file paths
+
+        Returns:
+            Dict with categories: source, tests, docs, config, other
+        """
+        categories: dict[str, list[str]] = {
+            "source": [],
+            "tests": [],
+            "docs": [],
+            "config": [],
+            "other": [],
+        }
+
+        for path in file_paths:
+            path_lower = path.lower()
+
+            # Categorization rules
+            if any(
+                test_pattern in path_lower
+                for test_pattern in [
+                    "test_",
+                    "tests/",
+                    "_test.",
+                    "spec/",
+                    "__tests__/",
+                ]
+            ):
+                categories["tests"].append(path)
+            elif any(
+                doc_pattern in path_lower
+                for doc_pattern in [
+                    ".md",
+                    "readme",
+                    "changelog",
+                    "docs/",
+                    "documentation/",
+                ]
+            ):
+                categories["docs"].append(path)
+            elif any(
+                config_pattern in path_lower
+                for config_pattern in [
+                    ".json",
+                    ".yaml",
+                    ".yml",
+                    ".toml",
+                    ".ini",
+                    ".cfg",
+                    "config",
+                    ".env",
+                    "dockerfile",
+                    "makefile",
+                ]
+            ):
+                categories["config"].append(path)
+            elif any(
+                path_lower.endswith(ext)
+                for ext in [
+                    ".py",
+                    ".js",
+                    ".ts",
+                    ".jsx",
+                    ".tsx",
+                    ".java",
+                    ".go",
+                    ".rs",
+                    ".php",
+                    ".rb",
+                    ".c",
+                    ".cpp",
+                    ".h",
+                    ".hpp",
+                ]
+            ):
+                categories["source"].append(path)
+            else:
+                categories["other"].append(path)
+
+        # Remove empty categories
+        return {k: v for k, v in categories.items() if v}
+
     def _commit_to_memory(self, commit: Any) -> Memory:
         """
         Convert git commit to Memory object.
@@ -176,14 +304,18 @@ class GitSyncManager:
         message = commit.message.strip()
         changed_files = self._get_changed_files(commit)
 
-        # Format content with commit details
-        file_summary = (
-            ", ".join(changed_files[:5])
-            if len(changed_files) <= 5
-            else f"{', '.join(changed_files[:5])} (+{len(changed_files) - 5} more)"
-        )
+        # Enhanced content format with searchable file list
+        if changed_files:
+            files_list = "\n".join(f"- {file}" for file in changed_files[:10])
+            if len(changed_files) > 10:
+                files_list += f"\n... and {len(changed_files) - 10} more files"
+            content = f"{message}\n\nChanged files:\n{files_list}"
+        else:
+            content = message
 
-        content = f"{message} | Files: {file_summary}"
+        # Get file statistics and categories
+        file_stats = self._get_file_stats(commit)
+        file_categories = self._categorize_files(changed_files)
 
         # Get branch name safely
         branch_name = "unknown"
@@ -227,6 +359,8 @@ class GitSyncManager:
                 "branch": branch_name,
                 "changed_files": changed_files,
                 "parent_count": len(commit.parents),
+                "file_stats": file_stats,
+                "file_categories": file_categories,
             },
         )
 

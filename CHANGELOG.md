@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Enhanced Git Commit File References** for better searchability and context
+  - Files now listed in searchable content (up to 10 files inline, with count for remainder)
+  - New `file_stats` metadata: insertions/deletions per file from git diff
+  - New `file_categories` metadata: automatic categorization (source, tests, docs, config, other)
+  - File paths fully searchable in memory content for better recall
+  - 20 comprehensive tests covering all enhancement features
+  - Backward compatible with existing git sync memories
+
 <!-- towncrier release notes start -->
 
 ## [1.4.2] - 2025-10-25
