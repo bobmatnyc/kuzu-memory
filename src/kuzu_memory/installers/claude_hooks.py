@@ -66,6 +66,8 @@ class ClaudeHooksInstaller(BaseInstaller):
             "CLAUDE.md",
             ".claude-mpm/config.json",
             ".claude/config.local.json",
+            ".claude/hooks/user_prompt_submit.py",
+            ".claude/hooks/post_tool_use.py",
             ".kuzu-memory/config.yaml",
         ]
         return files
@@ -584,6 +586,125 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
+    def _create_user_prompt_submit_hook(self) -> str:
+        """
+        Generate user_prompt_submit.py hook script.
+
+        This hook enhances user prompts with project context from KuzuMemory.
+        It's called by Claude Code before processing each user prompt.
+
+        Returns:
+            Python script content for UserPromptSubmit hook
+        """
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
+        return f'''#!/usr/bin/env python3
+"""Claude Code UserPromptSubmit hook - Enhance prompts with project context."""
+import subprocess
+import sys
+
+
+def main() -> int:
+    """Enhance user prompt with kuzu-memory context."""
+    # Read original prompt from stdin
+    prompt = sys.stdin.read().strip()
+
+    if not prompt:
+        # No prompt, pass through
+        print(prompt)
+        return 0
+
+    try:
+        # Call kuzu-memory enhance via CLI entry point
+        result = subprocess.run(
+            ["{kuzu_cmd}", "memory", "enhance", prompt],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+        )
+
+        if result.returncode == 0 and result.stdout:
+            # Successfully enhanced
+            print(result.stdout.strip())
+        else:
+            # Enhancement failed, use original
+            if result.stderr:
+                print(f"Enhancement failed: {{result.stderr}}", file=sys.stderr)
+            print(prompt)
+
+    except subprocess.TimeoutExpired:
+        # Timeout, fallback to original
+        print("Enhancement timed out", file=sys.stderr)
+        print(prompt)
+    except Exception as e:
+        # Any error, fallback to original
+        print(f"Enhancement error: {{e}}", file=sys.stderr)
+        print(prompt)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+'''
+
+    def _create_post_tool_use_hook(self) -> str:
+        """
+        Generate post_tool_use.py hook script.
+
+        This hook learns from tool usage (specifically Edit and Write operations).
+        It's called by Claude Code after each tool use.
+
+        Returns:
+            Python script content for PostToolUse hook
+        """
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
+        return f'''#!/usr/bin/env python3
+"""Claude Code PostToolUse hook - Learn from tool usage."""
+import json
+import subprocess
+import sys
+
+
+def main() -> int:
+    """Learn from tool usage events."""
+    # Read tool usage data from stdin
+    try:
+        data = json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, ValueError):
+        # Invalid JSON, nothing to learn
+        return 0
+
+    # Extract relevant content to learn from
+    tool = data.get("tool", "")
+    content = data.get("content", "")
+
+    # Only learn from file operations (Edit, Write)
+    if not content or tool not in ["Edit", "Write"]:
+        return 0
+
+    try:
+        # Call kuzu-memory learn via CLI entry point (async with --quiet)
+        subprocess.run(
+            ["{kuzu_cmd}", "memory", "learn", content, "--quiet"],
+            check=False,  # Don't raise on error
+            timeout=1.0,
+        )
+    except subprocess.TimeoutExpired:
+        # Learning timed out, but don't block
+        print("Learning timed out", file=sys.stderr)
+    except Exception as e:
+        # Learning failed, but don't block
+        print(f"Learning error: {{e}}", file=sys.stderr)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+'''
+
     def install(
         self, force: bool = False, dry_run: bool = False, verbose: bool = False
     ) -> InstallationResult:
@@ -660,6 +781,63 @@ exec {kuzu_cmd} "$@"
             claude_dir = self.project_root / ".claude"
             if not dry_run:
                 claude_dir.mkdir(exist_ok=True)
+
+            # Create .claude/hooks directory
+            hooks_dir = claude_dir / "hooks"
+            if not dry_run:
+                hooks_dir.mkdir(exist_ok=True)
+
+            # Create user_prompt_submit.py hook
+            user_prompt_hook_path = hooks_dir / "user_prompt_submit.py"
+            if user_prompt_hook_path.exists() and not force:
+                logger.info(
+                    f"Hook already exists at {user_prompt_hook_path}, skipping"
+                )
+                self.warnings.append(
+                    "user_prompt_submit.py already exists (use --force to overwrite)"
+                )
+            else:
+                if user_prompt_hook_path.exists() and force:
+                    if not dry_run:
+                        backup_path = self.create_backup(user_prompt_hook_path)
+                        if backup_path:
+                            self.backup_files.append(backup_path)
+                    self.files_modified.append(user_prompt_hook_path)
+                else:
+                    self.files_created.append(user_prompt_hook_path)
+
+                if not dry_run:
+                    user_prompt_hook_path.write_text(
+                        self._create_user_prompt_submit_hook()
+                    )
+                    user_prompt_hook_path.chmod(0o755)  # Make executable
+                logger.info(
+                    f"{'Would create' if dry_run else 'Created'} user_prompt_submit.py hook"
+                )
+
+            # Create post_tool_use.py hook
+            post_tool_hook_path = hooks_dir / "post_tool_use.py"
+            if post_tool_hook_path.exists() and not force:
+                logger.info(f"Hook already exists at {post_tool_hook_path}, skipping")
+                self.warnings.append(
+                    "post_tool_use.py already exists (use --force to overwrite)"
+                )
+            else:
+                if post_tool_hook_path.exists() and force:
+                    if not dry_run:
+                        backup_path = self.create_backup(post_tool_hook_path)
+                        if backup_path:
+                            self.backup_files.append(backup_path)
+                    self.files_modified.append(post_tool_hook_path)
+                else:
+                    self.files_created.append(post_tool_hook_path)
+
+                if not dry_run:
+                    post_tool_hook_path.write_text(self._create_post_tool_use_hook())
+                    post_tool_hook_path.chmod(0o755)  # Make executable
+                logger.info(
+                    f"{'Would create' if dry_run else 'Created'} post_tool_use.py hook"
+                )
 
             # Create or update config.local.json with hooks and MCP server
             local_config_path = claude_dir / "config.local.json"
