@@ -787,57 +787,47 @@ if __name__ == "__main__":
             if not dry_run:
                 hooks_dir.mkdir(exist_ok=True)
 
-            # Create user_prompt_submit.py hook
+            # Create user_prompt_submit.py hook (always update)
             user_prompt_hook_path = hooks_dir / "user_prompt_submit.py"
-            if user_prompt_hook_path.exists() and not force:
-                logger.info(
-                    f"Hook already exists at {user_prompt_hook_path}, skipping"
-                )
-                self.warnings.append(
-                    "user_prompt_submit.py already exists (use --force to overwrite)"
-                )
-            else:
-                if user_prompt_hook_path.exists() and force:
-                    if not dry_run:
-                        backup_path = self.create_backup(user_prompt_hook_path)
-                        if backup_path:
-                            self.backup_files.append(backup_path)
-                    self.files_modified.append(user_prompt_hook_path)
-                else:
-                    self.files_created.append(user_prompt_hook_path)
-
+            if user_prompt_hook_path.exists():
+                # Hook exists - update it with latest version
                 if not dry_run:
-                    user_prompt_hook_path.write_text(
-                        self._create_user_prompt_submit_hook()
-                    )
-                    user_prompt_hook_path.chmod(0o755)  # Make executable
-                logger.info(
-                    f"{'Would create' if dry_run else 'Created'} user_prompt_submit.py hook"
-                )
+                    backup_path = self.create_backup(user_prompt_hook_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(user_prompt_hook_path)
+                action = "update" if not dry_run else "would update"
+            else:
+                # New installation
+                self.files_created.append(user_prompt_hook_path)
+                action = "create" if not dry_run else "would create"
 
-            # Create post_tool_use.py hook
+            if not dry_run:
+                user_prompt_hook_path.write_text(
+                    self._create_user_prompt_submit_hook()
+                )
+                user_prompt_hook_path.chmod(0o755)  # Make executable
+            logger.info(f"{'Would ' if dry_run else ''}{action.capitalize()}d user_prompt_submit.py hook")
+
+            # Create post_tool_use.py hook (always update)
             post_tool_hook_path = hooks_dir / "post_tool_use.py"
-            if post_tool_hook_path.exists() and not force:
-                logger.info(f"Hook already exists at {post_tool_hook_path}, skipping")
-                self.warnings.append(
-                    "post_tool_use.py already exists (use --force to overwrite)"
-                )
-            else:
-                if post_tool_hook_path.exists() and force:
-                    if not dry_run:
-                        backup_path = self.create_backup(post_tool_hook_path)
-                        if backup_path:
-                            self.backup_files.append(backup_path)
-                    self.files_modified.append(post_tool_hook_path)
-                else:
-                    self.files_created.append(post_tool_hook_path)
-
+            if post_tool_hook_path.exists():
+                # Hook exists - update it with latest version
                 if not dry_run:
-                    post_tool_hook_path.write_text(self._create_post_tool_use_hook())
-                    post_tool_hook_path.chmod(0o755)  # Make executable
-                logger.info(
-                    f"{'Would create' if dry_run else 'Created'} post_tool_use.py hook"
-                )
+                    backup_path = self.create_backup(post_tool_hook_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(post_tool_hook_path)
+                action = "update" if not dry_run else "would update"
+            else:
+                # New installation
+                self.files_created.append(post_tool_hook_path)
+                action = "create" if not dry_run else "would create"
+
+            if not dry_run:
+                post_tool_hook_path.write_text(self._create_post_tool_use_hook())
+                post_tool_hook_path.chmod(0o755)  # Make executable
+            logger.info(f"{'Would ' if dry_run else ''}{action.capitalize()}d post_tool_use.py hook")
 
             # Create or update config.local.json with hooks and MCP server
             local_config_path = claude_dir / "config.local.json"
