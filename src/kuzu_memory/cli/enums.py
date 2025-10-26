@@ -36,6 +36,7 @@ class MCPSystem(str, Enum):
     """MCP server integrations."""
 
     CLAUDE_DESKTOP = "claude-desktop"
+    CLAUDE_CODE = "claude-code"
     CURSOR = "cursor"
     VSCODE = "vscode"
     WINDSURF = "windsurf"
@@ -45,6 +46,7 @@ class MCPSystem(str, Enum):
         """Get display name for MCP system."""
         return {
             "claude-desktop": "Claude Desktop",
+            "claude-code": "Claude Code",
             "cursor": "Cursor",
             "vscode": "VS Code",
             "windsurf": "Windsurf",
