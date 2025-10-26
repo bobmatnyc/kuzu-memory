@@ -107,20 +107,6 @@ class AISystemDetector:
             )
         )
 
-        # Zed (.zed/settings.json)
-        zed_path = self.project_root / ".zed" / "settings.json"
-        systems.append(
-            DetectedSystem(
-                name="Zed Editor",
-                installer_name="zed",
-                config_type="project",
-                config_path=zed_path,
-                exists=zed_path.exists(),
-                can_install=self.project_root.exists(),
-                notes="Project-specific settings (not yet implemented)",
-            )
-        )
-
         # Continue (.continue/config.yaml)
         continue_path = self.project_root / ".continue" / "config.yaml"
         systems.append(
