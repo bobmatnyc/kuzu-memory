@@ -278,7 +278,6 @@ def list_mcp_installers(verbose: bool):
     \b
     🚧 COMING SOON:
       • roo-code  - Roo Code (.roo/mcp.json)
-      • zed       - Zed Editor (.zed/settings.json)
       • continue  - Continue (.continue/config.yaml)
       • junie     - JetBrains Junie (.junie/mcp/mcp.json)
     """
@@ -297,7 +296,6 @@ def list_mcp_installers(verbose: bool):
     print("\n🚧 COMING SOON:")
     coming_soon = {
         "roo-code": "Roo Code project-specific MCP",
-        "zed": "Zed Editor settings integration",
         "continue": "Continue YAML configuration",
         "junie": "JetBrains Junie MCP integration",
     }
