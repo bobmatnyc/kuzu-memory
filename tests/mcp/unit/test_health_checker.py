@@ -175,17 +175,26 @@ class TestMCPHealthChecker:
 
     def test_latency_to_status_healthy(self, health_checker):
         """Test latency to status conversion - healthy."""
+        # Test values well within healthy range (<200ms)
         status = health_checker._latency_to_status(30.0)
+        assert status == HealthStatus.HEALTHY
+        status = health_checker._latency_to_status(150.0)
         assert status == HealthStatus.HEALTHY
 
     def test_latency_to_status_degraded(self, health_checker):
         """Test latency to status conversion - degraded."""
-        status = health_checker._latency_to_status(75.0)
+        # Test values in degraded range (200-500ms)
+        status = health_checker._latency_to_status(300.0)
+        assert status == HealthStatus.DEGRADED
+        status = health_checker._latency_to_status(450.0)
         assert status == HealthStatus.DEGRADED
 
     def test_latency_to_status_unhealthy(self, health_checker):
         """Test latency to status conversion - unhealthy."""
-        status = health_checker._latency_to_status(250.0)
+        # Test values in unhealthy range (>=500ms)
+        status = health_checker._latency_to_status(700.0)
+        assert status == HealthStatus.UNHEALTHY
+        status = health_checker._latency_to_status(1500.0)
         assert status == HealthStatus.UNHEALTHY
 
     def test_determine_overall_status_all_healthy(self, health_checker):
@@ -306,6 +315,10 @@ class TestMCPHealthChecker:
             assert result.name == "database"
             assert result.status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]
             assert result.metadata["path"] == str(db_path)
+            # Verify checked_paths metadata includes multiple locations
+            assert "checked_paths" in result.metadata
+            assert isinstance(result.metadata["checked_paths"], list)
+            assert len(result.metadata["checked_paths"]) >= 3  # env var + 2 project-local + default
 
     @pytest.mark.asyncio
     async def test_check_database_health_not_exists(self, health_checker, tmp_path):
@@ -318,6 +331,37 @@ class TestMCPHealthChecker:
             assert result.name == "database"
             assert result.status == HealthStatus.DEGRADED
             assert "not initialized" in result.message.lower()
+            # Verify checked_paths metadata is present even when no DB found
+            assert "checked_paths" in result.metadata
+            assert isinstance(result.metadata["checked_paths"], list)
+
+    @pytest.mark.asyncio
+    async def test_check_database_health_project_local(self, tmp_path):
+        """Test database health check - finds project-local database."""
+        # Create project root with kuzu-memories directory
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        kuzu_dir = project_root / "kuzu-memories"
+        kuzu_dir.mkdir()
+
+        # Create database in project-local location
+        db_path = kuzu_dir / "memories.db"
+        db_path.write_text("mock project database")
+
+        # Initialize health checker with project root
+        health_checker = MCPHealthChecker(project_root=project_root)
+
+        # Run check WITHOUT environment variable (to test fallback to project-local)
+        with patch.dict("os.environ", {}, clear=True):
+            result = await health_checker._check_database_health(retry=False)
+
+            assert result.name == "database"
+            assert result.status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]
+            # Should find the project-local database
+            assert result.metadata["path"] == str(db_path)
+            # Verify project-local path was checked
+            assert "checked_paths" in result.metadata
+            assert any("kuzu-memories" in path for path in result.metadata["checked_paths"])
 
     @pytest.mark.asyncio
     async def test_collect_performance_metrics_empty_history(self, health_checker):

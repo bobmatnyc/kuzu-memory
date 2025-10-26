@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 # Health check thresholds
 HEALTH_THRESHOLDS: dict[str, dict[str, float]] = {
     "latency_ms": {
-        "healthy": 50,  # <50ms = healthy
-        "degraded": 100,  # 50-100ms = degraded
-        "unhealthy": 200,  # >200ms = unhealthy
+        "healthy": 200,  # <200ms = healthy (allows subprocess overhead)
+        "degraded": 500,  # 200-500ms = degraded (slower but acceptable)
+        "unhealthy": 1000,  # >1000ms = unhealthy (unacceptably slow)
     },
     "error_rate": {
         "healthy": 0.01,  # <1% = healthy
@@ -333,17 +333,40 @@ class MCPHealthChecker:
 
         for attempt in range(self.retry_count if retry else 1):
             try:
-                # Check if database exists and is accessible
-                db_path = os.environ.get("KUZU_MEMORY_DB")
-                if not db_path:
-                    # Use default path
-                    db_path = str(Path.home() / ".kuzu" / "memory.db")
+                # Build list of candidate database paths in priority order
+                candidate_paths = []
 
-                db_file = Path(db_path)
+                # 1. Environment variable (highest priority)
+                env_db_path = os.environ.get("KUZU_MEMORY_DB")
+                if env_db_path:
+                    candidate_paths.append(Path(env_db_path))
+
+                # 2. Project-local paths
+                candidate_paths.extend([
+                    self.project_root / "kuzu-memories" / "memories.db",
+                    self.project_root / "kuzu-memories" / "memory.db",
+                ])
+
+                # 3. Default user path (fallback)
+                candidate_paths.append(Path.home() / ".kuzu" / "memory.db")
+
+                # Record all checked paths for metadata
+                checked_paths = [str(path) for path in candidate_paths]
+
+                # Find first existing, readable, writable database
+                db_file: Path | None = None
+
+                for path in candidate_paths:
+                    if path.exists():
+                        readable = os.access(path, os.R_OK)
+                        writable = os.access(path, os.W_OK)
+                        if readable and writable:
+                            db_file = path
+                            break
 
                 latency = (time.time() - start_time) * 1000
 
-                if db_file.exists():
+                if db_file and db_file.exists():
                     # Check size and accessibility
                     db_size = db_file.stat().st_size
                     readable = os.access(db_file, os.R_OK)
@@ -361,6 +384,7 @@ class MCPHealthChecker:
                                 "size_bytes": db_size,
                                 "readable": readable,
                                 "writable": writable,
+                                "checked_paths": checked_paths,
                             },
                         )
                     else:
@@ -370,8 +394,10 @@ class MCPHealthChecker:
                             message="Database has permission issues",
                             latency_ms=latency,
                             metadata={
+                                "path": str(db_file),
                                 "readable": readable,
                                 "writable": writable,
+                                "checked_paths": checked_paths,
                             },
                         )
                 else:
@@ -380,7 +406,10 @@ class MCPHealthChecker:
                         status=HealthStatus.DEGRADED,
                         message="Database not initialized",
                         latency_ms=latency,
-                        metadata={"expected_path": str(db_file)},
+                        metadata={
+                            "checked_paths": checked_paths,
+                            "note": "No readable/writable database found in any location"
+                        },
                     )
 
             except Exception as e:
