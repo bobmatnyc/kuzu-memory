@@ -10,7 +10,7 @@ import click
 
 from kuzu_memory.cli.cli_utils import rich_panel, rich_print
 from kuzu_memory.cli.mcp_install_commands import (
-    detect_systems,
+    mcp_status as detect_systems,  # Renamed but kept alias for compatibility
     install_mcp,
     list_mcp_installers,
 )

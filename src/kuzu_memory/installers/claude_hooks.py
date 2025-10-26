@@ -706,15 +706,18 @@ if __name__ == "__main__":
 '''
 
     def install(
-        self, force: bool = False, dry_run: bool = False, verbose: bool = False
+        self, dry_run: bool = False, verbose: bool = False, **kwargs
     ) -> InstallationResult:
         """
         Install Claude Code hooks for KuzuMemory.
 
+        Automatically updates existing installations (no force flag needed).
+        Previous versions are backed up before updating.
+
         Args:
-            force: If True, overwrite existing files
             dry_run: If True, show what would be done without making changes
             verbose: If True, enable verbose output
+            **kwargs: Additional arguments (for compatibility)
 
         Returns:
             InstallationResult with details of the installation
@@ -728,32 +731,27 @@ if __name__ == "__main__":
             if errors:
                 raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
 
-            # Create CLAUDE.md only if it doesn't exist (or force is True)
+            # Create or update CLAUDE.md (always update if exists)
             claude_md_path = self.project_root / "CLAUDE.md"
-            if claude_md_path.exists() and not force:
+            if claude_md_path.exists():
+                # Update existing file
+                if not dry_run:
+                    backup_path = self.create_backup(claude_md_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(claude_md_path)
                 logger.info(
-                    f"CLAUDE.md already exists at {claude_md_path}, skipping creation"
-                )
-                self.warnings.append(
-                    "CLAUDE.md already exists, preserved existing file (use --force to overwrite)"
+                    f"{'Would update' if dry_run else 'Updating'} CLAUDE.md at {claude_md_path}"
                 )
             else:
-                if claude_md_path.exists() and force:
-                    if not dry_run:
-                        backup_path = self.create_backup(claude_md_path)
-                        if backup_path:
-                            self.backup_files.append(backup_path)
-                    self.files_modified.append(claude_md_path)
-                    logger.info(
-                        f"{'Would overwrite' if dry_run else 'Overwriting'} CLAUDE.md at {claude_md_path} (forced)"
-                    )
-                else:
-                    self.files_created.append(claude_md_path)
-                    logger.info(
-                        f"{'Would create' if dry_run else 'Created'} CLAUDE.md at {claude_md_path}"
-                    )
-                if not dry_run:
-                    claude_md_path.write_text(self._create_claude_md())
+                # Create new file
+                self.files_created.append(claude_md_path)
+                logger.info(
+                    f"{'Would create' if dry_run else 'Creating'} CLAUDE.md at {claude_md_path}"
+                )
+
+            if not dry_run:
+                claude_md_path.write_text(self._create_claude_md())
 
             # Create .claude-mpm directory and config
             mpm_dir = self.project_root / ".claude-mpm"
@@ -920,36 +918,31 @@ if __name__ == "__main__":
                     "Claude Desktop MCP integration not supported - using Claude Code hooks only"
                 )
 
-            # Create project-specific config.yaml
+            # Create or update project-specific config.yaml
             config_path = self._get_project_config_path()
             config_dir = config_path.parent
             if not dry_run:
                 config_dir.mkdir(parents=True, exist_ok=True)
 
-            if config_path.exists() and not force:
+            if config_path.exists():
+                # Update existing config
+                if not dry_run:
+                    backup_path = self.create_backup(config_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(config_path)
                 logger.info(
-                    f"Config file already exists at {config_path}, skipping creation"
-                )
-                self.warnings.append(
-                    "config.yaml already exists, preserved existing file (use --force to overwrite)"
+                    f"{'Would update' if dry_run else 'Updating'} config.yaml at {config_path}"
                 )
             else:
-                if config_path.exists() and force:
-                    if not dry_run:
-                        backup_path = self.create_backup(config_path)
-                        if backup_path:
-                            self.backup_files.append(backup_path)
-                    self.files_modified.append(config_path)
-                    logger.info(
-                        f"{'Would overwrite' if dry_run else 'Overwriting'} config.yaml at {config_path} (forced)"
-                    )
-                else:
-                    self.files_created.append(config_path)
-                    logger.info(
-                        f"{'Would create' if dry_run else 'Created'} config.yaml at {config_path}"
-                    )
-                if not dry_run:
-                    config_path.write_text(self._create_project_config())
+                # Create new config
+                self.files_created.append(config_path)
+                logger.info(
+                    f"{'Would create' if dry_run else 'Creating'} config.yaml at {config_path}"
+                )
+
+            if not dry_run:
+                config_path.write_text(self._create_project_config())
 
             # Initialize kuzu-memory database if not already done
             db_path = self._get_project_db_path()

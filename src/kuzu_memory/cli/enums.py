@@ -9,12 +9,46 @@ from enum import Enum
 
 
 class AISystem(str, Enum):
-    """Available AI systems for installation."""
+    """Available AI systems for installation (DEPRECATED - use HookSystem or MCPSystem)."""
 
     CLAUDE_CODE = "claude-code"
     CLAUDE_DESKTOP = "claude-desktop"
     AUGGIE = "auggie"
     UNIVERSAL = "universal"
+
+
+class HookSystem(str, Enum):
+    """Hook-based AI system integrations."""
+
+    CLAUDE_CODE = "claude-code"
+    AUGGIE = "auggie"
+
+    @property
+    def display_name(self) -> str:
+        """Get display name for hook system."""
+        return {
+            "claude-code": "Claude Code",
+            "auggie": "Auggie",
+        }[self.value]
+
+
+class MCPSystem(str, Enum):
+    """MCP server integrations."""
+
+    CLAUDE_DESKTOP = "claude-desktop"
+    CURSOR = "cursor"
+    VSCODE = "vscode"
+    WINDSURF = "windsurf"
+
+    @property
+    def display_name(self) -> str:
+        """Get display name for MCP system."""
+        return {
+            "claude-desktop": "Claude Desktop",
+            "cursor": "Cursor",
+            "vscode": "VS Code",
+            "windsurf": "Windsurf",
+        }[self.value]
 
 
 class OutputFormat(str, Enum):
@@ -73,7 +107,9 @@ class InstallationMode(str, Enum):
 __all__ = [
     "AISystem",
     "DiagnosticCheck",
+    "HookSystem",
     "InstallationMode",
+    "MCPSystem",
     "MemoryType",
     "OutputFormat",
     "RecallStrategy",

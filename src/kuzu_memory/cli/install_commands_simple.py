@@ -66,6 +66,10 @@ def add(
     """
     Install integration for an AI system.
 
+    ⚠️  DEPRECATED: This command is deprecated. Please use the new commands:
+      - 'kuzu-memory hooks install <system>' for hook integrations
+      - 'kuzu-memory mcp install <system>' for MCP integrations
+
     \b
     🎯 SUPPORTED AI SYSTEMS (ONE PATH):
       auggie                  Augment rules for Auggie integration
@@ -74,7 +78,19 @@ def add(
       universal               Generic integration for any AI system
 
     \b
-    🎮 EXAMPLES:
+    🎮 NEW RECOMMENDED COMMANDS:
+      # Install hook systems (Claude Code, Auggie)
+      kuzu-memory hooks install claude-code
+      kuzu-memory hooks install auggie
+
+      # Install MCP systems (Claude Desktop, Cursor, VS Code, Windsurf)
+      kuzu-memory mcp install claude-desktop
+      kuzu-memory mcp install cursor
+      kuzu-memory mcp install vscode
+      kuzu-memory mcp install windsurf
+
+    \b
+    🎮 OLD EXAMPLES (still work but deprecated):
       # Install Auggie integration
       kuzu-memory install add auggie
 
@@ -83,17 +99,34 @@ def add(
 
       # Install Claude Desktop (auto-detects best method)
       kuzu-memory install add claude-desktop
-
-      # Install Claude Desktop with specific mode
-      kuzu-memory install add claude-desktop --mode pipx
-      kuzu-memory install add claude-desktop --mode home
-
-      # Force reinstall with custom settings
-      kuzu-memory install add claude-desktop --force --memory-db ~/my-memories
-
-      # Dry run to see what would happen
-      kuzu-memory install add claude-desktop --dry-run --verbose
     """
+    # Show deprecation warning
+    print("\n" + "=" * 70)
+    print("⚠️  DEPRECATION WARNING")
+    print("=" * 70)
+    print("This command is deprecated and will be removed in a future version.")
+    print("\nPlease use the new commands instead:")
+
+    # Show migration path based on system
+    if ai_system in ["claude-code", "auggie"]:
+        print(f"\n  🪝 New command: kuzu-memory hooks install {ai_system}")
+        print(f"     (Hook-based integration)")
+    elif ai_system in ["claude-desktop", "cursor", "vscode", "windsurf"]:
+        mcp_system = ai_system
+        print(f"\n  🔌 New command: kuzu-memory mcp install {mcp_system}")
+        print(f"     (MCP server integration)")
+    elif ai_system == "universal":
+        print("\n  ℹ️  Universal installer is still available through 'install add'")
+
+    print("\n" + "=" * 70)
+
+    # Ask for confirmation to continue
+    if not dry_run and not click.confirm("\nContinue with deprecated command?", default=True):
+        print("Installation cancelled.")
+        return
+
+    print()
+
     try:
         # Deprecation warnings for old installer names
         deprecated_mappings = {

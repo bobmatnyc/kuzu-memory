@@ -16,16 +16,18 @@ from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
-# Import top-level command groups (8 total)
-from ._deprecated.mcp_commands import mcp
+# Import top-level command groups (9 total now with hooks)
+from ._deprecated.mcp_commands import mcp as deprecated_mcp
 from .cli_utils import rich_panel, rich_print, rich_table
 from .doctor_commands import doctor
 from .enums import OutputFormat
 from .git_commands import git
 from .help_commands import help_group
+from .hooks_commands import hooks_group
 from .init_commands import init
 from .install_commands_simple import install
 from .memory_commands import enhance, memory, recall, recent, store
+from .mcp_install_commands import mcp_install_group
 from .status_commands import status
 
 # Set up logging for CLI
@@ -545,15 +547,19 @@ def demo(ctx):
         sys.exit(1)
 
 
-# Register 8 top-level commands (clean architecture)
+# Register 10 top-level commands (clean architecture)
 cli.add_command(init)  # 1. Initialize project
-cli.add_command(install)  # 2. Manage integrations (add, remove, list, status)
+cli.add_command(install)  # 2. Manage integrations (DEPRECATED - use hooks/mcp)
 cli.add_command(memory)  # 3. Memory operations (store, learn, recall, enhance, recent)
 cli.add_command(status)  # 4. System status and info
 cli.add_command(doctor)  # 5. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 6. Help and examples
-cli.add_command(mcp)  # 7. MCP server for Claude Code integration
-cli.add_command(git)  # 8. Git commit history synchronization
+cli.add_command(git)  # 7. Git commit history synchronization
+cli.add_command(hooks_group, name="hooks")  # 8. Hook system integrations (NEW)
+cli.add_command(mcp_install_group, name="mcp")  # 9. MCP server integrations (NEW)
+
+# Note: The old 'mcp' command with 'serve' is deprecated but kept for backward compatibility
+# The new mcp_install_group takes precedence for the 'mcp' name
 
 # Keep quickstart/demo for onboarding
 cli.add_command(quickstart)
@@ -601,8 +607,41 @@ def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format
     )
 
 
-# Register deprecated 'stats' alias
+# Alias: 'health' as alias for 'status'
+@click.command()
+@click.option("--validate", is_flag=True, help="Run health validation checks")
+@click.option(
+    "--project", "show_project", is_flag=True, help="Show detailed project information"
+)
+@click.option("--detailed", is_flag=True, help="Show detailed statistics")
+@click.option(
+    "--format",
+    "output_format",
+    default=OutputFormat.TEXT.value,
+    type=click.Choice([OutputFormat.TEXT.value, OutputFormat.JSON.value]),
+    help="Output format",
+)
+@click.pass_context
+def health(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str):
+    """
+    🏥 System health check (alias for 'status').
+
+    Shows memory system status and statistics. This is a convenient alias
+    for the 'status' command.
+    """
+    # Forward to status command
+    ctx.invoke(
+        status,
+        validate=validate,
+        show_project=show_project,
+        detailed=detailed,
+        output_format=output_format,
+    )
+
+
+# Register deprecated 'stats' alias and 'health' alias
 cli.add_command(stats)
+cli.add_command(health)
 
 
 if __name__ == "__main__":

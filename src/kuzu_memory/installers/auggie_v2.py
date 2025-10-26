@@ -65,20 +65,27 @@ class AuggieInstallerV2(BaseInstaller):
         return errors
 
     def install(
-        self, force: bool = False, auto_migrate: bool = True, **kwargs
+        self, auto_migrate: bool = True, dry_run: bool = False, verbose: bool = False, **kwargs
     ) -> InstallationResult:
         """
         Install or upgrade Auggie integration.
 
+        Automatically updates existing installations (no force flag needed).
+        Previous versions are backed up before updating.
+
         Args:
-            force: Force installation even if files exist
             auto_migrate: Automatically migrate from older versions (default: True)
-            **kwargs: Additional options
+            dry_run: If True, show what would be done without making changes
+            verbose: If True, enable verbose output
+            **kwargs: Additional options (for compatibility)
 
         Returns:
             InstallationResult with installation/upgrade details
         """
         try:
+            if dry_run:
+                logger.info("DRY RUN MODE - No changes will be made")
+
             # Check prerequisites
             errors = self.check_prerequisites()
             if errors:
@@ -89,40 +96,34 @@ class AuggieInstallerV2(BaseInstaller):
             installed_version = detector.get_installed_version()
 
             # Handle upgrade scenario
-            if installed_version and not force:
+            if installed_version:
                 if installed_version >= CURRENT_VERSION:
-                    # Already at latest version
-                    return InstallationResult(
-                        success=True,
-                        ai_system=self.ai_system_name,
-                        files_created=[],
-                        files_modified=[],
-                        backup_files=[],
-                        message=f"Already at latest version {CURRENT_VERSION}. Use --force to reinstall.",
-                        warnings=[],
-                    )
-
-                # Upgrade needed
-                if auto_migrate:
+                    # Already at latest version - reinstall/update
                     logger.info(
-                        f"Detected v{installed_version}, upgrading to v{CURRENT_VERSION}"
+                        f"Already at latest version {CURRENT_VERSION}. Updating installation."
                     )
-                    return self._upgrade_installation(installed_version, detector)
+                    # Continue with installation to update files
                 else:
-                    return InstallationResult(
-                        success=False,
-                        ai_system=self.ai_system_name,
-                        files_created=[],
-                        files_modified=[],
-                        backup_files=[],
-                        message=f"Upgrade available ({installed_version} → {CURRENT_VERSION}). "
-                        f"Run with --auto-migrate or use --force to reinstall.",
-                        warnings=[],
-                    )
+                    # Upgrade needed
+                    if auto_migrate:
+                        logger.info(
+                            f"Detected v{installed_version}, upgrading to v{CURRENT_VERSION}"
+                        )
+                        return self._upgrade_installation(installed_version, detector, dry_run=dry_run)
+                    else:
+                        return InstallationResult(
+                            success=False,
+                            ai_system=self.ai_system_name,
+                            files_created=[],
+                            files_modified=[],
+                            backup_files=[],
+                            message=f"Upgrade available ({installed_version} → {CURRENT_VERSION}). "
+                            f"Run with auto_migrate=True to upgrade.",
+                            warnings=[],
+                        )
 
-            # Fresh install or forced reinstall
-            if not installed_version and not force:
-                # Check if files exist without version
+            # Fresh install - check if files exist without version
+            if not installed_version:
                 existing_files = []
                 for file_pattern in self.required_files:
                     file_path = self.project_root / file_pattern
@@ -130,10 +131,17 @@ class AuggieInstallerV2(BaseInstaller):
                         existing_files.append(str(file_path))
 
                 if existing_files:
-                    raise InstallationError(
-                        f"Auggie integration files exist but no version detected. "
-                        f"Use --force to overwrite. Files: {', '.join(existing_files)}"
+                    # Files exist but no version - update them
+                    logger.info(
+                        f"Auggie files exist without version marker. Updating to v{CURRENT_VERSION}."
                     )
+                    # Create backups of existing files
+                    for file_path_str in existing_files:
+                        if not dry_run:
+                            file_path = Path(file_path_str)
+                            backup_path = self.create_backup(file_path)
+                            if backup_path:
+                                self.backup_files.append(backup_path)
 
             # Perform installation
             self._install_agents_md()
@@ -165,7 +173,7 @@ class AuggieInstallerV2(BaseInstaller):
             )
 
     def _upgrade_installation(
-        self, from_version, detector: AuggieVersionDetector
+        self, from_version, detector: AuggieVersionDetector, dry_run: bool = False
     ) -> InstallationResult:
         """
         Upgrade from existing version to current version.
@@ -173,6 +181,7 @@ class AuggieInstallerV2(BaseInstaller):
         Args:
             from_version: Version being upgraded from
             detector: Version detector instance
+            dry_run: If True, show what would be done without making changes
 
         Returns:
             InstallationResult with upgrade details
