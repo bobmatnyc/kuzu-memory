@@ -5,8 +5,10 @@ Tests the new activity-aware recency calculation that makes recency relative
 to project activity instead of absolute time.
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from kuzu_memory.core.models import Memory, MemoryType
 from kuzu_memory.recall.temporal_decay import TemporalDecayEngine
 
@@ -399,7 +401,7 @@ class TestActivityAwareIntegrationScenarios:
         ]
 
         # All activity-aware scores should be higher (memories appear more recent)
-        for abs_score, aware_score in zip(scores_absolute, scores_aware):
+        for abs_score, aware_score in zip(scores_absolute, scores_aware, strict=False):
             assert aware_score > abs_score
 
         # Most recent memory (1 day before last activity) should rank highest

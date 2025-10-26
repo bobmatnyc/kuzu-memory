@@ -7,14 +7,15 @@ Tests the enhanced file reference capabilities including:
 - File categorization by type
 """
 
-import pytest
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch
 from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-from kuzu_memory.integrations.git_sync import GitSyncManager
+import pytest
+
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.core.models import MemoryType
+from kuzu_memory.integrations.git_sync import GitSyncManager
 
 
 @pytest.fixture

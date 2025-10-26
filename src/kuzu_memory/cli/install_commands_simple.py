@@ -7,11 +7,11 @@ from pathlib import Path
 
 import click
 
-from ..installers import get_installer, has_installer
+from ..installers import get_installer
 from ..installers.registry import list_installers as registry_list_installers
 from ..utils.project_setup import find_project_root
 from .cli_utils import rich_print
-from .enums import AISystem, InstallationMode
+from .enums import AISystem
 
 
 @click.group(invoke_without_command=True)
@@ -40,14 +40,9 @@ def install(ctx):
 @install.command()
 @click.argument(
     "platform",
-    type=click.Choice([
-        "claude-code",
-        "claude-desktop",
-        "cursor",
-        "vscode",
-        "windsurf",
-        "auggie"
-    ])
+    type=click.Choice(
+        ["claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "auggie"]
+    ),
 )
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option(
@@ -190,8 +185,12 @@ def add(
                 print("2. KuzuMemory MCP server will be active")
                 print("3. Check the configuration file for details")
             elif platform == "auggie":
-                print("1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain")
-                print("2. Store info: kuzu-memory memory store 'This project uses FastAPI'")
+                print(
+                    "1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain"
+                )
+                print(
+                    "2. Store info: kuzu-memory memory store 'This project uses FastAPI'"
+                )
                 print("3. Start using Auggie with enhanced context!")
 
         else:

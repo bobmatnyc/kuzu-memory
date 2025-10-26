@@ -17,7 +17,6 @@ from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
 # Import top-level command groups (9 total now with hooks)
-from ._deprecated.mcp_commands import mcp as deprecated_mcp
 from .cli_utils import rich_panel, rich_print, rich_table
 from .doctor_commands import doctor
 from .enums import OutputFormat
@@ -26,8 +25,8 @@ from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
 from .install_commands_simple import install
-from .memory_commands import enhance, memory, recall, recent, store
 from .mcp_install_commands import mcp_install_group
+from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
 
 # Set up logging for CLI

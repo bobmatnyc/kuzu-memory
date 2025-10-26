@@ -118,7 +118,7 @@ You're using KuzuMemory correctly when:
         version_file = tmp_path / ".augment" / ".kuzu-version"
         assert version_file.exists()
 
-        with open(version_file, "r") as f:
+        with open(version_file) as f:
             data = json.load(f)
             assert data["version"] == "2.0.0"
             assert "installed_at" in data
@@ -181,7 +181,7 @@ class TestAuggieInstallation:
 
         # Check content has v2 markers
         agents_file = tmp_path / "AGENTS.md"
-        with open(agents_file, "r") as f:
+        with open(agents_file) as f:
             content = f.read()
             assert "Success Indicators" in content
             assert "v2.0.0" in content
@@ -240,7 +240,7 @@ class TestAuggieInstallation:
         assert detector.get_installed_version() == CURRENT_VERSION
 
         # Check v2 content in AGENTS.md
-        with open(agents_file, "r") as f:
+        with open(agents_file) as f:
             content = f.read()
             assert "Success Indicators" in content
             assert "v2.0.0" in content

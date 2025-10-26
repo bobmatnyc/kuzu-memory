@@ -103,7 +103,7 @@ class AuggieVersionDetector:
         self.project_root = project_root
         self.version_file = project_root / ".augment" / ".kuzu-version"
 
-    def get_installed_version(self) -> Optional[AuggieVersion]:
+    def get_installed_version(self) -> AuggieVersion | None:
         """
         Get the currently installed version.
 
@@ -115,15 +115,15 @@ class AuggieVersionDetector:
             return self._detect_version_from_content()
 
         try:
-            with open(self.version_file, "r") as f:
+            with open(self.version_file) as f:
                 data = json.load(f)
                 version_str = data.get("version", "")
                 return AuggieVersion.from_string(version_str)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.warning(f"Failed to read version file: {e}")
             return self._detect_version_from_content()
 
-    def _detect_version_from_content(self) -> Optional[AuggieVersion]:
+    def _detect_version_from_content(self) -> AuggieVersion | None:
         """
         Detect version from file content patterns.
 
@@ -138,7 +138,7 @@ class AuggieVersionDetector:
             return None
 
         try:
-            with open(integration_file, "r") as f:
+            with open(integration_file) as f:
                 content = f.read()
 
             # Check for v2.0.0 markers
@@ -150,8 +150,10 @@ class AuggieVersionDetector:
                 return AuggieVersion(1, 0, 0)
 
             return None
-        except IOError as e:
-            logger.warning(f"Failed to read integration file for version detection: {e}")
+        except OSError as e:
+            logger.warning(
+                f"Failed to read integration file for version detection: {e}"
+            )
             return None
 
     def write_version(self, version: AuggieVersion) -> bool:
@@ -178,7 +180,7 @@ class AuggieVersionDetector:
 
             logger.info(f"Wrote version {version} to {self.version_file}")
             return True
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to write version file: {e}")
             return False
 
@@ -224,7 +226,7 @@ class AuggieRuleMigrator:
         self.detector = AuggieVersionDetector(project_root)
         self.backup_dir = project_root / ".augment" / "backups"
 
-    def create_backup(self) -> Optional[Path]:
+    def create_backup(self) -> Path | None:
         """
         Create backup of current rules before migration.
 
@@ -245,20 +247,14 @@ class AuggieRuleMigrator:
             # Backup files
             files_to_backup = [
                 self.project_root / "AGENTS.md",
-                self.project_root
-                / ".augment"
-                / "rules"
-                / "kuzu-memory-integration.md",
-                self.project_root
-                / ".augment"
-                / "rules"
-                / "memory-quick-reference.md",
+                self.project_root / ".augment" / "rules" / "kuzu-memory-integration.md",
+                self.project_root / ".augment" / "rules" / "memory-quick-reference.md",
             ]
 
             for file_path in files_to_backup:
                 if file_path.exists():
                     dest = backup_path / file_path.name
-                    with open(file_path, "r") as src, open(dest, "w") as dst:
+                    with open(file_path) as src, open(dest, "w") as dst:
                         dst.write(src.read())
                     logger.info(f"Backed up {file_path.name} to {dest}")
 
@@ -275,7 +271,7 @@ class AuggieRuleMigrator:
             logger.info(f"Created backup at {backup_path}")
             return backup_path
 
-        except (IOError, OSError) as e:
+        except OSError as e:
             logger.error(f"Failed to create backup: {e}")
             return None
 
@@ -333,9 +329,7 @@ class AuggieRuleMigrator:
                 "message": "Failed to create backup. Migration aborted for safety.",
             }
 
-        logger.info(
-            f"Starting migration from {installed_version} to {CURRENT_VERSION}"
-        )
+        logger.info(f"Starting migration from {installed_version} to {CURRENT_VERSION}")
 
         return {
             "success": True,

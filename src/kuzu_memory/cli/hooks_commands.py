@@ -150,8 +150,12 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
       kuzu-memory hooks install auggie
     """
     # Show informational note about unified command
-    console.print("\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command.")
-    console.print("   It automatically installs the right components for each platform.\n")
+    console.print(
+        "\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command."
+    )
+    console.print(
+        "   It automatically installs the right components for each platform.\n"
+    )
 
     try:
         # Determine project root

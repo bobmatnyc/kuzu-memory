@@ -318,7 +318,9 @@ class TestMCPHealthChecker:
             # Verify checked_paths metadata includes multiple locations
             assert "checked_paths" in result.metadata
             assert isinstance(result.metadata["checked_paths"], list)
-            assert len(result.metadata["checked_paths"]) >= 3  # env var + 2 project-local + default
+            assert (
+                len(result.metadata["checked_paths"]) >= 3
+            )  # env var + 2 project-local + default
 
     @pytest.mark.asyncio
     async def test_check_database_health_not_exists(self, health_checker, tmp_path):
@@ -361,7 +363,9 @@ class TestMCPHealthChecker:
             assert result.metadata["path"] == str(db_path)
             # Verify project-local path was checked
             assert "checked_paths" in result.metadata
-            assert any("kuzu-memories" in path for path in result.metadata["checked_paths"])
+            assert any(
+                "kuzu-memories" in path for path in result.metadata["checked_paths"]
+            )
 
     @pytest.mark.asyncio
     async def test_collect_performance_metrics_empty_history(self, health_checker):

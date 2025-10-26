@@ -66,8 +66,8 @@ class ClaudeHooksInstaller(BaseInstaller):
             "CLAUDE.md",
             ".claude-mpm/config.json",
             ".claude/config.local.json",
-            ".claude/hooks/user_prompt_submit.py",
-            ".claude/hooks/post_tool_use.py",
+            ".claude/hooks/kuzu_enhance.py",
+            ".claude/hooks/kuzu_learn.py",
             ".kuzu-memory/config.yaml",
         ]
         return files
@@ -586,124 +586,44 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
-    def _create_user_prompt_submit_hook(self) -> str:
-        """
-        Generate user_prompt_submit.py hook script.
+    def _get_template_path(self, filename: str) -> Path:
+        """Get path to hook template file."""
+        template_dir = Path(__file__).parent / "templates" / "claude_hooks"
+        return template_dir / filename
 
-        This hook enhances user prompts with project context from KuzuMemory.
-        It's called by Claude Code before processing each user prompt.
+    def _load_template(self, filename: str) -> str:
+        """
+        Load hook template and replace placeholders.
+
+        Args:
+            filename: Name of the template file
 
         Returns:
-            Python script content for UserPromptSubmit hook
+            Template content with placeholders replaced
+
+        Raises:
+            FileNotFoundError: If template file doesn't exist
         """
+        template_path = self._get_template_path(filename)
+        if not template_path.exists():
+            raise FileNotFoundError(f"Hook template not found: {template_path}")
+
+        content = template_path.read_text()
+
+        # Replace placeholders
         kuzu_cmd = self._get_kuzu_memory_command_path()
+        content = content.replace("{KUZU_COMMAND}", str(kuzu_cmd))
+        # The shebang replacement is handled by the template already having the correct shebang
 
-        return f'''#!/usr/bin/env python3
-"""Claude Code UserPromptSubmit hook - Enhance prompts with project context."""
-import subprocess
-import sys
+        return content
 
-
-def main() -> int:
-    """Enhance user prompt with kuzu-memory context."""
-    # Read original prompt from stdin
-    prompt = sys.stdin.read().strip()
-
-    if not prompt:
-        # No prompt, pass through
-        print(prompt)
-        return 0
-
-    try:
-        # Call kuzu-memory enhance via CLI entry point
-        result = subprocess.run(
-            ["{kuzu_cmd}", "memory", "enhance", prompt],
-            capture_output=True,
-            text=True,
-            timeout=5.0,
-        )
-
-        if result.returncode == 0 and result.stdout:
-            # Successfully enhanced
-            print(result.stdout.strip())
-        else:
-            # Enhancement failed, use original
-            if result.stderr:
-                print(f"Enhancement failed: {{result.stderr}}", file=sys.stderr)
-            print(prompt)
-
-    except subprocess.TimeoutExpired:
-        # Timeout, fallback to original
-        print("Enhancement timed out", file=sys.stderr)
-        print(prompt)
-    except Exception as e:
-        # Any error, fallback to original
-        print(f"Enhancement error: {{e}}", file=sys.stderr)
-        print(prompt)
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-'''
+    def _create_user_prompt_submit_hook(self) -> str:
+        """Load production kuzu_enhance.py template."""
+        return self._load_template("kuzu_enhance.py")
 
     def _create_post_tool_use_hook(self) -> str:
-        """
-        Generate post_tool_use.py hook script.
-
-        This hook learns from tool usage (specifically Edit and Write operations).
-        It's called by Claude Code after each tool use.
-
-        Returns:
-            Python script content for PostToolUse hook
-        """
-        kuzu_cmd = self._get_kuzu_memory_command_path()
-
-        return f'''#!/usr/bin/env python3
-"""Claude Code PostToolUse hook - Learn from tool usage."""
-import json
-import subprocess
-import sys
-
-
-def main() -> int:
-    """Learn from tool usage events."""
-    # Read tool usage data from stdin
-    try:
-        data = json.loads(sys.stdin.read())
-    except (json.JSONDecodeError, ValueError):
-        # Invalid JSON, nothing to learn
-        return 0
-
-    # Extract relevant content to learn from
-    tool = data.get("tool", "")
-    content = data.get("content", "")
-
-    # Only learn from file operations (Edit, Write)
-    if not content or tool not in ["Edit", "Write"]:
-        return 0
-
-    try:
-        # Call kuzu-memory learn via CLI entry point (async with --quiet)
-        subprocess.run(
-            ["{kuzu_cmd}", "memory", "learn", content, "--quiet"],
-            check=False,  # Don't raise on error
-            timeout=1.0,
-        )
-    except subprocess.TimeoutExpired:
-        # Learning timed out, but don't block
-        print("Learning timed out", file=sys.stderr)
-    except Exception as e:
-        # Learning failed, but don't block
-        print(f"Learning error: {{e}}", file=sys.stderr)
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-'''
+        """Load production kuzu_learn.py template."""
+        return self._load_template("kuzu_learn.py")
 
     def install(
         self, dry_run: bool = False, verbose: bool = False, **kwargs
@@ -785,8 +705,8 @@ if __name__ == "__main__":
             if not dry_run:
                 hooks_dir.mkdir(exist_ok=True)
 
-            # Create user_prompt_submit.py hook (always update)
-            user_prompt_hook_path = hooks_dir / "user_prompt_submit.py"
+            # Create kuzu_enhance.py hook (always update)
+            user_prompt_hook_path = hooks_dir / "kuzu_enhance.py"
             if user_prompt_hook_path.exists():
                 # Hook exists - update it with latest version
                 if not dry_run:
@@ -801,14 +721,14 @@ if __name__ == "__main__":
                 action = "create" if not dry_run else "would create"
 
             if not dry_run:
-                user_prompt_hook_path.write_text(
-                    self._create_user_prompt_submit_hook()
-                )
+                user_prompt_hook_path.write_text(self._create_user_prompt_submit_hook())
                 user_prompt_hook_path.chmod(0o755)  # Make executable
-            logger.info(f"{'Would ' if dry_run else ''}{action.capitalize()}d user_prompt_submit.py hook")
+            logger.info(
+                f"{'Would ' if dry_run else ''}{action.capitalize()}d kuzu_enhance.py hook"
+            )
 
-            # Create post_tool_use.py hook (always update)
-            post_tool_hook_path = hooks_dir / "post_tool_use.py"
+            # Create kuzu_learn.py hook (always update)
+            post_tool_hook_path = hooks_dir / "kuzu_learn.py"
             if post_tool_hook_path.exists():
                 # Hook exists - update it with latest version
                 if not dry_run:
@@ -825,7 +745,9 @@ if __name__ == "__main__":
             if not dry_run:
                 post_tool_hook_path.write_text(self._create_post_tool_use_hook())
                 post_tool_hook_path.chmod(0o755)  # Make executable
-            logger.info(f"{'Would ' if dry_run else ''}{action.capitalize()}d post_tool_use.py hook")
+            logger.info(
+                f"{'Would ' if dry_run else ''}{action.capitalize()}d kuzu_learn.py hook"
+            )
 
             # Create or update config.local.json with hooks and MCP server
             local_config_path = claude_dir / "config.local.json"

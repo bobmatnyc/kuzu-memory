@@ -63,7 +63,9 @@ class TestGitUserProvider:
         """Test fallback to system username when git is not configured."""
         with (
             patch.object(GitUserProvider, "_run_git_command", return_value=None),
-            patch("kuzu_memory.utils.git_user.getpass.getuser", return_value="testuser"),
+            patch(
+                "kuzu_memory.utils.git_user.getpass.getuser", return_value="testuser"
+            ),
         ):
             user_info = GitUserProvider.get_git_user_info()
 
@@ -227,7 +229,9 @@ class TestKuzuMemoryUserTagging:
             original_generate = km.memory_store.generate_memories
             captured_user_id = None
 
-            def mock_generate(content, metadata=None, source="conversation", user_id=None, **kwargs):
+            def mock_generate(
+                content, metadata=None, source="conversation", user_id=None, **kwargs
+            ):
                 nonlocal captured_user_id
                 captured_user_id = user_id
                 return []
@@ -353,8 +357,8 @@ class TestGitSyncUserTagging:
 
     def test_git_commit_tagged_with_author_email(self):
         """Test that git commits are tagged with author/committer email."""
-        from kuzu_memory.integrations.git_sync import GitSyncManager
         from kuzu_memory.core.config import GitSyncConfig
+        from kuzu_memory.integrations.git_sync import GitSyncManager
 
         # Create mock commit
         mock_commit = MagicMock()
@@ -367,7 +371,9 @@ class TestGitSyncUserTagging:
         mock_commit.committer.email = "jane@example.com"
         mock_commit.committed_datetime = MagicMock()
         mock_commit.committed_datetime.replace = MagicMock(
-            return_value=MagicMock(isoformat=MagicMock(return_value="2025-01-01T00:00:00"))
+            return_value=MagicMock(
+                isoformat=MagicMock(return_value="2025-01-01T00:00:00")
+            )
         )
         mock_commit.tree.traverse = MagicMock(return_value=[])
 
@@ -393,8 +399,8 @@ class TestMemoryStoreUserFiltering:
 
     def test_get_memories_by_user_query(self, tmp_path):
         """Test get_memories_by_user generates correct query."""
-        from kuzu_memory.storage.memory_store import MemoryStore
         from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.storage.memory_store import MemoryStore
 
         config = KuzuMemoryConfig.default()
 
@@ -419,8 +425,8 @@ class TestMemoryStoreUserFiltering:
 
     def test_get_users_query(self, tmp_path):
         """Test get_users generates correct query."""
-        from kuzu_memory.storage.memory_store import MemoryStore
         from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.storage.memory_store import MemoryStore
 
         config = KuzuMemoryConfig.default()
 

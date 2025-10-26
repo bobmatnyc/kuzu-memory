@@ -109,7 +109,9 @@ def mcp_status(project, verbose: bool, available: bool, installed: bool):
 @mcp_install_group.command(name="install")
 @click.argument(
     "system",
-    type=click.Choice(["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]),
+    type=click.Choice(
+        ["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]
+    ),
 )
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
@@ -156,7 +158,9 @@ def install_mcp(
       kuzu-memory mcp install vscode
     """
     # Show informational note about unified command
-    print("\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command.")
+    print(
+        "\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command."
+    )
     print("   It automatically installs the right components for each platform.\n")
 
     try:

@@ -342,10 +342,12 @@ class MCPHealthChecker:
                     candidate_paths.append(Path(env_db_path))
 
                 # 2. Project-local paths
-                candidate_paths.extend([
-                    self.project_root / "kuzu-memories" / "memories.db",
-                    self.project_root / "kuzu-memories" / "memory.db",
-                ])
+                candidate_paths.extend(
+                    [
+                        self.project_root / "kuzu-memories" / "memories.db",
+                        self.project_root / "kuzu-memories" / "memory.db",
+                    ]
+                )
 
                 # 3. Default user path (fallback)
                 candidate_paths.append(Path.home() / ".kuzu" / "memory.db")
@@ -408,7 +410,7 @@ class MCPHealthChecker:
                         latency_ms=latency,
                         metadata={
                             "checked_paths": checked_paths,
-                            "note": "No readable/writable database found in any location"
+                            "note": "No readable/writable database found in any location",
                         },
                     )
 

@@ -65,7 +65,11 @@ class AuggieInstallerV2(BaseInstaller):
         return errors
 
     def install(
-        self, auto_migrate: bool = True, dry_run: bool = False, verbose: bool = False, **kwargs
+        self,
+        auto_migrate: bool = True,
+        dry_run: bool = False,
+        verbose: bool = False,
+        **kwargs,
     ) -> InstallationResult:
         """
         Install or upgrade Auggie integration.
@@ -109,7 +113,9 @@ class AuggieInstallerV2(BaseInstaller):
                         logger.info(
                             f"Detected v{installed_version}, upgrading to v{CURRENT_VERSION}"
                         )
-                        return self._upgrade_installation(installed_version, detector, dry_run=dry_run)
+                        return self._upgrade_installation(
+                            installed_version, detector, dry_run=dry_run
+                        )
                     else:
                         return InstallationResult(
                             success=False,
@@ -194,7 +200,9 @@ class AuggieInstallerV2(BaseInstaller):
             migration_info = migrator.migrate()
 
             if not migration_info.get("success"):
-                raise InstallationError(migration_info.get("message", "Migration failed"))
+                raise InstallationError(
+                    migration_info.get("message", "Migration failed")
+                )
 
             backup_path = Path(migration_info.get("backup_path", ""))
 
