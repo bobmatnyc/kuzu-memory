@@ -123,6 +123,9 @@ def install_mcp(
     """
     Install MCP server for specified system.
 
+    ℹ️  RECOMMENDED: Use 'kuzu-memory install add <platform>' instead.
+        The unified install command automatically handles MCP + hooks per platform.
+
     Automatically updates existing installations (no --force flag needed).
     Preserves existing MCP servers in configurations.
 
@@ -135,7 +138,14 @@ def install_mcp(
       windsurf        Windsurf IDE MCP configuration
 
     \b
-    🎯 EXAMPLES:
+    🎯 RECOMMENDED COMMAND:
+      kuzu-memory install add <platform>
+        • Installs MCP + hooks for claude-code
+        • Installs MCP only for claude-desktop, cursor, vscode, windsurf
+        • No need to think about MCP vs hooks - it does the right thing
+
+    \b
+    🎯 EXAMPLES (still supported):
       # Install for Claude Code (MCP + hooks)
       kuzu-memory mcp install claude-code
 
@@ -144,21 +154,11 @@ def install_mcp(
 
       # Install for VS Code
       kuzu-memory mcp install vscode
-
-      # Preview changes
-      kuzu-memory mcp install cursor --dry-run
-
-      # Install with verbose output
-      kuzu-memory mcp install vscode --verbose
-
-    \b
-    📝 NOTE:
-      MCP servers are always updated if they exist. No --force flag is needed.
-      Previous configurations are automatically backed up before updating.
-
-      Claude Code installs both MCP server and hooks. You can also use:
-        kuzu-memory hooks install claude-code
     """
+    # Show informational note about unified command
+    print("\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command.")
+    print("   It automatically installs the right components for each platform.\n")
+
     try:
         # Determine project root
         if project:

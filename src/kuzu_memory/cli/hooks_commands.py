@@ -124,6 +124,9 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
     """
     Install hooks for specified system.
 
+    ℹ️  RECOMMENDED: Use 'kuzu-memory install add <platform>' instead.
+        The unified install command automatically handles MCP + hooks per platform.
+
     Hooks are automatically updated if already installed (no --force flag needed).
 
     \b
@@ -132,24 +135,24 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
       auggie       Install Auggie rules (treated as hooks)
 
     \b
-    🎯 EXAMPLES:
+    🎯 RECOMMENDED COMMAND:
+      kuzu-memory install add <platform>
+        • Installs MCP + hooks for claude-code
+        • Installs rules for auggie
+        • No need to think about MCP vs hooks - it does the right thing
+
+    \b
+    🎯 EXAMPLES (still supported):
       # Install Claude Code hooks
       kuzu-memory hooks install claude-code
 
       # Install Auggie rules
       kuzu-memory hooks install auggie
-
-      # Preview changes
-      kuzu-memory hooks install claude-code --dry-run
-
-      # Verbose output
-      kuzu-memory hooks install auggie --verbose
-
-    \b
-    📝 NOTE:
-      Hooks are always updated if they exist. No --force flag is needed.
-      Previous versions are automatically backed up before updating.
     """
+    # Show informational note about unified command
+    console.print("\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command.")
+    console.print("   It automatically installs the right components for each platform.\n")
+
     try:
         # Determine project root
         if project:
