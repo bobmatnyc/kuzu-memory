@@ -278,6 +278,9 @@ yarn-error.log*
 # Kuzu Memory backups (temporary)
 .kuzu-memory-backups/
 
+# Auggie rules (project-specific, regenerated on install)
+.augment/rules/
+
 # Changelog fragments (preserve)
 !changelog.d/*.md
 !changelog.d/*.rst
