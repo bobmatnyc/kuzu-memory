@@ -38,116 +38,59 @@ def install(ctx):
 
 
 @install.command()
-@click.argument("ai_system", type=click.Choice([s.value for s in AISystem]))
-@click.option("--force", is_flag=True, help="Force installation even if files exist")
+@click.argument(
+    "platform",
+    type=click.Choice([
+        "claude-code",
+        "claude-desktop",
+        "cursor",
+        "vscode",
+        "windsurf",
+        "auggie"
+    ])
+)
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option(
     "--dry-run", is_flag=True, help="Show what would be done without making changes"
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-@click.option(
-    "--mode",
-    type=click.Choice([m.value for m in InstallationMode]),
-    default=InstallationMode.AUTO.value,
-    help="Installation mode (auto=detect, pipx=use pipx, home=home dir)",
-)
-@click.option("--backup-dir", type=click.Path(), help="Custom backup directory")
-@click.option("--memory-db", type=click.Path(), help="Custom memory database path")
 def add(
-    ai_system: str,
-    force: bool,
+    platform: str,
     project,
     dry_run: bool,
     verbose: bool,
-    mode: str,
-    backup_dir,
-    memory_db,
 ):
     """
-    Install integration for an AI system.
+    Install KuzuMemory integration for an AI platform.
 
-    ⚠️  DEPRECATED: This command is deprecated. Please use the new commands:
-      - 'kuzu-memory hooks install <system>' for hook integrations
-      - 'kuzu-memory mcp install <system>' for MCP integrations
-
-    \b
-    🎯 SUPPORTED AI SYSTEMS (ONE PATH):
-      auggie                  Augment rules for Auggie integration
-      claude-code             Claude Code with hooks/MCP
-      claude-desktop          Claude Desktop (auto-detects pipx/home)
-      universal               Generic integration for any AI system
+    Each platform gets the right components automatically:
+      - claude-code: MCP server + hooks (complete integration)
+      - claude-desktop: MCP server only
+      - cursor: MCP server only
+      - vscode: MCP server only
+      - windsurf: MCP server only
+      - auggie: Rules integration (treated as hooks)
 
     \b
-    🎮 NEW RECOMMENDED COMMANDS:
-      # Install hook systems (Claude Code, Auggie)
-      kuzu-memory hooks install claude-code
-      kuzu-memory hooks install auggie
-
-      # Install MCP systems (Claude Desktop, Cursor, VS Code, Windsurf)
-      kuzu-memory mcp install claude-desktop
-      kuzu-memory mcp install cursor
-      kuzu-memory mcp install vscode
-      kuzu-memory mcp install windsurf
-
-    \b
-    🎮 OLD EXAMPLES (still work but deprecated):
-      # Install Auggie integration
-      kuzu-memory install add auggie
-
-      # Install Claude Code integration
+    🎯 EXAMPLES:
+      # Install Claude Code (MCP + hooks)
       kuzu-memory install add claude-code
 
-      # Install Claude Desktop (auto-detects best method)
+      # Install Claude Desktop (MCP only)
+      kuzu-memory install add claude-desktop
+
+      # Install Cursor (MCP only)
+      kuzu-memory install add cursor
+
+      # Install Auggie (rules only)
+      kuzu-memory install add auggie
+
+    \b
+    📝 NOTE:
+      No --force flag needed. Installations always update existing configs safely
       kuzu-memory install add claude-desktop
     """
-    # Show deprecation warning
-    print("\n" + "=" * 70)
-    print("⚠️  DEPRECATION WARNING")
-    print("=" * 70)
-    print("This command is deprecated and will be removed in a future version.")
-    print("\nPlease use the new commands instead:")
-
-    # Show migration path based on system
-    if ai_system in ["claude-code", "auggie"]:
-        print(f"\n  🪝 New command: kuzu-memory hooks install {ai_system}")
-        print(f"     (Hook-based integration)")
-    elif ai_system in ["claude-desktop", "cursor", "vscode", "windsurf"]:
-        mcp_system = ai_system
-        print(f"\n  🔌 New command: kuzu-memory mcp install {mcp_system}")
-        print(f"     (MCP server integration)")
-    elif ai_system == "universal":
-        print("\n  ℹ️  Universal installer is still available through 'install add'")
-
-    print("\n" + "=" * 70)
-
-    # Ask for confirmation to continue
-    if not dry_run and not click.confirm("\nContinue with deprecated command?", default=True):
-        print("Installation cancelled.")
-        return
-
-    print()
-
     try:
-        # Deprecation warnings for old installer names
-        deprecated_mappings = {
-            "claude": ("claude-code", "kuzu-memory install add claude-code"),
-            "claude-mcp": ("claude-code", "kuzu-memory install add claude-code"),
-            "claude-desktop-pipx": (
-                "claude-desktop",
-                "kuzu-memory install add claude-desktop",
-            ),
-            "claude-desktop-home": (
-                "claude-desktop --mode=home",
-                "kuzu-memory install add claude-desktop --mode home",
-            ),
-            "generic": ("universal", "kuzu-memory install add universal"),
-        }
-
-        if ai_system in deprecated_mappings:
-            _new_name, new_command = deprecated_mappings[ai_system]
-            print(f"⚠️  DEPRECATION WARNING: '{ai_system}' is deprecated.")
-            print(f"   Please use: {new_command}")
-            print(f"   Continuing with installation using '{ai_system}' for now...\n")
         # Get project root
         if project:
             project_root = Path(project)
@@ -157,57 +100,32 @@ def add(
                 print("❌ Could not find project root. Use --project to specify.")
                 sys.exit(1)
 
-        # Check if installer exists
-        if not has_installer(ai_system):
-            print(f"❌ Unknown AI system: {ai_system}")
-            print("\n💡 Available installers:")
-            for installer_info in registry_list_installers():
-                print(f"  • {installer_info['name']} - {installer_info['description']}")
-            sys.exit(1)
+        # Show what will be installed
+        print(f"\n{'=' * 70}")
+        print(f"Installing KuzuMemory for {platform}")
+        print(f"{'=' * 70}")
 
-        # Prepare installer options
-        installer_options = {}
-        if dry_run:
-            installer_options["dry_run"] = dry_run
-        if verbose:
-            installer_options["verbose"] = verbose
-        # Mode applies to claude-desktop and claude-desktop-home
-        if mode and ai_system in ["claude-desktop", "claude-desktop-home"]:
-            installer_options["mode"] = mode
-        if backup_dir:
-            from pathlib import Path
+        # Map platform to installer(s)
+        if platform == "claude-code":
+            print("📦 Components: MCP server + hooks (complete integration)")
+        elif platform in ["claude-desktop", "cursor", "vscode", "windsurf"]:
+            print("📦 Component: MCP server")
+        elif platform == "auggie":
+            print("📦 Component: Rules integration")
 
-            installer_options["backup_dir"] = Path(backup_dir)
-        if memory_db:
-            from pathlib import Path
-
-            installer_options["memory_db"] = Path(memory_db)
-
-        # Get installer with options
-        installer = get_installer(ai_system, project_root)
-        if not installer:
-            print(f"❌ Failed to create installer for {ai_system}")
-            sys.exit(1)
-
-        # Update installer with options if they apply
-        for key, value in installer_options.items():
-            if hasattr(installer, key):
-                setattr(installer, key, value)
-
-        # Show installation info
-        print(f"🚀 Installing {installer.ai_system_name} integration...")
-        if project_root and ai_system not in [
-            "claude-desktop",
-            "claude-desktop-pipx",
-            "claude-desktop-home",
-        ]:
-            print(f"📁 Project: {project_root}")
-        print(f"📋 Description: {installer.description}")
+        print(f"📁 Project: {project_root}")
         if dry_run:
             print("🔍 DRY RUN MODE - No changes will be made")
+        print()
 
-        # Perform installation
-        result = installer.install(force=force, **installer_options)
+        # Get installer - use platform name directly
+        installer = get_installer(platform, project_root)
+        if not installer:
+            print(f"❌ Failed to create installer for {platform}")
+            sys.exit(1)
+
+        # Perform installation (installers now auto-update without force flag)
+        result = installer.install(dry_run=dry_run, verbose=verbose)
 
         # Show results
         if result.success:
@@ -257,28 +175,24 @@ def add(
                 for warning in result.warnings:
                     print(f"  • {warning}")
 
-            # Show next steps based on installer type
-            if ai_system.lower() in ["auggie", "claude"]:
-                print("\n🎯 Next Steps:")
-                print(
-                    "1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain"
-                )
-                print(
-                    "2. Store info: kuzu-memory memory store 'This project uses FastAPI'"
-                )
-                print("3. Start using Auggie with enhanced context!")
-            elif "claude-desktop" in ai_system.lower():
-                print("\n🎯 Next Steps:")
+            # Show next steps based on platform
+            print("\n🎯 Next Steps:")
+            if platform == "claude-code":
+                print("1. Reload Claude Code window or restart")
+                print("2. MCP tools + hooks active for enhanced context")
+                print("3. Check .claude/config.local.json for configuration")
+            elif platform == "claude-desktop":
                 print("1. Restart Claude Desktop application")
-                print("2. Open a new conversation in Claude Desktop")
-                print("3. KuzuMemory MCP tools will be available:")
-                print("   • kuzu_enhance - Enhance prompts with context")
-                print("   • kuzu_learn - Store learnings")
-                print("   • kuzu_recall - Query memories")
-                print("   • kuzu_remember - Store information")
-                print("   • kuzu_stats - Get statistics")
-                print("\n💡 Tip: You can validate the installation with:")
-                print("   kuzu-memory install-status")
+                print("2. Open a new conversation")
+                print("3. KuzuMemory MCP tools will be available")
+            elif platform in ["cursor", "vscode", "windsurf"]:
+                print(f"1. Reload or restart {installer.ai_system_name}")
+                print("2. KuzuMemory MCP server will be active")
+                print("3. Check the configuration file for details")
+            elif platform == "auggie":
+                print("1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain")
+                print("2. Store info: kuzu-memory memory store 'This project uses FastAPI'")
+                print("3. Start using Auggie with enhanced context!")
 
         else:
             print(f"\n❌ {result.message}")
