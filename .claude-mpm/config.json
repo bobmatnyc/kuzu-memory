@@ -4,14 +4,14 @@
     "provider": "kuzu-memory",
     "auto_enhance": true,
     "async_learning": true,
-    "project_root": "/Users/masa/Projects/managed/kuzu-memory"
+    "project_root": "/Users/masa/Projects/kuzu-memory"
   },
   "hooks": {
     "pre_response": [
-      "/Users/masa/Projects/managed/kuzu-memory/.venv/bin/kuzu-memory enhance"
+      "/Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory enhance"
     ],
     "post_response": [
-      "/Users/masa/Projects/managed/kuzu-memory/.venv/bin/kuzu-memory learn --quiet"
+      "/Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory learn --quiet"
     ]
   },
   "settings": {

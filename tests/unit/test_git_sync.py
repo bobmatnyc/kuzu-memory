@@ -292,20 +292,25 @@ class TestGitSyncManager:
             manager._repo = mock_repo
             manager._git_available = True
 
-            # Create mock commit
+            # Create mock commit with properly configured author/committer
             commit = Mock()
             commit.message = "feat: add new feature"
             commit.hexsha = "abc123def456"
+            commit.author = Mock()
             commit.author.name = "Test User"
             commit.author.email = "test@example.com"
+            commit.committer = Mock()
+            commit.committer.name = "Test User"
+            commit.committer.email = "test@example.com"
             commit.committed_datetime = datetime(2024, 1, 1, 12, 0, 0)
             commit.parents = [Mock()]
 
-            # Mock diff
+            # Mock diff for file stats
             parent = commit.parents[0]
             diff = Mock()
             diff.b_path = "test.py"
             diff.a_path = None
+            diff.diff = b""  # Empty diff for binary/new file
             parent.diff.return_value = [diff]
 
             memory = manager._commit_to_memory(commit)
@@ -318,6 +323,9 @@ class TestGitSyncManager:
             assert "Test User" in memory.metadata["commit_author"]
             assert memory.metadata["commit_timestamp"] == "2024-01-01T12:00:00"
             assert memory.created_at == datetime(2024, 1, 1, 12, 0, 0)
+            # Verify new fields
+            assert "file_stats" in memory.metadata
+            assert "file_categories" in memory.metadata
 
     def test_get_sync_status_not_available(self, manager_no_git):
         """Test sync status when git not available."""
@@ -348,6 +356,10 @@ class TestGitSyncIntegration:
         """Create mock memory store."""
         store = Mock()
         store.store_memory = Mock(side_effect=lambda m: m)
+        # batch_store_memories returns list of memory IDs
+        store.batch_store_memories = Mock(return_value=["mem_id_123"])
+        # get_recent_memories returns empty list (no duplicates)
+        store.get_recent_memories = Mock(return_value=[])
         return store
 
     def test_sync_dry_run(self, config, tmp_path, mock_memory_store):
@@ -410,6 +422,7 @@ class TestGitSyncIntegration:
             old_commit.message = "feat: old commit with enough length"
             old_commit.committed_datetime = datetime(2024, 1, 1, 10, 0, 0)
             old_commit.parents = []
+            old_commit.tree.traverse.return_value = []
 
             # New commit (after last sync)
             new_commit = Mock()
@@ -417,8 +430,14 @@ class TestGitSyncIntegration:
             new_commit.message = "feat: new commit with enough length"
             new_commit.committed_datetime = datetime(2024, 1, 2, 12, 0, 0)
             new_commit.parents = []
+            new_commit.tree.traverse.return_value = [Mock(path="test.py")]
+            # Properly configure author and committer
+            new_commit.author = Mock()
             new_commit.author.name = "Test"
             new_commit.author.email = "test@example.com"
+            new_commit.committer = Mock()
+            new_commit.committer.name = "Test"
+            new_commit.committer.email = "test@example.com"
 
             # Setup branch
             branch = Mock()
