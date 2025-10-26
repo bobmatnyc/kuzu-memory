@@ -159,8 +159,8 @@ def add(
                 for f in (result.files_created + result.files_modified)
                 if ".claude-mpm/config.json" in str(f)
             ]
-            # Show explanation for both "claude-code" and deprecated "claude" names
-            if mpm_files and ai_system in ["claude-code", "claude", "claude-mcp"]:
+            # Show explanation for Claude Code platform
+            if mpm_files and platform == "claude-code":
                 print("\n💡 Claude MPM Integration:")
                 print(
                     "   .claude-mpm/config.json enables project-wide memory settings for Claude MPM."
