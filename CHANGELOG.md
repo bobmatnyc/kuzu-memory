@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.25] - 2025-10-27
+
+### Fixed
+- Fixed MCP server configuration to be added to `.claude/settings.local.json` instead of `.claude/config.local.json`
+- MCP tools now correctly available in Claude Code after installation
+- Configuration properly merged with existing MCP servers
+
+### Changed
+- Updated CLI documentation to reference correct settings file location
+- Simplified configuration handling (-28 LOC)
+
 ## [1.4.24] - 2025-10-27
 
 ### Changed
@@ -630,7 +641,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.24...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.25...HEAD
+[1.4.25]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.24...v1.4.25
 [1.4.24]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.23...v1.4.24
 [1.4.23]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.10...v1.4.23
 [1.4.10]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.9...v1.4.10
