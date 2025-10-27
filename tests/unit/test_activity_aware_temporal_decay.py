@@ -99,7 +99,7 @@ class TestActivityAwareTemporalDecay:
         )
 
         # Calculate with activity-aware mode
-        score = self.engine.calculate_temporal_score(
+        self.engine.calculate_temporal_score(
             memory, self.current_time, project_last_activity=project_last_activity
         )
 
@@ -436,8 +436,8 @@ class TestActivityAwareIntegrationScenarios:
 
         # For active projects, activity-aware should match absolute scoring
         for memory in memories:
-            score_absolute = engine.calculate_temporal_score(memory, current_time)
-            score_aware = engine.calculate_temporal_score(
+            engine.calculate_temporal_score(memory, current_time)
+            engine.calculate_temporal_score(
                 memory, current_time, project_last_activity=last_activity
             )
 

@@ -69,7 +69,7 @@ class ClaudeHooksInstaller(BaseInstaller):
             return
 
         try:
-            with open(global_config_path, "r") as f:
+            with open(global_config_path) as f:
                 config = json.load(f)
 
             # Check all projects in the config for kuzu-memory entries

@@ -226,7 +226,6 @@ class TestKuzuMemoryUserTagging:
             km = KuzuMemory(db_path=db_path)
 
             # Mock memory store to capture the user_id
-            original_generate = km.memory_store.generate_memories
             captured_user_id = None
 
             def mock_generate(
@@ -411,7 +410,7 @@ class TestMemoryStoreUserFiltering:
         store = MemoryStore(mock_adapter, config)
 
         # Call get_memories_by_user
-        memories = store.get_memories_by_user("test@example.com", limit=50)
+        store.get_memories_by_user("test@example.com", limit=50)
 
         # Verify query was called with correct parameters
         assert mock_adapter.execute_query.called

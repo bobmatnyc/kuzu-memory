@@ -33,22 +33,17 @@ class TestClaudeHooksInstaller:
         global_config_path = tmp_path / ".claude.json"
         config = {
             "project1": {
-                "mcpServers": {
-                    "other-server": {
-                        "command": "other-command",
-                        "args": []
-                    }
-                }
+                "mcpServers": {"other-server": {"command": "other-command", "args": []}}
             }
         }
-        with open(global_config_path, 'w') as f:
+        with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
         installer = ClaudeHooksInstaller(tmp_path / "project")
         installer._clean_global_config()
 
         # Config should remain unchanged
-        with open(global_config_path, 'r') as f:
+        with open(global_config_path) as f:
             result = json.load(f)
 
         assert result == config
@@ -64,18 +59,12 @@ class TestClaudeHooksInstaller:
         config = {
             "project1": {
                 "mcpServers": {
-                    "kuzu-memory": {
-                        "command": "mcp",
-                        "args": ["serve", "kuzu-memory"]
-                    },
-                    "other-server": {
-                        "command": "other-command",
-                        "args": []
-                    }
+                    "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]},
+                    "other-server": {"command": "other-command", "args": []},
                 }
             }
         }
-        with open(global_config_path, 'w') as f:
+        with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
         installer = ClaudeHooksInstaller(tmp_path / "project")
@@ -86,7 +75,7 @@ class TestClaudeHooksInstaller:
         assert backup_path.exists()
 
         # Check kuzu-memory was removed
-        with open(global_config_path, 'r') as f:
+        with open(global_config_path) as f:
             result = json.load(f)
 
         assert "kuzu-memory" not in result["project1"]["mcpServers"]
@@ -101,17 +90,11 @@ class TestClaudeHooksInstaller:
         global_config_path = tmp_path / ".claude.json"
         config = {
             "mcpServers": {
-                "kuzu-memory": {
-                    "command": "mcp",
-                    "args": ["serve", "kuzu-memory"]
-                },
-                "other-server": {
-                    "command": "other-command",
-                    "args": []
-                }
+                "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]},
+                "other-server": {"command": "other-command", "args": []},
             }
         }
-        with open(global_config_path, 'w') as f:
+        with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
         installer = ClaudeHooksInstaller(tmp_path / "project")
@@ -122,7 +105,7 @@ class TestClaudeHooksInstaller:
         assert backup_path.exists()
 
         # Check kuzu-memory was removed
-        with open(global_config_path, 'r') as f:
+        with open(global_config_path) as f:
             result = json.load(f)
 
         assert "kuzu-memory" not in result["mcpServers"]
@@ -138,28 +121,19 @@ class TestClaudeHooksInstaller:
         config = {
             "project1": {
                 "mcpServers": {
-                    "kuzu-memory": {
-                        "command": "mcp",
-                        "args": ["serve", "kuzu-memory"]
-                    }
+                    "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
                 }
             },
             "project2": {
                 "mcpServers": {
-                    "kuzu-memory": {
-                        "command": "mcp",
-                        "args": ["serve", "kuzu-memory"]
-                    }
+                    "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
                 }
             },
             "mcpServers": {
-                "kuzu-memory": {
-                    "command": "mcp",
-                    "args": ["serve", "kuzu-memory"]
-                }
-            }
+                "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
+            },
         }
-        with open(global_config_path, 'w') as f:
+        with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
         installer = ClaudeHooksInstaller(tmp_path / "project")
@@ -170,7 +144,7 @@ class TestClaudeHooksInstaller:
         assert backup_path.exists()
 
         # Check all kuzu-memory entries were removed
-        with open(global_config_path, 'r') as f:
+        with open(global_config_path) as f:
             result = json.load(f)
 
         assert "kuzu-memory" not in result.get("mcpServers", {})

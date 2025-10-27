@@ -62,7 +62,7 @@ class GitUserProvider:
         """
         try:
             result = subprocess.run(
-                ["git"] + args,
+                ["git", *args],
                 cwd=cwd,
                 capture_output=True,
                 text=True,
