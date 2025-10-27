@@ -88,9 +88,7 @@ class TestMemoryClassifier:
 
     def test_classify_procedural_memory(self, classifier):
         """Test classification of procedural-type memory (how-to)."""
-        content = (
-            "How to connect to the database: use connection pooling with max connections set to 10"
-        )
+        content = "How to connect to the database: use connection pooling with max connections set to 10"
         result = classifier.classify(content)
 
         # Should detect procedural type (instructions)
@@ -135,9 +133,7 @@ class TestMemoryClassifier:
 
     def test_extract_entities_technologies(self, classifier):
         """Test extraction of technology entities."""
-        content = (
-            "We use Python with FastAPI, PostgreSQL for the database, and deploy on AWS with Docker"
-        )
+        content = "We use Python with FastAPI, PostgreSQL for the database, and deploy on AWS with Docker"
         result = classifier.extract_entities(content)
 
         assert "Python" in result.technologies
@@ -167,7 +163,9 @@ class TestMemoryClassifier:
     def test_calculate_importance(self, classifier):
         """Test importance score calculation."""
         # High importance for identity type
-        importance = classifier.calculate_importance("My name is Alice", MemoryType.SEMANTIC)
+        importance = classifier.calculate_importance(
+            "My name is Alice", MemoryType.SEMANTIC
+        )
         assert importance >= 0.9
 
         # Lower importance for episodic type (casual conversation)
@@ -436,15 +434,21 @@ class TestPatternFunctions:
     def test_adjust_confidence_by_indicators(self):
         """Test confidence adjustment based on linguistic indicators."""
         # High confidence indicator
-        high_conf = adjust_confidence_by_indicators("We definitely need to implement this", 0.5)
+        high_conf = adjust_confidence_by_indicators(
+            "We definitely need to implement this", 0.5
+        )
         assert high_conf > 0.5
 
         # Low confidence indicator
-        low_conf = adjust_confidence_by_indicators("Maybe we could try this approach", 0.5)
+        low_conf = adjust_confidence_by_indicators(
+            "Maybe we could try this approach", 0.5
+        )
         assert low_conf < 0.5
 
         # No indicators
-        same_conf = adjust_confidence_by_indicators("We will implement this feature", 0.5)
+        same_conf = adjust_confidence_by_indicators(
+            "We will implement this feature", 0.5
+        )
         assert same_conf == 0.5
 
     def test_calculate_content_importance(self):
@@ -454,11 +458,15 @@ class TestPatternFunctions:
         assert factors["contains_code"] is True
 
         # Content with URL
-        factors = calculate_content_importance("Visit https://example.com for more info")
+        factors = calculate_content_importance(
+            "Visit https://example.com for more info"
+        )
         assert factors["contains_url"] is True
 
         # Content with numbers
-        factors = calculate_content_importance("The server has 8 CPU cores and 32GB RAM")
+        factors = calculate_content_importance(
+            "The server has 8 CPU cores and 32GB RAM"
+        )
         assert factors["contains_numbers"] is True
 
         # Question content
@@ -504,12 +512,16 @@ class TestIntegrationWithMemoryEnhancer:
                             intent="preference",
                         )
                     )
-                    enhancer.nlp_classifier.calculate_importance = Mock(return_value=0.8)
+                    enhancer.nlp_classifier.calculate_importance = Mock(
+                        return_value=0.8
+                    )
                     return enhancer
 
     def test_classify_memory_method(self, memory_enhancer):
         """Test the classify_memory method."""
-        result = memory_enhancer.classify_memory("I prefer Python for backend development")
+        result = memory_enhancer.classify_memory(
+            "I prefer Python for backend development"
+        )
 
         assert result["memory_type"] == MemoryType.PREFERENCE
         assert result["confidence"] == 0.85

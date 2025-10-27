@@ -32,7 +32,9 @@ class TestClaudeHooksInstaller:
         # Create global config without kuzu-memory
         global_config_path = tmp_path / ".claude.json"
         config = {
-            "project1": {"mcpServers": {"other-server": {"command": "other-command", "args": []}}}
+            "project1": {
+                "mcpServers": {"other-server": {"command": "other-command", "args": []}}
+            }
         }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
@@ -118,12 +120,18 @@ class TestClaudeHooksInstaller:
         global_config_path = tmp_path / ".claude.json"
         config = {
             "project1": {
-                "mcpServers": {"kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}}
+                "mcpServers": {
+                    "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
+                }
             },
             "project2": {
-                "mcpServers": {"kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}}
+                "mcpServers": {
+                    "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
+                }
             },
-            "mcpServers": {"kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}},
+            "mcpServers": {
+                "kuzu-memory": {"command": "mcp", "args": ["serve", "kuzu-memory"]}
+            },
         }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)

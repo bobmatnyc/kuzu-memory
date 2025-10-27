@@ -155,7 +155,9 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
     console.print(
         "\n[blue]Note:[/blue] 'kuzu-memory install <platform>' is now the recommended command."
     )
-    console.print("   It automatically installs the right components for each platform.\n")
+    console.print(
+        "   It automatically installs the right components for each platform.\n"
+    )
 
     try:
         # Determine project root
@@ -185,12 +187,16 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
             sys.exit(1)
 
         # Show installation info
-        console.print(f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]")
+        console.print(
+            f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]"
+        )
         console.print(f"📁 Project: {project_root}")
         console.print(f"📋 Description: {installer.description}")
 
         if dry_run:
-            console.print("\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+            console.print(
+                "\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]"
+            )
 
         console.print()
 
@@ -229,12 +235,16 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
             console.print("\n[green]🎯 Next Steps:[/green]")
             if system == "claude-code":
                 console.print("1. Reload Claude Code window or restart")
-                console.print("2. Hooks will auto-enhance prompts and learn from responses")
+                console.print(
+                    "2. Hooks will auto-enhance prompts and learn from responses"
+                )
                 console.print("3. Check .claude/settings.local.json for configuration")
             elif system == "auggie":
                 console.print("1. Open or reload your Auggie workspace")
                 console.print("2. Rules will be active for enhanced context")
-                console.print("3. Check AGENTS.md and .augment/rules/ for configuration")
+                console.print(
+                    "3. Check AGENTS.md and .augment/rules/ for configuration"
+                )
 
         else:
             console.print(f"\n[red]❌ {result.message}[/red]")
@@ -287,7 +297,9 @@ def list_hooks():
 
     console.print(table)
 
-    console.print("\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n")
+    console.print(
+        "\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n"
+    )
 
 
 @hooks_group.command(name="enhance")
@@ -340,7 +352,9 @@ def hooks_enhance():
         # Limit prompt size
         max_prompt_length = 100000
         if len(prompt) > max_prompt_length:
-            logger.warning(f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars")
+            logger.warning(
+                f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars"
+            )
             prompt = prompt[:max_prompt_length]
 
         # Find project root and initialize memory
@@ -478,7 +492,10 @@ def hooks_learn():
                     entry = json.loads(line)
                     message = entry.get("message", {})
 
-                    if not isinstance(message, dict) or message.get("role") != "assistant":
+                    if (
+                        not isinstance(message, dict)
+                        or message.get("role") != "assistant"
+                    ):
                         continue
 
                     content = message.get("content", [])
@@ -555,7 +572,9 @@ def hooks_learn():
 
         max_text_length = 1000000
         if len(assistant_text) > max_text_length:
-            logger.warning(f"Truncating from {len(assistant_text)} to {max_text_length} chars")
+            logger.warning(
+                f"Truncating from {len(assistant_text)} to {max_text_length} chars"
+            )
             assistant_text = assistant_text[:max_text_length]
 
         # Check for duplicates

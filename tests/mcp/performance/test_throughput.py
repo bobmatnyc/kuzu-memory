@@ -121,7 +121,11 @@ class TestSequentialThroughput:
             status = (
                 "✓"
                 if tput >= THROUGHPUT_THRESHOLDS["sequential"]["target"]
-                else ("⚠" if tput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"] else "✗")
+                else (
+                    "⚠"
+                    if tput >= THROUGHPUT_THRESHOLDS["sequential"]["critical"]
+                    else "✗"
+                )
             )
             print(f"  {tool:15s}: {tput:6.2f} ops/sec {status}")
 
@@ -302,7 +306,9 @@ class TestThroughputDegradation:
             print(f"Batch {batch + 1} throughput: {throughput:.2f} ops/sec")
 
         # Check that throughput doesn't degrade significantly
-        first_half_avg = sum(throughputs[: len(throughputs) // 2]) / (len(throughputs) // 2)
+        first_half_avg = sum(throughputs[: len(throughputs) // 2]) / (
+            len(throughputs) // 2
+        )
         second_half_avg = sum(throughputs[len(throughputs) // 2 :]) / (
             len(throughputs) - len(throughputs) // 2
         )

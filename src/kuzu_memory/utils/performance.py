@@ -137,7 +137,9 @@ class PerformanceMonitor:
             # Check for performance issues
             self._check_performance_alerts(operation, duration_ms, success)
 
-    def _check_performance_alerts(self, operation: str, duration_ms: float, success: bool) -> None:
+    def _check_performance_alerts(
+        self, operation: str, duration_ms: float, success: bool
+    ) -> None:
         """Check for performance issues and generate alerts."""
 
         # Check if operation exceeded threshold
@@ -228,7 +230,9 @@ class PerformanceMonitor:
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         with self._lock:
-            recent_alerts = [alert for alert in self._alerts if alert["timestamp"] > cutoff_time]
+            recent_alerts = [
+                alert for alert in self._alerts if alert["timestamp"] > cutoff_time
+            ]
 
             return sorted(recent_alerts, key=lambda x: x["timestamp"], reverse=True)
 
@@ -244,7 +248,9 @@ class PerformanceMonitor:
 
             # Recent performance (last hour)
             recent_cutoff = datetime.now() - timedelta(hours=1)
-            recent_metrics = [m for m in self._metrics_history if m.timestamp > recent_cutoff]
+            recent_metrics = [
+                m for m in self._metrics_history if m.timestamp > recent_cutoff
+            ]
 
             # Slow operations
             slow_operations = []
@@ -266,14 +272,17 @@ class PerformanceMonitor:
                 "status": "healthy" if not slow_operations else "degraded",
                 "total_operations": total_operations,
                 "success_rate": (
-                    successful_operations / total_operations if total_operations > 0 else 0
+                    successful_operations / total_operations
+                    if total_operations > 0
+                    else 0
                 ),
                 "recent_operations_count": len(recent_metrics),
                 "slow_operations": slow_operations,
                 "recent_alerts_count": len(self.get_recent_alerts(1)),
                 "monitoring_duration_hours": (
                     (
-                        self._metrics_history[-1].timestamp - self._metrics_history[0].timestamp
+                        self._metrics_history[-1].timestamp
+                        - self._metrics_history[0].timestamp
                     ).total_seconds()
                     / 3600
                     if len(self._metrics_history) > 1
@@ -303,8 +312,12 @@ class PerformanceMonitor:
                             "type": "slow_operation",
                             "operation": operation,
                             "issue": f"Average time ({avg_time_ms:.1f}ms) exceeds threshold ({threshold}ms)",
-                            "recommendation": self._get_operation_recommendation(operation),
-                            "priority": ("high" if avg_time_ms > threshold * 2 else "medium"),
+                            "recommendation": self._get_operation_recommendation(
+                                operation
+                            ),
+                            "priority": (
+                                "high" if avg_time_ms > threshold * 2 else "medium"
+                            ),
                         }
                     )
 
@@ -327,7 +340,9 @@ class PerformanceMonitor:
                 if len(recent_times_obj) > 10:
                     recent_times = list(recent_times_obj)
                     avg_time = sum(recent_times) / len(recent_times)
-                    variance = sum((t - avg_time) ** 2 for t in recent_times) / len(recent_times)
+                    variance = sum((t - avg_time) ** 2 for t in recent_times) / len(
+                        recent_times
+                    )
                     std_dev = variance**0.5
 
                     if std_dev > avg_time * 0.5:  # High variance

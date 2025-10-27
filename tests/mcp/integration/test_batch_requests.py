@@ -144,7 +144,9 @@ class TestBatchRequests:
             await client.initialize()
 
             # Large batch (20 requests)
-            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)]
+            batch = [
+                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)
+            ]
 
             responses = await client.send_batch(batch)
 
@@ -306,7 +308,9 @@ class TestBatchErrorScenarios:
             await client.initialize()
 
             # Large batch that might timeout
-            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)]
+            batch = [
+                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)
+            ]
 
             responses = await client.send_batch(batch)
 

@@ -146,7 +146,9 @@ class TestCacheIntegration:
             assert (
                 cache_improvement > 0.1
             ), f"Cache improvement {cache_improvement:.1%} insufficient"
-            assert avg_warm_time <= cold_cache_time, "Warm cache should not be slower than cold"
+            assert (
+                avg_warm_time <= cold_cache_time
+            ), "Warm cache should not be slower than cold"
 
     @pytest.mark.skip(
         reason="Memory extraction patterns need adjustment - no memories generated from test content"
@@ -170,7 +172,9 @@ class TestCacheIntegration:
 
             # Add new conflicting information
             new_content = "Actually, I now work at MegaCorp as a Senior Engineer."
-            memory.generate_memories(content=new_content, user_id=user_id, source="update_data")
+            memory.generate_memories(
+                content=new_content, user_id=user_id, source="update_data"
+            )
 
             # Query again - should reflect new data
             context2 = memory.attach_memories(query, user_id=user_id)
@@ -187,7 +191,9 @@ class TestCacheIntegration:
             assert len(context3.memories) > 0
             # Should prioritize more recent/relevant information
             enhanced_specific = context3.enhanced_prompt.lower()
-            assert any(term in enhanced_specific for term in ["megacorp", "senior", "engineer"])
+            assert any(
+                term in enhanced_specific for term in ["megacorp", "senior", "engineer"]
+            )
 
     @pytest.mark.skip(
         reason="Memory extraction patterns need adjustment - no memories generated from test content"
@@ -234,7 +240,9 @@ class TestCacheIntegration:
             We've adopted Istio service mesh and Prometheus monitoring stack.
             """
 
-            memory.generate_memories(content=major_update, user_id=user_id, source="major_update")
+            memory.generate_memories(
+                content=major_update, user_id=user_id, source="major_update"
+            )
 
             # Re-query and verify cache updates
             updated_contexts = {}
@@ -249,7 +257,9 @@ class TestCacheIntegration:
                 # Should include updated information
                 enhanced_lower = context.enhanced_prompt.lower()
                 if "job role" in query.lower() or "role" in query.lower():
-                    assert any(term in enhanced_lower for term in ["principal", "architect"])
+                    assert any(
+                        term in enhanced_lower for term in ["principal", "architect"]
+                    )
 
             # Verify cache was appropriately updated
             for query in queries:
@@ -264,7 +274,9 @@ class TestCacheIntegration:
 
                 # Content should differ for relevant queries
                 if any(term in query.lower() for term in ["role", "tools", "cloud"]):
-                    content_changed = cached["content_sample"] != updated["content_sample"]
+                    content_changed = (
+                        cached["content_sample"] != updated["content_sample"]
+                    )
                     # Should see some change in content for relevant queries
                     print(f"Query '{query}': Content changed = {content_changed}")
 
@@ -321,9 +333,15 @@ class TestCacheIntegration:
 
             # Each user should get their own data
             assert (
-                "alice" in alice_content or "frontend" in alice_content or "react" in alice_content
+                "alice" in alice_content
+                or "frontend" in alice_content
+                or "react" in alice_content
             )
-            assert "bob" in bob_content or "backend" in bob_content or "apis" in bob_content
+            assert (
+                "bob" in bob_content
+                or "backend" in bob_content
+                or "apis" in bob_content
+            )
             assert (
                 "carol" in carol_content
                 or "data scientist" in carol_content
@@ -343,7 +361,8 @@ class TestCacheIntegration:
                 # Should still get user-specific data
                 if user_id == "user1":
                     assert any(
-                        term in enhanced_lower for term in ["alice", "frontend", "react", "vue"]
+                        term in enhanced_lower
+                        for term in ["alice", "frontend", "react", "vue"]
                     )
                 elif user_id == "user2":
                     assert any(
@@ -359,7 +378,9 @@ class TestCacheIntegration:
     @pytest.mark.skip(
         reason="Memory extraction patterns need adjustment - no memories generated from test content"
     )
-    def test_cache_performance_comparison(self, temp_db_path, cache_config, no_cache_config):
+    def test_cache_performance_comparison(
+        self, temp_db_path, cache_config, no_cache_config
+    ):
         """Compare performance with and without caching."""
         # Test with caching
         cached_times = []
@@ -398,7 +419,9 @@ class TestCacheIntegration:
 
         # Test without caching
         uncached_times = []
-        with KuzuMemory(db_path=temp_db_path, config=no_cache_config) as memory_uncached:
+        with KuzuMemory(
+            db_path=temp_db_path, config=no_cache_config
+        ) as memory_uncached:
             # Same queries without cache
             for _ in range(10):
                 query = test_queries[_ % len(test_queries)]
@@ -426,5 +449,9 @@ class TestCacheIntegration:
         assert avg_cached < avg_uncached, "Cached queries should be faster on average"
 
         # Both should still meet performance targets
-        assert avg_cached < 100.0, f"Cached performance {avg_cached:.2f}ms still too slow"
-        assert avg_uncached < 200.0, f"Uncached performance {avg_uncached:.2f}ms too slow"
+        assert (
+            avg_cached < 100.0
+        ), f"Cached performance {avg_cached:.2f}ms still too slow"
+        assert (
+            avg_uncached < 200.0
+        ), f"Uncached performance {avg_uncached:.2f}ms too slow"

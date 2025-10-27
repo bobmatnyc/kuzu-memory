@@ -200,7 +200,9 @@ class AuggieInstallerV2(BaseInstaller):
             migration_info = migrator.migrate()
 
             if not migration_info.get("success"):
-                raise InstallationError(migration_info.get("message", "Migration failed"))
+                raise InstallationError(
+                    migration_info.get("message", "Migration failed")
+                )
 
             backup_path = Path(migration_info.get("backup_path", ""))
 

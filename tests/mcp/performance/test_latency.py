@@ -121,7 +121,9 @@ class TestToolCallLatency:
 
         async def call_recall():
             start = time.perf_counter()
-            result = await initialized_client.call_tool("recall", {"query": "test", "limit": 5})
+            result = await initialized_client.call_tool(
+                "recall", {"query": "test", "limit": 5}
+            )
             latency = (time.perf_counter() - start) * 1000
             return latency, result
 
@@ -174,7 +176,11 @@ class TestToolCallLatency:
             status = (
                 "✓"
                 if latency < LATENCY_THRESHOLDS["tool_call"]["target"]
-                else ("⚠" if latency < LATENCY_THRESHOLDS["tool_call"]["critical"] else "✗")
+                else (
+                    "⚠"
+                    if latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
+                    else "✗"
+                )
             )
             print(f"  {tool:15s}: {latency:6.2f}ms {status}")
 

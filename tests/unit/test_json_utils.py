@@ -311,7 +311,9 @@ class TestCreateMcpServerConfig:
 
     def test_create_config_with_env(self):
         """Test creating configuration with environment variables."""
-        config = create_mcp_server_config("kuzu-memory", env={"PROJECT": "/path/to/project"})
+        config = create_mcp_server_config(
+            "kuzu-memory", env={"PROJECT": "/path/to/project"}
+        )
 
         assert config["command"] == "kuzu-memory"
         assert config["env"] == {"PROJECT": "/path/to/project"}

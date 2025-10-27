@@ -59,7 +59,9 @@ def cache_key_from_args(*args, **kwargs) -> str:
     return hashlib.md5(key_str.encode()).hexdigest()
 
 
-def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
+def cached_method(
+    maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS
+):
     """
     Decorator for caching method results with TTL support.
 
@@ -81,7 +83,9 @@ def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_
             if cache_key in cache:
                 cached_time = cache_times.get(cache_key, 0)
                 if time.time() - cached_time < ttl_seconds:
-                    logger.debug(f"Cache hit for {func.__name__} with key {cache_key[:8]}")
+                    logger.debug(
+                        f"Cache hit for {func.__name__} with key {cache_key[:8]}"
+                    )
                     return cache[cache_key]
                 else:
                     # Expired, remove from cache
@@ -185,7 +189,9 @@ class KuzuMemory:
                 else:
                     # Auto-detect from git
                     try:
-                        git_user_info = GitUserProvider.get_git_user_info(self.project_root)
+                        git_user_info = GitUserProvider.get_git_user_info(
+                            self.project_root
+                        )
                         self._user_id = git_user_info.user_id
                         logger.info(
                             f"Auto-detected git user_id: {self._user_id} (source: {git_user_info.source})"
@@ -262,7 +268,9 @@ class KuzuMemory:
             from ..integrations.git_sync import GitSyncManager
 
             # Determine repository path (use project root or current directory)
-            repo_path = self.db_path.parent.parent  # Go up from .kuzu-memory/memories.db
+            repo_path = (
+                self.db_path.parent.parent
+            )  # Go up from .kuzu-memory/memories.db
 
             # Create git sync manager
             git_sync = GitSyncManager(
@@ -300,7 +308,9 @@ class KuzuMemory:
             # Run auto-sync in background (non-blocking)
             # Only log on init trigger, others are silent by default
             verbose = trigger == "init"
-            result = self.auto_git_sync.auto_sync_if_needed(trigger=trigger, verbose=verbose)
+            result = self.auto_git_sync.auto_sync_if_needed(
+                trigger=trigger, verbose=verbose
+            )
 
             # Log only if sync actually happened
             if result.get("success") and not result.get("skipped"):
@@ -355,7 +365,9 @@ class KuzuMemory:
                 raise ValidationError("prompt", prompt, "cannot be empty")
 
             if max_memories <= 0:
-                raise ValidationError("max_memories", str(max_memories), "must be positive")
+                raise ValidationError(
+                    "max_memories", str(max_memories), "must be positive"
+                )
 
             if strategy not in ["auto", "keyword", "entity", "temporal"]:
                 raise ValidationError(
@@ -723,7 +735,9 @@ class KuzuMemory:
             logger.error(f"Failed to batch store memories: {e}")
             raise KuzuMemoryError(f"batch_store_memories failed: {e}")
 
-    @cached_method(maxsize=MEMORY_BY_ID_CACHE_SIZE * 10, ttl_seconds=MEMORY_BY_ID_CACHE_TTL)
+    @cached_method(
+        maxsize=MEMORY_BY_ID_CACHE_SIZE * 10, ttl_seconds=MEMORY_BY_ID_CACHE_TTL
+    )
     def batch_get_memories_by_ids(self, memory_ids: list[str]) -> list[Memory]:
         """
         Retrieve multiple memories by their IDs in a single batch operation.
@@ -769,7 +783,9 @@ class KuzuMemory:
             # Update performance statistics
             self._performance_stats["total_memories_recalled"] += len(memories)
 
-            logger.debug(f"Batch retrieved {len(memories)} memories from {len(memory_ids)} IDs")
+            logger.debug(
+                f"Batch retrieved {len(memories)} memories from {len(memory_ids)} IDs"
+            )
             return memories
 
         except ValidationError:
@@ -854,7 +870,9 @@ class KuzuMemory:
             logger.error(f"Failed to get statistics: {e}")
             return {"error": str(e)}
 
-    def _update_attach_stats(self, execution_time_ms: float, memories_count: int) -> None:
+    def _update_attach_stats(
+        self, execution_time_ms: float, memories_count: int
+    ) -> None:
         """Update attach_memories performance statistics."""
         self._performance_stats["attach_memories_calls"] += 1
         self._performance_stats["total_memories_recalled"] += memories_count
@@ -865,7 +883,9 @@ class KuzuMemory:
         new_avg = ((current_avg * (total_calls - 1)) + execution_time_ms) / total_calls
         self._performance_stats["avg_attach_time_ms"] = new_avg
 
-    def _update_generate_stats(self, execution_time_ms: float, memories_count: int) -> None:
+    def _update_generate_stats(
+        self, execution_time_ms: float, memories_count: int
+    ) -> None:
         """Update generate_memories performance statistics."""
         self._performance_stats["generate_memories_calls"] += 1
         self._performance_stats["total_memories_generated"] += memories_count

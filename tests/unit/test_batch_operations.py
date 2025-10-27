@@ -170,7 +170,9 @@ class TestBatchOperations:
         """Test that batch operations update performance statistics correctly."""
         # Get initial stats
         initial_stats = kuzu_memory.get_statistics()
-        initial_generated = initial_stats["performance_stats"]["total_memories_generated"]
+        initial_generated = initial_stats["performance_stats"][
+            "total_memories_generated"
+        ]
         initial_recalled = initial_stats["performance_stats"]["total_memories_recalled"]
 
         # Store memories

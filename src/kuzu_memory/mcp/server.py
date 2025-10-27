@@ -191,7 +191,9 @@ class KuzuMemoryMCPServer:
             ]
 
         @self.server.call_tool()
-        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        async def handle_call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> list[TextContent]:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
@@ -203,7 +205,9 @@ class KuzuMemoryMCPServer:
                     arguments.get("content"), arguments.get("source", "ai-conversation")
                 )
             elif name == "kuzu_recall":
-                result = await self._recall(arguments.get("query"), arguments.get("limit", 5))
+                result = await self._recall(
+                    arguments.get("query"), arguments.get("limit", 5)
+                )
             elif name == "kuzu_remember":
                 result = await self._remember(
                     arguments.get("content"), arguments.get("memory_type", "identity")
@@ -260,7 +264,9 @@ class KuzuMemoryMCPServer:
                     stderr=asyncio.subprocess.PIPE,
                     cwd=self.project_root,
                 )
-                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=10.0
+                )
 
                 if process.returncode == 0:
                     return stdout.decode().strip()
@@ -376,7 +382,9 @@ class KuzuMemoryMCPServer:
 
         # Use stdio_server async context manager for proper stream handling
         async with stdio_server() as (read_stream, write_stream):
-            logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
+            logger.info(
+                f"KuzuMemory MCP Server running for project: {self.project_root}"
+            )
 
             try:
                 # Run the MCP server with proper streams
@@ -444,7 +452,9 @@ class SimplifiedMCPServer:
                 ["enhance", params.get("prompt", ""), "--format", "plain"]
             )
         elif method == "learn":
-            result = await self._run_cli_command(["learn", params.get("content", ""), "--quiet"])
+            result = await self._run_cli_command(
+                ["learn", params.get("content", ""), "--quiet"]
+            )
         elif method == "recall":
             result = await self._run_cli_command(
                 ["recall", params.get("query", ""), "--format", "json"]

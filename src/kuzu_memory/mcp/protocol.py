@@ -88,10 +88,14 @@ class JSONRPCMessage:
 
         # Validate method
         if "method" not in message:
-            raise JSONRPCError(JSONRPCErrorCode.INVALID_REQUEST, "Missing 'method' field")
+            raise JSONRPCError(
+                JSONRPCErrorCode.INVALID_REQUEST, "Missing 'method' field"
+            )
 
         if not isinstance(message["method"], str):
-            raise JSONRPCError(JSONRPCErrorCode.INVALID_REQUEST, "'method' must be a string")
+            raise JSONRPCError(
+                JSONRPCErrorCode.INVALID_REQUEST, "'method' must be a string"
+            )
 
         # Validate params if present
         if "params" in message:
@@ -127,14 +131,18 @@ class JSONRPCMessage:
         response = {"jsonrpc": "2.0", "id": request_id}
 
         if error is not None:
-            response["error"] = error.to_dict() if isinstance(error, JSONRPCError) else error
+            response["error"] = (
+                error.to_dict() if isinstance(error, JSONRPCError) else error
+            )
         else:
             response["result"] = result if result is not None else {}
 
         return response
 
     @staticmethod
-    def create_notification(method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def create_notification(
+        method: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Create a JSON-RPC notification (no response expected).
 
@@ -178,7 +186,9 @@ class JSONRPCProtocol:
             self.reader = sys.stdin
 
         if isinstance(sys.stdout, io.BufferedWriter):
-            self.writer = io.TextIOWrapper(sys.stdout, encoding="utf-8", line_buffering=True)
+            self.writer = io.TextIOWrapper(
+                sys.stdout, encoding="utf-8", line_buffering=True
+            )
         else:
             self.writer = sys.stdout
 
@@ -198,7 +208,9 @@ class JSONRPCProtocol:
                     line = self.reader.readline()
                 else:
                     # Unix-like systems: use select with timeout
-                    ready, _, exceptional = select.select([self.reader], [], [self.reader], 0.5)
+                    ready, _, exceptional = select.select(
+                        [self.reader], [], [self.reader], 0.5
+                    )
 
                     if exceptional:
                         # Exception on stdin (closed, etc)
@@ -237,7 +249,9 @@ class JSONRPCProtocol:
     async def initialize(self):
         """Initialize stdio communication with synchronous reading thread."""
         # Start the synchronous reader thread
-        self._reader_thread = threading.Thread(target=self._read_stdin_sync, daemon=True)
+        self._reader_thread = threading.Thread(
+            target=self._read_stdin_sync, daemon=True
+        )
         self._reader_thread.start()
 
     async def read_message(self) -> dict[str, Any] | None:
@@ -327,7 +341,9 @@ class JSONRPCProtocol:
             logger.error(f"Error writing message: {e}")
             raise
 
-    async def send_notification(self, method: str, params: dict[str, Any] | None = None) -> None:
+    async def send_notification(
+        self, method: str, params: dict[str, Any] | None = None
+    ) -> None:
         """
         Send a JSON-RPC notification.
 
@@ -366,7 +382,9 @@ class BatchRequestHandler:
         return isinstance(message, list)
 
     @staticmethod
-    async def process_batch(messages: list[dict[str, Any]], handler_func) -> list[dict[str, Any]]:
+    async def process_batch(
+        messages: list[dict[str, Any]], handler_func
+    ) -> list[dict[str, Any]]:
         """
         Process a batch of JSON-RPC requests.
 
@@ -395,7 +413,9 @@ class BatchRequestHandler:
             except JSONRPCError as e:
                 # Include error response if there's an ID
                 if isinstance(message, dict) and "id" in message:
-                    responses.append(JSONRPCMessage.create_response(message["id"], error=e))
+                    responses.append(
+                        JSONRPCMessage.create_response(message["id"], error=e)
+                    )
             except Exception as e:
                 # Internal error
                 if isinstance(message, dict) and "id" in message:
