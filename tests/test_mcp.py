@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 async def test_mcp_tools():
     """Test MCP tool definitions."""
-    from kuzu_memory.integrations.mcp_server import KuzuMemoryMCPServer
+    from kuzu_memory.mcp.server import KuzuMemoryMCPServer
 
     try:
         # Create server instance

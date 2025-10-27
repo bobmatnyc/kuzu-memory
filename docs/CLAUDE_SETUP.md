@@ -647,7 +647,7 @@ kuzu-memory status
 
 ```bash
 # Run MCP server manually (for debugging)
-python -m kuzu_memory.integrations.mcp_server
+python -m kuzu_memory.mcp.server
 ```
 
 ### Verify Claude Desktop Integration

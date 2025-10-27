@@ -1,511 +1,530 @@
 """
-MCP Server implementation for KuzuMemory.
+MCP (Model Context Protocol) server wrapper for KuzuMemory.
 
-Provides all memory operations as MCP tools for Claude Code integration.
+Provides MCP tools that wrap kuzu-memory CLI commands for seamless
+integration with Claude Desktop and other MCP-compatible AI systems.
 """
 
 import asyncio
 import json
 import logging
-import subprocess
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
+# MCP SDK imports (will be dynamically imported if available)
+try:
+    from mcp.server import NotificationOptions, Server
+    from mcp.server.models import InitializationOptions
+    from mcp.server.stdio import stdio_server
+    from mcp.types import (
+        Resource,
+        ResourceTemplate,
+        TextContent,
+        Tool,
+    )
+
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
+
+    # Define stubs for when MCP is not available
+    class Server:
+        pass
+
+    class Tool:
+        pass
+
+    class Resource:
+        pass
+
+
 logger = logging.getLogger(__name__)
 
 
-class MCPServer:
-    """MCP Server for KuzuMemory operations."""
+class KuzuMemoryMCPServer:
+    """
+    MCP server that exposes kuzu-memory functionality as tools.
+
+    This server provides:
+    - enhance: Enhance prompts with project context
+    - learn: Store learnings asynchronously
+    - recall: Query specific memories
+    - stats: Get memory system statistics
+    - remember: Store new memories
+    """
 
     def __init__(self, project_root: Path | None = None):
-        """Initialize MCP server with project root."""
+        """
+        Initialize the MCP server.
+
+        Args:
+            project_root: Project root directory (auto-detected if not provided)
+        """
+        if not MCP_AVAILABLE:
+            raise ImportError("MCP SDK is not installed. Install with: pip install mcp")
+
         self.project_root = project_root or self._find_project_root()
-        self.cli_path = self._find_cli_executable()
+        self.server = Server("kuzu-memory")
+        self._setup_handlers()
 
     def _find_project_root(self) -> Path:
-        """Find project root by looking for git directory or kuzu-memories."""
+        """Find the project root directory."""
+        # Check environment variable
+        if "KUZU_MEMORY_PROJECT" in os.environ:
+            return Path(os.environ["KUZU_MEMORY_PROJECT"])
+
+        # Walk up from current directory
         current = Path.cwd()
         while current != current.parent:
             if (current / ".git").exists() or (current / "kuzu-memories").exists():
                 return current
             current = current.parent
+
+        # Default to current directory
         return Path.cwd()
 
-    def _find_cli_executable(self) -> str:
-        """Find the kuzu-memory CLI executable."""
-        # Try common locations
-        candidates = [
-            "kuzu-memory",  # Global install
-            "/opt/homebrew/bin/kuzu-memory",  # Homebrew on macOS
-            str(Path.home() / ".local" / "bin" / "kuzu-memory"),  # pipx
-            str(self.project_root / ".venv" / "bin" / "kuzu-memory"),  # venv
-            str(self.project_root / "venv" / "bin" / "kuzu-memory"),  # venv
-        ]
+    def _setup_handlers(self):
+        """Set up MCP server handlers."""
 
-        for candidate in candidates:
-            try:
-                result = subprocess.run(
-                    [candidate, "--version"], capture_output=True, text=True, timeout=2
+        @self.server.list_tools()
+        async def handle_list_tools() -> list[Tool]:
+            """List available tools."""
+            return [
+                Tool(
+                    name="kuzu_enhance",
+                    description="Enhance a prompt with project-specific context from KuzuMemory",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "prompt": {
+                                "type": "string",
+                                "description": "The prompt to enhance with context",
+                            },
+                            "max_memories": {
+                                "type": "integer",
+                                "description": "Maximum number of memories to include",
+                                "default": 5,
+                            },
+                        },
+                        "required": ["prompt"],
+                    },
+                ),
+                Tool(
+                    name="kuzu_learn",
+                    description="Store a learning or observation asynchronously (non-blocking)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "content": {
+                                "type": "string",
+                                "description": "The content to learn and store",
+                            },
+                            "source": {
+                                "type": "string",
+                                "description": "Source of the learning",
+                                "default": "ai-conversation",
+                            },
+                        },
+                        "required": ["content"],
+                    },
+                ),
+                Tool(
+                    name="kuzu_recall",
+                    description="Query specific memories from the project",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The query to search memories",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of results",
+                                "default": 5,
+                            },
+                        },
+                        "required": ["query"],
+                    },
+                ),
+                Tool(
+                    name="kuzu_remember",
+                    description="Store important project information",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "content": {
+                                "type": "string",
+                                "description": "The content to remember",
+                            },
+                            "memory_type": {
+                                "type": "string",
+                                "description": "Type of memory",
+                                "enum": [
+                                    "identity",
+                                    "preference",
+                                    "decision",
+                                    "pattern",
+                                ],
+                                "default": "identity",
+                            },
+                        },
+                        "required": ["content"],
+                    },
+                ),
+                Tool(
+                    name="kuzu_stats",
+                    description="Get KuzuMemory statistics and status",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "detailed": {
+                                "type": "boolean",
+                                "description": "Show detailed statistics",
+                                "default": False,
+                            }
+                        },
+                    },
+                ),
+            ]
+
+        @self.server.call_tool()
+        async def handle_call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> list[TextContent]:
+            """Handle tool calls."""
+
+            if name == "kuzu_enhance":
+                result = await self._enhance(
+                    arguments.get("prompt"), arguments.get("max_memories", 5)
                 )
-                if result.returncode == 0:
-                    return candidate
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
+            elif name == "kuzu_learn":
+                result = await self._learn(
+                    arguments.get("content"), arguments.get("source", "ai-conversation")
+                )
+            elif name == "kuzu_recall":
+                result = await self._recall(
+                    arguments.get("query"), arguments.get("limit", 5)
+                )
+            elif name == "kuzu_remember":
+                result = await self._remember(
+                    arguments.get("content"), arguments.get("memory_type", "identity")
+                )
+            elif name == "kuzu_stats":
+                result = await self._stats(arguments.get("detailed", False))
+            else:
+                result = f"Unknown tool: {name}"
 
-        # Fallback to python module execution
-        return f"{sys.executable} -m kuzu_memory.cli"
+            return [TextContent(type="text", text=result)]
 
-    def _run_cli(self, args: list[str], timeout: int = 10) -> dict[str, Any]:
-        """Run CLI command and return result."""
-        try:
-            # Split cli_path if it contains spaces (module execution)
-            cmd_parts = (
-                self.cli_path.split() if " " in self.cli_path else [self.cli_path]
-            )
-            cmd = cmd_parts + args
+        @self.server.list_resources()
+        async def handle_list_resources() -> list[Resource]:
+            """List available resources."""
+            return [
+                Resource(
+                    uri=f"kuzu://project/{self.project_root.name}",
+                    name=f"Project: {self.project_root.name}",
+                    description="KuzuMemory project context and memories",
+                    mimeType="application/json",
+                )
+            ]
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(self.project_root),
-                timeout=timeout,
-            )
+        @self.server.list_resource_templates()
+        async def handle_list_resource_templates() -> list[ResourceTemplate]:
+            """List resource templates."""
+            return [
+                ResourceTemplate(
+                    uriTemplate="kuzu://memory/{id}",
+                    name="Memory by ID",
+                    description="Access a specific memory by its ID",
+                    mimeType="application/json",
+                )
+            ]
 
-            return {
-                "success": result.returncode == 0,
-                "output": result.stdout.strip() if result.stdout else "",
-                "error": result.stderr.strip() if result.stderr else "",
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "success": False,
-                "output": "",
-                "error": f"Command timed out after {timeout} seconds",
-            }
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-
-    async def _run_cli_async(
-        self, args: list[str], timeout: int = 10
-    ) -> dict[str, Any]:
-        """Run CLI command asynchronously."""
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self._run_cli, args, timeout
-        )
-
-    # MCP Tool implementations
-
-    def enhance(
-        self, prompt: str, format: str = "plain", limit: int = 5
-    ) -> dict[str, Any]:
+    async def _run_command(self, args: list[str], capture_output: bool = True) -> str:
         """
-        Enhance a prompt with relevant project context.
+        Run a kuzu-memory command asynchronously.
 
         Args:
-            prompt: The prompt to enhance
-            format: Output format (plain, json, markdown)
-            limit: Maximum number of memories to include
+            args: Command arguments
+            capture_output: Whether to capture output
 
         Returns:
-            Enhanced prompt with context
+            Command output or status message
         """
+        try:
+            cmd = ["kuzu-memory", *args]
+
+            if capture_output:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=self.project_root,
+                )
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=10.0
+                )
+
+                if process.returncode == 0:
+                    return stdout.decode().strip()
+                else:
+                    error_msg = stderr.decode().strip() or "Command failed"
+                    logger.error(f"Command failed: {' '.join(cmd)}: {error_msg}")
+                    return f"Error: {error_msg}"
+            else:
+                # Fire and forget for async operations
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                    cwd=self.project_root,
+                )
+                # Don't wait for completion
+                return "Learning stored asynchronously"
+
+        except TimeoutError:
+            return "Error: Command timed out"
+        except Exception as e:
+            logger.error(f"Failed to run command: {e}")
+            return f"Error: {e!s}"
+
+    async def _enhance(self, prompt: str, max_memories: int = 5) -> str:
+        """Enhance a prompt with project context."""
+        if not prompt:
+            return "Error: No prompt provided"
+
         args = [
-            "memory",
             "enhance",
             prompt,
-            "--format",
-            format,
             "--max-memories",
-            str(limit),
-        ]
-        result = self._run_cli(args)
-
-        if result["success"]:
-            return {"enhanced_prompt": result["output"], "success": True}
-        else:
-            return {
-                "enhanced_prompt": prompt,  # Fallback to original
-                "success": False,
-                "error": result["error"],
-            }
-
-    def learn(
-        self, content: str, source: str = "mcp", quiet: bool = True
-    ) -> dict[str, Any]:
-        """
-        Store a learning asynchronously (non-blocking).
-
-        Args:
-            content: The content to learn
-            source: Source of the learning
-            quiet: Run quietly without output
-
-        Returns:
-            Status of learning operation
-        """
-        args = ["learn", content, "--source", source]
-        if quiet:
-            args.append("--quiet")
-
-        # Run async to not block
-        self._run_cli(args, timeout=2)  # Short timeout for async operation
-
-        return {
-            "success": True,  # Always return success for async operations
-            "message": "Learning queued for processing",
-        }
-
-    def recall(
-        self, query: str, limit: int = 5, format: str = "json"
-    ) -> dict[str, Any]:
-        """
-        Query memories for relevant information.
-
-        Args:
-            query: The search query
-            limit: Maximum number of results
-            format: Output format
-
-        Returns:
-            Relevant memories matching the query
-        """
-        args = [
-            "memory",
-            "recall",
-            query,
-            "--max-memories",
-            str(limit),
+            str(max_memories),
             "--format",
-            format,
+            "plain",
         ]
-        result = self._run_cli(args)
+        return await self._run_command(args)
 
-        if result["success"]:
-            if format == "json":
-                try:
-                    memories = json.loads(result["output"])
-                    return {"memories": memories, "success": True}
-                except json.JSONDecodeError:
-                    pass
+    async def _learn(self, content: str, source: str = "ai-conversation") -> str:
+        """Store a learning asynchronously."""
+        if not content:
+            return "Error: No content provided"
 
-            return {"memories": result["output"], "success": True}
-        else:
-            return {"memories": [], "success": False, "error": result["error"]}
+        args = ["learn", content, "--source", source, "--quiet"]
+        # Fire and forget - don't wait for completion
+        return await self._run_command(args, capture_output=False)
 
-    def remember(
-        self, content: str, source: str = "mcp", session_id: str | None = None
-    ) -> dict[str, Any]:
-        """
-        Store a direct memory.
+    async def _recall(self, query: str, limit: int = 5) -> str:
+        """Query specific memories."""
+        if not query:
+            return "Error: No query provided"
 
-        Args:
-            content: The content to remember
-            source: Source of the memory
-            session_id: Session ID to group related memories
+        args = ["recall", query, "--limit", str(limit), "--format", "json"]
+        result = await self._run_command(args)
 
-        Returns:
-            Status of memory storage
-        """
-        args = ["remember", content, "--source", source]
-        if session_id:
-            args.extend(["--session-id", session_id])
+        # Parse and format the JSON output
+        try:
+            data = json.loads(result)
+            if isinstance(data, list):
+                formatted = []
+                for memory in data:
+                    formatted.append(f"- {memory.get('content', 'No content')}")
+                return "\n".join(formatted) if formatted else "No memories found"
+            return result
+        except json.JSONDecodeError:
+            return result
 
-        result = self._run_cli(args)
+    async def _remember(self, content: str, memory_type: str = "identity") -> str:
+        """Store important project information."""
+        if not content:
+            return "Error: No content provided"
 
-        return {
-            "success": result["success"],
-            "message": result["output"] if result["success"] else result["error"],
-        }
+        args = ["remember", content, "--type", memory_type]
+        return await self._run_command(args)
 
-    def stats(self, detailed: bool = False, format: str = "json") -> dict[str, Any]:
-        """
-        Get memory system statistics.
-
-        Args:
-            detailed: Show detailed statistics
-            format: Output format
-
-        Returns:
-            Memory system statistics
-        """
-        args = ["stats", "--format", format]
+    async def _stats(self, detailed: bool = False) -> str:
+        """Get memory system statistics."""
+        args = ["stats", "--format", "json"]
         if detailed:
             args.append("--detailed")
 
-        result = self._run_cli(args)
+        result = await self._run_command(args)
 
-        if result["success"]:
-            if format == "json":
-                try:
-                    stats = json.loads(result["output"])
-                    return {"stats": stats, "success": True}
-                except json.JSONDecodeError:
-                    pass
+        # Parse and format the JSON output
+        try:
+            data = json.loads(result)
+            stats = []
+            stats.append(f"Total Memories: {data.get('total_memories', 0)}")
+            stats.append(f"Memory Types: {data.get('memory_types', {})}")
+            stats.append(f"Recent Activity: {data.get('recent_activity', 'N/A')}")
 
-            return {"stats": result["output"], "success": True}
+            if detailed and "performance" in data:
+                perf = data["performance"]
+                stats.append(f"Avg Recall Time: {perf.get('avg_recall_time', 'N/A')}ms")
+                stats.append(f"Cache Hit Rate: {perf.get('cache_hit_rate', 'N/A')}%")
+
+            return "\n".join(stats)
+        except json.JSONDecodeError:
+            return result
+
+    async def run(self):
+        """Run the MCP server."""
+        # Use stdin/stdout for MCP communication
+        init_options = InitializationOptions(
+            server_name="kuzu-memory",
+            server_version="1.0.0",
+            capabilities=self.server.get_capabilities(
+                notification_options=NotificationOptions(),
+                experimental_capabilities={},
+            ),
+        )
+
+        # Use stdio_server async context manager for proper stream handling
+        async with stdio_server() as (read_stream, write_stream):
+            logger.info(
+                f"KuzuMemory MCP Server running for project: {self.project_root}"
+            )
+
+            try:
+                # Run the MCP server with proper streams
+                await self.server.run(
+                    read_stream, write_stream, init_options, raise_exceptions=False
+                )
+            except asyncio.CancelledError:
+                logger.info("Server shutdown requested")
+                raise
+            except GeneratorExit:
+                logger.info("Server context manager cleanup")
+                # Allow proper cleanup without ignoring GeneratorExit
+                raise
+
+
+async def main():
+    """Main entry point for MCP server."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    if not MCP_AVAILABLE:
+        print(
+            "Error: MCP SDK is not installed. Install with: pip install mcp",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        server = KuzuMemoryMCPServer()
+        await server.run()
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except asyncio.CancelledError:
+        logger.info("Server cancelled")
+    except GeneratorExit:
+        logger.info("Server generator exit")
+        # Don't suppress GeneratorExit - let it propagate for proper cleanup
+        raise
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+        sys.exit(1)
+
+
+# Alternative simplified server for environments without MCP SDK
+class SimplifiedMCPServer:
+    """
+    Simplified MCP-like server that works without the MCP SDK.
+
+    This provides a basic JSON-RPC interface for kuzu-memory operations.
+    """
+
+    def __init__(self, project_root: Path | None = None):
+        """Initialize simplified server."""
+        self.project_root = project_root or Path.cwd()
+
+    async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Handle JSON-RPC style requests."""
+        method = request.get("method", "")
+        params = request.get("params", {})
+
+        if method == "enhance":
+            result = await self._run_cli_command(
+                ["enhance", params.get("prompt", ""), "--format", "plain"]
+            )
+        elif method == "learn":
+            result = await self._run_cli_command(
+                ["learn", params.get("content", ""), "--quiet"]
+            )
+        elif method == "recall":
+            result = await self._run_cli_command(
+                ["recall", params.get("query", ""), "--format", "json"]
+            )
+        elif method == "stats":
+            result = await self._run_cli_command(["stats", "--format", "json"])
         else:
-            return {"stats": {}, "success": False, "error": result["error"]}
+            result = {"error": f"Unknown method: {method}"}
 
-    def recent(self, limit: int = 10, format: str = "json") -> dict[str, Any]:
-        """
-        Get recent memories.
+        return {"jsonrpc": "2.0", "id": request.get("id", 1), "result": result}
 
-        Args:
-            limit: Number of recent memories to retrieve
-            format: Output format
+    async def _run_cli_command(self, args: list[str]) -> Any:
+        """Run kuzu-memory CLI command."""
+        try:
+            cmd = ["kuzu-memory", *args]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=self.project_root,
+            )
+            stdout, stderr = await process.communicate()
 
-        Returns:
-            Recent memories
-        """
-        args = ["recent", "--recent", str(limit), "--format", format]
-        result = self._run_cli(args)
-
-        if result["success"]:
-            if format == "json":
+            if process.returncode == 0:
+                output = stdout.decode().strip()
+                # Try to parse as JSON
                 try:
-                    memories = json.loads(result["output"])
-                    return {"memories": memories, "success": True}
+                    return json.loads(output)
                 except json.JSONDecodeError:
-                    pass
+                    return output
+            else:
+                return {"error": stderr.decode().strip()}
+        except Exception as e:
+            return {"error": str(e)}
 
-            return {"memories": result["output"], "success": True}
-        else:
-            return {"memories": [], "success": False, "error": result["error"]}
+    async def run_stdio(self):
+        """Run server using stdio for communication."""
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        await asyncio.get_running_loop().connect_read_pipe(lambda: protocol, sys.stdin)
 
-    def cleanup(self, force: bool = False, dry_run: bool = False) -> dict[str, Any]:
-        """
-        Clean up expired memories.
+        try:
+            while True:
+                try:
+                    line = await reader.readline()
+                    if not line:
+                        break
 
-        Args:
-            force: Force cleanup without confirmation
-            dry_run: Show what would be cleaned without actually cleaning
+                    request = json.loads(line.decode())
+                    response = await self.handle_request(request)
 
-        Returns:
-            Cleanup results
-        """
-        args = ["cleanup"]
-        if force:
-            args.append("--force")
-        if dry_run:
-            args.append("--dry-run")
-
-        result = self._run_cli(args)
-
-        return {
-            "success": result["success"],
-            "message": result["output"] if result["success"] else result["error"],
-        }
-
-    def project(self, verbose: bool = False) -> dict[str, Any]:
-        """
-        Get project information.
-
-        Args:
-            verbose: Show detailed project information
-
-        Returns:
-            Project information
-        """
-        args = ["project"]
-        if verbose:
-            args.append("--verbose")
-
-        result = self._run_cli(args)
-
-        # Always return success field for consistency
-        return {
-            "success": result["success"],
-            "project_info": result["output"] if result["success"] else "",
-            "error": result["error"] if not result["success"] else None,
-        }
-
-    def init(self, path: str | None = None, force: bool = False) -> dict[str, Any]:
-        """
-        Initialize a new project.
-
-        Args:
-            path: Project path (current directory if not specified)
-            force: Force initialization even if already initialized
-
-        Returns:
-            Initialization status
-        """
-        args = ["init"]
-        if path:
-            args.extend(["--path", path])
-        if force:
-            args.append("--force")
-
-        result = self._run_cli(args)
-
-        return {
-            "success": result["success"],
-            "message": result["output"] if result["success"] else result["error"],
-        }
-
-    def get_tools(self) -> list[dict[str, Any]]:
-        """Get list of available MCP tools."""
-        return [
-            {
-                "name": "enhance",
-                "description": "Enhance prompts with relevant project context",
-                "parameters": {
-                    "prompt": {
-                        "type": "string",
-                        "required": True,
-                        "description": "The prompt to enhance",
-                    },
-                    "format": {
-                        "type": "string",
-                        "default": "plain",
-                        "description": "Output format (plain, json, markdown)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Maximum memories to include",
-                    },
-                },
-            },
-            {
-                "name": "learn",
-                "description": "Store a learning asynchronously (non-blocking)",
-                "parameters": {
-                    "content": {
-                        "type": "string",
-                        "required": True,
-                        "description": "Content to learn",
-                    },
-                    "source": {
-                        "type": "string",
-                        "default": "mcp",
-                        "description": "Source of the learning",
-                    },
-                    "quiet": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Run quietly",
-                    },
-                },
-            },
-            {
-                "name": "recall",
-                "description": "Query memories for relevant information",
-                "parameters": {
-                    "query": {
-                        "type": "string",
-                        "required": True,
-                        "description": "Search query",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Maximum results",
-                    },
-                    "format": {
-                        "type": "string",
-                        "default": "json",
-                        "description": "Output format",
-                    },
-                },
-            },
-            {
-                "name": "remember",
-                "description": "Store a direct memory",
-                "parameters": {
-                    "content": {
-                        "type": "string",
-                        "required": True,
-                        "description": "Content to remember",
-                    },
-                    "source": {
-                        "type": "string",
-                        "default": "mcp",
-                        "description": "Source of the memory",
-                    },
-                    "session_id": {
-                        "type": "string",
-                        "required": False,
-                        "description": "Session ID to group related memories",
-                    },
-                },
-            },
-            {
-                "name": "stats",
-                "description": "Get memory system statistics",
-                "parameters": {
-                    "detailed": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Show detailed stats",
-                    },
-                    "format": {
-                        "type": "string",
-                        "default": "json",
-                        "description": "Output format",
-                    },
-                },
-            },
-            {
-                "name": "recent",
-                "description": "Get recent memories",
-                "parameters": {
-                    "limit": {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Number of memories",
-                    },
-                    "format": {
-                        "type": "string",
-                        "default": "json",
-                        "description": "Output format",
-                    },
-                },
-            },
-            {
-                "name": "cleanup",
-                "description": "Clean up expired memories",
-                "parameters": {
-                    "force": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Force cleanup",
-                    },
-                    "dry_run": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Show what would be cleaned",
-                    },
-                },
-            },
-            {
-                "name": "project",
-                "description": "Get project information",
-                "parameters": {
-                    "verbose": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Show detailed info",
-                    }
-                },
-            },
-            {
-                "name": "init",
-                "description": "Initialize a new project",
-                "parameters": {
-                    "path": {"type": "string", "description": "Project path"},
-                    "force": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Force initialization",
-                    },
-                },
-            },
-        ]
+                    print(json.dumps(response))
+                    sys.stdout.flush()
+                except asyncio.CancelledError:
+                    logger.info("Simplified server cancelled")
+                    break
+                except Exception as e:
+                    logger.error(f"Error handling request: {e}")
+        except GeneratorExit:
+            logger.info("Simplified server generator exit")
+            # Allow proper cleanup
+            raise
 
 
-def create_mcp_server(project_root: Path | None = None) -> MCPServer:
-    """Create and return an MCP server instance."""
-    return MCPServer(project_root=project_root)
+if __name__ == "__main__":
+    # Run the appropriate server based on availability
+    if MCP_AVAILABLE:
+        asyncio.run(main())
+    else:
+        # Fallback to simplified server
+        logging.basicConfig(level=logging.INFO)
+        server = SimplifiedMCPServer()
+        asyncio.run(server.run_stdio())

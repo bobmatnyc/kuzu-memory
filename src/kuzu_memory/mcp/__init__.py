@@ -12,7 +12,16 @@ from .protocol import (
     JSONRPCMessage,
     JSONRPCProtocol,
 )
-from .server import MCPServer, create_mcp_server
+from .server import KuzuMemoryMCPServer, SimplifiedMCPServer, MCP_AVAILABLE, main
+
+# Backwards compatibility aliases
+MCPServer = KuzuMemoryMCPServer
+
+
+def create_mcp_server(project_root=None):
+    """Create and return an MCP server instance (backwards compatibility)."""
+    return KuzuMemoryMCPServer(project_root=project_root)
+
 
 __all__ = [
     "BatchRequestHandler",
@@ -20,6 +29,10 @@ __all__ = [
     "JSONRPCErrorCode",
     "JSONRPCMessage",
     "JSONRPCProtocol",
-    "MCPServer",
-    "create_mcp_server",
+    "KuzuMemoryMCPServer",
+    "SimplifiedMCPServer",
+    "MCPServer",  # Backwards compatibility
+    "create_mcp_server",  # Backwards compatibility
+    "MCP_AVAILABLE",
+    "main",
 ]

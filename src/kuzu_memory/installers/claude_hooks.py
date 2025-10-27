@@ -891,6 +891,26 @@ exec {kuzu_cmd} "$@"
             # - UserPromptSubmit: kuzu-memory hooks enhance
             # - PostToolUse: kuzu-memory hooks learn
 
+            # Clean up legacy hook files from previous installations to prevent duplicate execution
+            legacy_hook_files = [
+                "kuzu_enhance.py",
+                "kuzu_learn.py",
+                "post_tool_use.py",
+                "user_prompt_submit.py"
+            ]
+            hooks_dir = claude_dir / "hooks"
+            if hooks_dir.exists():
+                for hook_file in legacy_hook_files:
+                    legacy_hook_path = hooks_dir / hook_file
+                    if legacy_hook_path.exists():
+                        if not dry_run:
+                            backup_path = self.create_backup(legacy_hook_path)
+                            if backup_path:
+                                self.backup_files.append(backup_path)
+                            legacy_hook_path.unlink()
+                            logger.info(f"Removed legacy hook file: {hook_file}")
+                        self.files_modified.append(legacy_hook_path)
+
             # NOTE: config.local.json is legacy and not used by Claude Code
             # We now merge MCP server config into settings.local.json instead
             # Clean up legacy config.local.json if it exists
