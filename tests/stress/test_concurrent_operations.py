@@ -166,9 +166,9 @@ class TestConcurrentOperations:
             total_operations = num_workers * queries_per_worker
             success_rate = len(successful_results) / total_operations
 
-            assert (
-                success_rate > 0.95
-            ), f"Success rate {success_rate:.1%} too low under concurrent load"
+            assert success_rate > 0.95, (
+                f"Success rate {success_rate:.1%} too low under concurrent load"
+            )
             assert len(failed_results) == 0, f"Failed operations: {failed_results}"
 
             # Performance analysis
@@ -180,15 +180,15 @@ class TestConcurrentOperations:
             avg_memory_count = sum(memory_counts) / len(memory_counts)
 
             # Assertions for concurrent performance
-            assert (
-                avg_response_time < 100.0
-            ), f"Average response time {avg_response_time:.2f}ms too high"
-            assert (
-                max_response_time < 500.0
-            ), f"Max response time {max_response_time:.2f}ms too high"
-            assert (
-                avg_memory_count > 1.0
-            ), f"Average memory count {avg_memory_count:.1f} too low"
+            assert avg_response_time < 100.0, (
+                f"Average response time {avg_response_time:.2f}ms too high"
+            )
+            assert max_response_time < 500.0, (
+                f"Max response time {max_response_time:.2f}ms too high"
+            )
+            assert avg_memory_count > 1.0, (
+                f"Average memory count {avg_memory_count:.1f} too low"
+            )
 
             print("Concurrent Read Performance:")
             print(f"  Total operations: {total_operations}")
@@ -357,12 +357,12 @@ class TestConcurrentOperations:
             read_success_rate = len(successful_reads) / total_reads
             write_success_rate = len(successful_writes) / total_writes
 
-            assert (
-                read_success_rate > 0.95
-            ), f"Read success rate {read_success_rate:.1%} too low"
-            assert (
-                write_success_rate > 0.95
-            ), f"Write success rate {write_success_rate:.1%} too low"
+            assert read_success_rate > 0.95, (
+                f"Read success rate {read_success_rate:.1%} too low"
+            )
+            assert write_success_rate > 0.95, (
+                f"Write success rate {write_success_rate:.1%} too low"
+            )
 
             # Performance analysis
             if successful_reads:
@@ -370,24 +370,24 @@ class TestConcurrentOperations:
                     successful_reads
                 )
                 max_read_time = max(r["time_ms"] for r in successful_reads)
-                assert (
-                    avg_read_time < 150.0
-                ), f"Average read time {avg_read_time:.2f}ms too high"
-                assert (
-                    max_read_time < 800.0
-                ), f"Max read time {max_read_time:.2f}ms too high"
+                assert avg_read_time < 150.0, (
+                    f"Average read time {avg_read_time:.2f}ms too high"
+                )
+                assert max_read_time < 800.0, (
+                    f"Max read time {max_read_time:.2f}ms too high"
+                )
 
             if successful_writes:
                 avg_write_time = sum(r["time_ms"] for r in successful_writes) / len(
                     successful_writes
                 )
                 max_write_time = max(r["time_ms"] for r in successful_writes)
-                assert (
-                    avg_write_time < 300.0
-                ), f"Average write time {avg_write_time:.2f}ms too high"
-                assert (
-                    max_write_time < 1000.0
-                ), f"Max write time {max_write_time:.2f}ms too high"
+                assert avg_write_time < 300.0, (
+                    f"Average write time {avg_write_time:.2f}ms too high"
+                )
+                assert max_write_time < 1000.0, (
+                    f"Max write time {max_write_time:.2f}ms too high"
+                )
 
             print("Mixed Operations Performance:")
             print(
@@ -506,9 +506,9 @@ class TestConcurrentOperations:
                     except Exception as e:
                         pytest.fail(f"Worker failed with exception: {e}")
 
-                assert (
-                    completed == num_workers
-                ), f"Only {completed}/{num_workers} workers completed"
+                assert completed == num_workers, (
+                    f"Only {completed}/{num_workers} workers completed"
+                )
 
             # Analyze connection pool performance
             all_results = []
@@ -522,12 +522,12 @@ class TestConcurrentOperations:
             total_operations = num_workers * operations_per_worker
             success_rate = len(successful_operations) / total_operations
 
-            assert (
-                success_rate > 0.90
-            ), f"Connection pool success rate {success_rate:.1%} too low"
-            assert (
-                len(failed_operations) < total_operations * 0.05
-            ), "Too many connection failures"
+            assert success_rate > 0.90, (
+                f"Connection pool success rate {success_rate:.1%} too low"
+            )
+            assert len(failed_operations) < total_operations * 0.05, (
+                "Too many connection failures"
+            )
 
             # Check for connection timeout or pool exhaustion errors
             timeout_errors = [
@@ -553,9 +553,9 @@ class TestConcurrentOperations:
                 print(f"  Max response time: {max_response_time:.2f}ms")
 
                 # Connection pool should handle contention gracefully
-                assert (
-                    avg_response_time < 500.0
-                ), f"Average response time {avg_response_time:.2f}ms too high"
+                assert avg_response_time < 500.0, (
+                    f"Average response time {avg_response_time:.2f}ms too high"
+                )
 
     def test_memory_pressure_stress(self, temp_db_path, stress_config):
         """Test system under memory pressure conditions."""
@@ -608,14 +608,14 @@ class TestConcurrentOperations:
                     generation_time = (end_time - start_time) * 1000
                     generation_times.append(generation_time)
 
-                    assert (
-                        len(memory_ids) > 0
-                    ), f"Failed to generate memory for entry {i}"
+                    assert len(memory_ids) > 0, (
+                        f"Failed to generate memory for entry {i}"
+                    )
 
                     # Validate generation time doesn't degrade significantly
-                    assert (
-                        generation_time < 1000.0
-                    ), f"Generation time {generation_time:.2f}ms too high at entry {i}"
+                    assert generation_time < 1000.0, (
+                        f"Generation time {generation_time:.2f}ms too high at entry {i}"
+                    )
 
                 # Test recall performance at this memory count
                 recall_queries = [
@@ -640,9 +640,9 @@ class TestConcurrentOperations:
                     recall_times.append(recall_time)
                     memory_counts_returned.append(len(context.memories))
 
-                    assert (
-                        recall_time < 500.0
-                    ), f"Recall time {recall_time:.2f}ms too high with {target_count} memories"
+                    assert recall_time < 500.0, (
+                        f"Recall time {recall_time:.2f}ms too high with {target_count} memories"
+                    )
                     # Don't assert on memory count in stress tests - focus on performance
 
                 avg_generation_time = (
@@ -676,9 +676,9 @@ class TestConcurrentOperations:
             max_recall = max(recall_times_by_count)
             degradation_ratio = max_recall / min_recall
 
-            assert (
-                degradation_ratio < 5.0
-            ), f"Performance degraded {degradation_ratio:.1f}x under memory pressure"
+            assert degradation_ratio < 5.0, (
+                f"Performance degraded {degradation_ratio:.1f}x under memory pressure"
+            )
 
             print("Memory Pressure Analysis:")
             print(f"  Performance degradation ratio: {degradation_ratio:.1f}x")

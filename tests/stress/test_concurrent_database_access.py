@@ -164,9 +164,9 @@ class TestConcurrentDatabaseAccess:
                 else:
                     count = 0
                 # Only assert if we had successful writes
-                assert count >= len(
-                    successful
-                ), f"Expected at least {len(successful)} nodes, found {count}"
+                assert count >= len(successful), (
+                    f"Expected at least {len(successful)} nodes, found {count}"
+                )
 
         finally:
             await pool.close_all()
@@ -275,9 +275,9 @@ class TestConcurrentDatabaseAccess:
             ref_count = KuzuConnection._db_ref_counts.get(temp_db_path, 0)
 
             # Reference count should be at least num_servers (could be more with pooling)
-            assert (
-                ref_count >= num_servers
-            ), f"Expected ref_count >= {num_servers}, got {ref_count}"
+            assert ref_count >= num_servers, (
+                f"Expected ref_count >= {num_servers}, got {ref_count}"
+            )
 
         finally:
             # Cleanup all pools
@@ -481,9 +481,9 @@ class TestConcurrentDatabaseAccess:
                 )
                 count = result[0]["count"] if result else 0
                 successful_writes = results.count(True)
-                assert (
-                    count >= successful_writes
-                ), f"Expected at least {successful_writes} nodes, found {count}"
+                assert count >= successful_writes, (
+                    f"Expected at least {successful_writes} nodes, found {count}"
+                )
 
             # Verify shared Database is still working
             assert temp_db_path in KuzuConnection._shared_databases
