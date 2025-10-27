@@ -91,12 +91,13 @@ def enhance_with_memory(prompt: str) -> str | None:
 
         cmd = [KUZU_COMMAND, "memory", "enhance", prompt, "--format", "plain"]
 
-        # Add project-root if CLAUDE_PROJECT_DIR is set
-        if PROJECT_DIR:
-            cmd.extend(["--project-root", PROJECT_DIR])
+        # Change working directory to project root if CLAUDE_PROJECT_DIR is set
+        # This allows kuzu-memory to auto-detect the project
+        cwd = PROJECT_DIR if PROJECT_DIR else None
 
         result = subprocess.run(
             cmd,
+            cwd=cwd,
             capture_output=True,
             text=True,
             timeout=ENHANCE_TIMEOUT,

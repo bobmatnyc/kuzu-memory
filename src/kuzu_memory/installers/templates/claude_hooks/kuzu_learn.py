@@ -287,12 +287,13 @@ def store_memory(text: str) -> bool:
             AGENT_ID,
         ]
 
-        # Add project-root if CLAUDE_PROJECT_DIR is set
-        if PROJECT_DIR:
-            cmd.extend(["--project-root", PROJECT_DIR])
+        # Change working directory to project root if CLAUDE_PROJECT_DIR is set
+        # This allows kuzu-memory to auto-detect the project
+        cwd = PROJECT_DIR if PROJECT_DIR else None
 
         result = subprocess.run(
             cmd,
+            cwd=cwd,
             timeout=STORE_TIMEOUT,
             capture_output=True,
             text=True,
