@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 20 comprehensive tests covering all enhancement features
   - Backward compatible with existing git sync memories
 
+### Fixed
+- Added automatic cleanup of legacy `.claude/config.local.json` during installation
+- Installer now removes old config.local.json and migrates config to settings.local.json
+- Prevents duplicate MCP configuration between legacy and current config files
+
 <!-- towncrier release notes start -->
 
 ## [1.4.25] - 2025-10-27

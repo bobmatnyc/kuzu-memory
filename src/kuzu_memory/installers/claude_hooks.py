@@ -917,6 +917,21 @@ exec {kuzu_cmd} "$@"
 
             # NOTE: config.local.json is legacy and not used by Claude Code
             # We now merge MCP server config into settings.local.json instead
+            # Clean up legacy config.local.json if it exists
+            legacy_config_path = claude_dir / "config.local.json"
+            if legacy_config_path.exists():
+                if not dry_run:
+                    backup_path = self.create_backup(legacy_config_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                    legacy_config_path.unlink()
+                    logger.info(
+                        "Removed legacy config.local.json (merged into settings.local.json)"
+                    )
+                    print(
+                        "✓ Removed legacy .claude/config.local.json (config merged into settings.local.json)"
+                    )
+                self.files_modified.append(legacy_config_path)
 
             # Create or update settings.local.json with hooks AND MCP server config
             settings_path = claude_dir / "settings.local.json"
