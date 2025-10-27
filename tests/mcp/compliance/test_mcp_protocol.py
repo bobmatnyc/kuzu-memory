@@ -52,12 +52,12 @@ class TestProtocolVersionNegotiation:
 
         if response and "result" in response:
             result = response["result"]
-            assert (
-                "protocolVersion" in result
-            ), "Initialize result must include protocolVersion"
-            assert (
-                result["protocolVersion"] in MCP_PROTOCOL_VERSIONS
-            ), "Must be valid protocol version"
+            assert "protocolVersion" in result, (
+                "Initialize result must include protocolVersion"
+            )
+            assert result["protocolVersion"] in MCP_PROTOCOL_VERSIONS, (
+                "Must be valid protocol version"
+            )
 
         await mcp_client.disconnect()
 
@@ -212,9 +212,9 @@ class TestToolsList:
 
             # KuzuMemory should have these core tools
             expected_tools = {"enhance", "recall", "stats", "remember"}
-            assert expected_tools.issubset(
-                tool_names
-            ), f"Missing required tools: {expected_tools - tool_names}"
+            assert expected_tools.issubset(tool_names), (
+                f"Missing required tools: {expected_tools - tool_names}"
+            )
 
 
 @pytest.mark.compliance
@@ -289,12 +289,12 @@ class TestToolSchemaValidation:
                 assert schema["type"] == "object", "Input schema type should be object"
 
                 # Must have properties
-                assert (
-                    "properties" in schema
-                ), f"Tool {tool['name']} schema missing properties"
-                assert isinstance(
-                    schema["properties"], dict
-                ), "Properties must be object"
+                assert "properties" in schema, (
+                    f"Tool {tool['name']} schema missing properties"
+                )
+                assert isinstance(schema["properties"], dict), (
+                    "Properties must be object"
+                )
 
     @pytest.mark.asyncio
     async def test_required_parameters_specified(self, initialized_client):
@@ -314,9 +314,9 @@ class TestToolSchemaValidation:
                     properties = schema["properties"]
 
                     for req_field in required:
-                        assert (
-                            req_field in properties
-                        ), f"Required field {req_field} not in properties"
+                        assert req_field in properties, (
+                            f"Required field {req_field} not in properties"
+                        )
 
     @pytest.mark.asyncio
     async def test_parameter_types_specified(self, initialized_client):
@@ -330,9 +330,9 @@ class TestToolSchemaValidation:
                 properties = tool["inputSchema"].get("properties", {})
 
                 for param_name, param_schema in properties.items():
-                    assert (
-                        "type" in param_schema
-                    ), f"Parameter {param_name} missing type"
+                    assert "type" in param_schema, (
+                        f"Parameter {param_name} missing type"
+                    )
                     assert isinstance(param_schema["type"], str), "Type must be string"
 
 

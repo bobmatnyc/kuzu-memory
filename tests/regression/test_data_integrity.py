@@ -215,9 +215,9 @@ class TestDataIntegrityRegression:
             )
 
             # Regression assertion - should maintain reasonable accuracy
-            assert (
-                overall_accuracy >= 0.6
-            ), f"Memory type classification accuracy regressed: {overall_accuracy:.1%}"
+            assert overall_accuracy >= 0.6, (
+                f"Memory type classification accuracy regressed: {overall_accuracy:.1%}"
+            )
 
     @pytest.mark.skip(
         reason="Entity extraction patterns need tuning for test content alignment"
@@ -290,12 +290,12 @@ class TestDataIntegrityRegression:
                 print(f"  Average F1-Score: {avg_f1:.2f}")
 
                 # Regression assertions
-                assert (
-                    avg_precision >= 0.5
-                ), f"Entity extraction precision regressed: {avg_precision:.2f}"
-                assert (
-                    avg_recall >= 0.4
-                ), f"Entity extraction recall regressed: {avg_recall:.2f}"
+                assert avg_precision >= 0.5, (
+                    f"Entity extraction precision regressed: {avg_precision:.2f}"
+                )
+                assert avg_recall >= 0.4, (
+                    f"Entity extraction recall regressed: {avg_recall:.2f}"
+                )
 
     def test_deduplication_integrity(self, temp_db_path, integrity_config):
         """Test that deduplication works correctly and consistently."""
@@ -324,9 +324,9 @@ class TestDataIntegrityRegression:
                     unique_contents.add(retrieved_memory.content)
 
             # Should have deduplicated exact matches
-            assert (
-                len(unique_contents) <= 2
-            ), f"Exact deduplication failed: {len(unique_contents)} unique contents"
+            assert len(unique_contents) <= 2, (
+                f"Exact deduplication failed: {len(unique_contents)} unique contents"
+            )
 
             # Test near duplicates
             near_duplicates = [
@@ -360,9 +360,9 @@ class TestDataIntegrityRegression:
             )
 
             # Should handle near-duplicates reasonably
-            assert len(near_unique_contents) <= len(
-                near_duplicates
-            ), "Near-duplicate handling failed"
+            assert len(near_unique_contents) <= len(near_duplicates), (
+                "Near-duplicate handling failed"
+            )
 
     def test_recall_consistency_integrity(
         self, temp_db_path, integrity_config, reference_dataset
@@ -438,9 +438,9 @@ class TestDataIntegrityRegression:
                 print(f"  {status} {query[:40]}...")
 
             # Regression assertion
-            assert (
-                consistency_rate >= 0.8
-            ), f"Recall consistency regressed: {consistency_rate:.1%}"
+            assert consistency_rate >= 0.8, (
+                f"Recall consistency regressed: {consistency_rate:.1%}"
+            )
 
     def test_data_persistence_integrity(
         self, temp_db_path, integrity_config, reference_dataset
@@ -579,10 +579,10 @@ class TestDataIntegrityRegression:
         successful_workers = len(results)
         successful_recalls = sum(1 for r in results if r["recall_success"])
 
-        assert (
-            successful_workers == num_workers
-        ), f"Not all workers completed successfully: {successful_workers}/{num_workers}"
+        assert successful_workers == num_workers, (
+            f"Not all workers completed successfully: {successful_workers}/{num_workers}"
+        )
         assert len(errors) == 0, f"Concurrent access errors occurred: {errors}"
-        assert (
-            successful_recalls >= num_workers * 0.8
-        ), f"Recall success rate too low: {successful_recalls}/{num_workers}"
+        assert successful_recalls >= num_workers * 0.8, (
+            f"Recall success rate too low: {successful_recalls}/{num_workers}"
+        )

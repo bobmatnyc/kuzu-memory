@@ -352,9 +352,9 @@ class TestClaudeDesktopConcurrentSessions:
         try:
             # Connect all clients
             connected_count = await concurrent_sim.connect_all()
-            assert (
-                connected_count >= 2
-            ), f"Only {connected_count}/{num_sessions} connected"
+            assert connected_count >= 2, (
+                f"Only {connected_count}/{num_sessions} connected"
+            )
 
             # Each session performs operations
             results = await concurrent_sim.concurrent_requests("ping", {})

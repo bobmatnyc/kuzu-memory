@@ -43,30 +43,35 @@ pip install kuzu-memory[dev]
 KuzuMemory can be integrated with various AI systems following the **ONE PATH** principle:
 
 ```bash
-# List available integrations
-kuzu-memory install list
+# Install Claude Code integration (MCP + hooks)
+kuzu-memory install claude-code
 
-# Install Claude Code integration (project-specific memory)
-kuzu-memory install add claude-code
+# Install Claude Desktop integration (MCP only)
+kuzu-memory install claude-desktop
 
-# Install Claude Desktop integration (global memory)
-kuzu-memory install add claude-desktop
+# Install Cursor IDE integration (MCP only)
+kuzu-memory install cursor
 
-# Install Auggie integration
-kuzu-memory install add auggie
+# Install VS Code integration (MCP only)
+kuzu-memory install vscode
 
-# Install universal integration files
-kuzu-memory install add universal
+# Install Windsurf IDE integration (MCP only)
+kuzu-memory install windsurf
 
-# Check installation status
-kuzu-memory install status
+# Install Auggie integration (rules)
+kuzu-memory install auggie
+
+# Uninstall an integration
+kuzu-memory uninstall claude-code
 ```
 
-**Primary Installers** (ONE path for each AI system):
-- `claude-code` - Claude Code IDE integration with automatic hooks (project-specific memory isolation)
-- `claude-desktop` - Claude Desktop app (global memory across all conversations)
-- `auggie` - Auggie AI integration
-- `universal` - Universal integration files
+**Available Integrations** (ONE command per system):
+- `claude-code` - Claude Code IDE with MCP + hooks (complete integration)
+- `claude-desktop` - Claude Desktop app with MCP server (global memory)
+- `cursor` - Cursor IDE with MCP server
+- `vscode` - VS Code with Claude extension (MCP server)
+- `windsurf` - Windsurf IDE with MCP server
+- `auggie` - Auggie AI with rules integration
 
 **Key Differences**:
 
@@ -329,7 +334,7 @@ pytest tests/mcp/performance/ --benchmark-only
 - ✅ Project memory database (kuzu-memory/)
 - ✅ Claude Code MCP config (.claude/config.local.json)
 - ✅ Claude Code hooks (if configured)
-- ❌ Does NOT check Claude Desktop (use `kuzu-memory install add claude-desktop` instead)
+- ❌ Does NOT check Claude Desktop (use `kuzu-memory install claude-desktop` instead)
 
 See [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Reference](docs/MCP_DIAGNOSTICS.md) for complete documentation.
 

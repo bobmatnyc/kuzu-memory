@@ -23,6 +23,13 @@ def hooks_group():
     """
     🪝 Manage hook system integrations.
 
+    ⚠️  DEPRECATED: Use 'kuzu-memory install' instead.
+
+    This command group is deprecated. Use the unified install command:
+      • kuzu-memory install claude-code
+      • kuzu-memory install auggie
+      • kuzu-memory uninstall claude-code
+
     Install and manage hook-based integrations for AI coding assistants
     that support hooks (Claude Code) or rules (Auggie).
 
@@ -39,7 +46,14 @@ def hooks_group():
 
     Use 'kuzu-memory hooks COMMAND --help' for detailed help.
     """
-    pass
+    console.print("\n⚠️  [yellow]WARNING: 'kuzu-memory hooks' is deprecated.[/yellow]")
+    console.print(
+        "[yellow]⚠️  Use 'kuzu-memory install <integration>' instead.[/yellow]"
+    )
+    console.print()
+    console.print("[dim]Examples:[/dim]")
+    console.print("[dim]  kuzu-memory install claude-code[/dim]")
+    console.print("[dim]  kuzu-memory uninstall claude-code[/dim]\n")
 
 
 @hooks_group.command(name="status")
@@ -124,7 +138,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
     """
     Install hooks for specified system.
 
-    ℹ️  RECOMMENDED: Use 'kuzu-memory install add <platform>' instead.
+    ℹ️  RECOMMENDED: Use 'kuzu-memory install <platform>' instead.
         The unified install command automatically handles MCP + hooks per platform.
 
     Hooks are automatically updated if already installed (no --force flag needed).
@@ -136,7 +150,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
 
     \b
     🎯 RECOMMENDED COMMAND:
-      kuzu-memory install add <platform>
+      kuzu-memory install <platform>
         • Installs MCP + hooks for claude-code
         • Installs rules for auggie
         • No need to think about MCP vs hooks - it does the right thing
@@ -151,7 +165,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
     """
     # Show informational note about unified command
     console.print(
-        "\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command."
+        "\nℹ️  Note: 'kuzu-memory install <platform>' is now the recommended command."
     )
     console.print(
         "   It automatically installs the right components for each platform.\n"

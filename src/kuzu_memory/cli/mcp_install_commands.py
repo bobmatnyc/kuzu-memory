@@ -19,6 +19,14 @@ def mcp_install_group():
     """
     🔌 Manage MCP server integrations.
 
+    ⚠️  DEPRECATED: Use 'kuzu-memory install' instead.
+
+    This command group is deprecated. Use the unified install command:
+      • kuzu-memory install claude-code
+      • kuzu-memory install claude-desktop
+      • kuzu-memory install cursor
+      • kuzu-memory uninstall cursor
+
     Auto-detect and install MCP server configurations for various AI coding assistants.
 
     \b
@@ -29,7 +37,13 @@ def mcp_install_group():
 
     Use 'kuzu-memory mcp COMMAND --help' for detailed help.
     """
-    pass
+    print("\n⚠️  WARNING: 'kuzu-memory mcp' is deprecated.")
+    print("⚠️  Use 'kuzu-memory install <integration>' instead.")
+    print()
+    print("Examples:")
+    print("  kuzu-memory install claude-code")
+    print("  kuzu-memory install cursor")
+    print("  kuzu-memory uninstall claude-desktop\n")
 
 
 @mcp_install_group.command(name="status")
@@ -125,7 +139,7 @@ def install_mcp(
     """
     Install MCP server for specified system.
 
-    ℹ️  RECOMMENDED: Use 'kuzu-memory install add <platform>' instead.
+    ℹ️  RECOMMENDED: Use 'kuzu-memory install <platform>' instead.
         The unified install command automatically handles MCP + hooks per platform.
 
     Automatically updates existing installations (no --force flag needed).
@@ -141,7 +155,7 @@ def install_mcp(
 
     \b
     🎯 RECOMMENDED COMMAND:
-      kuzu-memory install add <platform>
+      kuzu-memory install <platform>
         • Installs MCP + hooks for claude-code
         • Installs MCP only for claude-desktop, cursor, vscode, windsurf
         • No need to think about MCP vs hooks - it does the right thing
@@ -158,9 +172,7 @@ def install_mcp(
       kuzu-memory mcp install vscode
     """
     # Show informational note about unified command
-    print(
-        "\nℹ️  Note: 'kuzu-memory install add <platform>' is now the recommended command."
-    )
+    print("\nℹ️  Note: 'kuzu-memory install <platform>' is now the recommended command.")
     print("   It automatically installs the right components for each platform.\n")
 
     try:

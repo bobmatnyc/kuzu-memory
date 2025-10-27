@@ -11,11 +11,17 @@ This project uses KuzuMemory for intelligent context management.
 
 KuzuMemory is configured to enhance all AI interactions with project-specific context.
 
-### Available Commands:
+### Installation Commands (ONE WAY):
+- `kuzu-memory install claude-code` - Install Claude Code integration (MCP + hooks)
+- `kuzu-memory install claude-desktop` - Install Claude Desktop integration (MCP only)
+- `kuzu-memory uninstall <integration>` - Uninstall integration
+- `kuzu-memory remove <integration>` - Alias for uninstall
+
+### Memory Commands:
 - `kuzu-memory enhance <prompt>` - Enhance prompts with project context
 - `kuzu-memory learn <content>` - Store learning from conversations (async)
 - `kuzu-memory recall <query>` - Query project memories
-- `kuzu-memory stats` - View memory statistics
+- `kuzu-memory status` - View memory statistics
 
 ### MCP Tools Available:
 When interacting with Claude Desktop, the following MCP tools are available:

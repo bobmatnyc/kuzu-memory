@@ -24,7 +24,7 @@ from .git_commands import git
 from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
-from .install_commands_simple import install
+from .install_unified import install_command, remove_command, uninstall_command
 from .mcp_install_commands import mcp_install_group
 from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
@@ -63,10 +63,26 @@ def cli(ctx, debug, config, db_path, project_root):
 
     \b
     🚀 QUICK START:
-      kuzu-memory init              # Initialize project memory
-      kuzu-memory remember "info"   # Store information
-      kuzu-memory enhance "prompt"  # Enhance AI prompts
-      kuzu-memory learn "content"   # Learn asynchronously
+      kuzu-memory init                    # Initialize project memory
+      kuzu-memory install claude-code     # Install integration
+      kuzu-memory remember "info"         # Store information
+      kuzu-memory enhance "prompt"        # Enhance AI prompts
+      kuzu-memory learn "content"         # Learn asynchronously
+
+    \b
+    🔧 INSTALLATION (ONE WAY):
+      kuzu-memory install <integration>   # Install for an IDE/tool
+      kuzu-memory uninstall <integration> # Uninstall integration
+      kuzu-memory remove <integration>    # Alias for uninstall
+
+    \b
+    📦 AVAILABLE INTEGRATIONS:
+      claude-code      Claude Code (MCP + hooks)
+      claude-desktop   Claude Desktop (MCP only)
+      cursor           Cursor IDE (MCP only)
+      vscode           VS Code (MCP only)
+      windsurf         Windsurf IDE (MCP only)
+      auggie           Auggie (rules)
 
     \b
     🎯 KEY FEATURES:
@@ -546,16 +562,20 @@ def demo(ctx):
         sys.exit(1)
 
 
-# Register 10 top-level commands (clean architecture)
+# Register top-level commands (clean architecture)
 cli.add_command(init)  # 1. Initialize project
-cli.add_command(install)  # 2. Manage integrations (DEPRECATED - use hooks/mcp)
-cli.add_command(memory)  # 3. Memory operations (store, learn, recall, enhance, recent)
-cli.add_command(status)  # 4. System status and info
-cli.add_command(doctor)  # 5. Diagnostics and health checks
-cli.add_command(help_group, name="help")  # 6. Help and examples
-cli.add_command(git)  # 7. Git commit history synchronization
-cli.add_command(hooks_group, name="hooks")  # 8. Hook system integrations (NEW)
-cli.add_command(mcp_install_group, name="mcp")  # 9. MCP server integrations (NEW)
+cli.add_command(install_command)  # 2. Install integrations (ONE WAY)
+cli.add_command(uninstall_command)  # 3. Uninstall integrations
+cli.add_command(remove_command)  # 4. Remove (alias for uninstall)
+cli.add_command(memory)  # 5. Memory operations (store, learn, recall, enhance, recent)
+cli.add_command(status)  # 6. System status and info
+cli.add_command(doctor)  # 7. Diagnostics and health checks
+cli.add_command(help_group, name="help")  # 8. Help and examples
+cli.add_command(git)  # 9. Git commit history synchronization
+cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
+cli.add_command(
+    mcp_install_group, name="mcp"
+)  # 11. MCP server integrations (DEPRECATED)
 
 # Note: The old 'mcp' command with 'serve' is deprecated but kept for backward compatibility
 # The new mcp_install_group takes precedence for the 'mcp' name
