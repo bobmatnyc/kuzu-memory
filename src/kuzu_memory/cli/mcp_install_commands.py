@@ -139,8 +139,8 @@ def install_mcp(
     """
     Install MCP server for specified system.
 
-    ℹ️  RECOMMENDED: Use 'kuzu-memory install <platform>' instead.
-        The unified install command automatically handles MCP + hooks per platform.
+    NOTE: RECOMMENDED: Use 'kuzu-memory install <platform>' instead.
+          The unified install command automatically handles MCP + hooks per platform.
 
     Automatically updates existing installations (no --force flag needed).
     Preserves existing MCP servers in configurations.
@@ -172,8 +172,8 @@ def install_mcp(
       kuzu-memory mcp install vscode
     """
     # Show informational note about unified command
-    print("\nℹ️  Note: 'kuzu-memory install <platform>' is now the recommended command.")
-    print("   It automatically installs the right components for each platform.\n")
+    print("\nNote: 'kuzu-memory install <platform>' is now the recommended command.")
+    print("     It automatically installs the right components for each platform.\n")
 
     try:
         # Determine project root

@@ -373,7 +373,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
     def _create_claude_code_hooks_config(self) -> dict[str, Any]:
         """
-        Create Claude Code hooks configuration (for settings.local.json).
+        Create Claude Code hooks configuration (for settings.local.json) using CLI entry points.
 
         Configures two hooks:
         - UserPromptSubmit: Enhances prompts with project context
@@ -382,12 +382,6 @@ class ClaudeHooksInstaller(BaseInstaller):
         Returns:
             Claude Code hooks configuration dict
         """
-        # Get absolute paths for python3 and hook scripts
-        python_exe = sys.executable
-        hooks_dir = self.project_root / ".claude" / "hooks"
-        enhance_script = hooks_dir / "kuzu_enhance.py"
-        learn_script = hooks_dir / "kuzu_learn.py"
-
         # Get package version for comment
         try:
             from importlib.metadata import version
@@ -405,7 +399,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                         "hooks": [
                             {
                                 "type": "command",
-                                "command": f"{python_exe} {enhance_script}",
+                                "command": "kuzu-memory hooks enhance",
                             }
                         ],
                     }
@@ -416,7 +410,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                         "hooks": [
                             {
                                 "type": "command",
-                                "command": f"{python_exe} {learn_script}",
+                                "command": "kuzu-memory hooks learn",
                             }
                         ],
                     }

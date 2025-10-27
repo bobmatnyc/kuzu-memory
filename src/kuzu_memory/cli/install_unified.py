@@ -190,7 +190,7 @@ def uninstall_command(
         # Check if installed
         status = installer.get_status()
         if not status.get("installed", False):
-            rich_print(f"ℹ️  {integration} is not currently installed.", style="blue")
+            rich_print(f"Note: {integration} is not currently installed.", style="blue")
             sys.exit(0)
 
         # Show uninstallation header
