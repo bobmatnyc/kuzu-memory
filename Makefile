@@ -189,8 +189,17 @@ build: quality
 
 publish: build
 	@echo "📤 Publishing to PyPI..."
-	python3 -m twine upload dist/*
-	@echo "✅ Package published"
+	@if [ ! -f .env.local ]; then \
+		echo "❌ Error: .env.local not found"; \
+		echo "Create .env.local with PYPI_TOKEN=<your-token>"; \
+		exit 1; \
+	fi
+	@. .env.local && \
+	export TWINE_USERNAME=__token__ && \
+	export TWINE_PASSWORD=$$PYPI_TOKEN && \
+	VERSION=$$(python3 -c "import sys; sys.path.insert(0, 'src'); from kuzu_memory.__version__ import __version__; print(__version__)") && \
+	python3 -m twine upload dist/kuzu_memory-$$VERSION*
+	@echo "✅ Package published to PyPI"
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
