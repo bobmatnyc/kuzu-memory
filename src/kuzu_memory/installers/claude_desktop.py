@@ -267,18 +267,46 @@ retention:
                 },
             }
         elif self.kuzu_command:
+            # Use Python to run the MCP server module
+            # Try to find the Python executable associated with the kuzu-memory installation
+            kuzu_path = Path(self.kuzu_command)
+            if kuzu_path.exists():
+                # Try to find python in the same bin directory
+                bin_dir = kuzu_path.parent
+                python_candidates = [
+                    bin_dir / "python3",
+                    bin_dir / "python",
+                    bin_dir / "python.exe",
+                ]
+                for python_path in python_candidates:
+                    if python_path.exists():
+                        return {
+                            "command": str(python_path),
+                            "args": ["-m", "kuzu_memory.mcp.run_server"],
+                            "env": {
+                                "KUZU_MEMORY_DB": str(self.memory_db),
+                                "KUZU_MEMORY_MODE": "mcp",
+                            },
+                        }
+
+            # Fallback to system Python with module invocation
+            import sys
+
             return {
-                "command": self.kuzu_command,
-                "args": ["mcp", "serve"],
+                "command": sys.executable,
+                "args": ["-m", "kuzu_memory.mcp.run_server"],
                 "env": {
                     "KUZU_MEMORY_DB": str(self.memory_db),
                     "KUZU_MEMORY_MODE": "mcp",
                 },
             }
         else:
+            # Final fallback to system Python
+            import sys
+
             return {
-                "command": "kuzu-memory",
-                "args": ["mcp", "serve"],
+                "command": sys.executable,
+                "args": ["-m", "kuzu_memory.mcp.run_server"],
                 "env": {
                     "KUZU_MEMORY_DB": str(self.memory_db),
                     "KUZU_MEMORY_MODE": "mcp",
