@@ -55,6 +55,67 @@ class ClaudeHooksInstaller(BaseInstaller):
         )
         self._kuzu_command_path = None  # Cache for kuzu-memory command path
 
+    def _clean_global_config(self) -> None:
+        """
+        Check for and remove kuzu-memory from global Claude Code config.
+
+        kuzu-memory should ONLY be in project-specific .claude/config.local.json,
+        never in global ~/.claude.json.
+        """
+        global_config_path = Path.home() / ".claude.json"
+
+        if not global_config_path.exists():
+            logger.debug("No global .claude.json found - nothing to clean")
+            return
+
+        try:
+            with open(global_config_path, "r") as f:
+                config = json.load(f)
+
+            # Check all projects in the config for kuzu-memory entries
+            removed_count = 0
+            for project_name, project_config in config.items():
+                if not isinstance(project_config, dict):
+                    continue
+
+                if (
+                    "mcpServers" in project_config
+                    and "kuzu-memory" in project_config["mcpServers"]
+                ):
+                    logger.info(
+                        f"Removing kuzu-memory from global config project: {project_name}"
+                    )
+                    del project_config["mcpServers"]["kuzu-memory"]
+                    removed_count += 1
+
+            # Also check top-level mcpServers
+            if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
+                logger.info("Removing kuzu-memory from top-level global mcpServers")
+                del config["mcpServers"]["kuzu-memory"]
+                removed_count += 1
+
+            if removed_count > 0:
+                # Backup before writing
+                backup_path = global_config_path.with_suffix(".json.backup")
+                shutil.copy(global_config_path, backup_path)
+                logger.info(f"Backed up global config to {backup_path}")
+
+                # Write cleaned config
+                with open(global_config_path, "w") as f:
+                    json.dump(config, f, indent=2)
+
+                logger.info(
+                    f"Removed {removed_count} kuzu-memory entries from global config"
+                )
+                print(
+                    f"✓ Cleaned {removed_count} kuzu-memory entries from global Claude Code config"
+                )
+                print(f"  (Backup saved to {backup_path})")
+
+        except Exception as e:
+            logger.warning(f"Failed to clean global config: {e}")
+            # Don't fail installation if cleanup fails
+
     @property
     def ai_system_name(self) -> str:
         """Name of the AI system."""
@@ -646,6 +707,10 @@ exec {kuzu_cmd} "$@"
         try:
             if dry_run:
                 logger.info("DRY RUN MODE - No changes will be made")
+
+            # Clean global config FIRST (before any other operations)
+            if not dry_run:
+                self._clean_global_config()
 
             # Check prerequisites
             errors = self.check_prerequisites()
