@@ -135,12 +135,12 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
             print(output_content)
 
         # Check if there are fixable issues and prompt for auto-fix
-        has_failures = report.has_critical_errors or report.failed > 0
+        has_failures = report.has_critical_errors or report.actionable_failures > 0
         has_fixable = any(r.fix_suggestion for r in report.results if not r.success)
 
         if has_failures and has_fixable and not fix:
             rich_print(
-                f"\n💡 Found {report.failed} issue(s) with suggested fixes available.",
+                f"\n💡 Found {report.actionable_failures} issue(s) with suggested fixes available.",
                 style="yellow",
             )
 
@@ -166,11 +166,11 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
                 # Update report for exit code determination
                 report = fix_report
 
-                if fix_report.failed == 0:
+                if fix_report.actionable_failures == 0:
                     rich_print("\n✅ All issues fixed successfully!", style="green")
                 else:
                     rich_print(
-                        f"\n⚠️  {fix_report.failed} issue(s) still remain after auto-fix.",
+                        f"\n⚠️  {fix_report.actionable_failures} issue(s) still remain after auto-fix.",
                         style="yellow",
                     )
 
@@ -178,9 +178,9 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
         if report.has_critical_errors:
             rich_print("\n❌ Critical errors detected. See report for details.", style="red")
             sys.exit(1)
-        elif report.failed > 0:
+        elif report.actionable_failures > 0:
             rich_print(
-                f"\n⚠️  {report.failed} checks failed. See report for details.",
+                f"\n⚠️  {report.actionable_failures} checks failed. See report for details.",
                 style="yellow",
             )
             sys.exit(1)

@@ -98,6 +98,17 @@ class DiagnosticReport:
             r.severity == DiagnosticSeverity.CRITICAL and not r.success for r in self.results
         )
 
+    @property
+    def actionable_failures(self) -> int:
+        """Count failures that require action (CRITICAL, ERROR, WARNING only, excluding INFO)."""
+        return sum(
+            1
+            for r in self.results
+            if not r.success
+            and r.severity
+            in (DiagnosticSeverity.CRITICAL, DiagnosticSeverity.ERROR, DiagnosticSeverity.WARNING)
+        )
+
     def add_result(self, result: DiagnosticResult) -> None:
         """Add a diagnostic result to the report."""
         self.results.append(result)
@@ -347,10 +358,10 @@ class MCPDiagnostics:
                 DiagnosticResult(
                     check_name="claude_hook_script",
                     success=False,
-                    severity=DiagnosticSeverity.ERROR,
-                    message="Claude hook script not found",
+                    severity=DiagnosticSeverity.INFO,
+                    message="Claude hook script not found (optional for Claude Code integration)",
                     error=f"File not found: {hook_script_path}",
-                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    fix_suggestion="Optional: Run: kuzu-memory install add claude-code",
                     duration_ms=(time.time() - start) * 1000,
                 )
             )
@@ -414,10 +425,10 @@ class MCPDiagnostics:
                 DiagnosticResult(
                     check_name="claude_mpm_config",
                     success=False,
-                    severity=DiagnosticSeverity.ERROR,
-                    message="Claude MPM config not found",
+                    severity=DiagnosticSeverity.INFO,
+                    message="Claude MPM config not found (optional for Claude Code integration)",
                     error=f"File not found: {claude_mpm_config_path}",
-                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    fix_suggestion="Optional: Run: kuzu-memory install add claude-code",
                     duration_ms=(time.time() - start) * 1000,
                 )
             )
@@ -440,10 +451,10 @@ class MCPDiagnostics:
                 DiagnosticResult(
                     check_name="kuzu_memory_config",
                     success=False,
-                    severity=DiagnosticSeverity.ERROR,
-                    message="KuzuMemory config not found",
+                    severity=DiagnosticSeverity.INFO,
+                    message="KuzuMemory config not found (optional for Claude Code integration)",
                     error=f"File not found: {kuzu_config_path}",
-                    fix_suggestion="Run: kuzu-memory install add claude-code",
+                    fix_suggestion="Optional: Run: kuzu-memory install add claude-code",
                     duration_ms=(time.time() - start) * 1000,
                 )
             )
