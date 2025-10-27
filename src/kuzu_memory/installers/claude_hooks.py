@@ -468,7 +468,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                 "kuzu-memory": {
                     "type": "stdio",
                     "command": mcp_python_path,
-                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
+                    "args": ["-m", "kuzu_memory.mcp.server"],
                     "env": {
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(db_path),
@@ -760,7 +760,7 @@ exec {kuzu_cmd} "$@"
                 "kuzu-memory": {
                     "type": "stdio",
                     "command": python_exe,
-                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
+                    "args": ["-m", "kuzu_memory.mcp.server"],
                     "env": {
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(db_path),
