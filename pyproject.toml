@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kuzu-memory"
-version = "1.4.21"
+version = "1.4.22"
 description = "Lightweight, embedded graph-based memory system for AI applications"
 readme = "README.md"
 license = {text = "MIT"}
@@ -33,7 +33,8 @@ dependencies = [
     "typing-extensions>=4.5", # Python 3.11+ compatibility
     "rich>=13.0.0",         # Rich CLI formatting
     "psutil>=5.9.0",        # System and process utilities for health monitoring
-    "gitpython>=3.1.0"      # Git repository integration
+    "gitpython>=3.1.0",     # Git repository integration
+    "mcp>=1.0.0"            # Model Context Protocol SDK for MCP server integration
 ]
 
 [project.optional-dependencies]
