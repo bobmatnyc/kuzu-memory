@@ -173,13 +173,9 @@ class ConfigLoader:
             return config_data
 
         except yaml.YAMLError as e:
-            raise ConfigurationError(
-                f"Failed to parse YAML configuration file {config_path}: {e}"
-            )
+            raise ConfigurationError(f"Failed to parse YAML configuration file {config_path}: {e}")
         except Exception as e:
-            raise ConfigurationError(
-                f"Failed to load configuration file {config_path}: {e}"
-            )
+            raise ConfigurationError(f"Failed to load configuration file {config_path}: {e}")
 
     def _auto_discover_config(self) -> dict[str, Any] | None:
         """Auto-discover configuration file from default paths."""
@@ -278,9 +274,7 @@ class ConfigLoader:
                     self._set_nested_config(env_config, config_path, parsed_value)
                     found_env_vars = True
                 except (ValueError, TypeError) as e:
-                    logger.warning(
-                        f"Failed to parse environment variable {env_var}={value}: {e}"
-                    )
+                    logger.warning(f"Failed to parse environment variable {env_var}={value}: {e}")
 
         if found_env_vars:
             logger.info("Loaded configuration from environment variables")
@@ -304,18 +298,12 @@ class ConfigLoader:
 
         current[keys[-1]] = value
 
-    def _merge_configs(
-        self, base: dict[str, Any], override: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _merge_configs(self, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
         """Recursively merge two configuration dictionaries."""
         result = base.copy()
 
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._merge_configs(result[key], value)
             else:
                 result[key] = value
@@ -342,16 +330,12 @@ class ConfigLoader:
 
             # Save to YAML file
             with open(config_path, "w", encoding="utf-8") as f:
-                yaml.dump(
-                    config_dict, f, default_flow_style=False, indent=2, sort_keys=True
-                )
+                yaml.dump(config_dict, f, default_flow_style=False, indent=2, sort_keys=True)
 
             logger.info(f"Configuration saved to {config_path}")
 
         except Exception as e:
-            raise ConfigurationError(
-                f"Failed to save configuration to {config_path}: {e}"
-            )
+            raise ConfigurationError(f"Failed to save configuration to {config_path}: {e}")
 
     def create_example_config(self, config_path: Path) -> None:
         """

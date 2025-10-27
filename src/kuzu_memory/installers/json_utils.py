@@ -19,9 +19,7 @@ class JSONConfigError(Exception):
     pass
 
 
-def expand_variables(
-    config: dict[str, Any], variables: dict[str, str]
-) -> dict[str, Any]:
+def expand_variables(config: dict[str, Any], variables: dict[str, str]) -> dict[str, Any]:
     """
     Expand variables in JSON configuration.
 

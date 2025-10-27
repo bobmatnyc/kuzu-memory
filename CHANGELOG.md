@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.32] - 2025-10-27
 
+### Changed
+- Version bump
+
+## [1.4.32] - 2025-10-27
+
 ### Fixed
 - Fixed version mismatch in __version__.py
 
@@ -684,7 +689,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.29...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.32...HEAD
+[1.4.32]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.29...v1.4.32
 [1.4.29]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.28...v1.4.29
 [1.4.28]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.27...v1.4.28
 [1.4.27]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.26...v1.4.27
