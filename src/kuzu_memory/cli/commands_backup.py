@@ -85,31 +85,24 @@ def rich_table(headers, rows, title=None):
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers, *rows])
-            for i in range(len(headers))
+            max(len(str(row[i])) for row in [headers, *rows]) for i in range(len(headers))
         ]
 
         # Header
-        header_row = " | ".join(
-            headers[i].ljust(col_widths[i]) for i in range(len(headers))
-        )
+        header_row = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
         print(header_row)
         print("-" * len(header_row))
 
         # Rows
         for row in rows:
-            row_str = " | ".join(
-                str(row[i]).ljust(col_widths[i]) for i in range(len(row))
-            )
+            row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
             print(row_str)
 
 
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="kuzu-memory")
 @click.option("--debug", is_flag=True, help="Enable debug logging")
-@click.option(
-    "--config", type=click.Path(exists=True), help="Path to configuration file"
-)
+@click.option("--config", type=click.Path(exists=True), help="Path to configuration file")
 @click.option(
     "--db-path",
     type=click.Path(),
@@ -233,13 +226,9 @@ def quickstart(ctx, skip_demo):
 
         if RICH_AVAILABLE:
             if db_path.exists():
-                if not Confirm.ask(
-                    f"Database {db_path} exists. Continue with existing?"
-                ):
+                if not Confirm.ask(f"Database {db_path} exists. Continue with existing?"):
                     db_path = Path(
-                        Prompt.ask(
-                            "Enter new database path", default="my_memories_new.db"
-                        )
+                        Prompt.ask("Enter new database path", default="my_memories_new.db")
                     )
 
         # Initialize memory system
@@ -254,9 +243,7 @@ def quickstart(ctx, skip_demo):
             rich_print(f"✅ Memory database ready at: {db_path}", style="green")
 
             # Step 2: Store some memories
-            rich_print(
-                "\n💾 Step 2: Let's store some memories about you...", style="bold blue"
-            )
+            rich_print("\n💾 Step 2: Let's store some memories about you...", style="bold blue")
 
             sample_memories = [
                 "I'm a software developer who loves Python and JavaScript",
@@ -276,9 +263,7 @@ def quickstart(ctx, skip_demo):
 
             stored_count = 0
             for memory_text in sample_memories:
-                memory_ids = memory.generate_memories(
-                    memory_text, user_id="quickstart-user"
-                )
+                memory_ids = memory.generate_memories(memory_text, user_id="quickstart-user")
                 stored_count += len(memory_ids)
                 rich_print(f"  ✓ Stored: {memory_text[:50]}...", style="dim")
 
@@ -294,13 +279,9 @@ def quickstart(ctx, skip_demo):
             ]
 
             for query in test_queries:
-                context = memory.attach_memories(
-                    query, user_id="quickstart-user", max_memories=3
-                )
+                context = memory.attach_memories(query, user_id="quickstart-user", max_memories=3)
                 rich_print(f"  🔍 Query: {query}", style="cyan")
-                rich_print(
-                    f"     Found {len(context.memories)} relevant memories", style="dim"
-                )
+                rich_print(f"     Found {len(context.memories)} relevant memories", style="dim")
                 if context.memories:
                     rich_print(
                         f"     Top result: {context.memories[0].content[:60]}...",
@@ -309,9 +290,7 @@ def quickstart(ctx, skip_demo):
 
             # Step 4: Auggie integration
             if not skip_demo:
-                rich_print(
-                    "\n🤖 Step 4: AI-powered features with Auggie...", style="bold blue"
-                )
+                rich_print("\n🤖 Step 4: AI-powered features with Auggie...", style="bold blue")
 
                 try:
                     from ..integrations.auggie import AuggieIntegration
@@ -328,14 +307,10 @@ def quickstart(ctx, skip_demo):
                         f"  🚀 Enhanced: {len(enhancement['enhanced_prompt'])} chars (was {len(test_prompt)})",
                         style="green",
                     )
-                    rich_print(
-                        f"  📊 Context: {enhancement['context_summary']}", style="dim"
-                    )
+                    rich_print(f"  📊 Context: {enhancement['context_summary']}", style="dim")
 
                 except Exception as e:
-                    rich_print(
-                        f"⚠️  Auggie integration not available: {e}", style="yellow"
-                    )
+                    rich_print(f"⚠️  Auggie integration not available: {e}", style="yellow")
 
         # Success!
         rich_panel(
@@ -422,9 +397,7 @@ def demo(ctx):
                     context = memory.attach_memories(query, user_id="demo-user")
                     rich_print(f"  🔍 '{query}'", style="cyan")
                     if context.memories:
-                        rich_print(
-                            f"     → {context.memories[0].content}", style="green"
-                        )
+                        rich_print(f"     → {context.memories[0].content}", style="green")
                     else:
                         rich_print("     → No memories found", style="red")
 
@@ -473,9 +446,7 @@ def demo(ctx):
 
 @cli.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
-@click.option(
-    "--config-path", type=click.Path(), help="Path to save example configuration"
-)
+@click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.pass_context
 def init(ctx, force, config_path):
     """
@@ -527,18 +498,14 @@ def init(ctx, force, config_path):
             return
 
         if result.get("error"):
-            rich_print(
-                f"❌ Failed to create project structure: {result['error']}", style="red"
-            )
+            rich_print(f"❌ Failed to create project structure: {result['error']}", style="red")
             sys.exit(1)
 
         # Create example configuration if requested
         if config_path:
             config_loader = get_config_loader()
             config_loader.create_example_config(Path(config_path))
-            rich_print(
-                f"✅ Example configuration created at {config_path}", style="green"
-            )
+            rich_print(f"✅ Example configuration created at {config_path}", style="green")
 
         # Initialize the database
         db_path = Path(result["db_path"])
@@ -571,9 +538,7 @@ def init(ctx, force, config_path):
             rich_print("\n📋 Git Integration:", style="bold")
             rich_print("  ✅ Git repository detected", style="green")
             rich_print("  📝 Remember to commit kuzu-memories/ directory", style="cyan")
-            rich_print(
-                "  🤝 Team members will get shared project context", style="cyan"
-            )
+            rich_print("  🤝 Team members will get shared project context", style="cyan")
 
     except Exception as e:
         rich_print(f"❌ Initialization failed: {e}", style="red")
@@ -619,16 +584,12 @@ def project(ctx, verbose):
         if context_summary["memories_exist"]:
             if context_summary["db_exists"]:
                 db_size = context_summary["db_size_mb"]
-                rich_print(
-                    f"✅ Memory database ready ({db_size:.1f} MB)", style="green"
-                )
+                rich_print(f"✅ Memory database ready ({db_size:.1f} MB)", style="green")
 
                 # Get memory statistics if verbose
                 if verbose:
                     try:
-                        with KuzuMemory(
-                            db_path=Path(context_summary["db_path"])
-                        ) as memory:
+                        with KuzuMemory(db_path=Path(context_summary["db_path"])) as memory:
                             stats = memory.get_statistics()
 
                         rich_print("\n📊 Memory Statistics:", style="bold")
@@ -658,9 +619,7 @@ def project(ctx, verbose):
                         )
 
                     except Exception as e:
-                        rich_print(
-                            f"⚠️  Could not load memory statistics: {e}", style="yellow"
-                        )
+                        rich_print(f"⚠️  Could not load memory statistics: {e}", style="yellow")
             else:
                 rich_print(
                     "⚠️  Memory directory exists but database not initialized",
@@ -677,9 +636,7 @@ def project(ctx, verbose):
             rich_print("  ✅ Git repository detected", style="green")
             if context_summary["should_commit"]:
                 rich_print("  📝 Memories should be committed to git", style="green")
-                rich_print(
-                    "  🤝 Team members will share project context", style="green"
-                )
+                rich_print("  🤝 Team members will share project context", style="green")
             else:
                 rich_print("  ⚠️  Memories not configured for git", style="yellow")
         else:
@@ -1090,9 +1047,7 @@ def remember(ctx, content, source, session_id, agent_id, metadata):
                         style="dim",
                     )
                 elif len(memory_ids) > 3:
-                    rich_print(
-                        "🎉 Great! Rich content produced multiple memories", style="dim"
-                    )
+                    rich_print("🎉 Great! Rich content produced multiple memories", style="dim")
 
                 if ctx.obj["debug"]:
                     rich_print("\n📋 Memory IDs:", style="bold")
@@ -1132,9 +1087,7 @@ def remember(ctx, content, source, session_id, agent_id, metadata):
         rich_print(f"❌ Error storing memory: {e}", style="red")
         if ctx.obj["debug"]:
             raise
-        rich_print(
-            "💡 Try: kuzu-memory --debug remember 'your content'", style="yellow"
-        )
+        rich_print("💡 Try: kuzu-memory --debug remember 'your content'", style="yellow")
         sys.exit(1)
 
 
@@ -1316,9 +1269,7 @@ def examples(ctx, topic):
 
     if topic not in examples_data:
         rich_print(f"❌ Unknown topic: {topic}", style="red")
-        rich_print(
-            f"Available topics: {', '.join(examples_data.keys())}", style="yellow"
-        )
+        rich_print(f"Available topics: {', '.join(examples_data.keys())}", style="yellow")
         return
 
     example = examples_data[topic]
@@ -1356,15 +1307,11 @@ def setup(ctx, advanced):
 
         if RICH_AVAILABLE:
             default_db = "kuzu_memories.db"
-            db_path = Prompt.ask(
-                "Where should we store your memories?", default=default_db
-            )
+            db_path = Prompt.ask("Where should we store your memories?", default=default_db)
             db_path = Path(db_path)
 
             if db_path.exists():
-                if not Confirm.ask(
-                    f"Database {db_path} exists. Use existing database?"
-                ):
+                if not Confirm.ask(f"Database {db_path} exists. Use existing database?"):
                     db_path = Path(Prompt.ask("Enter new database path"))
         else:
             db_path = Path("kuzu_memories.db")
@@ -1374,9 +1321,7 @@ def setup(ctx, advanced):
 
         if RICH_AVAILABLE and advanced:
             max_recall_time = Prompt.ask("Maximum recall time (ms)", default="100")
-            max_generation_time = Prompt.ask(
-                "Maximum generation time (ms)", default="200"
-            )
+            max_generation_time = Prompt.ask("Maximum generation time (ms)", default="200")
         else:
             max_recall_time = "100"
             max_generation_time = "200"
@@ -1418,9 +1363,7 @@ def setup(ctx, advanced):
                     )
 
                     # Test recall
-                    context = memory.attach_memories(
-                        "What do you know?", user_id="setup-user"
-                    )
+                    context = memory.attach_memories("What do you know?", user_id="setup-user")
                     if context.memories:
                         rich_print(
                             f"✅ Memory recall working! Found: {context.memories[0].content[:50]}...",
@@ -1442,9 +1385,7 @@ def setup(ctx, advanced):
                 rich_print("✅ Auggie AI integration available!", style="green")
 
                 if test_memory.strip():
-                    enhancement = auggie.enhance_prompt(
-                        "How do I get started?", "setup-user"
-                    )
+                    enhancement = auggie.enhance_prompt("How do I get started?", "setup-user")
                     rich_print(
                         f"✅ AI enhancement working! ({len(enhancement['enhanced_prompt'])} chars)",
                         style="green",
@@ -1552,12 +1493,8 @@ def tips(ctx):
 
 
 @cli.command()
-@click.option(
-    "--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance"
-)
-@click.option(
-    "--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)"
-)
+@click.option("--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance")
+@click.option("--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)")
 @click.pass_context
 def optimize(ctx, enable_cli, disable_cli):
     """
@@ -1583,9 +1520,7 @@ def optimize(ctx, enable_cli, disable_cli):
     """
 
     if enable_cli and disable_cli:
-        rich_print(
-            "❌ Cannot enable and disable CLI adapter at the same time", style="red"
-        )
+        rich_print("❌ Cannot enable and disable CLI adapter at the same time", style="red")
         return
 
     if not enable_cli and not disable_cli:
@@ -1662,9 +1597,7 @@ def optimize(ctx, enable_cli, disable_cli):
                 return
 
         elif disable_cli:
-            rich_print(
-                "🔧 Disabling CLI adapter (using Python API)...", style="bold blue"
-            )
+            rich_print("🔧 Disabling CLI adapter (using Python API)...", style="bold blue")
             config.storage.use_cli_adapter = False
 
             rich_panel(
@@ -1695,9 +1628,7 @@ def optimize(ctx, enable_cli, disable_cli):
                     memory.generate_memories("Test optimization", user_id="test")
                     test_time = (time.time() - start_time) * 1000
 
-                    adapter_type = (
-                        "CLI" if config.storage.use_cli_adapter else "Python API"
-                    )
+                    adapter_type = "CLI" if config.storage.use_cli_adapter else "Python API"
                     rich_print(
                         f"✅ {adapter_type} adapter working! Test completed in {test_time:.1f}ms",
                         style="green",
@@ -1880,12 +1811,8 @@ def stats(ctx, detailed, output_format):
 
                 # System info
                 click.echo(f"Database Path: {system_info.get('db_path', 'Unknown')}")
-                click.echo(
-                    f"Initialized: {system_info.get('initialized_at', 'Unknown')}"
-                )
-                click.echo(
-                    f"Config Version: {system_info.get('config_version', 'Unknown')}"
-                )
+                click.echo(f"Initialized: {system_info.get('initialized_at', 'Unknown')}")
+                click.echo(f"Config Version: {system_info.get('config_version', 'Unknown')}")
                 click.echo()
 
                 # Performance stats
@@ -1922,30 +1849,18 @@ def stats(ctx, detailed, output_format):
                     # Storage details
                     if "storage_stats" in storage_stats:
                         store_stats = storage_stats["storage_stats"]
-                        click.echo(
-                            f"  Memories stored: {store_stats.get('memories_stored', 0)}"
-                        )
-                        click.echo(
-                            f"  Memories skipped: {store_stats.get('memories_skipped', 0)}"
-                        )
-                        click.echo(
-                            f"  Memories updated: {store_stats.get('memories_updated', 0)}"
-                        )
+                        click.echo(f"  Memories stored: {store_stats.get('memories_stored', 0)}")
+                        click.echo(f"  Memories skipped: {store_stats.get('memories_skipped', 0)}")
+                        click.echo(f"  Memories updated: {store_stats.get('memories_updated', 0)}")
 
                     # Recall details
                     if "recall_stats" in stats_data:
                         recall_stats = stats_data["recall_stats"]
                         if "coordinator_stats" in recall_stats:
                             coord_stats = recall_stats["coordinator_stats"]
-                            click.echo(
-                                f"  Total recalls: {coord_stats.get('total_recalls', 0)}"
-                            )
-                            click.echo(
-                                f"  Cache hits: {coord_stats.get('cache_hits', 0)}"
-                            )
-                            click.echo(
-                                f"  Cache misses: {coord_stats.get('cache_misses', 0)}"
-                            )
+                            click.echo(f"  Total recalls: {coord_stats.get('total_recalls', 0)}")
+                            click.echo(f"  Cache hits: {coord_stats.get('cache_hits', 0)}")
+                            click.echo(f"  Cache misses: {coord_stats.get('cache_misses', 0)}")
 
     except Exception as e:
         click.echo(f"Error getting statistics: {e}", err=True)
@@ -1965,9 +1880,7 @@ def cleanup(ctx, force):
         config = config_loader.load_config(config_path=ctx.obj.get("config_path"))
 
         if not force:
-            click.confirm(
-                "This will permanently delete expired memories. Continue?", abort=True
-            )
+            click.confirm("This will permanently delete expired memories. Continue?", abort=True)
 
         with KuzuMemory(db_path=ctx.obj.get("db_path"), config=config) as memory:
             cleaned_count = memory.cleanup_expired_memories()
@@ -2045,9 +1958,7 @@ def auggie_enhance(ctx, prompt, user_id, verbose):
                     for i, memory in enumerate(memory_context.memories[:3]):
                         click.echo(f"  {i + 1}. {memory.content[:60]}...")
 
-                executed_rules = enhancement["rule_modifications"].get(
-                    "executed_rules", []
-                )
+                executed_rules = enhancement["rule_modifications"].get("executed_rules", [])
                 if executed_rules:
                     click.echo(f"Rules applied: {len(executed_rules)}")
                     for rule_info in executed_rules:
@@ -2085,9 +1996,7 @@ def auggie_learn(ctx, prompt, response, feedback, user_id, verbose):
             click.echo("🧠 Learning Results:")
             click.echo("=" * 30)
             click.echo(f"Quality Score: {learning_result.get('quality_score', 0):.2f}")
-            click.echo(
-                f"Memories Created: {len(learning_result.get('extracted_memories', []))}"
-            )
+            click.echo(f"Memories Created: {len(learning_result.get('extracted_memories', []))}")
 
             if "corrections" in learning_result:
                 corrections = learning_result["corrections"]
@@ -2131,9 +2040,7 @@ def rules(ctx, verbose):
                 by_type[rule_type].append(rule)
 
             for rule_type, type_rules in by_type.items():
-                click.echo(
-                    f"\n🔧 {rule_type.replace('_', ' ').title()} ({len(type_rules)} rules):"
-                )
+                click.echo(f"\n🔧 {rule_type.replace('_', ' ').title()} ({len(type_rules)} rules):")
 
                 for rule in sorted(type_rules, key=lambda r: r.priority.value):
                     status = "✅" if rule.enabled else "❌"
@@ -2145,9 +2052,7 @@ def rules(ctx, verbose):
                     if verbose:
                         click.echo(f"      ID: {rule.id}")
                         click.echo(f"      Description: {rule.description}")
-                        click.echo(
-                            f"      Executions: {executions}, Success: {success_rate:.1f}%"
-                        )
+                        click.echo(f"      Executions: {executions}, Success: {success_rate:.1f}%")
                         click.echo(f"      Conditions: {rule.conditions}")
                         click.echo(f"      Actions: {rule.actions}")
                         click.echo()
@@ -2194,9 +2099,7 @@ def auggie_stats(ctx, verbose):
             click.echo("\nResponse Learner:")
             click.echo(f"  Learning Events: {learner_stats['total_learning_events']}")
             if "average_quality_score" in learner_stats:
-                click.echo(
-                    f"  Average Quality: {learner_stats['average_quality_score']:.2f}"
-                )
+                click.echo(f"  Average Quality: {learner_stats['average_quality_score']:.2f}")
 
             if verbose:
                 click.echo("\n🔧 Rule Performance:")
@@ -2348,19 +2251,13 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
 
                 # Summary statistics
                 avg_age = sum(a["age_days"] for a in analyses) / len(analyses)
-                avg_score = sum(a["final_temporal_score"] for a in analyses) / len(
-                    analyses
-                )
-                recent_boost_count = sum(
-                    1 for a in analyses if a["recent_boost_applied"]
-                )
+                avg_score = sum(a["final_temporal_score"] for a in analyses) / len(analyses)
+                recent_boost_count = sum(1 for a in analyses if a["recent_boost_applied"])
 
                 rich_print("\n📊 Summary:")
                 rich_print(f"  Average Age: {avg_age:.1f} days")
                 rich_print(f"  Average Temporal Score: {avg_score:.3f}")
-                rich_print(
-                    f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories"
-                )
+                rich_print(f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories")
 
     except Exception as e:
         if ctx.obj.get("debug"):

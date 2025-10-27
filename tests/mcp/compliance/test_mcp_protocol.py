@@ -20,9 +20,7 @@ class TestProtocolVersionNegotiation:
         """Test that current protocol version is supported."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         assert response is not None
         assert "result" in response or "error" not in response
@@ -33,9 +31,7 @@ class TestProtocolVersionNegotiation:
         """Test that legacy protocol version is supported."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2024-11-05"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2024-11-05"})
 
         assert response is not None
         # Should either accept or gracefully handle
@@ -46,15 +42,11 @@ class TestProtocolVersionNegotiation:
         """Test that initialize response includes protocol version."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             result = response["result"]
-            assert (
-                "protocolVersion" in result
-            ), "Initialize result must include protocolVersion"
+            assert "protocolVersion" in result, "Initialize result must include protocolVersion"
             assert (
                 result["protocolVersion"] in MCP_PROTOCOL_VERSIONS
             ), "Must be valid protocol version"
@@ -104,9 +96,7 @@ class TestInitializeMethod:
         """Test that initialize returns server information."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             result = response["result"]
@@ -122,9 +112,7 @@ class TestInitializeMethod:
         """Test that initialize returns server capabilities."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             result = response["result"]
@@ -140,15 +128,11 @@ class TestInitializeMethod:
         await mcp_client.connect()
 
         # First initialize
-        response1 = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response1 = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
         assert response1 is not None
 
         # Second initialize should also work
-        response2 = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response2 = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
         assert response2 is not None
 
         await mcp_client.disconnect()
@@ -234,9 +218,7 @@ class TestToolsCall:
     @pytest.mark.asyncio
     async def test_tools_call_with_arguments(self, initialized_client):
         """Test tools/call with arguments."""
-        response = await initialized_client.call_tool(
-            "recall", {"query": "test", "limit": 5}
-        )
+        response = await initialized_client.call_tool("recall", {"query": "test", "limit": 5})
 
         assert response is not None
 
@@ -289,12 +271,8 @@ class TestToolSchemaValidation:
                 assert schema["type"] == "object", "Input schema type should be object"
 
                 # Must have properties
-                assert (
-                    "properties" in schema
-                ), f"Tool {tool['name']} schema missing properties"
-                assert isinstance(
-                    schema["properties"], dict
-                ), "Properties must be object"
+                assert "properties" in schema, f"Tool {tool['name']} schema missing properties"
+                assert isinstance(schema["properties"], dict), "Properties must be object"
 
     @pytest.mark.asyncio
     async def test_required_parameters_specified(self, initialized_client):
@@ -330,9 +308,7 @@ class TestToolSchemaValidation:
                 properties = tool["inputSchema"].get("properties", {})
 
                 for param_name, param_schema in properties.items():
-                    assert (
-                        "type" in param_schema
-                    ), f"Parameter {param_name} missing type"
+                    assert "type" in param_schema, f"Parameter {param_name} missing type"
                     assert isinstance(param_schema["type"], str), "Type must be string"
 
 
@@ -345,9 +321,7 @@ class TestCapabilityNegotiation:
         """Test that server advertises its capabilities."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             result = response["result"]
@@ -364,9 +338,7 @@ class TestCapabilityNegotiation:
         """Test that tools capability is advertised."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             capabilities = response["result"].get("capabilities", {})
@@ -387,9 +359,7 @@ class TestServerInfo:
         """Test server info has required fields."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             server_info = response["result"].get("serverInfo", {})
@@ -407,9 +377,7 @@ class TestServerInfo:
         """Test that server version follows semantic versioning."""
         await mcp_client.connect()
 
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2025-06-18"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
 
         if response and "result" in response:
             server_info = response["result"].get("serverInfo", {})
@@ -432,9 +400,7 @@ class TestProtocolUpgrade:
         await mcp_client.connect()
 
         # Try older version
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2024-11-05"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2024-11-05"})
 
         # Should handle gracefully (accept or provide fallback)
         assert response is not None
@@ -447,9 +413,7 @@ class TestProtocolUpgrade:
         await mcp_client.connect()
 
         # Try future version
-        response = await mcp_client.send_request(
-            "initialize", {"protocolVersion": "2099-12-31"}
-        )
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2099-12-31"})
 
         # Should handle gracefully (fallback to supported version or error)
         assert response is not None

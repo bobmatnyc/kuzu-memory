@@ -42,9 +42,7 @@ class TestConcurrentConnections:
 
         # Create connections concurrently
         start_time = time.perf_counter()
-        results = await asyncio.gather(
-            *[create_and_connect() for _ in range(num_clients)]
-        )
+        results = await asyncio.gather(*[create_and_connect() for _ in range(num_clients)])
         elapsed = time.perf_counter() - start_time
 
         clients = [r[0] for r in results]
@@ -122,9 +120,7 @@ class TestConcurrentExecution:
             return results
 
         start_time = time.perf_counter()
-        all_results = await asyncio.gather(
-            *[client_worker(c) for c in multiple_clients]
-        )
+        all_results = await asyncio.gather(*[client_worker(c) for c in multiple_clients])
         elapsed = time.perf_counter() - start_time
 
         total_ops = len(multiple_clients) * num_ops_per_client
@@ -165,9 +161,7 @@ class TestConcurrentExecution:
             return results
 
         start_time = time.perf_counter()
-        all_results = await asyncio.gather(
-            *[client_worker(c) for c in multiple_clients]
-        )
+        all_results = await asyncio.gather(*[client_worker(c) for c in multiple_clients])
         _elapsed = time.perf_counter() - start_time
 
         total_ops = len(multiple_clients) * len(operations) * 5
@@ -200,9 +194,7 @@ class TestLoadBalancing:
             successes = 0
             for _ in range(30):
                 try:
-                    result = await asyncio.wait_for(
-                        client.call_tool("stats", {}), timeout=2.0
-                    )
+                    result = await asyncio.wait_for(client.call_tool("stats", {}), timeout=2.0)
                     if result is not None:
                         successes += 1
                 except TimeoutError:
@@ -210,9 +202,7 @@ class TestLoadBalancing:
             return successes
 
         start_time = time.perf_counter()
-        results = await asyncio.gather(
-            *[aggressive_worker(c) for c in multiple_clients]
-        )
+        results = await asyncio.gather(*[aggressive_worker(c) for c in multiple_clients])
         elapsed = time.perf_counter() - start_time
 
         total_expected = len(multiple_clients) * 30
@@ -347,9 +337,7 @@ class TestStressLoad:
         print(f"  Time: {elapsed:.2f}s")
 
         # Under stress, we accept lower success rate
-        assert (
-            success_rate >= 0.70
-        ), f"Stress test success rate {success_rate * 100:.1f}% too low"
+        assert success_rate >= 0.70, f"Stress test success rate {success_rate * 100:.1f}% too low"
 
     @pytest.mark.asyncio
     async def test_burst_load(self, project_root):
@@ -371,9 +359,7 @@ class TestStressLoad:
         for burst in range(num_bursts):
             print(f"\nBurst {burst + 1}/{num_bursts}")
             start_time = time.perf_counter()
-            results = await asyncio.gather(
-                *[burst_worker() for _ in range(clients_per_burst)]
-            )
+            results = await asyncio.gather(*[burst_worker() for _ in range(clients_per_burst)])
             elapsed = time.perf_counter() - start_time
 
             success_count = sum(results)

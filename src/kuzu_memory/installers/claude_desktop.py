@@ -33,12 +33,8 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
         super().__init__(project_root)
 
         # Configuration options
-        self.backup_dir = (
-            kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        )
-        self.memory_db = (
-            kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
-        )
+        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
+        self.memory_db = kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
         self.force = kwargs.get("force", False)
         self.dry_run = kwargs.get("dry_run", False)
         self.verbose = kwargs.get("verbose", False)
@@ -82,13 +78,7 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
             appdata = os.getenv("APPDATA")
             if appdata:
                 return Path(appdata) / "Claude" / "claude_desktop_config.json"
-            return (
-                Path.home()
-                / "AppData"
-                / "Roaming"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
+            return Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
         else:
             raise OSError(f"Unsupported operating system: {system}")
 
@@ -355,9 +345,7 @@ retention:
                         files_created=[],
                         files_modified=[],
                         backup_files=[],
-                        warnings=[
-                            f"Backup available at: {backup_path}" if backup_path else ""
-                        ],
+                        warnings=[f"Backup available at: {backup_path}" if backup_path else ""],
                     )
 
             # Ensure mcpServers section exists
@@ -395,9 +383,7 @@ retention:
 
             if not self.dry_run:
                 if global_config_path.exists():
-                    logger.info(
-                        f"Global config already exists at {global_config_path}, preserving"
-                    )
+                    logger.info(f"Global config already exists at {global_config_path}, preserving")
                     modified_files.append(global_config_path)
                 else:
                     global_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -537,9 +523,7 @@ retention:
             except (OSError, json.JSONDecodeError):
                 pass
 
-        status["installed"] = (
-            status["kuzu_installed"] and status["configured_in_claude"]
-        )
+        status["installed"] = status["kuzu_installed"] and status["configured_in_claude"]
 
         return status
 
@@ -559,12 +543,8 @@ class SmartClaudeDesktopInstaller(BaseInstaller):
 
         # Configuration options
         self.mode = kwargs.get("mode", "auto")
-        self.backup_dir = (
-            kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        )
-        self.memory_db = (
-            kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
-        )
+        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
+        self.memory_db = kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
         self.force = kwargs.get("force", False)
         self.dry_run = kwargs.get("dry_run", False)
         self.verbose = kwargs.get("verbose", False)
@@ -680,9 +660,7 @@ class ClaudeDesktopHomeInstaller(BaseInstaller):
 
         # Configuration options
         self.mode = kwargs.get("mode", "auto")
-        self.backup_dir = (
-            kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        )
+        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
         self.force = kwargs.get("force", False)
         self.dry_run = kwargs.get("dry_run", False)
         self.verbose = kwargs.get("verbose", False)
@@ -737,13 +715,7 @@ class ClaudeDesktopHomeInstaller(BaseInstaller):
             appdata = os.getenv("APPDATA")
             if appdata:
                 return Path(appdata) / "Claude" / "claude_desktop_config.json"
-            return (
-                Path.home()
-                / "AppData"
-                / "Roaming"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
+            return Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
         else:
             raise OSError(f"Unsupported operating system: {system}")
 

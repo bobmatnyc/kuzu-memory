@@ -108,12 +108,8 @@ class TestConcurrentDatabaseAccess:
                             query = f"""
                                 CREATE (n:TestNode {{id: 'worker{worker_id}_item{i}', value: {i}}})
                             """
-                            await conn.execute(
-                                query, max_retries=5, retry_backoff_ms=50
-                            )
-                            results.append(
-                                {"success": True, "worker": worker_id, "item": i}
-                            )
+                            await conn.execute(query, max_retries=5, retry_backoff_ms=50)
+                            results.append({"success": True, "worker": worker_id, "item": i})
                     except Exception as e:
                         results.append(
                             {
@@ -153,14 +149,10 @@ class TestConcurrentDatabaseAccess:
 
             # Verify data was written
             async with pool.get_connection() as conn:
-                result = await conn.execute(
-                    "MATCH (n:TestNode) RETURN count(*) as count"
-                )
+                result = await conn.execute("MATCH (n:TestNode) RETURN count(*) as count")
                 # Result is a list of dicts from _process_result
                 if result and len(result) > 0:
-                    count = (
-                        result[0].get("count", 0) if isinstance(result[0], dict) else 0
-                    )
+                    count = result[0].get("count", 0) if isinstance(result[0], dict) else 0
                 else:
                     count = 0
                 # Only assert if we had successful writes
@@ -236,9 +228,7 @@ class TestConcurrentDatabaseAccess:
                                     f"MATCH (m:Memory) WHERE m.server_id = {server_id} RETURN count(*) as count"
                                 )
 
-                        results.append(
-                            {"success": True, "server": server_id, "op": op_id}
-                        )
+                        results.append({"success": True, "server": server_id, "op": op_id})
 
                     except Exception as e:
                         results.append(
@@ -275,9 +265,7 @@ class TestConcurrentDatabaseAccess:
             ref_count = KuzuConnection._db_ref_counts.get(temp_db_path, 0)
 
             # Reference count should be at least num_servers (could be more with pooling)
-            assert (
-                ref_count >= num_servers
-            ), f"Expected ref_count >= {num_servers}, got {ref_count}"
+            assert ref_count >= num_servers, f"Expected ref_count >= {num_servers}, got {ref_count}"
 
         finally:
             # Cleanup all pools
@@ -476,9 +464,7 @@ class TestConcurrentDatabaseAccess:
 
             # Verify data was written (at least successful writes)
             async with pool.get_connection() as conn:
-                result = await conn.execute(
-                    "MATCH (n:StressTest) RETURN count(*) as count"
-                )
+                result = await conn.execute("MATCH (n:StressTest) RETURN count(*) as count")
                 count = result[0]["count"] if result else 0
                 successful_writes = results.count(True)
                 assert (

@@ -40,9 +40,7 @@ class InstallerRegistry:
         # AI System Installers (ONE PATH per system)
         self.register("auggie", AuggieInstaller)
         self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
-        self.register(
-            "claude-desktop", SmartClaudeDesktopInstaller
-        )  # Smart auto-detection
+        self.register("claude-desktop", SmartClaudeDesktopInstaller)  # Smart auto-detection
         self.register("universal", UniversalInstaller)
 
         # MCP-specific installers (Priority 1)

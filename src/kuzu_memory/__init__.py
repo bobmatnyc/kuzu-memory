@@ -25,7 +25,7 @@ Example Usage:
 """
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .__version__ import DB_SCHEMA_VERSION, __version__, __version_info__
 
@@ -49,9 +49,7 @@ except ImportError as e:
     # Define placeholder classes to prevent import errors
     class KuzuMemory:
         def __init__(self, *args, **kwargs):
-            raise ImportError(
-                f"KuzuMemory core components not available: {_IMPORT_ERROR}"
-            )
+            raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
 
     class Memory:
         pass

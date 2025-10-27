@@ -95,8 +95,7 @@ class DiagnosticReport:
     def has_critical_errors(self) -> bool:
         """Check if any critical errors exist."""
         return any(
-            r.severity == DiagnosticSeverity.CRITICAL and not r.success
-            for r in self.results
+            r.severity == DiagnosticSeverity.CRITICAL and not r.success for r in self.results
         )
 
     def add_result(self, result: DiagnosticResult) -> None:
@@ -148,9 +147,7 @@ class MCPDiagnostics:
         self.project_root = project_root or Path.cwd()
         self.verbose = verbose
         # PROJECT-LEVEL CONFIG ONLY
-        self.claude_code_config_path = (
-            self.project_root / ".claude" / "settings.local.json"
-        )
+        self.claude_code_config_path = self.project_root / ".claude" / "settings.local.json"
         self.memory_db_path = self.project_root / "kuzu-memories"
 
     async def check_configuration(self) -> list[DiagnosticResult]:
@@ -663,9 +660,7 @@ class MCPDiagnostics:
                     message=stdio_result.message,
                     error=stdio_result.error,
                     fix_suggestion=(
-                        "Check server logs and process status"
-                        if not stdio_result.success
-                        else None
+                        "Check server logs and process status" if not stdio_result.success else None
                     ),
                     duration_ms=stdio_result.duration_ms,
                 )
@@ -830,9 +825,7 @@ class MCPDiagnostics:
                                 )
                             else:
                                 error_msg = (
-                                    tool_response.get("error", {}).get(
-                                        "message", "Unknown error"
-                                    )
+                                    tool_response.get("error", {}).get("message", "Unknown error")
                                     if tool_response
                                     else "No response"
                                 )
@@ -1182,8 +1175,7 @@ class MCPDiagnostics:
         lines.append(f"Timestamp: {report.timestamp}")
         lines.append(f"Platform: {report.platform}")
         lines.append(
-            f"Results: {report.passed}/{report.total} passed "
-            f"({report.success_rate:.1f}%)"
+            f"Results: {report.passed}/{report.total} passed " f"({report.success_rate:.1f}%)"
         )
         lines.append(f"Duration: {report.total_duration_ms:.2f}ms")
         lines.append("=" * 70)

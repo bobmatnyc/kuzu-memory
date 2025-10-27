@@ -45,7 +45,9 @@ class VSCodeInstaller(BaseInstaller):
     @property
     def description(self) -> str:
         """Description of what this installer does."""
-        return "Install MCP server configuration for VS Code with Claude extension (project-specific)"
+        return (
+            "Install MCP server configuration for VS Code with Claude extension (project-specific)"
+        )
 
     def _get_config_path(self) -> Path:
         """Get path to VS Code MCP configuration file."""
@@ -89,9 +91,7 @@ class VSCodeInstaller(BaseInstaller):
 
         return config
 
-    def install(
-        self, force: bool = False, dry_run: bool = False, **kwargs
-    ) -> InstallationResult:
+    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
         """
         Install MCP configuration for VS Code.
 
@@ -121,9 +121,7 @@ class VSCodeInstaller(BaseInstaller):
                 )
 
             # Load existing configuration
-            existing_config = (
-                load_json_config(config_path) if config_path.exists() else {}
-            )
+            existing_config = load_json_config(config_path) if config_path.exists() else {}
 
             # Normalize format if needed
             if existing_config:
@@ -149,9 +147,7 @@ class VSCodeInstaller(BaseInstaller):
                 # Use new config (force mode or no existing config)
                 merged_config = kuzu_config
                 if force and existing_config:
-                    self.warnings.append(
-                        "Force mode: existing configuration will be backed up"
-                    )
+                    self.warnings.append("Force mode: existing configuration will be backed up")
 
             # Validate merged configuration
             validation_errors = validate_mcp_config(merged_config)
@@ -199,9 +195,7 @@ class VSCodeInstaller(BaseInstaller):
 
             # Success message
             server_count = len(merged_config.get("mcpServers", {}))
-            message = (
-                f"Successfully installed MCP configuration for {self.ai_system_name}"
-            )
+            message = f"Successfully installed MCP configuration for {self.ai_system_name}"
             message += f"\nConfiguration file: {config_path}"
             message += f"\nMCP servers configured: {server_count}"
 

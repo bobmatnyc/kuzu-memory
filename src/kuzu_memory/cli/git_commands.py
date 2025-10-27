@@ -126,9 +126,7 @@ def sync(
 
                     if result.get("commits"):
                         for commit in result["commits"]:
-                            rich_print(
-                                f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}..."
-                            )
+                            rich_print(f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}...")
                 else:
                     status_msg = (
                         f"[green]Sync Complete[/green]\n\n"
@@ -261,8 +259,7 @@ def install_hooks(ctx: click.Context, force: bool) -> None:
         # Check if hook already exists
         if hook_file.exists() and not force:
             rich_print(
-                f"[yellow]Hook already exists:[/yellow] {hook_file}\n"
-                "Use --force to overwrite",
+                f"[yellow]Hook already exists:[/yellow] {hook_file}\n" "Use --force to overwrite",
             )
             ctx.exit(1)
 
