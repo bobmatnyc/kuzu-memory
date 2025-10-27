@@ -1,4 +1,4 @@
-__version__ = "1.4.29"
+__version__ = "1.4.30"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Database schema version for migration support

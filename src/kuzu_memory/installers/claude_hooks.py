@@ -136,8 +136,6 @@ class ClaudeHooksInstaller(BaseInstaller):
             "CLAUDE.md",
             ".claude-mpm/config.json",
             ".claude/settings.local.json",
-            ".claude/hooks/kuzu_enhance.py",
-            ".claude/hooks/kuzu_learn.py",
             ".kuzu-memory/config.yaml",
             ".mcp.json",
         ]
@@ -338,8 +336,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         Handles multiple formats:
         1. Direct handler format: {"handler": "kuzu_memory_...", ...}
-        2. Script-based format with nested hooks: {"matcher": "*", "hooks": [{"command": ".../kuzu_enhance.py"}]}
-        3. Direct command format: {"command": "...kuzu..."}
+        2. Direct command format: {"command": "...kuzu-memory hooks..."}
 
         Args:
             hook_entry: Hook configuration entry
@@ -809,13 +806,6 @@ exec {kuzu_cmd} "$@"
 
         return content
 
-    def _create_user_prompt_submit_hook(self) -> str:
-        """Load production kuzu_enhance.py template."""
-        return self._load_template("kuzu_enhance.py")
-
-    def _create_post_tool_use_hook(self) -> str:
-        """Load production kuzu_learn.py template."""
-        return self._load_template("kuzu_learn.py")
 
     def install(
         self, dry_run: bool = False, verbose: bool = False, **kwargs
@@ -896,54 +886,10 @@ exec {kuzu_cmd} "$@"
             if not dry_run:
                 claude_dir.mkdir(exist_ok=True)
 
-            # Create .claude/hooks directory
-            hooks_dir = claude_dir / "hooks"
-            if not dry_run:
-                hooks_dir.mkdir(exist_ok=True)
-
-            # Create kuzu_enhance.py hook (always update)
-            user_prompt_hook_path = hooks_dir / "kuzu_enhance.py"
-            if user_prompt_hook_path.exists():
-                # Hook exists - update it with latest version
-                if not dry_run:
-                    backup_path = self.create_backup(user_prompt_hook_path)
-                    if backup_path:
-                        self.backup_files.append(backup_path)
-                self.files_modified.append(user_prompt_hook_path)
-                action = "update" if not dry_run else "would update"
-            else:
-                # New installation
-                self.files_created.append(user_prompt_hook_path)
-                action = "create" if not dry_run else "would create"
-
-            if not dry_run:
-                user_prompt_hook_path.write_text(self._create_user_prompt_submit_hook())
-                user_prompt_hook_path.chmod(0o755)  # Make executable
-            logger.info(
-                f"{'Would ' if dry_run else ''}{action.capitalize()}d kuzu_enhance.py hook"
-            )
-
-            # Create kuzu_learn.py hook (always update)
-            post_tool_hook_path = hooks_dir / "kuzu_learn.py"
-            if post_tool_hook_path.exists():
-                # Hook exists - update it with latest version
-                if not dry_run:
-                    backup_path = self.create_backup(post_tool_hook_path)
-                    if backup_path:
-                        self.backup_files.append(backup_path)
-                self.files_modified.append(post_tool_hook_path)
-                action = "update" if not dry_run else "would update"
-            else:
-                # New installation
-                self.files_created.append(post_tool_hook_path)
-                action = "create" if not dry_run else "would create"
-
-            if not dry_run:
-                post_tool_hook_path.write_text(self._create_post_tool_use_hook())
-                post_tool_hook_path.chmod(0o755)  # Make executable
-            logger.info(
-                f"{'Would ' if dry_run else ''}{action.capitalize()}d kuzu_learn.py hook"
-            )
+            # NOTE: Legacy hook scripts (kuzu_enhance.py, kuzu_learn.py) are no longer created.
+            # The hooks configuration now calls CLI entry points directly:
+            # - UserPromptSubmit: kuzu-memory hooks enhance
+            # - PostToolUse: kuzu-memory hooks learn
 
             # NOTE: config.local.json is legacy and not used by Claude Code
             # We now merge MCP server config into settings.local.json instead

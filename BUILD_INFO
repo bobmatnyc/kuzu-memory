@@ -1,7 +1,7 @@
 {
-  "version": "1.4.28",
-  "build_date": "2025-10-27T09:05:59.461040",
-  "git_commit": "954a0fd5cb571146cb6ef0210dcb956db54cebb4",
+  "version": "1.4.29",
+  "build_date": "2025-10-27T09:11:53.937520",
+  "git_commit": "1020d944f55147303ea3dfa57905393e3069080e",
   "git_branch": "main",
   "python_version": "3.13.7",
   "platform": "darwin"
