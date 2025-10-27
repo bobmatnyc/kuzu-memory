@@ -137,7 +137,6 @@ class ClaudeHooksInstaller(BaseInstaller):
             ".claude-mpm/config.json",
             ".claude/settings.local.json",
             ".kuzu-memory/config.yaml",
-            ".mcp.json",
         ]
         return files
 
@@ -740,40 +739,6 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
-    def _create_mcp_json(self) -> None:
-        """
-        Create .mcp.json file for Claude Code MCP server integration.
-
-        Uses the stdio format required by Claude Code.
-        """
-        mcp_json_path = self.project_root / ".mcp.json"
-
-        # Get the Python executable from pipx venv or current environment
-        python_exe = sys.executable
-
-        # Database path
-        db_path = self._get_project_db_path()
-
-        # Create the MCP server entry using Claude Code stdio format
-        mcp_config = {
-            "mcpServers": {
-                "kuzu-memory": {
-                    "type": "stdio",
-                    "command": python_exe,
-                    "args": ["-m", "kuzu_memory.mcp.server"],
-                    "env": {
-                        "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
-                        "KUZU_MEMORY_DB": str(db_path),
-                    },
-                }
-            }
-        }
-
-        # Write the .mcp.json file
-        with open(mcp_json_path, "w") as f:
-            json.dump(mcp_config, f, indent=2)
-
-        logger.info(f"Created .mcp.json at {mcp_json_path}")
 
     def _get_template_path(self, filename: str) -> Path:
         """Get path to hook template file."""
@@ -1029,26 +994,6 @@ exec {kuzu_cmd} "$@"
                 wrapper_path.write_text(self._create_shell_wrapper())
                 wrapper_path.chmod(0o755)  # Make executable
 
-            # Create .mcp.json for Claude Code MCP integration
-            mcp_json_path = self.project_root / ".mcp.json"
-            if mcp_json_path.exists():
-                if not dry_run:
-                    backup_path = self.create_backup(mcp_json_path)
-                    if backup_path:
-                        self.backup_files.append(backup_path)
-                self.files_modified.append(mcp_json_path)
-                logger.info(
-                    f"{'Would update' if dry_run else 'Updating'} .mcp.json at {mcp_json_path}"
-                )
-            else:
-                self.files_created.append(mcp_json_path)
-                logger.info(
-                    f"{'Would create' if dry_run else 'Creating'} .mcp.json at {mcp_json_path}"
-                )
-
-            if not dry_run:
-                self._create_mcp_json()
-
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only
             if self.mcp_config_path and self.mcp_config_path.exists():
@@ -1195,13 +1140,6 @@ exec {kuzu_cmd} "$@"
             if claude_dir.exists():
                 shutil.rmtree(claude_dir)
                 removed_files.append(claude_dir)
-
-            # Remove .mcp.json
-            mcp_json_path = self.project_root / ".mcp.json"
-            if mcp_json_path.exists():
-                mcp_json_path.unlink()
-                removed_files.append(mcp_json_path)
-                logger.info("Removed .mcp.json")
 
             # Claude Desktop MCP server registration not supported, nothing to remove
             if self.mcp_config_path and self.mcp_config_path.exists():
