@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.31] - 2025-10-27
+
+### Fixed
+- Improved diagnostic reporting to exclude INFO-level checks from failure counts
+- Changed Claude Code integration checks from ERROR to INFO severity
+- Fixed false positives for projects without Claude Code integration
+- Aligned code formatters to 100 character line length
+- Upgraded GitHub Actions artifact actions to v4
+- Removed .mcp.json handling from Claude Code installer
+
+### Changed
+- Applied Black code formatting across 151 files
+
 ## [1.4.29] - 2025-10-27
 
 ### Changed
