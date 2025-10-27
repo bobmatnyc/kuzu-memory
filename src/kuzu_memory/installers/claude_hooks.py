@@ -74,7 +74,11 @@ class ClaudeHooksInstaller(BaseInstaller):
 
             # Check all projects in the config for kuzu-memory entries
             removed_count = 0
-            for project_name, project_config in config.items():
+
+            # The actual structure has projects at config["projects"]
+            projects = config.get("projects", {})
+
+            for project_path, project_config in projects.items():
                 if not isinstance(project_config, dict):
                     continue
 
@@ -83,12 +87,12 @@ class ClaudeHooksInstaller(BaseInstaller):
                     and "kuzu-memory" in project_config["mcpServers"]
                 ):
                     logger.info(
-                        f"Removing kuzu-memory from global config project: {project_name}"
+                        f"Removing kuzu-memory from global config project: {project_path}"
                     )
                     del project_config["mcpServers"]["kuzu-memory"]
                     removed_count += 1
 
-            # Also check top-level mcpServers
+            # Also check top-level mcpServers (if it exists)
             if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
                 logger.info("Removing kuzu-memory from top-level global mcpServers")
                 del config["mcpServers"]["kuzu-memory"]
@@ -111,6 +115,10 @@ class ClaudeHooksInstaller(BaseInstaller):
                     f"✓ Cleaned {removed_count} kuzu-memory entries from global Claude Code config"
                 )
                 print(f"  (Backup saved to {backup_path})")
+            else:
+                print(
+                    "✓ Global Claude Code config is already clean (no kuzu-memory entries)"
+                )
 
         except Exception as e:
             logger.warning(f"Failed to clean global config: {e}")
@@ -131,6 +139,7 @@ class ClaudeHooksInstaller(BaseInstaller):
             ".claude/hooks/kuzu_enhance.py",
             ".claude/hooks/kuzu_learn.py",
             ".kuzu-memory/config.yaml",
+            ".mcp.json",
         ]
         return files
 
@@ -306,6 +315,39 @@ class ClaudeHooksInstaller(BaseInstaller):
         except Exception as e:
             logger.debug(f"Failed to verify MCP support for {command_path}: {e}")
             return False
+
+    def _is_kuzu_hook(self, hook_entry: dict[str, Any]) -> bool:
+        """
+        Check if a hook entry is a kuzu-memory hook.
+
+        Handles both formats:
+        1. Direct handler format: {"handler": "kuzu_memory_...", ...}
+        2. Script-based format: {"hooks": [{"command": ".../kuzu_enhance.py"}]}
+
+        Args:
+            hook_entry: Hook configuration entry
+
+        Returns:
+            True if this is a kuzu-memory hook, False otherwise
+        """
+        # Check direct handler format
+        handler = hook_entry.get("handler", "")
+        if "kuzu_memory" in handler or "kuzu-memory" in handler:
+            return True
+
+        # Check script-based format (nested hooks array)
+        if "hooks" in hook_entry and isinstance(hook_entry["hooks"], list):
+            for nested_hook in hook_entry["hooks"]:
+                command = nested_hook.get("command", "")
+                if "kuzu" in command.lower():
+                    return True
+
+        # Check direct command format
+        command = hook_entry.get("command", "")
+        if "kuzu" in command.lower():
+            return True
+
+        return False
 
     def _validate_hook_events(self, config: dict) -> None:
         """
@@ -648,6 +690,33 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
+    def _create_mcp_json(self) -> None:
+        """
+        Create .mcp.json file for Claude Code MCP server integration.
+
+        Uses the simple, working format:
+        server-name: /path/to/python -m module.path {project_root}
+
+        This matches the exact format used by mcp-vector-search:
+        "mcp-vector-search": "/path/to/python -m mcp_vector_search.mcp.server /project/root"
+        """
+        mcp_json_path = self.project_root / ".mcp.json"
+
+        # Get the Python executable from pipx venv or current environment
+        python_exe = sys.executable
+
+        # Create the MCP server entry using the working format
+        # Simple string format: "python -m module {project_root}"
+        mcp_config = {
+            "kuzu-memory": f"{python_exe} -m kuzu_memory.integrations.mcp_server {self.project_root}"
+        }
+
+        # Write the .mcp.json file
+        with open(mcp_json_path, "w") as f:
+            json.dump(mcp_config, f, indent=2)
+
+        logger.info(f"Created .mcp.json at {mcp_json_path}")
+
     def _get_template_path(self, filename: str) -> Path:
         """Get path to hook template file."""
         template_dir = Path(__file__).parent / "templates" / "claude_hooks"
@@ -855,11 +924,11 @@ exec {kuzu_cmd} "$@"
             for hook_type, handlers in kuzu_config["hooks"].items():
                 if hook_type not in existing_config["hooks"]:
                     existing_config["hooks"][hook_type] = []
-                # Remove existing kuzu-memory handlers
+                # Remove existing kuzu-memory handlers (both direct and script-based)
                 existing_config["hooks"][hook_type] = [
                     h
                     for h in existing_config["hooks"][hook_type]
-                    if "kuzu_memory" not in h.get("handler", "")
+                    if not self._is_kuzu_hook(h)
                 ]
                 # Add new kuzu-memory handlers
                 existing_config["hooks"][hook_type].extend(handlers)
@@ -895,6 +964,26 @@ exec {kuzu_cmd} "$@"
             if not dry_run:
                 wrapper_path.write_text(self._create_shell_wrapper())
                 wrapper_path.chmod(0o755)  # Make executable
+
+            # Create .mcp.json for Claude Code MCP integration
+            mcp_json_path = self.project_root / ".mcp.json"
+            if mcp_json_path.exists():
+                if not dry_run:
+                    backup_path = self.create_backup(mcp_json_path)
+                    if backup_path:
+                        self.backup_files.append(backup_path)
+                self.files_modified.append(mcp_json_path)
+                logger.info(
+                    f"{'Would update' if dry_run else 'Updating'} .mcp.json at {mcp_json_path}"
+                )
+            else:
+                self.files_created.append(mcp_json_path)
+                logger.info(
+                    f"{'Would create' if dry_run else 'Creating'} .mcp.json at {mcp_json_path}"
+                )
+
+            if not dry_run:
+                self._create_mcp_json()
 
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only
@@ -1010,9 +1099,12 @@ exec {kuzu_cmd} "$@"
 
         return warnings
 
-    def uninstall(self) -> InstallationResult:
+    def uninstall(self, **kwargs) -> InstallationResult:
         """
         Uninstall Claude Code hooks.
+
+        Args:
+            **kwargs: Additional arguments (for compatibility)
 
         Returns:
             InstallationResult with details of the uninstallation
@@ -1039,6 +1131,13 @@ exec {kuzu_cmd} "$@"
             if claude_dir.exists():
                 shutil.rmtree(claude_dir)
                 removed_files.append(claude_dir)
+
+            # Remove .mcp.json
+            mcp_json_path = self.project_root / ".mcp.json"
+            if mcp_json_path.exists():
+                mcp_json_path.unlink()
+                removed_files.append(mcp_json_path)
+                logger.info("Removed .mcp.json")
 
             # Claude Desktop MCP server registration not supported, nothing to remove
             if self.mcp_config_path and self.mcp_config_path.exists():
