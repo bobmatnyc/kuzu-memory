@@ -806,7 +806,6 @@ exec {kuzu_cmd} "$@"
 
         return content
 
-
     def install(
         self, dry_run: bool = False, verbose: bool = False, **kwargs
     ) -> InstallationResult:
@@ -896,7 +895,7 @@ exec {kuzu_cmd} "$@"
                 "kuzu_enhance.py",
                 "kuzu_learn.py",
                 "post_tool_use.py",
-                "user_prompt_submit.py"
+                "user_prompt_submit.py",
             ]
             hooks_dir = claude_dir / "hooks"
             if hooks_dir.exists():

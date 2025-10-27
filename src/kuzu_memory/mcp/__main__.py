@@ -3,9 +3,10 @@
 MCP Server entry point for python -m kuzu_memory.mcp.server
 """
 
-from kuzu_memory.mcp.server import main, MCP_AVAILABLE, SimplifiedMCPServer
 import asyncio
 import logging
+
+from kuzu_memory.mcp.server import MCP_AVAILABLE, SimplifiedMCPServer, main
 
 if __name__ == "__main__":
     # Run the appropriate server based on availability

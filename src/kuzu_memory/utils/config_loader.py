@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from ..core.config import KuzuMemoryConfig
 from .exceptions import ConfigurationError
@@ -26,7 +26,7 @@ class ConfigLoader:
     defaults with proper validation and error handling.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration loader."""
         self.env_prefix = "KUZU_MEMORY_"
 
@@ -193,7 +193,7 @@ class ConfigLoader:
 
     def _load_from_environment(self) -> dict[str, Any] | None:
         """Load configuration from environment variables."""
-        env_config = {}
+        env_config: dict[str, Any] = {}
 
         # Map environment variables to config structure
         env_mappings = {
@@ -274,7 +274,7 @@ class ConfigLoader:
             value = os.getenv(env_var)
             if value is not None:
                 try:
-                    parsed_value = parser(value)
+                    parsed_value: Any = parser(value)  # type: ignore[operator]
                     self._set_nested_config(env_config, config_path, parsed_value)
                     found_env_vars = True
                 except (ValueError, TypeError) as e:

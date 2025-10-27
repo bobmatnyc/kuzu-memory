@@ -178,7 +178,7 @@ class ErrorRecoveryManager:
         """
         self.max_retries = max_retries
         self.base_delay = base_delay
-        self.recovery_stats = {
+        self.recovery_stats: dict[str, int] = {
             "total_errors": 0,
             "recovered_errors": 0,
             "failed_recoveries": 0,
@@ -186,7 +186,9 @@ class ErrorRecoveryManager:
         }
 
         # Recovery strategies for different error types
-        self.recovery_strategies = {
+        self.recovery_strategies: dict[
+            str, Callable[[Exception, str, dict[str, Any]], bool]
+        ] = {
             "DatabaseError": self._recover_database_error,
             "PerformanceError": self._recover_performance_error,
             "CacheError": self._recover_cache_error,
@@ -437,30 +439,32 @@ class ErrorRecoveryManager:
         Returns:
             Dictionary with recovery stats and metrics
         """
-        stats = self.recovery_stats.copy()
+        stats_dict: dict[str, Any] = self.recovery_stats.copy()
 
         # Calculate derived metrics
-        if stats["total_errors"] > 0:
-            stats["recovery_success_rate"] = (
-                stats["recovered_errors"] / stats["total_errors"]
-            ) * 100
+        if stats_dict["total_errors"] > 0:
+            stats_dict["recovery_success_rate"] = float(
+                (stats_dict["recovered_errors"] / stats_dict["total_errors"]) * 100
+            )
         else:
-            stats["recovery_success_rate"] = 100.0
+            stats_dict["recovery_success_rate"] = 100.0
 
-        if stats["recovery_attempts"] > 0:
-            stats["avg_attempts_per_recovery"] = (
-                stats["recovery_attempts"] / stats["recovered_errors"]
-                if stats["recovered_errors"] > 0
+        if stats_dict["recovery_attempts"] > 0:
+            stats_dict["avg_attempts_per_recovery"] = float(
+                stats_dict["recovery_attempts"] / stats_dict["recovered_errors"]
+                if stats_dict["recovered_errors"] > 0
                 else 0
             )
         else:
-            stats["avg_attempts_per_recovery"] = 0.0
+            stats_dict["avg_attempts_per_recovery"] = 0.0
 
-        stats["total_operations"] = stats["total_errors"] + stats["recovered_errors"]
+        stats_dict["total_operations"] = (
+            stats_dict["total_errors"] + stats_dict["recovered_errors"]
+        )
 
-        return stats
+        return stats_dict
 
-    def reset_statistics(self):
+    def reset_statistics(self) -> None:
         """Reset recovery statistics."""
         self.recovery_stats = {
             "total_errors": 0,
@@ -470,7 +474,11 @@ class ErrorRecoveryManager:
         }
         logger.info("Recovery statistics reset")
 
-    def configure_strategy(self, error_type: str, strategy: Callable) -> None:
+    def configure_strategy(
+        self,
+        error_type: str,
+        strategy: Callable[[Exception, str, dict[str, Any]], bool],
+    ) -> None:
         """
         Configure custom recovery strategy for specific error type.
 
