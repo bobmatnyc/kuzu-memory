@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.32] - 2025-10-27
+
+### Fixed
+- Fixed version mismatch in __version__.py
+
 ## [1.4.31] - 2025-10-27
 
 ### Fixed
