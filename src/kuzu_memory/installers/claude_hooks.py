@@ -417,6 +417,7 @@ class ClaudeHooksInstaller(BaseInstaller):
             },
             "mcpServers": {
                 "kuzu-memory": {
+                    "type": "stdio",
                     "command": sys.executable,
                     "args": ["-m", "kuzu_memory.integrations.mcp_server"],
                     "env": {
