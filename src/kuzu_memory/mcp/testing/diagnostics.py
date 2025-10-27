@@ -125,7 +125,7 @@ class MCPDiagnostics:
 
     Focuses exclusively on project-scoped diagnostics:
     - Project memory database (kuzu-memories/)
-    - Claude Code MCP configuration (.claude/config.local.json)
+    - Claude Code MCP configuration (.claude/settings.local.json)
     - Claude Code hooks (if configured)
 
     Does NOT check user-level configurations:
@@ -149,7 +149,7 @@ class MCPDiagnostics:
         self.verbose = verbose
         # PROJECT-LEVEL CONFIG ONLY
         self.claude_code_config_path = (
-            self.project_root / ".claude" / "config.local.json"
+            self.project_root / ".claude" / "settings.local.json"
         )
         self.memory_db_path = self.project_root / "kuzu-memories"
 
@@ -159,7 +159,7 @@ class MCPDiagnostics:
 
         Checks ONLY:
         - Project memory database directory (kuzu-memories/)
-        - Claude Code MCP config (.claude/config.local.json)
+        - Claude Code MCP config (.claude/settings.local.json)
         - Claude Code hooks (if configured)
 
         Does NOT check Claude Desktop (user-level) configuration.
@@ -592,7 +592,7 @@ class MCPDiagnostics:
                         severity=DiagnosticSeverity.ERROR,
                         message="Claude Code config contains invalid JSON",
                         error=str(e),
-                        fix_suggestion="Fix JSON syntax errors in .claude/config.local.json",
+                        fix_suggestion="Fix JSON syntax errors in .claude/settings.local.json",
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )

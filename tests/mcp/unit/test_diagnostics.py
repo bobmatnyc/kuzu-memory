@@ -251,7 +251,7 @@ class TestMCPDiagnostics:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Set up project structure
             project_root = Path(tmpdir)
-            claude_config_path = project_root / ".claude" / "config.local.json"
+            claude_config_path = project_root / ".claude" / "settings.local.json"
             claude_config_path.parent.mkdir(parents=True, exist_ok=True)
             claude_config_path.write_text("{ invalid json }")
 
