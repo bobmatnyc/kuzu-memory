@@ -10,16 +10,16 @@ Production-ready version with:
 - Better error handling
 - Configurable timeouts
 """
+
+import hashlib
 import json
 import logging
 import os
-import sys
 import subprocess
-import hashlib
+import sys
 import time
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Configure logging
 LOG_DIR = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
@@ -30,15 +30,16 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler(LOG_FILE),
-    ]
+    ],
 )
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
 STORE_TIMEOUT = int(os.getenv("KUZU_STORE_TIMEOUT", "5"))
-KUZU_COMMAND = os.getenv("KUZU_COMMAND", "kuzu-memory")
+KUZU_COMMAND = os.getenv("KUZU_COMMAND", "/Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory")
 SOURCE = os.getenv("KUZU_HOOK_SOURCE", "claude-code-hook")
 AGENT_ID = os.getenv("KUZU_HOOK_AGENT_ID", "assistant")
+PROJECT_DIR = os.getenv("CLAUDE_PROJECT_DIR", "")
 
 # Deduplication cache file
 CACHE_FILE = LOG_DIR / ".kuzu_learn_cache.json"
@@ -55,7 +56,7 @@ def get_content_hash(text: str) -> str:
     Returns:
         SHA256 hash of the text
     """
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def is_duplicate(text: str) -> bool:
@@ -76,12 +77,12 @@ def is_duplicate(text: str) -> bool:
         current_time = time.time()
 
         # Load cache
-        cache: Dict[str, float] = {}
+        cache: dict[str, float] = {}
         if CACHE_FILE.exists():
             try:
-                with open(CACHE_FILE, 'r') as f:
+                with open(CACHE_FILE) as f:
                     cache = json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 logger.warning("Failed to load cache, starting fresh")
                 cache = {}
 
@@ -99,9 +100,9 @@ def is_duplicate(text: str) -> bool:
 
         # Save cache
         try:
-            with open(CACHE_FILE, 'w') as f:
+            with open(CACHE_FILE, "w") as f:
                 json.dump(cache, f)
-        except IOError as e:
+        except OSError as e:
             logger.warning(f"Failed to save cache: {e}")
 
         return False
@@ -112,7 +113,7 @@ def is_duplicate(text: str) -> bool:
         return False
 
 
-def find_transcript_file(transcript_path: str) -> Optional[Path]:
+def find_transcript_file(transcript_path: str) -> Path | None:
     """
     Find the most recent transcript file.
 
@@ -154,7 +155,7 @@ def find_transcript_file(transcript_path: str) -> Optional[Path]:
         return None
 
 
-def parse_transcript_entry(line: str) -> Optional[Dict[str, Any]]:
+def parse_transcript_entry(line: str) -> dict[str, Any] | None:
     """
     Parse a single transcript line.
 
@@ -171,7 +172,7 @@ def parse_transcript_entry(line: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def extract_assistant_text(entry: Dict[str, Any]) -> Optional[str]:
+def extract_assistant_text(entry: dict[str, Any]) -> str | None:
     """
     Extract text content from an assistant message entry.
 
@@ -213,7 +214,7 @@ def extract_assistant_text(entry: Dict[str, Any]) -> Optional[str]:
         return None
 
 
-def find_last_assistant_message(transcript_file: Path) -> Optional[str]:
+def find_last_assistant_message(transcript_file: Path) -> str | None:
     """
     Find the last assistant message in the transcript.
 
@@ -224,7 +225,7 @@ def find_last_assistant_message(transcript_file: Path) -> Optional[str]:
         Last assistant message text, or None if not found
     """
     try:
-        with open(transcript_file, 'r', encoding='utf-8') as f:
+        with open(transcript_file, encoding="utf-8") as f:
             lines = f.readlines()
 
         if not lines:
@@ -275,15 +276,26 @@ def store_memory(text: str) -> bool:
 
         # Use 'memory store' which directly stores content
         # (not 'learn' - learn requires specific patterns)
+        cmd = [
+            KUZU_COMMAND,
+            "memory",
+            "store",
+            text,
+            "--source",
+            SOURCE,
+            "--agent-id",
+            AGENT_ID,
+        ]
+
+        # Add project-root if CLAUDE_PROJECT_DIR is set
+        if PROJECT_DIR:
+            cmd.extend(["--project-root", PROJECT_DIR])
+
         result = subprocess.run(
-            [
-                KUZU_COMMAND, "memory", "store", text,
-                "--source", SOURCE,
-                "--agent-id", AGENT_ID
-            ],
+            cmd,
             timeout=STORE_TIMEOUT,
             capture_output=True,
-            text=True
+            text=True,
         )
 
         if result.returncode == 0:
@@ -299,7 +311,7 @@ def store_memory(text: str) -> bool:
         logger.error(f"Store timed out after {STORE_TIMEOUT}s")
         return False
     except FileNotFoundError:
-        logger.error(f"kuzu-memory command not found: {KUZU_COMMAND}")
+        logger.error(f"kuzu-memory command not found: /Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory")
         return False
     except Exception as e:
         logger.error(f"Unexpected error storing memory: {e}")
@@ -313,7 +325,7 @@ def main() -> None:
 
         # Read JSON from stdin
         try:
-            input_data: Dict[str, Any] = json.load(sys.stdin)
+            input_data: dict[str, Any] = json.load(sys.stdin)
             hook_event = input_data.get("hook_event_name", "unknown")
             logger.info(f"Hook event: {hook_event}")
         except json.JSONDecodeError as e:
@@ -348,7 +360,9 @@ def main() -> None:
 
         max_text_length = 1000000  # 1MB reasonable limit
         if len(assistant_text) > max_text_length:
-            logger.warning(f"Truncating long message: {len(assistant_text)} -> {max_text_length}")
+            logger.warning(
+                f"Truncating long message: {len(assistant_text)} -> {max_text_length}"
+            )
             assistant_text = assistant_text[:max_text_length]
 
         # Check for duplicates (prevents multiple PostToolUse events from storing same content)

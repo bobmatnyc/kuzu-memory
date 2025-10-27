@@ -11,17 +11,11 @@ This project uses KuzuMemory for intelligent context management.
 
 KuzuMemory is configured to enhance all AI interactions with project-specific context.
 
-### Installation Commands (ONE WAY):
-- `kuzu-memory install claude-code` - Install Claude Code integration (MCP + hooks)
-- `kuzu-memory install claude-desktop` - Install Claude Desktop integration (MCP only)
-- `kuzu-memory uninstall <integration>` - Uninstall integration
-- `kuzu-memory remove <integration>` - Alias for uninstall
-
-### Memory Commands:
+### Available Commands:
 - `kuzu-memory enhance <prompt>` - Enhance prompts with project context
 - `kuzu-memory learn <content>` - Store learning from conversations (async)
 - `kuzu-memory recall <query>` - Query project memories
-- `kuzu-memory status` - View memory statistics
+- `kuzu-memory stats` - View memory statistics
 
 ### MCP Tools Available:
 When interacting with Claude Desktop, the following MCP tools are available:
@@ -42,17 +36,6 @@ Lightweight, embedded graph-based memory system for AI applications
 - Store important decisions with kuzu-memory learn
 - Query context with kuzu-memory recall when needed
 - Keep memories project-specific and relevant
-
-## PyPI Publishing
-- **PyPI Token Location**: `.env.local` file contains `TWINE_PASSWORD`
-- **Publishing Command**:
-  ```bash
-  source .env.local  # Load TWINE_PASSWORD
-  export TWINE_USERNAME=__token__
-  python3 -m twine upload dist/kuzu_memory-*.whl dist/kuzu_memory-*.tar.gz
-  ```
-- Always verify version number before publishing
-- Check https://pypi.org/project/kuzu-memory/ after upload
 
 ## Memory Guidelines
 

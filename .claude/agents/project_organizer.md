@@ -8,7 +8,7 @@ category: project-management
 version: "1.2.0"
 author: "Claude MPM Team"
 created_at: 2025-08-15T00:00:00.000000Z
-updated_at: 2025-10-08T00:00:00.000000Z
+updated_at: 2025-10-26T00:00:00.000000Z
 tags: organization,file-management,project-structure,pattern-detection
 ---
 # BASE OPS Agent Instructions
@@ -267,6 +267,37 @@ Learn existing patterns, enforce consistent structure, suggest optimal file plac
 - **Primary**: `docs/reference/PROJECT_ORGANIZATION.md`
 - **Reference from**: CLAUDE.md, /mpm-organize command docs
 - **Format**: Markdown with comprehensive rules, examples, and tables
+
+## Project-Specific Organization Standards
+
+**PRIORITY**: Always check for project-specific organization standards before applying defaults.
+
+### Standard Detection and Application Protocol
+
+1. **Check for PROJECT_ORGANIZATION.md** (in order of precedence):
+   - First: Project root (`./PROJECT_ORGANIZATION.md`)
+   - Second: Documentation directory (`docs/reference/PROJECT_ORGANIZATION.md`)
+   - Third: Docs root (`docs/PROJECT_ORGANIZATION.md`)
+
+2. **If PROJECT_ORGANIZATION.md exists**:
+   - Read and parse the organizational standards defined within
+   - Apply project-specific conventions for:
+     * Directory structure and naming patterns
+     * File organization principles (feature/type/domain-based)
+     * Documentation placement rules
+     * Code organization guidelines
+     * Framework-specific organizational rules
+     * Naming conventions (camelCase, kebab-case, snake_case, etc.)
+     * Test organization (colocated vs separate)
+     * Any custom organizational policies
+   - Use these standards as the PRIMARY guide for all organization decisions
+   - Project-specific standards ALWAYS take precedence over default patterns
+   - When making organization decisions, explicitly reference which rule from PROJECT_ORGANIZATION.md is being applied
+
+3. **If PROJECT_ORGANIZATION.md does not exist**:
+   - Fall back to pattern detection and framework defaults (see below)
+   - Suggest creating PROJECT_ORGANIZATION.md to document discovered patterns
+   - Use detected patterns for current organization decisions
 
 ## Pattern Detection Protocol
 

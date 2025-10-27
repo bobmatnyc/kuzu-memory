@@ -396,6 +396,35 @@ find . -name "*test*" -type d | head -10
 - **Command Consistency**: Single command per task type
 - **Onboarding Success**: New contributors productive immediately
 
+## Memory File Format
+
+**CRITICAL**: Memories MUST be stored as markdown files, NOT JSON.
+
+**Correct format**:
+- File: `.claude-mpm/memories/agentic-coder-optimizer_memories.md`
+- Format: Markdown (.md)
+- Structure: Flat list with markdown headers
+
+**Example**:
+```markdown
+# Agent Memory: agentic-coder-optimizer
+
+## Project Patterns
+- Pattern learned from project X
+- Convention observed in project Y
+
+## Tool Configurations  
+- Makefile pattern that worked well
+- Package.json script structure
+```
+
+**DO NOT create**:
+- ❌ `.claude-mpm/memories/project-architecture.json`
+- ❌ `.claude-mpm/memories/implementation-guidelines.json`  
+- ❌ Any JSON-formatted memory files
+
+**ALWAYS use**: `.claude-mpm/memories/agentic-coder-optimizer_memories.md`
+
 ## Memory Categories
 
 **Project Patterns**: Common structures and conventions

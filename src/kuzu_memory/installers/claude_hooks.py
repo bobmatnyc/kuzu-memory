@@ -694,21 +694,29 @@ exec {kuzu_cmd} "$@"
         """
         Create .mcp.json file for Claude Code MCP server integration.
 
-        Uses the simple, working format:
-        server-name: /path/to/python -m module.path {project_root}
-
-        This matches the exact format used by mcp-vector-search:
-        "mcp-vector-search": "/path/to/python -m mcp_vector_search.mcp.server /project/root"
+        Uses the stdio format required by Claude Code.
         """
         mcp_json_path = self.project_root / ".mcp.json"
 
         # Get the Python executable from pipx venv or current environment
         python_exe = sys.executable
 
-        # Create the MCP server entry using the working format
-        # Simple string format: "python -m module {project_root}"
+        # Database path
+        db_path = self._get_project_db_path()
+
+        # Create the MCP server entry using Claude Code stdio format
         mcp_config = {
-            "kuzu-memory": f"{python_exe} -m kuzu_memory.integrations.mcp_server {self.project_root}"
+            "mcpServers": {
+                "kuzu-memory": {
+                    "type": "stdio",
+                    "command": python_exe,
+                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
+                    "env": {
+                        "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
+                        "KUZU_MEMORY_DB": str(db_path),
+                    },
+                }
+            }
         }
 
         # Write the .mcp.json file
@@ -918,9 +926,26 @@ exec {kuzu_cmd} "$@"
             if not existing_config and "_comment" in kuzu_config:
                 existing_config["_comment"] = kuzu_config["_comment"]
 
+            # Remove old lowercase event names that are no longer valid
+            OLD_EVENT_NAMES = {
+                "user_prompt_submit",
+                "assistant_response",
+                "post_tool_use",
+                "pre_tool_use",
+                "session_start",
+                "session_end",
+            }
+
             # Merge hooks
             if "hooks" not in existing_config:
                 existing_config["hooks"] = {}
+
+            # Clean up old deprecated event names
+            for old_event in OLD_EVENT_NAMES:
+                if old_event in existing_config["hooks"]:
+                    logger.info(f"Removing deprecated hook event: {old_event}")
+                    del existing_config["hooks"][old_event]
+
             for hook_type, handlers in kuzu_config["hooks"].items():
                 if hook_type not in existing_config["hooks"]:
                     existing_config["hooks"][hook_type] = []

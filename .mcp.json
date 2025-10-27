@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "kuzu-memory": {
+      "type": "stdio",
+      "command": "/Users/masa/.local/pipx/venvs/kuzu-memory/bin/python",
+      "args": [
+        "-m",
+        "kuzu_memory.integrations.mcp_server"
+      ],
+      "env": {
+        "KUZU_MEMORY_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
+        "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/kuzu-memories"
+      }
+    }
+  }
+}

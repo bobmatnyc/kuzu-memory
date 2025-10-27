@@ -9,14 +9,14 @@ Production-ready version with:
 - Input validation
 - Configurable timeouts
 """
+
 import json
 import logging
 import os
-import sys
 import subprocess
-from datetime import datetime
+import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Configure logging
 LOG_DIR = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
@@ -27,16 +27,17 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler(LOG_FILE),
-    ]
+    ],
 )
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
 ENHANCE_TIMEOUT = int(os.getenv("KUZU_ENHANCE_TIMEOUT", "2"))
-KUZU_COMMAND = os.getenv("KUZU_COMMAND", "kuzu-memory")
+KUZU_COMMAND = os.getenv("KUZU_COMMAND", "/Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory")
+PROJECT_DIR = os.getenv("CLAUDE_PROJECT_DIR", "")
 
 
-def validate_input(input_data: Dict[str, Any]) -> Optional[str]:
+def validate_input(input_data: dict[str, Any]) -> str | None:
     """
     Validate input data and extract prompt.
 
@@ -67,13 +68,15 @@ def validate_input(input_data: Dict[str, Any]) -> Optional[str]:
     # Basic validation - check for extremely long prompts
     max_prompt_length = 100000  # 100KB reasonable limit
     if len(prompt) > max_prompt_length:
-        logger.warning(f"Prompt too long: {len(prompt)} chars (max {max_prompt_length})")
+        logger.warning(
+            f"Prompt too long: {len(prompt)} chars (max {max_prompt_length})"
+        )
         return prompt[:max_prompt_length]
 
     return prompt
 
 
-def enhance_with_memory(prompt: str) -> Optional[str]:
+def enhance_with_memory(prompt: str) -> str | None:
     """
     Call kuzu-memory to enhance the prompt with context.
 
@@ -86,11 +89,17 @@ def enhance_with_memory(prompt: str) -> Optional[str]:
     try:
         logger.info(f"Enhancing prompt ({len(prompt)} chars)")
 
+        cmd = [KUZU_COMMAND, "memory", "enhance", prompt, "--format", "plain"]
+
+        # Add project-root if CLAUDE_PROJECT_DIR is set
+        if PROJECT_DIR:
+            cmd.extend(["--project-root", PROJECT_DIR])
+
         result = subprocess.run(
-            [KUZU_COMMAND, "memory", "enhance", prompt, "--format", "plain"],
+            cmd,
             capture_output=True,
             text=True,
-            timeout=ENHANCE_TIMEOUT
+            timeout=ENHANCE_TIMEOUT,
         )
 
         logger.info(f"kuzu-memory returned: {result.returncode}")
@@ -113,7 +122,7 @@ def enhance_with_memory(prompt: str) -> Optional[str]:
         logger.error(f"kuzu-memory timed out after {ENHANCE_TIMEOUT}s")
         return None
     except FileNotFoundError:
-        logger.error(f"kuzu-memory command not found: {KUZU_COMMAND}")
+        logger.error(f"kuzu-memory command not found: /Users/masa/.local/pipx/venvs/kuzu-memory/bin/kuzu-memory")
         return None
     except Exception as e:
         logger.error(f"Unexpected error calling kuzu-memory: {e}")
@@ -127,7 +136,7 @@ def main() -> None:
 
         # Read JSON from stdin (official Claude Code API)
         try:
-            input_data: Dict[str, Any] = json.load(sys.stdin)
+            input_data: dict[str, Any] = json.load(sys.stdin)
             logger.debug(f"Input keys: {list(input_data.keys())}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
