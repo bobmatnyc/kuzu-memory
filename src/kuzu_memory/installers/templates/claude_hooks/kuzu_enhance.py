@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # Configuration from environment
 ENHANCE_TIMEOUT = int(os.getenv("KUZU_ENHANCE_TIMEOUT", "2"))
 KUZU_COMMAND = os.getenv("KUZU_COMMAND", "{KUZU_COMMAND}")
+PROJECT_DIR = os.getenv("CLAUDE_PROJECT_DIR", "")
 
 
 def validate_input(input_data: dict[str, Any]) -> str | None:
@@ -87,8 +88,14 @@ def enhance_with_memory(prompt: str) -> str | None:
     try:
         logger.info(f"Enhancing prompt ({len(prompt)} chars)")
 
+        cmd = [KUZU_COMMAND, "memory", "enhance", prompt, "--format", "plain"]
+
+        # Add project-root if CLAUDE_PROJECT_DIR is set
+        if PROJECT_DIR:
+            cmd.extend(["--project-root", PROJECT_DIR])
+
         result = subprocess.run(
-            [KUZU_COMMAND, "memory", "enhance", prompt, "--format", "plain"],
+            cmd,
             capture_output=True,
             text=True,
             timeout=ENHANCE_TIMEOUT,

@@ -38,6 +38,7 @@ STORE_TIMEOUT = int(os.getenv("KUZU_STORE_TIMEOUT", "5"))
 KUZU_COMMAND = os.getenv("KUZU_COMMAND", "{KUZU_COMMAND}")
 SOURCE = os.getenv("KUZU_HOOK_SOURCE", "claude-code-hook")
 AGENT_ID = os.getenv("KUZU_HOOK_AGENT_ID", "assistant")
+PROJECT_DIR = os.getenv("CLAUDE_PROJECT_DIR", "")
 
 # Deduplication cache file
 CACHE_FILE = LOG_DIR / ".kuzu_learn_cache.json"
@@ -274,17 +275,23 @@ def store_memory(text: str) -> bool:
 
         # Use 'memory store' which directly stores content
         # (not 'learn' - learn requires specific patterns)
+        cmd = [
+            KUZU_COMMAND,
+            "memory",
+            "store",
+            text,
+            "--source",
+            SOURCE,
+            "--agent-id",
+            AGENT_ID,
+        ]
+
+        # Add project-root if CLAUDE_PROJECT_DIR is set
+        if PROJECT_DIR:
+            cmd.extend(["--project-root", PROJECT_DIR])
+
         result = subprocess.run(
-            [
-                KUZU_COMMAND,
-                "memory",
-                "store",
-                text,
-                "--source",
-                SOURCE,
-                "--agent-id",
-                AGENT_ID,
-            ],
+            cmd,
             timeout=STORE_TIMEOUT,
             capture_output=True,
             text=True,

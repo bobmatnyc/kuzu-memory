@@ -37,6 +37,17 @@ Lightweight, embedded graph-based memory system for AI applications
 - Query context with kuzu-memory recall when needed
 - Keep memories project-specific and relevant
 
+## PyPI Publishing
+- **PyPI Token Location**: `.env.local` file contains `TWINE_PASSWORD`
+- **Publishing Command**:
+  ```bash
+  source .env.local  # Load TWINE_PASSWORD
+  export TWINE_USERNAME=__token__
+  python3 -m twine upload dist/kuzu_memory-*.whl dist/kuzu_memory-*.tar.gz
+  ```
+- Always verify version number before publishing
+- Check https://pypi.org/project/kuzu-memory/ after upload
+
 ## Memory Guidelines
 
 - Store project decisions and conventions
