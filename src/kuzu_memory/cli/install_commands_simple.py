@@ -175,7 +175,7 @@ def add(
             if platform == "claude-code":
                 print("1. Reload Claude Code window or restart")
                 print("2. MCP tools + hooks active for enhanced context")
-                print("3. Check .claude/config.local.json for configuration")
+                print("3. Check .claude/settings.local.json for configuration")
             elif platform == "claude-desktop":
                 print("1. Restart Claude Desktop application")
                 print("2. Open a new conversation")

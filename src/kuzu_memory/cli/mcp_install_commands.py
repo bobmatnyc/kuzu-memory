@@ -249,7 +249,7 @@ def install_mcp(
             elif system == "claude-code":
                 print("1. Reload Claude Code window or restart")
                 print("2. MCP tools + hooks active for enhanced context")
-                print("3. Check .claude/config.local.json for configuration")
+                print("3. Check .claude/settings.local.json for configuration")
             elif system in ["cursor", "vscode", "windsurf"]:
                 print(f"1. Reload or restart {installer.ai_system_name}")
                 print("2. KuzuMemory MCP server will be active")

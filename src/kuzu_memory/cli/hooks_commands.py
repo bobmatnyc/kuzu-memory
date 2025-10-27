@@ -238,7 +238,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
                 console.print(
                     "2. Hooks will auto-enhance prompts and learn from responses"
                 )
-                console.print("3. Check .claude/config.local.json for configuration")
+                console.print("3. Check .claude/settings.local.json for configuration")
             elif system == "auggie":
                 console.print("1. Open or reload your Auggie workspace")
                 console.print("2. Rules will be active for enhanced context")

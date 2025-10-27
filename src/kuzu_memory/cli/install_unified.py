@@ -120,7 +120,7 @@ def install_command(
             if integration == "claude-code":
                 rich_print("1. Reload Claude Code window or restart")
                 rich_print("2. MCP tools + hooks active for enhanced context")
-                rich_print("3. Check .claude/config.local.json for configuration")
+                rich_print("3. Check .claude/settings.local.json for configuration")
             elif integration == "claude-desktop":
                 rich_print("1. Restart Claude Desktop application")
                 rich_print("2. Open a new conversation")

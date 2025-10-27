@@ -59,7 +59,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         """
         Check for and remove kuzu-memory from global Claude Code config.
 
-        kuzu-memory should ONLY be in project-specific .claude/config.local.json,
+        kuzu-memory should ONLY be in project-specific .claude/settings.local.json,
         never in global ~/.claude.json.
         """
         global_config_path = Path.home() / ".claude.json"
@@ -135,7 +135,6 @@ class ClaudeHooksInstaller(BaseInstaller):
         files = [
             "CLAUDE.md",
             ".claude-mpm/config.json",
-            ".claude/config.local.json",
             ".claude/settings.local.json",
             ".claude/hooks/kuzu_enhance.py",
             ".claude/hooks/kuzu_learn.py",
@@ -421,7 +420,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
     def _create_claude_code_mcp_config(self) -> dict[str, Any]:
         """
-        Create Claude Code MCP server configuration (for config.local.json).
+        Create Claude Code MCP server configuration (for settings.local.json).
 
         Returns:
             Claude Code MCP server configuration dict
@@ -916,55 +915,10 @@ exec {kuzu_cmd} "$@"
                 f"{'Would ' if dry_run else ''}{action.capitalize()}d kuzu_learn.py hook"
             )
 
-            # Create or update config.local.json with MCP server ONLY
-            local_config_path = claude_dir / "config.local.json"
-            existing_mcp_config = {}
+            # NOTE: config.local.json is legacy and not used by Claude Code
+            # We now merge MCP server config into settings.local.json instead
 
-            if local_config_path.exists():
-                try:
-                    with open(local_config_path) as f:
-                        existing_mcp_config = json.load(f)
-                    if not dry_run:
-                        backup_path = self.create_backup(local_config_path)
-                        if backup_path:
-                            self.backup_files.append(backup_path)
-                    self.files_modified.append(local_config_path)
-                    logger.info(
-                        f"{'Would merge with' if dry_run else 'Merging with'} existing config.local.json"
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to read existing config.local.json: {e}")
-                    self.warnings.append(
-                        f"Could not read existing config.local.json: {e}"
-                    )
-            else:
-                self.files_created.append(local_config_path)
-                logger.info(
-                    f"{'Would create' if dry_run else 'Creating'} config.local.json at {local_config_path}"
-                )
-
-            # Merge kuzu-memory MCP config with existing config
-            kuzu_mcp_config = self._create_claude_code_mcp_config()
-
-            # Add version comment if creating new config
-            if not existing_mcp_config and "_comment" in kuzu_mcp_config:
-                existing_mcp_config["_comment"] = kuzu_mcp_config["_comment"]
-
-            # Merge MCP servers
-            if "mcpServers" not in existing_mcp_config:
-                existing_mcp_config["mcpServers"] = {}
-            existing_mcp_config["mcpServers"]["kuzu-memory"] = kuzu_mcp_config[
-                "mcpServers"
-            ]["kuzu-memory"]
-
-            if not dry_run:
-                with open(local_config_path, "w") as f:
-                    json.dump(existing_mcp_config, f, indent=2)
-            logger.info(
-                f"{'Would configure' if dry_run else 'Configured'} Claude Code MCP server in config.local.json"
-            )
-
-            # Create or update settings.local.json with hooks ONLY
+            # Create or update settings.local.json with hooks AND MCP server config
             settings_path = claude_dir / "settings.local.json"
             existing_settings = {}
 
@@ -1033,11 +987,21 @@ exec {kuzu_cmd} "$@"
             # Validate hook events before writing
             self._validate_hook_events(existing_settings)
 
+            # Merge MCP server configuration into settings.local.json
+            kuzu_mcp_config = self._create_claude_code_mcp_config()
+
+            # Merge MCP servers (preserving existing servers like mcp-vector-search)
+            if "mcpServers" not in existing_settings:
+                existing_settings["mcpServers"] = {}
+            existing_settings["mcpServers"]["kuzu-memory"] = kuzu_mcp_config[
+                "mcpServers"
+            ]["kuzu-memory"]
+
             if not dry_run:
                 with open(settings_path, "w") as f:
                     json.dump(existing_settings, f, indent=2)
             logger.info(
-                f"{'Would configure' if dry_run else 'Configured'} Claude Code hooks in settings.local.json"
+                f"{'Would configure' if dry_run else 'Configured'} Claude Code hooks and MCP server in settings.local.json"
             )
 
             # Create shell wrapper
@@ -1272,9 +1236,6 @@ exec {kuzu_cmd} "$@"
         mpm_config = self.project_root / ".claude-mpm" / "config.json"
         status["files"]["mpm_config"] = mpm_config.exists()
 
-        local_config = self.project_root / ".claude" / "config.local.json"
-        status["files"]["config.local.json"] = local_config.exists()
-
         settings_config = self.project_root / ".claude" / "settings.local.json"
         status["files"]["settings.local.json"] = settings_config.exists()
 
@@ -1287,11 +1248,22 @@ exec {kuzu_cmd} "$@"
             [
                 status["files"]["CLAUDE.md"],
                 status["files"]["mpm_config"],
-                status["files"]["config.local.json"],
                 status["files"]["settings.local.json"],
                 status["files"]["config_yaml"],
             ]
         )
+
+        # Check if MCP server is configured in settings.local.json
+        if settings_config.exists():
+            try:
+                with open(settings_config) as f:
+                    settings = json.load(f)
+                    status["mcp_configured"] = (
+                        "mcpServers" in settings
+                        and "kuzu-memory" in settings["mcpServers"]
+                    )
+            except Exception:
+                pass
 
         # Check MCP configuration
         if self.mcp_config_path and self.mcp_config_path.exists():
