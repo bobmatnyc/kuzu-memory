@@ -98,30 +98,30 @@ init: install
 # Quality targets (ONE way to do each)
 test:
 	@echo "🧪 Running all tests..."
-	python -m pytest tests/ -v --cov=kuzu_memory --cov-report=term-missing --cov-report=html
+	python3 -m pytest tests/ -v --cov=kuzu_memory --cov-report=term-missing --cov-report=html
 	@echo "✅ All tests completed"
 
 format:
 	@echo "🎨 Formatting code..."
-	python -m black src/ tests/ --line-length=88
-	python -m isort src/ tests/ --profile black
+	python3 -m black src/ tests/ --line-length=88
+	python3 -m isort src/ tests/ --profile black
 	@echo "✅ Code formatting complete"
 
 lint:
 	@echo "🔍 Linting code..."
-	python -m ruff check src/ tests/ --fix
-	python -m ruff format src/ tests/
+	python3 -m ruff check src/ tests/ --fix
+	python3 -m ruff format src/ tests/
 	@echo "✅ Linting complete"
 
 typecheck:
 	@echo "📝 Type checking..."
-	python -m mypy src/kuzu_memory --strict --ignore-missing-imports
+	python3 -m mypy src/kuzu_memory --strict --ignore-missing-imports
 	@echo "✅ Type checking complete"
 
 quality: format lint typecheck
 	@echo "🎯 Running complete quality check..."
-	python -m ruff check src/ tests/
-	python -m mypy src/kuzu_memory --strict --ignore-missing-imports
+	python3 -m ruff check src/ tests/
+	python3 -m mypy src/kuzu_memory --strict --ignore-missing-imports
 	@echo "✅ All quality checks passed"
 
 # Changelog fragment management (Towncrier)
@@ -214,7 +214,7 @@ clean:
 docs:
 	@echo "📚 Building documentation..."
 	@if [ -d "docs" ]; then \
-		cd docs && python -m mkdocs build; \
+		cd docs && python3 -m mkdocs build; \
 	else \
 		echo "⚠️  No docs directory found"; \
 	fi
@@ -223,45 +223,45 @@ docs:
 # Performance and testing targets with NEW optimizations
 profile: dev
 	@echo "⚡ Running enhanced performance profiling..."
-	python -m cProfile -s cumulative -m kuzu_memory.cli.commands --help > /dev/null
-	python -c "import time, subprocess; print('🔍 Testing CLI performance...'); start = time.time(); result = subprocess.run(['kuzu-memory', '--help'], capture_output=True); end = time.time(); print(f'CLI help took: {(end-start)*1000:.1f}ms')"
+	python3 -m cProfile -s cumulative -m kuzu_memory.cli.commands --help > /dev/null
+	python3 -c "import time, subprocess; print('🔍 Testing CLI performance...'); start = time.time(); result = subprocess.run(['kuzu-memory', '--help'], capture_output=True); end = time.time(); print(f'CLI help took: {(end-start)*1000:.1f}ms')"
 	@echo "✅ Performance profiling complete"
 
 memory-test: dev
 	@echo "🧠 Testing memory system performance..."
-	PYTHONPATH=/Users/masa/Projects/managed/kuzu-memory/src python tests/test_memory_performance.py
+	PYTHONPATH=/Users/masa/Projects/managed/kuzu-memory/src python3 tests/test_memory_performance.py
 	@echo "✅ Memory performance test complete"
 
 # NEW performance-focused targets
 perf-test: dev
 	@echo "🏎️  Running performance benchmark tests..."
-	python -m pytest tests/benchmarks/ --benchmark-only --benchmark-sort=mean --benchmark-group-by=group -v
+	python3 -m pytest tests/benchmarks/ --benchmark-only --benchmark-sort=mean --benchmark-group-by=group -v
 	@echo "✅ Performance benchmarks complete"
 
 perf-validate: dev
 	@echo "🎯 Validating performance thresholds..."
-	python -m pytest tests/benchmarks/test_performance.py::test_benchmark_thresholds -v -s
+	python3 -m pytest tests/benchmarks/test_performance.py::test_benchmark_thresholds -v -s
 	@echo "✅ Performance thresholds validated"
 
 cache-test: dev
 	@echo "💾 Testing cache performance..."
-	python -m pytest tests/benchmarks/ -k "cache" --benchmark-only -v
+	python3 -m pytest tests/benchmarks/ -k "cache" --benchmark-only -v
 	@echo "✅ Cache performance tests complete"
 
 async-test: dev
 	@echo "⚡ Testing async operation performance..."
-	python -m pytest tests/benchmarks/ -k "concurrent" --benchmark-only -v
+	python3 -m pytest tests/benchmarks/ -k "concurrent" --benchmark-only -v
 	@echo "✅ Async performance tests complete"
 
 memory-profile: dev
 	@echo "🔍 Memory usage profiling..."
-	python -m memory_profiler -m kuzu_memory.cli.commands --help || echo "Install memory_profiler: pip install memory-profiler"
+	python3 -m memory_profiler -m kuzu_memory.cli.commands --help || echo "Install memory_profiler: pip install memory-profiler"
 	@echo "✅ Memory profiling complete"
 
 # Connection pool and database performance
 db-perf: dev
 	@echo "🗄️  Testing database performance..."
-	python -m pytest tests/benchmarks/ -k "database" --benchmark-only -v
+	python3 -m pytest tests/benchmarks/ -k "database" --benchmark-only -v
 	@echo "✅ Database performance tests complete"
 
 # Continuous Integration target
@@ -298,45 +298,45 @@ perf-full: perf-test cache-test async-test db-perf
 # Check if all required tools are available
 check-tools:
 	@echo "🔧 Checking required tools..."
-	@command -v python >/dev/null 2>&1 || { echo "❌ Python not found"; exit 1; }
+	@command -v python3 >/dev/null 2>&1 || { echo "❌ Python not found"; exit 1; }
 	@command -v pip >/dev/null 2>&1 || { echo "❌ Pip not found"; exit 1; }
-	@python -c "import sys; print(f'✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
+	@python3 -c "import sys; print(f'✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
 	@echo "✅ All tools available"
 
 # MCP Testing & Diagnostics (NEW - Phase 5)
 mcp-test: dev
 	@echo "🔌 Running MCP test suite (151+ tests)..."
-	python -m pytest tests/mcp/ -v
+	python3 -m pytest tests/mcp/ -v
 	@echo "✅ MCP tests complete"
 
 mcp-unit: dev
 	@echo "🔬 Running MCP unit tests..."
-	python -m pytest tests/mcp/unit/ -v
+	python3 -m pytest tests/mcp/unit/ -v
 	@echo "✅ MCP unit tests complete"
 
 mcp-integration: dev
 	@echo "🔗 Running MCP integration tests..."
-	python -m pytest tests/mcp/integration/ -v
+	python3 -m pytest tests/mcp/integration/ -v
 	@echo "✅ MCP integration tests complete"
 
 mcp-e2e: dev
 	@echo "🎯 Running MCP end-to-end tests..."
-	python -m pytest tests/mcp/e2e/ -v
+	python3 -m pytest tests/mcp/e2e/ -v
 	@echo "✅ MCP e2e tests complete"
 
 mcp-performance: dev
 	@echo "⚡ Running MCP performance tests..."
-	python -m pytest tests/mcp/performance/ -v
+	python3 -m pytest tests/mcp/performance/ -v
 	@echo "✅ MCP performance tests complete"
 
 mcp-compliance: dev
 	@echo "✅ Running MCP compliance tests..."
-	python -m pytest tests/mcp/compliance/ -v
+	python3 -m pytest tests/mcp/compliance/ -v
 	@echo "✅ MCP compliance tests complete"
 
 mcp-benchmark: dev
 	@echo "📊 Running MCP performance benchmarks..."
-	python -m pytest tests/mcp/performance/ --benchmark-only --benchmark-sort=mean
+	python3 -m pytest tests/mcp/performance/ --benchmark-only --benchmark-sort=mean
 	@echo "✅ MCP benchmarks complete"
 
 mcp-diagnose:
@@ -390,7 +390,7 @@ uninstall-home:
 
 test-home-installer: dev
 	@echo "🧪 Testing home installer..."
-	python -m pytest tests/integration/test_home_installer.py -v
+	python3 -m pytest tests/integration/test_home_installer.py -v
 	@echo "✅ Home installer tests complete"
 
 # Dry-run targets for home installation
