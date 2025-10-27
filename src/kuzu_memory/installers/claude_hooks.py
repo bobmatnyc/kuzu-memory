@@ -739,7 +739,6 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
-
     def _get_template_path(self, filename: str) -> Path:
         """Get path to hook template file."""
         template_dir = Path(__file__).parent / "templates" / "claude_hooks"
