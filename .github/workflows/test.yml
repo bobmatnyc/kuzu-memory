@@ -60,7 +60,7 @@ jobs:
           --tb=short
     
     - name: Upload unit test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results-${{ matrix.python-version }}
@@ -113,7 +113,7 @@ jobs:
           --timeout=300
     
     - name: Upload integration test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -155,7 +155,7 @@ jobs:
           --timeout=600
     
     - name: Upload E2E test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: e2e-test-results
@@ -191,7 +191,7 @@ jobs:
           --tb=short
     
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results
@@ -232,7 +232,7 @@ jobs:
           --timeout=1200
     
     - name: Upload regression test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: regression-test-results
@@ -246,7 +246,7 @@ jobs:
           --output regression-report.md
     
     - name: Upload regression report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: regression-report
@@ -290,7 +290,7 @@ jobs:
         bandit -r src/ -f json -o bandit-report.json
     
     - name: Upload security report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-report
@@ -306,7 +306,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Download all test artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -328,7 +328,7 @@ jobs:
           --output test-summary.html
     
     - name: Upload test summary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-summary
         path: test-summary.html
