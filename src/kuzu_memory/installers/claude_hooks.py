@@ -10,6 +10,7 @@ import logging
 import platform
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -313,8 +314,8 @@ class ClaudeHooksInstaller(BaseInstaller):
             },
             "mcpServers": {
                 "kuzu-memory": {
-                    "command": kuzu_cmd,
-                    "args": ["mcp"],
+                    "command": sys.executable,
+                    "args": ["-m", "kuzu_memory.integrations.mcp_server"],
                     "env": {
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(db_path),
