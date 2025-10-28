@@ -55,65 +55,108 @@ class ClaudeHooksInstaller(BaseInstaller):
         )
         self._kuzu_command_path: str | None = None  # Cache for kuzu-memory command path
 
-    def _clean_global_config(self) -> None:
-        """
-        Check for and remove kuzu-memory from global Claude Code config.
-
-        kuzu-memory should ONLY be in project-specific .claude/settings.local.json,
-        never in global ~/.claude.json.
-        """
+    def _update_global_mcp_config(self) -> None:
+        """Update MCP server config in ~/.claude.json under projects[<path>].mcpServers."""
         global_config_path = Path.home() / ".claude.json"
 
-        if not global_config_path.exists():
-            logger.debug("No global .claude.json found - nothing to clean")
-            return
+        # Load or create config
+        if global_config_path.exists():
+            try:
+                with open(global_config_path) as f:
+                    config = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to read ~/.claude.json: {e}")
+                raise InstallationError(f"Cannot read global config file: {e}")
+        else:
+            config = {}
+
+        # Ensure projects structure exists
+        if "projects" not in config:
+            config["projects"] = {}
+
+        project_key = str(self.project_root.resolve())
+        if project_key not in config["projects"]:
+            config["projects"][project_key] = {}
+
+        # Add MCP server config
+        if "mcpServers" not in config["projects"][project_key]:
+            config["projects"][project_key]["mcpServers"] = {}
+
+        db_path = self._get_project_db_path()
+        config["projects"][project_key]["mcpServers"]["kuzu-memory"] = {
+            "type": "stdio",
+            "command": "kuzu-memory",
+            "args": ["mcp"],
+            "env": {
+                "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
+                "KUZU_MEMORY_DB": str(db_path),
+            },
+        }
+
+        # Backup and write
+        if global_config_path.exists():
+            backup_path = global_config_path.with_suffix(".json.backup")
+            shutil.copy(global_config_path, backup_path)
+            logger.debug(f"Backed up global config to {backup_path}")
 
         try:
-            with open(global_config_path) as f:
-                config = json.load(f)
-
-            # Check all projects in the config for kuzu-memory entries
-            removed_count = 0
-
-            # The actual structure has projects at config["projects"]
-            projects = config.get("projects", {})
-
-            for project_path, project_config in projects.items():
-                if not isinstance(project_config, dict):
-                    continue
-
-                if "mcpServers" in project_config and "kuzu-memory" in project_config["mcpServers"]:
-                    logger.info(f"Removing kuzu-memory from global config project: {project_path}")
-                    del project_config["mcpServers"]["kuzu-memory"]
-                    removed_count += 1
-
-            # Also check top-level mcpServers (if it exists)
-            if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
-                logger.info("Removing kuzu-memory from top-level global mcpServers")
-                del config["mcpServers"]["kuzu-memory"]
-                removed_count += 1
-
-            if removed_count > 0:
-                # Backup before writing
-                backup_path = global_config_path.with_suffix(".json.backup")
-                shutil.copy(global_config_path, backup_path)
-                logger.info(f"Backed up global config to {backup_path}")
-
-                # Write cleaned config
-                with open(global_config_path, "w") as f:
-                    json.dump(config, f, indent=2)
-
-                logger.info(f"Removed {removed_count} kuzu-memory entries from global config")
-                print(
-                    f"✓ Cleaned {removed_count} kuzu-memory entries from global Claude Code config"
-                )
-                print(f"  (Backup saved to {backup_path})")
-            else:
-                print("✓ Global Claude Code config is already clean (no kuzu-memory entries)")
-
+            with open(global_config_path, "w") as f:
+                json.dump(config, f, indent=2)
+            logger.info(
+                f"✓ Configured MCP server in ~/.claude.json for project: {self.project_root.name}"
+            )
         except Exception as e:
-            logger.warning(f"Failed to clean global config: {e}")
-            # Don't fail installation if cleanup fails
+            logger.error(f"Failed to write ~/.claude.json: {e}")
+            raise InstallationError(f"Cannot write global config file: {e}")
+
+    def _clean_legacy_mcp_locations(self) -> list[str]:
+        """Remove MCP config from incorrect locations. Returns warnings."""
+        warnings = []
+
+        # Clean from top-level ~/.claude.json (wrong location)
+        global_config_path = Path.home() / ".claude.json"
+        if global_config_path.exists():
+            try:
+                with open(global_config_path) as f:
+                    config = json.load(f)
+
+                # Only remove from top-level mcpServers (not from projects)
+                if "mcpServers" in config and "kuzu-memory" in config.get("mcpServers", {}):
+                    del config["mcpServers"]["kuzu-memory"]
+
+                    # Backup and write
+                    backup_path = global_config_path.with_suffix(".json.backup")
+                    shutil.copy(global_config_path, backup_path)
+
+                    with open(global_config_path, "w") as f:
+                        json.dump(config, f, indent=2)
+
+                    warnings.append("Moved MCP config from top-level ~/.claude.json to projects section")
+                    logger.info("Cleaned top-level MCP config from ~/.claude.json")
+            except Exception as e:
+                logger.warning(f"Failed to clean top-level MCP config: {e}")
+
+        # Clean from settings.local.json
+        local_settings = self.project_root / ".claude" / "settings.local.json"
+        if local_settings.exists():
+            try:
+                with open(local_settings) as f:
+                    settings = json.load(f)
+
+                if "mcpServers" in settings and "kuzu-memory" in settings.get("mcpServers", {}):
+                    del settings["mcpServers"]["kuzu-memory"]
+                    if not settings["mcpServers"]:
+                        del settings["mcpServers"]
+
+                    with open(local_settings, "w") as f:
+                        json.dump(settings, f, indent=2)
+
+                    warnings.append("Moved MCP config from settings.local.json to ~/.claude.json")
+                    logger.info("Cleaned MCP config from settings.local.json")
+            except Exception as e:
+                logger.warning(f"Failed to clean settings.local.json MCP config: {e}")
+
+        return warnings
 
     @property
     def ai_system_name(self) -> str:
@@ -763,10 +806,6 @@ exec {kuzu_cmd} "$@"
             if dry_run:
                 logger.info("DRY RUN MODE - No changes will be made")
 
-            # Clean global config FIRST (before any other operations)
-            if not dry_run:
-                self._clean_global_config()
-
             # Check prerequisites
             errors = self.check_prerequisites()
             if errors:
@@ -929,22 +968,29 @@ exec {kuzu_cmd} "$@"
             # Validate hook events before writing
             self._validate_hook_events(existing_settings)
 
-            # Merge MCP server configuration into settings.local.json
-            kuzu_mcp_config = self._create_claude_code_mcp_config()
-
-            # Merge MCP servers (preserving existing servers like mcp-vector-search)
-            if "mcpServers" not in existing_settings:
-                existing_settings["mcpServers"] = {}
-            existing_settings["mcpServers"]["kuzu-memory"] = kuzu_mcp_config["mcpServers"][
-                "kuzu-memory"
-            ]
-
+            # Write hooks configuration to settings.local.json
+            # (MCP servers will be configured in ~/.claude.json separately)
             if not dry_run:
                 with open(settings_path, "w") as f:
                     json.dump(existing_settings, f, indent=2)
             logger.info(
-                f"{'Would configure' if dry_run else 'Configured'} Claude Code hooks and MCP server in settings.local.json"
+                f"{'Would configure' if dry_run else 'Configured'} Claude Code hooks in settings.local.json"
             )
+
+            # Clean up legacy MCP server locations (before writing to correct location)
+            if not dry_run:
+                legacy_warnings = self._clean_legacy_mcp_locations()
+                if legacy_warnings:
+                    self.warnings.extend(legacy_warnings)
+
+            # Update MCP server configuration in ~/.claude.json (correct location for Claude Code)
+            if not dry_run:
+                self._update_global_mcp_config()
+            else:
+                logger.info("Would update MCP server configuration in ~/.claude.json")
+                print(
+                    f"  Would add MCP server to: ~/.claude.json -> projects[{self.project_root}].mcpServers"
+                )
 
             # Create shell wrapper
             wrapper_path = claude_dir / "kuzu-memory.sh"
@@ -1104,9 +1150,38 @@ exec {kuzu_cmd} "$@"
                 shutil.rmtree(claude_dir)
                 removed_files.append(claude_dir)
 
-            # Claude Desktop MCP server registration not supported, nothing to remove
-            if self.mcp_config_path and self.mcp_config_path.exists():
-                logger.debug("Claude Desktop MCP server removal skipped (not supported)")
+            # Remove MCP server configuration from ~/.claude.json
+            global_config_path = Path.home() / ".claude.json"
+            if global_config_path.exists():
+                try:
+                    with open(global_config_path) as f:
+                        config = json.load(f)
+
+                    project_key = str(self.project_root.resolve())
+                    if "projects" in config and project_key in config["projects"]:
+                        project_config = config["projects"][project_key]
+                        if "mcpServers" in project_config and "kuzu-memory" in project_config["mcpServers"]:
+                            # Backup before modifying
+                            backup_path = global_config_path.with_suffix(".json.backup")
+                            shutil.copy(global_config_path, backup_path)
+
+                            # Remove kuzu-memory MCP server
+                            del project_config["mcpServers"]["kuzu-memory"]
+
+                            # Clean up empty structures
+                            if not project_config["mcpServers"]:
+                                del project_config["mcpServers"]
+                            if not config["projects"][project_key]:
+                                del config["projects"][project_key]
+
+                            # Write updated config
+                            with open(global_config_path, "w") as f:
+                                json.dump(config, f, indent=2)
+
+                            logger.info(f"Removed MCP server from ~/.claude.json for project: {self.project_root.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove MCP config from ~/.claude.json: {e}")
+                    self.warnings.append(f"Could not remove MCP config from global file: {e}")
 
             return InstallationResult(
                 success=True,
@@ -1162,24 +1237,33 @@ exec {kuzu_cmd} "$@"
             ]
         )
 
-        # Check if MCP server is configured in settings.local.json
+        # Check if MCP server is configured in ~/.claude.json (correct location)
+        global_config_path = Path.home() / ".claude.json"
+        if global_config_path.exists():
+            try:
+                with open(global_config_path) as f:
+                    config = json.load(f)
+                project_key = str(self.project_root.resolve())
+                status["mcp_configured"] = (
+                    "projects" in config
+                    and project_key in config["projects"]
+                    and "mcpServers" in config["projects"][project_key]
+                    and "kuzu-memory" in config["projects"][project_key]["mcpServers"]
+                )
+            except Exception:
+                pass
+
+        # Warn if MCP config is in legacy location (settings.local.json)
         if settings_config.exists():
             try:
                 with open(settings_config) as f:
                     settings = json.load(f)
-                    status["mcp_configured"] = (
-                        "mcpServers" in settings and "kuzu-memory" in settings["mcpServers"]
-                    )
-            except Exception:
-                pass
-
-        # Check MCP configuration
-        if self.mcp_config_path and self.mcp_config_path.exists():
-            try:
-                with open(self.mcp_config_path) as f:
-                    global_config = json.load(f)
-                project_key = f"kuzu-memory-{self.project_root.name}"
-                status["mcp_configured"] = project_key in global_config.get("mcpServers", {})
+                    if "mcpServers" in settings and "kuzu-memory" in settings["mcpServers"]:
+                        status["legacy_mcp_location"] = True
+                        logger.warning(
+                            "MCP config found in legacy location (settings.local.json). "
+                            "Run 'kuzu-memory install claude-code --force' to migrate."
+                        )
             except Exception:
                 pass
 
