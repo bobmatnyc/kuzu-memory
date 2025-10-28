@@ -243,65 +243,16 @@ retention:
 
     def _create_mcp_config(self) -> dict[str, Any]:
         """Create the MCP server configuration for KuzuMemory."""
-        if self.pipx_venv_path:
-            python_path = self.pipx_venv_path / "bin" / "python"
-            if not python_path.exists():
-                python_path = self.pipx_venv_path / "Scripts" / "python.exe"
-
-            return {
-                "command": str(python_path),
-                "args": ["-m", "kuzu_memory.mcp.run_server"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp",
-                },
-            }
-        elif self.kuzu_command:
-            # Use Python to run the MCP server module
-            # Try to find the Python executable associated with the kuzu-memory installation
-            kuzu_path = Path(self.kuzu_command)
-            if kuzu_path.exists():
-                # Try to find python in the same bin directory
-                bin_dir = kuzu_path.parent
-                python_candidates = [
-                    bin_dir / "python3",
-                    bin_dir / "python",
-                    bin_dir / "python.exe",
-                ]
-                for python_path in python_candidates:
-                    if python_path.exists():
-                        return {
-                            "command": str(python_path),
-                            "args": ["-m", "kuzu_memory.mcp.run_server"],
-                            "env": {
-                                "KUZU_MEMORY_DB": str(self.memory_db),
-                                "KUZU_MEMORY_MODE": "mcp",
-                            },
-                        }
-
-            # Fallback to system Python with module invocation
-            import sys
-
-            return {
-                "command": sys.executable,
-                "args": ["-m", "kuzu_memory.mcp.run_server"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp",
-                },
-            }
-        else:
-            # Final fallback to system Python
-            import sys
-
-            return {
-                "command": sys.executable,
-                "args": ["-m", "kuzu_memory.mcp.run_server"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp",
-                },
-            }
+        # Use the unified 'kuzu-memory mcp' command for all installations
+        # This provides a consistent interface across all MCP clients
+        return {
+            "command": "kuzu-memory",
+            "args": ["mcp"],
+            "env": {
+                "KUZU_MEMORY_DB": str(self.memory_db),
+                "KUZU_MEMORY_MODE": "mcp",
+            },
+        }
 
     def install(self, **kwargs) -> InstallationResult:
         """Install Claude Desktop MCP integration."""

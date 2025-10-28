@@ -25,7 +25,7 @@ from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
 from .install_unified import install_command, remove_command, uninstall_command
-from .mcp_install_commands import mcp_install_group
+from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
 
@@ -559,10 +559,10 @@ cli.add_command(doctor)  # 7. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 8. Help and examples
 cli.add_command(git)  # 9. Git commit history synchronization
 cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
-cli.add_command(mcp_install_group, name="mcp")  # 11. MCP server integrations (DEPRECATED)
+cli.add_command(mcp_server)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
 
-# Note: The old 'mcp' command with 'serve' is deprecated but kept for backward compatibility
-# The new mcp_install_group takes precedence for the 'mcp' name
+# Note: The 'mcp' command now starts the MCP server via stdio
+# The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead
 
 # Keep quickstart/demo for onboarding
 cli.add_command(quickstart)
