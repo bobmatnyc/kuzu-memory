@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 
 from .auggie import AuggieInstaller
+from .auggie_mcp_installer import AuggieMCPInstaller
 from .base import BaseInstaller
 from .claude_desktop import (
     ClaudeDesktopHomeInstaller,
@@ -39,6 +40,7 @@ class InstallerRegistry:
         """Register built-in installers."""
         # AI System Installers (ONE PATH per system)
         self.register("auggie", AuggieInstaller)
+        self.register("auggie-mcp", AuggieMCPInstaller)  # Auggie MCP server integration
         self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
         self.register("claude-desktop", SmartClaudeDesktopInstaller)  # Smart auto-detection
         self.register("universal", UniversalInstaller)

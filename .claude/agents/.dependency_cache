@@ -1,17 +1,6 @@
 {
-  "bb661a7aa0e44dd4632e80c04c7337b9": {
-    "timestamp": 1761535230.905622,
-    "results": {
-      "agents": {},
-      "summary": {
-        "total_agents": 0
-      }
-    },
-    "deployment_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "context": {}
-  },
   "4f44de1fb984a7500a5bb5159a2d9144": {
-    "timestamp": 1761539056.587013,
+    "timestamp": 1761644736.942986,
     "results": {
       "agents": {},
       "summary": {

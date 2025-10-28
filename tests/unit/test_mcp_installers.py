@@ -1,5 +1,5 @@
 """
-Unit tests for MCP installers (Cursor, VSCode, Windsurf).
+Unit tests for MCP installers (Cursor, VSCode, Windsurf, Auggie).
 """
 
 import json
@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from kuzu_memory.installers.auggie_mcp_installer import AuggieMCPInstaller
 from kuzu_memory.installers.cursor_installer import CursorInstaller
 from kuzu_memory.installers.vscode_installer import VSCodeInstaller
 from kuzu_memory.installers.windsurf_installer import WindsurfInstaller
@@ -299,6 +300,197 @@ class TestWindsurfInstaller:
         assert not config_path.exists()
 
 
+class TestAuggieMCPInstaller:
+    """Test Auggie MCP installer."""
+
+    def test_installer_properties(self, tmp_path):
+        """Test installer basic properties."""
+        installer = AuggieMCPInstaller(tmp_path)
+
+        assert installer.ai_system_name == "Auggie (MCP)"
+        assert len(installer.required_files) == 0  # Global config
+        assert "global" in installer.description.lower()
+
+    def test_install_uses_home_directory(self, tmp_path, monkeypatch):
+        """Test that Auggie installs to home directory."""
+        # Mock home directory
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        # Create Auggie directory
+        auggie_dir = fake_home / ".augment"
+        auggie_dir.mkdir(parents=True)
+
+        # Install (use tmp_path as project root, but config goes to home)
+        installer = AuggieMCPInstaller(tmp_path)
+        result = installer.install()
+
+        assert result.success
+
+        # Config should be in home directory, not project
+        config_path = fake_home / ".augment" / "settings.json"
+        assert config_path.exists()
+
+        # Project directory should NOT have config
+        project_config = tmp_path / ".augment" / "settings.json"
+        assert not project_config.exists()
+
+    def test_install_creates_config(self, tmp_path, monkeypatch):
+        """Test installation creates MCP configuration."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        auggie_dir = fake_home / ".augment"
+        auggie_dir.mkdir(parents=True)
+
+        installer = AuggieMCPInstaller(tmp_path)
+        result = installer.install()
+
+        assert result.success
+
+        # Check config file exists
+        config_path = fake_home / ".augment" / "settings.json"
+        assert config_path.exists()
+
+        # Check config content
+        with open(config_path) as f:
+            config = json.load(f)
+
+        assert "mcpServers" in config
+        assert "kuzu-memory" in config["mcpServers"]
+        server = config["mcpServers"]["kuzu-memory"]
+        assert "command" in server
+        assert server["command"] == "kuzu-memory"
+        assert "args" in server
+        assert server["args"] == ["mcp"]
+
+    def test_install_preserves_existing_servers(self, tmp_path, monkeypatch):
+        """Test that existing MCP servers are preserved."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        # Create existing configuration
+        config_path = fake_home / ".augment" / "settings.json"
+        config_path.parent.mkdir(parents=True)
+
+        existing_config = {"mcpServers": {"existing-server": {"command": "existing-cmd"}}}
+
+        with open(config_path, "w") as f:
+            json.dump(existing_config, f)
+
+        # Install
+        installer = AuggieMCPInstaller(tmp_path)
+        result = installer.install(force=False)
+
+        assert result.success
+
+        # Check both servers exist
+        with open(config_path) as f:
+            config = json.load(f)
+
+        assert "existing-server" in config["mcpServers"]
+        assert "kuzu-memory" in config["mcpServers"]
+        assert config["mcpServers"]["existing-server"]["command"] == "existing-cmd"
+
+    def test_install_dry_run(self, tmp_path, monkeypatch):
+        """Test dry-run mode doesn't create files."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        auggie_dir = fake_home / ".augment"
+        auggie_dir.mkdir(parents=True)
+
+        installer = AuggieMCPInstaller(tmp_path)
+        result = installer.install(dry_run=True)
+
+        assert result.success
+        assert "[DRY RUN]" in result.message
+
+        # No files should be created
+        config_path = fake_home / ".augment" / "settings.json"
+        assert not config_path.exists()
+
+    def test_install_force_mode(self, tmp_path, monkeypatch):
+        """Test force mode overwrites existing configuration."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        # Create existing configuration
+        config_path = fake_home / ".augment" / "settings.json"
+        config_path.parent.mkdir(parents=True)
+
+        existing_config = {"mcpServers": {"old-server": {"command": "old"}}}
+
+        with open(config_path, "w") as f:
+            json.dump(existing_config, f)
+
+        # Install with force
+        installer = AuggieMCPInstaller(tmp_path)
+        result = installer.install(force=True)
+
+        assert result.success
+        assert len(result.backup_files) > 0  # Backup should be created
+
+    def test_install_creates_backup(self, tmp_path, monkeypatch):
+        """Test that backups are created for existing files."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        # Create existing configuration
+        config_path = fake_home / ".augment" / "settings.json"
+        config_path.parent.mkdir(parents=True)
+
+        with open(config_path, "w") as f:
+            json.dump({"test": "data"}, f)
+
+        # Install (will modify existing)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        installer = AuggieMCPInstaller(project_dir)
+        installer.install()
+
+        # Check backup was created
+        backup_dir = project_dir / ".kuzu-memory-backups"
+        assert backup_dir.exists()
+
+        backup_files = list(backup_dir.glob("settings.json.backup_*"))
+        assert len(backup_files) > 0
+
+    def test_install_includes_project_info(self, tmp_path, monkeypatch):
+        """Test that installation includes correct project information."""
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+        auggie_dir = fake_home / ".augment"
+        auggie_dir.mkdir(parents=True)
+
+        project_dir = tmp_path / "my_project"
+        project_dir.mkdir()
+
+        installer = AuggieMCPInstaller(project_dir)
+        result = installer.install()
+
+        assert result.success
+
+        # Check env includes project path
+        config_path = fake_home / ".augment" / "settings.json"
+        with open(config_path) as f:
+            config = json.load(f)
+
+        env = config["mcpServers"]["kuzu-memory"].get("env", {})
+        assert "KUZU_MEMORY_PROJECT_ROOT" in env
+        assert str(project_dir.resolve()) in env["KUZU_MEMORY_PROJECT_ROOT"]
+        assert "KUZU_MEMORY_DB" in env
+        assert "kuzu-memories" in env["KUZU_MEMORY_DB"]
+
+
 class TestInstallerRegistry:
     """Test that MCP installers are properly registered."""
 
@@ -320,6 +512,12 @@ class TestInstallerRegistry:
 
         assert has_installer("windsurf")
 
+    def test_auggie_mcp_installer_registered(self):
+        """Test Auggie MCP installer is registered."""
+        from kuzu_memory.installers.registry import has_installer
+
+        assert has_installer("auggie-mcp")
+
     def test_get_installer_returns_correct_type(self, tmp_path):
         """Test registry returns correct installer types."""
         from kuzu_memory.installers.registry import get_installer
@@ -327,7 +525,9 @@ class TestInstallerRegistry:
         cursor = get_installer("cursor", tmp_path)
         vscode = get_installer("vscode", tmp_path)
         windsurf = get_installer("windsurf", tmp_path)
+        auggie_mcp = get_installer("auggie-mcp", tmp_path)
 
         assert isinstance(cursor, CursorInstaller)
         assert isinstance(vscode, VSCodeInstaller)
         assert isinstance(windsurf, WindsurfInstaller)
+        assert isinstance(auggie_mcp, AuggieMCPInstaller)

@@ -1,7 +1,7 @@
 """
-Cursor IDE MCP installer for KuzuMemory.
+Auggie MCP installer for KuzuMemory.
 
-Installs MCP server configuration for Cursor IDE.
+Installs MCP server configuration for Auggie (global configuration).
 """
 
 import logging
@@ -21,32 +21,35 @@ from .json_utils import (
 logger = logging.getLogger(__name__)
 
 
-class CursorInstaller(BaseInstaller):
+class AuggieMCPInstaller(BaseInstaller):
     """
-    Installer for Cursor IDE MCP integration.
+    Installer for Auggie MCP integration.
 
-    Creates .cursor/mcp.json configuration file with KuzuMemory MCP server.
+    Creates ~/.augment/settings.json configuration with KuzuMemory MCP server.
     Preserves existing MCP servers in the configuration.
+
+    Note: Auggie uses a global configuration file, not project-specific.
     """
 
     @property
     def ai_system_name(self) -> str:
         """Name of the AI system this installer supports."""
-        return "Cursor IDE"
+        return "Auggie (MCP)"
 
     @property
     def required_files(self) -> list[str]:
         """List of files that will be created/modified by this installer."""
-        return [".cursor/mcp.json"]
+        # Global config, not in project directory
+        return []
 
     @property
     def description(self) -> str:
         """Description of what this installer does."""
-        return "Install MCP server configuration for Cursor IDE (project-specific)"
+        return "Install MCP server configuration for Auggie (global: ~/.augment/settings.json)"
 
     def _get_config_path(self) -> Path:
-        """Get path to Cursor MCP configuration file."""
-        return self.project_root / ".cursor" / "mcp.json"
+        """Get path to Auggie settings configuration file."""
+        return Path.home() / ".augment" / "settings.json"
 
     def _create_kuzu_server_config(self) -> dict:
         """Create KuzuMemory MCP server configuration."""
@@ -63,9 +66,35 @@ class CursorInstaller(BaseInstaller):
             }
         }
 
+    def check_prerequisites(self) -> list[str]:
+        """
+        Check if prerequisites are met for installation.
+
+        Returns:
+            List of error messages, empty if all prerequisites are met
+        """
+        errors = []
+
+        # Check if project root exists
+        if not self.project_root.exists():
+            errors.append(f"Project root does not exist: {self.project_root}")
+
+        # Check if .augment directory exists, create if not
+        config_path = self._get_config_path()
+        augment_dir = config_path.parent
+
+        if not augment_dir.exists():
+            try:
+                augment_dir.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Created Auggie config directory: {augment_dir}")
+            except Exception as e:
+                errors.append(f"Cannot create Auggie config directory {augment_dir}: {e}")
+
+        return errors
+
     def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
         """
-        Install MCP configuration for Cursor IDE.
+        Install MCP configuration for Auggie.
 
         Args:
             force: Force installation even if config exists
@@ -102,6 +131,30 @@ class CursorInstaller(BaseInstaller):
             variables = get_standard_variables(self.project_root)
             kuzu_config = expand_variables(kuzu_config, variables)
 
+            # Check if kuzu-memory is already configured
+            existing_servers = existing_config.get("mcpServers", {})
+            kuzu_already_exists = "kuzu-memory" in existing_servers
+
+            if kuzu_already_exists and not force:
+                # Check if configuration is the same
+                existing_kuzu = existing_servers["kuzu-memory"]
+                new_kuzu = kuzu_config["mcpServers"]["kuzu-memory"]
+
+                if existing_kuzu == new_kuzu:
+                    return InstallationResult(
+                        success=True,
+                        ai_system=self.ai_system_name,
+                        files_created=[],
+                        files_modified=[],
+                        backup_files=[],
+                        message=f"KuzuMemory MCP server already configured for this project in {config_path}",
+                        warnings=["Configuration unchanged. Use --force to reinstall."],
+                    )
+                else:
+                    self.warnings.append(
+                        "KuzuMemory server exists with different configuration. Use --force to update."
+                    )
+
             # Merge configurations
             if existing_config and not force:
                 # Preserve existing servers
@@ -135,6 +188,10 @@ class CursorInstaller(BaseInstaller):
                 message = f"[DRY RUN] Would install MCP configuration to {config_path}"
                 if config_path.exists():
                     message += f"\nWould preserve {len(existing_config.get('mcpServers', {}))} existing server(s)"
+                if kuzu_already_exists and not force:
+                    message += "\nWould update existing kuzu-memory server configuration"
+                else:
+                    message += "\nWould add new kuzu-memory server configuration"
                 return InstallationResult(
                     success=True,
                     ai_system=self.ai_system_name,
@@ -166,11 +223,18 @@ class CursorInstaller(BaseInstaller):
             message = f"Successfully installed MCP configuration for {self.ai_system_name}"
             message += f"\nConfiguration file: {config_path}"
             message += f"\nMCP servers configured: {server_count}"
+            message += f"\nProject: {self.project_root}"
 
             if existing_config:
                 preserved_count = len(existing_config.get("mcpServers", {}))
-                if preserved_count > 0:
+                if preserved_count > 0 and not force:
                     message += f"\nPreserved {preserved_count} existing server(s)"
+
+            # Add note about global configuration
+            self.warnings.append(
+                "Note: Auggie uses a global configuration file. "
+                "This configuration applies to all projects."
+            )
 
             return InstallationResult(
                 success=True,

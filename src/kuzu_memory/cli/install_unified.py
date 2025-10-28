@@ -21,6 +21,7 @@ AVAILABLE_INTEGRATIONS = [
     "vscode",
     "windsurf",
     "auggie",
+    "auggie-mcp",
 ]
 
 
@@ -47,6 +48,7 @@ def install_command(
       • vscode: MCP server only
       • windsurf: MCP server only
       • auggie: Rules integration
+      • auggie-mcp: MCP server integration (global)
 
     \b
     Examples:
@@ -54,6 +56,7 @@ def install_command(
         kuzu-memory install claude-desktop
         kuzu-memory install cursor --dry-run
         kuzu-memory install vscode --verbose
+        kuzu-memory install auggie-mcp
     """
     try:
         # Determine project root
@@ -131,6 +134,10 @@ def install_command(
                 rich_print("1. Open or reload your Auggie workspace")
                 rich_print("2. Rules will be active for enhanced context")
                 rich_print("3. Check AGENTS.md and .augment/rules/ for configuration")
+            elif integration == "auggie-mcp":
+                rich_print("1. Restart Auggie application")
+                rich_print("2. KuzuMemory MCP tools will be available")
+                rich_print("3. Configuration: ~/.augment/settings.json")
         else:
             rich_print(f"\n❌ {result.message}", style="red")
             if result.warnings:

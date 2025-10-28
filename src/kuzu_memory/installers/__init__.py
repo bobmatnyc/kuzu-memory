@@ -6,6 +6,7 @@ Each installer sets up the appropriate integration files and configuration.
 """
 
 from .auggie import AuggieInstaller
+from .auggie_mcp_installer import AuggieMCPInstaller
 from .base import BaseInstaller, InstallationError, InstallationResult
 from .claude_desktop import ClaudeDesktopHomeInstaller, ClaudeDesktopPipxInstaller
 from .claude_hooks import ClaudeHooksInstaller
@@ -19,6 +20,7 @@ from .windsurf_installer import WindsurfInstaller
 __all__ = [
     "AISystemDetector",
     "AuggieInstaller",
+    "AuggieMCPInstaller",
     "BaseInstaller",
     "ClaudeDesktopHomeInstaller",
     "ClaudeDesktopPipxInstaller",

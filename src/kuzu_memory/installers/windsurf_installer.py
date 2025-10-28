@@ -54,13 +54,11 @@ class WindsurfInstaller(BaseInstaller):
         """Create KuzuMemory MCP server configuration."""
         # For global installation, we can't use ${PROJECT_ROOT}
         # User must specify project in command args or use project-specific config
-        import sys
-
         return {
             "mcpServers": {
                 "kuzu-memory": create_mcp_server_config(
-                    command=sys.executable,
-                    args=["-m", "kuzu_memory.mcp.server"],
+                    command="kuzu-memory",
+                    args=["mcp"],
                     env={
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(self.project_root / "kuzu-memories"),

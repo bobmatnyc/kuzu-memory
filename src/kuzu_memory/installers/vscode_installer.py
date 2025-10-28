@@ -55,13 +55,11 @@ class VSCodeInstaller(BaseInstaller):
 
     def _create_kuzu_server_config(self) -> dict:
         """Create KuzuMemory MCP server configuration."""
-        import sys
-
         return {
             "mcpServers": {
                 "kuzu-memory": create_mcp_server_config(
-                    command=sys.executable,
-                    args=["-m", "kuzu_memory.mcp.server"],
+                    command="kuzu-memory",
+                    args=["mcp"],
                     env={
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
                         "KUZU_MEMORY_DB": str(self.project_root / "kuzu-memories"),
