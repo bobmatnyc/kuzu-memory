@@ -120,7 +120,9 @@ class MemoryStore:
 
             # Process and store each extracted memory
             stored_ids = []
-            memory_id_to_extracted = {}  # Map to track which memory ID corresponds to which extracted memory
+            memory_id_to_extracted = (
+                {}
+            )  # Map to track which memory ID corresponds to which extracted memory
 
             for extracted_memory in extracted_memories:
                 try:

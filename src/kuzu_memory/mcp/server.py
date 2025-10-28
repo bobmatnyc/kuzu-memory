@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from pydantic import AnyUrl
+
 # MCP SDK imports (will be dynamically imported if available)
 try:
     from mcp.server import NotificationOptions, Server
@@ -28,16 +30,10 @@ try:
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
-
-    # Define stubs for when MCP is not available
-    class Server:
-        pass
-
-    class Tool:
-        pass
-
-    class Resource:
-        pass
+    # Stubs will be defined as aliases if needed, but we shouldn't define classes
+    # with the same names as the real imports - this causes mypy errors.
+    # Instead, we'll just let the import error propagate when MCP is used without
+    # the SDK being available.
 
 
 logger = logging.getLogger(__name__)
@@ -195,21 +191,36 @@ class KuzuMemoryMCPServer:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
+                prompt = arguments.get("prompt", "")
+                max_memories = arguments.get("max_memories", 5)
                 result = await self._enhance(
-                    arguments.get("prompt"), arguments.get("max_memories", 5)
+                    str(prompt) if prompt is not None else "",
+                    int(max_memories) if isinstance(max_memories, int) else 5,
                 )
             elif name == "kuzu_learn":
+                content = arguments.get("content", "")
+                source = arguments.get("source", "ai-conversation")
                 result = await self._learn(
-                    arguments.get("content"), arguments.get("source", "ai-conversation")
+                    str(content) if content is not None else "",
+                    str(source) if source is not None else "ai-conversation",
                 )
             elif name == "kuzu_recall":
-                result = await self._recall(arguments.get("query"), arguments.get("limit", 5))
+                query = arguments.get("query", "")
+                limit = arguments.get("limit", 5)
+                result = await self._recall(
+                    str(query) if query is not None else "",
+                    int(limit) if isinstance(limit, int) else 5,
+                )
             elif name == "kuzu_remember":
+                content = arguments.get("content", "")
+                memory_type = arguments.get("memory_type", "identity")
                 result = await self._remember(
-                    arguments.get("content"), arguments.get("memory_type", "identity")
+                    str(content) if content is not None else "",
+                    str(memory_type) if memory_type is not None else "identity",
                 )
             elif name == "kuzu_stats":
-                result = await self._stats(arguments.get("detailed", False))
+                detailed = arguments.get("detailed", False)
+                result = await self._stats(bool(detailed) if detailed is not None else False)
             else:
                 result = f"Unknown tool: {name}"
 
@@ -220,7 +231,7 @@ class KuzuMemoryMCPServer:
             """List available resources."""
             return [
                 Resource(
-                    uri=f"kuzu://project/{self.project_root.name}",
+                    uri=AnyUrl(f"kuzu://project/{self.project_root.name}"),
                     name=f"Project: {self.project_root.name}",
                     description="KuzuMemory project context and memories",
                     mimeType="application/json",

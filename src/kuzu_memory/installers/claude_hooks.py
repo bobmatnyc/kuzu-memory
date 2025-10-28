@@ -53,7 +53,7 @@ class ClaudeHooksInstaller(BaseInstaller):
             if self.claude_config_dir
             else None
         )
-        self._kuzu_command_path = None  # Cache for kuzu-memory command path
+        self._kuzu_command_path: str | None = None  # Cache for kuzu-memory command path
 
     def _clean_global_config(self) -> None:
         """
@@ -515,7 +515,7 @@ When interacting with Claude Desktop, the following MCP tools are available:
         Returns:
             Project analysis dictionary
         """
-        info = {
+        info: dict[str, Any] = {
             "language": "Unknown",
             "framework": "Unknown",
             "technologies": [],
@@ -742,7 +742,9 @@ exec {kuzu_cmd} "$@"
 
         return content
 
-    def install(self, dry_run: bool = False, verbose: bool = False, **kwargs) -> InstallationResult:
+    def install(
+        self, force: bool = False, dry_run: bool = False, verbose: bool = False, **kwargs
+    ) -> InstallationResult:
         """
         Install Claude Code hooks for KuzuMemory.
 
@@ -1127,7 +1129,7 @@ exec {kuzu_cmd} "$@"
         Returns:
             Status information dictionary
         """
-        status = {
+        status: dict[str, Any] = {
             "installed": False,
             "claude_desktop_detected": self.claude_config_dir is not None,
             "files": {},
