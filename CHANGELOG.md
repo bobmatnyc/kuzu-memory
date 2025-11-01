@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.38] - 2025-11-01
+
+### Fixed
+
+- **SessionStart Hook Logging** - Fixed bug where SessionStart hook logs were not being written to disk
+  - Added `logging.shutdown()` calls before all `sys.exit()` statements to ensure log buffers are flushed
+  - Logs now properly written to `/tmp/kuzu_session_start.log`
+  - Session start memories now correctly created with source `claude-code-session`
+  - Affects: `src/kuzu_memory/cli/hooks_commands.py` in `hooks_session_start()` function
+
 ## [1.4.37] - 2025-11-01
 
 ### Added

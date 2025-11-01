@@ -172,7 +172,8 @@ def project(ctx, verbose):
             )
             return
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only project info operation (performance optimization)
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
             # Get basic stats
             total_memories = memory.get_memory_count()
             recent_memories = memory.get_recent_memories(limit=5)
@@ -239,8 +240,8 @@ def project(ctx, verbose):
         # Health check
         health_status = "✅ Healthy"
         try:
-            # Basic health checks
-            with KuzuMemory(db_path=db_path) as memory:
+            # Basic health checks (read-only, no git_sync needed)
+            with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
                 memory.get_recent_memories(limit=1)
                 # Add more health checks as needed
         except Exception as e:
@@ -286,7 +287,8 @@ def stats(ctx, detailed, output_format):
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only stats operation (performance optimization)
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
             # Collect all statistics - simplified to avoid query errors
             recent_memories = memory.get_recent_memories(limit=24)
             stats_data = {

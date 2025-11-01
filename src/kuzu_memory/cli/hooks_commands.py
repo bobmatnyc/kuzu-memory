@@ -452,13 +452,17 @@ def hooks_session_start():
         except Exception as e:
             logger.error(f"Error storing session start memory: {e}")
 
+        # Flush logging before exit
+        logging.shutdown()
         sys.exit(0)
 
     except KeyboardInterrupt:
         logger.info("Hook interrupted by user")
+        logging.shutdown()
         sys.exit(0)
     except Exception as e:
         logger.error(f"Unhandled exception: {e}", exc_info=True)
+        logging.shutdown()
         sys.exit(0)
 
 
