@@ -146,6 +146,19 @@ class GitSyncConfig:
 
 
 @dataclass
+class PruneConfig:
+    """Memory pruning configuration."""
+
+    enabled: bool = True  # Enable pruning functionality
+    strategy: str = "safe"  # Default pruning strategy (safe, intelligent, aggressive)
+    always_backup: bool = True  # Always create backup before pruning
+    auto_trigger_db_size_mb: int = 2500  # Auto-trigger pruning at 2.5 GB
+    auto_trigger_memory_count: int = 75000  # Auto-trigger pruning at 75k memories
+    schedule: str = "weekly"  # Auto-prune schedule (never, weekly, monthly)
+    last_prune_timestamp: str | None = None  # ISO8601 timestamp of last prune
+
+
+@dataclass
 class KuzuMemoryConfig:
     """
     Main configuration class for KuzuMemory.
@@ -162,6 +175,7 @@ class KuzuMemoryConfig:
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     retention: RetentionConfig = field(default_factory=RetentionConfig)
     git_sync: GitSyncConfig = field(default_factory=GitSyncConfig)
+    prune: PruneConfig = field(default_factory=PruneConfig)
 
     # Global settings
     version: str = "1.0"
@@ -238,6 +252,13 @@ class KuzuMemoryConfig:
                     if hasattr(git_sync_config, key):
                         setattr(git_sync_config, key, value)
 
+            prune_config = PruneConfig()
+            if "prune" in validated_config:
+                prune_data = validated_config["prune"]
+                for key, value in prune_data.items():
+                    if hasattr(prune_config, key):
+                        setattr(prune_config, key, value)
+
             # Create main configuration
             return cls(
                 storage=storage_config,
@@ -247,6 +268,7 @@ class KuzuMemoryConfig:
                 performance=performance_config,
                 retention=retention_config,
                 git_sync=git_sync_config,
+                prune=prune_config,
                 version=validated_config.get("version", "1.0"),
                 debug=validated_config.get("debug", False),
                 log_level=validated_config.get("log_level", "INFO"),

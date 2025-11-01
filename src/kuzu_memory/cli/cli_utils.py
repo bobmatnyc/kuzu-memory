@@ -111,3 +111,79 @@ def format_exception(e, debug=False):
         return traceback.format_exc()
     else:
         return str(e)
+
+
+def format_database_size(size_bytes: int) -> str:
+    """
+    Format database size in human-readable format.
+
+    Args:
+        size_bytes: Size in bytes
+
+    Returns:
+        Formatted size string (e.g., "2.3 MB", "450 KB")
+    """
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
+def format_performance_stats(
+    query_time_ms: float,
+    total_memories: int,
+    returned_count: int,
+    db_size_bytes: int | None = None,
+) -> str:
+    """
+    Format query performance statistics for display.
+
+    Args:
+        query_time_ms: Query execution time in milliseconds
+        total_memories: Total number of memories in database
+        returned_count: Number of memories returned by query
+        db_size_bytes: Optional database size in bytes
+
+    Returns:
+        Formatted statistics string with appropriate styling
+    """
+    # Determine performance indicator
+    if query_time_ms > 5000:
+        time_icon = "🔴"
+        time_style = "red bold"
+        time_suffix = " (critical)"
+    elif query_time_ms > 1000:
+        time_icon = "⚠️ "
+        time_style = "yellow"
+        time_suffix = " (slow)"
+    elif query_time_ms > 500:
+        time_icon = "⚠️ "
+        time_style = "yellow"
+        time_suffix = ""
+    else:
+        time_icon = "📊"
+        time_style = "dim"
+        time_suffix = ""
+
+    # Format the statistics line
+    parts = [
+        f"{time_icon} Query: {query_time_ms:.0f}ms{time_suffix}",
+        f"Total: {total_memories:,} memories",
+        f"Returned: {returned_count}",
+    ]
+
+    if db_size_bytes is not None:
+        parts.append(f"DB: {format_database_size(db_size_bytes)}")
+
+    stats_line = " | ".join(parts)
+
+    # Add performance tip if slow
+    if query_time_ms > 1000:
+        tip = "\n💡 Tip: Large databases may need optimization. Consider running 'kuzu-memory optimize' (if available)"
+        return (stats_line, time_style, tip)
+
+    return (stats_line, time_style, None)

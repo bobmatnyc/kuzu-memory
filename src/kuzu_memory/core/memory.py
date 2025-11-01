@@ -130,6 +130,7 @@ class KuzuMemory:
         db_path: Path | None = None,
         config: dict[str, Any] | None = None,
         container: DependencyContainer | None = None,
+        enable_git_sync: bool = True,
     ):
         """
         Initialize KuzuMemory.
@@ -138,6 +139,8 @@ class KuzuMemory:
             db_path: Path to database file (default: ~/.kuzu-memory/memories.db)
             config: Optional configuration dict or KuzuMemoryConfig object
             container: Optional dependency container for testing/customization
+            enable_git_sync: Enable git sync initialization (default: True).
+                            Set to False for read-only operations to improve performance.
 
         Raises:
             ConfigurationError: If configuration is invalid
@@ -165,6 +168,9 @@ class KuzuMemory:
 
             # Set up dependency container
             self.container = container or get_container()
+
+            # Store git sync preference
+            self._enable_git_sync = enable_git_sync
 
             # Initialize components
             self._initialize_components()
@@ -231,8 +237,15 @@ class KuzuMemory:
             self.memory_store = self.container.get_memory_store()
             self.recall_coordinator = self.container.get_recall_coordinator()
 
-            # Initialize git sync components
-            self._initialize_git_sync()
+            # Initialize git sync components only if enabled
+            if self._enable_git_sync:
+                self._initialize_git_sync()
+                # Run initial auto-sync if enabled (periodic check)
+                self._auto_git_sync("init")
+            else:
+                # Set auto_git_sync to None when disabled
+                self.auto_git_sync = None
+                logger.debug("Git sync disabled for this instance")
 
             # Performance tracking
             self._performance_stats = {
@@ -243,9 +256,6 @@ class KuzuMemory:
                 "total_memories_generated": 0,
                 "total_memories_recalled": 0,
             }
-
-            # Run initial auto-sync if enabled (periodic check)
-            self._auto_git_sync("init")
 
         except Exception as e:
             raise DatabaseError(f"Failed to initialize components: {e}")
@@ -604,6 +614,21 @@ class KuzuMemory:
             return self.memory_store.get_memory_count()
         except Exception as e:
             logger.error(f"Failed to get memory count: {e}")
+            return 0
+
+    def get_database_size(self) -> int:
+        """
+        Get the size of the database file in bytes.
+
+        Returns:
+            Database size in bytes, or 0 if not accessible
+        """
+        try:
+            if self.db_path.exists():
+                return self.db_path.stat().st_size
+            return 0
+        except Exception as e:
+            logger.error(f"Failed to get database size: {e}")
             return 0
 
     def get_memory_type_stats(self) -> dict[str, int]:

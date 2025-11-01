@@ -34,6 +34,7 @@ def memory():
       recall     Query stored memories
       enhance    Enhance prompts with context
       recent     Show recent memories
+      prune      Prune old or low-value memories
 
     Use 'kuzu-memory memory COMMAND --help' for detailed help.
     """
@@ -301,10 +302,15 @@ def recall(
       # Show ranking explanation
       kuzu-memory memory recall "API design" --explain-ranking
     """
+    import time
+
+    from .cli_utils import format_performance_stats
+
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only recall operation (performance optimization)
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
             # Build filters
             filters = {}
             if session_id:
@@ -312,11 +318,18 @@ def recall(
             if agent_id != "cli":
                 filters["agent_id"] = agent_id
 
+            # Track query performance
+            start_time = time.time()
             # Recall memories using the attach_memories API
             memory_context = memory.attach_memories(
                 prompt, max_memories=max_memories, strategy=strategy, **filters
             )
             memories = memory_context.memories
+            query_time_ms = (time.time() - start_time) * 1000
+
+            # Get statistics for performance display
+            total_memories = memory.get_memory_count()
+            db_size = memory.get_database_size()
 
             if not memories:
                 rich_print(f"[i]  No memories found for: '{prompt}'", style="blue")
@@ -328,6 +341,9 @@ def recall(
                     "prompt": prompt,
                     "strategy": strategy,
                     "memories_found": len(memories),
+                    "query_time_ms": query_time_ms,
+                    "total_in_database": total_memories,
+                    "database_size_bytes": db_size,
                     "memories": [
                         {
                             "id": mem.id,
@@ -344,6 +360,14 @@ def recall(
             elif output_format == "raw":
                 for mem in memories:
                     rich_print(mem.content)
+                # Show performance stats for raw format too
+                stats_result = format_performance_stats(
+                    query_time_ms, total_memories, len(memories), db_size
+                )
+                stats_line, time_style, tip = stats_result
+                rich_print(f"\n{stats_line}", style=time_style)
+                if tip:
+                    rich_print(tip, style="dim")
             elif output_format == "simple":
                 rich_print(f"Found {len(memories)} memories for: {prompt}\n")
                 for i, mem in enumerate(memories, 1):
@@ -354,6 +378,15 @@ def recall(
                     if hasattr(mem, "relevance_score"):
                         rich_print(f"   Relevance: {mem.relevance_score:.3f}")
                     rich_print("")  # Empty line
+
+                # Show performance stats
+                stats_result = format_performance_stats(
+                    query_time_ms, total_memories, len(memories), db_size
+                )
+                stats_line, time_style, tip = stats_result
+                rich_print(f"\n{stats_line}", style=time_style)
+                if tip:
+                    rich_print(tip, style="dim")
             else:
                 # Enhanced format (default)
                 rich_panel(
@@ -386,6 +419,15 @@ def recall(
                         rich_print(f"   🎯 Ranking: {mem.ranking_explanation}", style="cyan")
 
                     rich_print("")  # Empty line
+
+                # Show performance stats after results
+                stats_result = format_performance_stats(
+                    query_time_ms, total_memories, len(memories), db_size
+                )
+                stats_line, time_style, tip = stats_result
+                rich_print(f"{stats_line}", style=time_style)
+                if tip:
+                    rich_print(tip, style="dim")
 
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -426,7 +468,8 @@ def enhance(ctx, prompt, max_memories, output_format):
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only enhance operation (performance optimization)
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
             # Get relevant memories using the attach_memories API
             memory_context = memory.attach_memories(prompt, max_memories=max_memories)
             memories = memory_context.memories
@@ -497,6 +540,202 @@ def enhance(ctx, prompt, max_memories, output_format):
 
 
 @memory.command()
+@click.option(
+    "--strategy",
+    type=click.Choice(["safe", "intelligent", "aggressive"]),
+    default="safe",
+    help="Pruning strategy to use",
+)
+@click.option("--execute", is_flag=True, help="Actually prune memories (default is dry-run)")
+@click.option(
+    "--backup/--no-backup", default=True, help="Create backup before pruning (default: yes)"
+)
+@click.option("--force", is_flag=True, help="Skip confirmation prompts")
+@click.pass_context
+def prune(ctx, strategy, execute, backup, force):
+    """
+    🧹 Prune old or low-value memories to optimize database size.
+
+    Analyzes and optionally removes memories based on the selected strategy.
+    By default runs in dry-run mode showing what would be pruned.
+
+    \b
+    🎯 STRATEGIES:
+      safe        - Only old, minimal-impact git commits (>90d, <2 files or <200B)
+                    Expected: ~7% reduction, very low risk
+      intelligent - Value-based pruning excluding important commits
+                    Expected: ~15-20% reduction, low risk
+      aggressive  - Drastic pruning for critically large databases
+                    Expected: ~30-50% reduction, moderate risk
+
+    \b
+    🛡️  PROTECTED MEMORIES (never pruned):
+      - claude-code-hook memories
+      - cli memories
+      - project-initialization memories
+      - Important commits (feat, fix, perf, BREAKING in intelligent/aggressive)
+
+    \b
+    🎮 EXAMPLES:
+      # Dry-run with safe strategy (default)
+      kuzu-memory memory prune
+
+      # Analyze with intelligent strategy
+      kuzu-memory memory prune --strategy intelligent
+
+      # Execute pruning with backup
+      kuzu-memory memory prune --strategy safe --execute
+
+      # Execute without backup (not recommended)
+      kuzu-memory memory prune --execute --no-backup --force
+
+      # Aggressive pruning for large databases
+      kuzu-memory memory prune --strategy aggressive --execute
+    """
+    import time
+
+    from ..core.prune import MemoryPruner
+
+    try:
+        db_path = get_project_db_path(ctx.obj.get("project_root"))
+
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+            pruner = MemoryPruner(memory)
+
+            # Get current database stats
+            total_memories = memory.get_memory_count()
+            db_size = memory.get_database_size()
+
+            rich_print(f"\n📊 Analyzing memories for pruning...\n", style="blue")
+            rich_print(f"   Database: {total_memories:,} memories, {db_size / (1024*1024):.1f} MB")
+            rich_print(f"   Strategy: {strategy}")
+            rich_print(f"   Mode: {'EXECUTE' if execute else 'DRY-RUN'}\n")
+
+            # Analyze what would be pruned
+            start_time = time.time()
+            stats = pruner.analyze(strategy)
+            analysis_time_ms = (time.time() - start_time) * 1000
+
+            # Display analysis results
+            prune_percentage = (
+                (stats.memories_to_prune / stats.total_memories * 100)
+                if stats.total_memories > 0
+                else 0
+            )
+            keep_percentage = (
+                (stats.memories_to_keep / stats.total_memories * 100)
+                if stats.total_memories > 0
+                else 0
+            )
+
+            rich_panel(
+                f"Analysis Complete ({analysis_time_ms:.0f}ms)", title="📋 Prune Report", style="green"
+            )
+
+            # Summary
+            rich_print(f"\n🔍 Summary:", style="bold blue")
+            rich_print(
+                f"   Memories to prune: {stats.memories_to_prune:,} ({prune_percentage:.1f}%)",
+                style="yellow",
+            )
+            rich_print(
+                f"   Memories to keep: {stats.memories_to_keep:,} ({keep_percentage:.1f}%)",
+                style="green",
+            )
+            rich_print(f"   Protected: {stats.protected_count:,}", style="cyan")
+
+            # By age breakdown
+            if any(stats.by_age.values()):
+                rich_print(f"\n📅 By Age:", style="bold blue")
+                for age_range, count in stats.by_age.items():
+                    if count > 0:
+                        rich_print(f"   {age_range}: {count:,} memories")
+
+            # By size breakdown
+            if any(stats.by_size.values()):
+                rich_print(f"\n📏 By Size:", style="bold blue")
+                for size_range, count in stats.by_size.items():
+                    if count > 0:
+                        rich_print(f"   {size_range}: {count:,} memories")
+
+            # By source breakdown
+            if stats.by_source:
+                rich_print(f"\n📦 By Source:", style="bold blue")
+                for source, count in sorted(
+                    stats.by_source.items(), key=lambda x: x[1], reverse=True
+                ):
+                    rich_print(f"   {source}: {count:,} memories")
+
+            # Savings estimate
+            content_mb = stats.estimated_content_savings_bytes / (1024 * 1024)
+            db_mb = stats.estimated_db_savings_bytes / (1024 * 1024)
+            db_percentage = (
+                (stats.estimated_db_savings_bytes / db_size * 100) if db_size > 0 else 0
+            )
+
+            rich_print(f"\n💾 Expected Savings:", style="bold blue")
+            rich_print(f"   Content: {content_mb:.2f} MB")
+            rich_print(f"   Database: ~{db_mb:.0f} MB (~{db_percentage:.1f}%, estimated)")
+
+            # Execute or show dry-run message
+            if execute:
+                rich_print(f"\n⚠️  WARNING: About to prune {stats.memories_to_prune:,} memories!", style="bold red")
+
+                # Confirmation prompt unless --force
+                if not force:
+                    rich_print(f"\n   Strategy: {strategy}")
+                    rich_print(f"   Backup: {'yes' if backup else 'NO'}")
+                    confirm = click.confirm("\n   Do you want to continue?", default=False)
+                    if not confirm:
+                        rich_print("\n❌ Pruning cancelled by user", style="yellow")
+                        return
+
+                # Execute pruning
+                rich_print(f"\n🚀 Executing prune...", style="blue")
+                result = pruner.prune(strategy, execute=True, create_backup=backup)
+
+                if result.success:
+                    rich_print(
+                        f"\n✅ Pruning completed successfully!",
+                        style="bold green",
+                    )
+                    rich_print(f"   Memories pruned: {result.memories_pruned:,}")
+                    rich_print(f"   Execution time: {result.execution_time_ms:.0f}ms")
+                    if result.backup_path:
+                        rich_print(f"   Backup saved: {result.backup_path}")
+
+                    # Show final stats
+                    final_count = memory.get_memory_count()
+                    final_size = memory.get_database_size()
+                    actual_reduction = db_size - final_size
+                    actual_percentage = (actual_reduction / db_size * 100) if db_size > 0 else 0
+
+                    rich_print(f"\n📊 Final Database:", style="bold blue")
+                    rich_print(f"   Memories: {final_count:,} (was {total_memories:,})")
+                    rich_print(
+                        f"   Size: {final_size / (1024*1024):.1f} MB (was {db_size / (1024*1024):.1f} MB)"
+                    )
+                    rich_print(
+                        f"   Reduction: {actual_reduction / (1024*1024):.1f} MB ({actual_percentage:.1f}%)"
+                    )
+                else:
+                    rich_print(f"\n❌ Pruning failed: {result.error}", style="red")
+                    sys.exit(1)
+            else:
+                # Dry-run mode
+                rich_print(
+                    f"\n⚠️  DRY RUN MODE - No changes made.", style="bold yellow"
+                )
+                rich_print(f"   Use --execute to perform pruning.", style="dim")
+
+    except Exception as e:
+        if ctx.obj.get("debug"):
+            raise
+        rich_print(f"❌ Prune operation failed: {e}", style="red")
+        sys.exit(1)
+
+
+@memory.command()
 @click.option("--limit", default=10, help="Number of recent memories to show")
 @click.option(
     "--format",
@@ -527,11 +766,23 @@ def recent(ctx, limit, output_format):
       # Simple list format
       kuzu-memory memory recent --format list
     """
+    import time
+
+    from .cli_utils import format_performance_stats
+
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only recent operation (performance optimization)
+        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+            # Track query performance
+            start_time = time.time()
             memories = memory.get_recent_memories(limit=limit)
+            query_time_ms = (time.time() - start_time) * 1000
+
+            # Get statistics for performance display
+            total_memories = memory.get_memory_count()
+            db_size = memory.get_database_size()
 
             if not memories:
                 rich_print("[i]  No memories found in this project", style="blue")
@@ -540,6 +791,9 @@ def recent(ctx, limit, output_format):
             if output_format == "json":
                 result = {
                     "total_memories": len(memories),
+                    "query_time_ms": query_time_ms,
+                    "total_in_database": total_memories,
+                    "database_size_bytes": db_size,
                     "memories": [
                         {
                             "id": mem.id,
@@ -560,6 +814,15 @@ def recent(ctx, limit, output_format):
                         f"   {getattr(mem, 'source_type', 'unknown')} | {mem.created_at.strftime('%Y-%m-%d %H:%M')}"
                     )
                     rich_print("")  # Empty line
+
+                # Show performance stats
+                stats_result = format_performance_stats(
+                    query_time_ms, total_memories, len(memories), db_size
+                )
+                stats_line, time_style, tip = stats_result
+                rich_print(f"\n{stats_line}", style=time_style)
+                if tip:
+                    rich_print(tip, style="dim")
             else:
                 # Table format (default)
                 rows = [
@@ -578,6 +841,15 @@ def recent(ctx, limit, output_format):
                     rows,
                     title=f"🕒 Recent {len(memories)} Memories",
                 )
+
+                # Show performance stats after table
+                stats_result = format_performance_stats(
+                    query_time_ms, total_memories, len(memories), db_size
+                )
+                stats_line, time_style, tip = stats_result
+                rich_print(f"\n{stats_line}", style=time_style)
+                if tip:
+                    rich_print(tip, style="dim")
 
     except Exception as e:
         if ctx.obj.get("debug"):

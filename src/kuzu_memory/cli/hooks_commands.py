@@ -386,6 +386,82 @@ def hooks_enhance():
         sys.exit(0)
 
 
+@hooks_group.command(name="session-start")
+def hooks_session_start():
+    """
+    Record session start event (for Claude Code hooks).
+
+    Reads JSON from stdin per Claude Code hooks API and creates a simple
+    session start memory.
+
+    This command is designed to be called by Claude Code hooks, not directly by users.
+    """
+    import json
+    import logging
+    import os
+    import sys
+    from pathlib import Path
+
+    from ..core.memory import KuzuMemory
+    from ..utils.project_setup import find_project_root, get_project_db_path
+
+    # Configure minimal logging for hook execution
+    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+    log_file = log_dir / "kuzu_session_start.log"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[logging.FileHandler(log_file)],
+    )
+    logger = logging.getLogger(__name__)
+
+    try:
+        logger.info("=== hooks session-start called ===")
+
+        # Read JSON from stdin (Claude Code hooks API)
+        try:
+            input_data = json.load(sys.stdin)
+            logger.debug(f"Input keys: {list(input_data.keys())}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from stdin: {e}")
+            sys.exit(0)
+
+        # Find project root and initialize memory
+        try:
+            project_root = find_project_root()
+            db_path = get_project_db_path(project_root)
+
+            if not db_path.exists():
+                logger.info("Project not initialized, skipping session start")
+                sys.exit(0)
+
+            # Store session start memory
+            memory = KuzuMemory(db_path=db_path)
+
+            project_name = project_root.name
+            memory.remember(
+                content=f"Session started in {project_name}",
+                source="claude-code-session",
+                metadata={"agent_id": "session-tracker", "event_type": "session_start"},
+            )
+
+            logger.info(f"Session start memory stored for project: {project_name}")
+            memory.close()
+
+        except Exception as e:
+            logger.error(f"Error storing session start memory: {e}")
+
+        sys.exit(0)
+
+    except KeyboardInterrupt:
+        logger.info("Hook interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Unhandled exception: {e}", exc_info=True)
+        sys.exit(0)
+
+
 @hooks_group.command(name="learn")
 def hooks_learn():
     """

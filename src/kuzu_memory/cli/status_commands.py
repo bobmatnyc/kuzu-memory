@@ -80,7 +80,10 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
                 )
             return
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Disable git_sync for read-only status operation (performance optimization)
+        # Exception: enable it during validation since we test write capability
+        enable_sync = validate
+        with KuzuMemory(db_path=db_path, enable_git_sync=enable_sync) as memory:
             # Collect statistics
             total_memories = memory.get_memory_count()
             recent_memories = memory.get_recent_memories(limit=24)

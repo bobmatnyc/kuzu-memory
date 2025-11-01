@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- towncrier release notes start -->
+
+## [1.4.37] - 2025-11-01
+
 ### Added
+
+- **SessionStart Hook** for Claude Code integration
+  - Records session start events with project context
+  - Captures timestamp, working directory, and session metadata
+  - Enables tracking of AI interaction patterns across sessions
+  - Integrates seamlessly with existing hooks infrastructure
+
+- **Query Performance Statistics** for CLI memory commands
+  - `kuzu-memory memory recent` now shows query timing and database stats
+  - `kuzu-memory memory recall` displays performance metrics after results
+  - Performance warnings for slow queries (>1000ms) and critical queries (>5000ms)
+  - Statistics include: query time, total memories, returned count, and database size
+  - Available in all output formats (table, list, JSON)
+  - New `get_database_size()` method in KuzuMemory class
+  - Helper functions `format_performance_stats()` and `format_database_size()` in cli_utils
 
 - **Enhanced Git Commit File References** for better searchability and context
   - Files now listed in searchable content (up to 10 files inline, with count for remainder)
@@ -17,12 +36,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 20 comprehensive tests covering all enhancement features
   - Backward compatible with existing git sync memories
 
+- **Auto-Prune System** for intelligent memory management
+  - Three pruning strategies: age-based, size-based, and importance-based
+  - Configurable thresholds and limits for each strategy
+  - Dry-run mode for safe testing before actual pruning
+  - Comprehensive statistics and reporting
+  - Integration with memory cleanup commands
+  - Preserves high-importance memories regardless of age
+
 ### Fixed
+
+- **Git Sync Performance** - 47x faster for read-only commands
+  - Reduced git status check overhead from ~1400ms to ~30ms
+  - Eliminated unnecessary git operations for non-mutating commands
+  - Improved CLI responsiveness across all memory operations
+  - Maintained accuracy while optimizing performance
+
 - Added automatic cleanup of legacy `.claude/config.local.json` during installation
 - Installer now removes old config.local.json and migrates config to settings.local.json
 - Prevents duplicate MCP configuration between legacy and current config files
-
-<!-- towncrier release notes start -->
 
 ## [1.4.36] - 2025-10-30
 
@@ -704,7 +736,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.36...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.37...HEAD
+[1.4.37]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.36...v1.4.37
 [1.4.36]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.35...v1.4.36
 [1.4.35]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.33...v1.4.35
 [1.4.33]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.32...v1.4.33
