@@ -746,7 +746,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.37...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.38...HEAD
+[1.4.38]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.37...v1.4.38
 [1.4.37]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.36...v1.4.37
 [1.4.36]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.35...v1.4.36
 [1.4.35]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.33...v1.4.35

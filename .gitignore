@@ -287,3 +287,19 @@ yarn-error.log*
 
 # MCP Ticketer
 .mcp-ticketer/
+
+# Local MCP configuration
+.claude/mcp.local.json
+
+# Legacy memory directory
+.kuzu_memory/
+
+# Temporary documentation
+docs/_archive/
+PERFORMANCE_FIX_SUMMARY.md
+docs/hooks-troubleshooting.md
+docs/hooks-verification-report.md
+
+# Claude MPM temp directories
+src/.claude-mpm/
+.claude-mpm/
