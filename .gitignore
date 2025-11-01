@@ -284,3 +284,6 @@ yarn-error.log*
 # Changelog fragments (preserve)
 !changelog.d/*.md
 !changelog.d/*.rst
+
+# MCP Ticketer
+.mcp-ticketer/
