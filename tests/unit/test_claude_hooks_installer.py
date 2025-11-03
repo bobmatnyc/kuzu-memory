@@ -198,3 +198,45 @@ class TestClaudeHooksInstaller:
         assert installer.ai_system_name == "claude"
         assert "CLAUDE.md" in installer.required_files
         assert "hooks" in installer.description.lower()
+
+    def test_auto_fix_broken_mcp_args(self, tmp_path, monkeypatch, caplog):
+        """Test auto-fix of broken MCP args during config update."""
+        import logging
+        caplog.set_level(logging.INFO)
+
+        # Mock Path.home() to use tmp_path
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+        project_key = str(project_path.resolve())
+
+        # Create global config with broken args
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                project_key: {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "command": "kuzu-memory",
+                            "args": ["mcp", "serve"]  # Broken pattern
+                        }
+                    }
+                }
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f, indent=2)
+
+        installer = ClaudeHooksInstaller(project_path)
+        installer._update_global_mcp_config()
+
+        # Check that config was auto-fixed
+        with open(global_config_path) as f:
+            result = json.load(f)
+
+        # Args should be fixed to just ["mcp"]
+        assert result["projects"][project_key]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+
+        # Check that appropriate logging occurred
+        assert any("Auto-fixed" in record.message for record in caplog.records)

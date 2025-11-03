@@ -11,6 +11,7 @@ from kuzu_memory.installers.json_utils import (
     JSONConfigError,
     create_mcp_server_config,
     expand_variables,
+    fix_broken_mcp_args,
     get_standard_variables,
     load_json_config,
     merge_json_configs,
@@ -327,3 +328,179 @@ class TestCreateMcpServerConfig:
         assert config["command"] == "kuzu-memory"
         assert config["args"] == ["mcp", "serve"]
         assert config["env"] == {"PROJECT_ROOT": "/path"}
+
+
+class TestFixBrokenMcpArgs:
+    """Test automatic fixing of broken MCP server arguments."""
+
+    def test_fix_broken_args_in_root_mcpServers(self):
+        """Test fixing broken args in root-level mcpServers."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert len(fixes) == 1
+        assert "kuzu-memory" in fixes[0]
+
+    def test_fix_broken_args_with_extra_args(self):
+        """Test fixing broken args while preserving extra arguments."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve", "--verbose", "--debug"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp", "--verbose", "--debug"]
+        assert len(fixes) == 1
+
+    def test_fix_broken_args_in_project_specific(self):
+        """Test fixing broken args in project-specific configurations."""
+        config = {
+            "projects": {
+                "/path/to/project": {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "command": "kuzu-memory",
+                            "args": ["mcp", "serve"]
+                        }
+                    }
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert len(fixes) == 1
+        assert "/path/to/project" in fixes[0]
+
+    def test_only_fixes_kuzu_memory_servers(self):
+        """Test that only kuzu-memory servers are fixed."""
+        config = {
+            "mcpServers": {
+                "other-server": {
+                    "command": "other",
+                    "args": ["mcp", "serve"]
+                },
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        # Other server should be untouched
+        assert fixed["mcpServers"]["other-server"]["args"] == ["mcp", "serve"]
+        # Kuzu-memory should be fixed
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        # Only one fix should be reported
+        assert len(fixes) == 1
+
+    def test_no_fix_needed_for_correct_args(self):
+        """Test that correct args are not modified."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert len(fixes) == 0
+
+    def test_handles_empty_config(self):
+        """Test handling of empty configuration."""
+        config = {}
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed == {}
+        assert len(fixes) == 0
+
+    def test_handles_missing_args_field(self):
+        """Test handling of server config without args field."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory"
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert "args" not in fixed["mcpServers"]["kuzu-memory"]
+        assert len(fixes) == 0
+
+    def test_handles_malformed_args(self):
+        """Test handling of malformed args field."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": "not a list"
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        # Should not crash, should leave untouched
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == "not a list"
+        assert len(fixes) == 0
+
+    def test_fix_multiple_broken_servers(self):
+        """Test fixing multiple broken servers."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve"]
+                },
+                "kuzu-memory-dev": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve", "--debug"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert fixed["mcpServers"]["kuzu-memory-dev"]["args"] == ["mcp", "--debug"]
+        assert len(fixes) == 2
+
+    def test_case_insensitive_server_name_matching(self):
+        """Test that server name matching is case-insensitive."""
+        config = {
+            "mcpServers": {
+                "KUZU-MEMORY": {
+                    "command": "kuzu-memory",
+                    "args": ["mcp", "serve"]
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["KUZU-MEMORY"]["args"] == ["mcp"]
+        assert len(fixes) == 1

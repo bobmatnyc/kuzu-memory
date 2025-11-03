@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseInstaller, InstallationError, InstallationResult
+from .json_utils import fix_broken_mcp_args
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,13 @@ class ClaudeHooksInstaller(BaseInstaller):
                 raise InstallationError(f"Cannot read global config file: {e}")
         else:
             config = {}
+
+        # Auto-fix broken MCP configurations
+        config, fixes = fix_broken_mcp_args(config)
+        if fixes:
+            logger.info(f"Auto-fixed {len(fixes)} broken MCP configuration(s)")
+            for fix in fixes:
+                logger.debug(fix)
 
         # Ensure projects structure exists
         if "projects" not in config:

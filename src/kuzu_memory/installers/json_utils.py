@@ -226,3 +226,114 @@ def create_mcp_server_config(
         config["env"] = env
 
     return config
+
+
+def _needs_mcp_args_fix(server_name: str, server_config: dict) -> bool:
+    """
+    Check if server config needs args fix.
+
+    Only fixes kuzu-memory servers with the outdated ["mcp", "serve"] pattern.
+
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+
+    Returns:
+        True if fix is needed, False otherwise
+    """
+    # Only fix kuzu-memory servers
+    if "kuzu-memory" not in server_name.lower():
+        return False
+
+    # Check if args field exists and is a list
+    args = server_config.get("args")
+    if not isinstance(args, list) or len(args) < 2:
+        return False
+
+    # Check for the broken pattern: ["mcp", "serve"]
+    return args[0] == "mcp" and args[1] == "serve"
+
+
+def _fix_mcp_args(args: list) -> list:
+    """
+    Fix MCP args by removing 'serve' after 'mcp'.
+
+    Transforms ["mcp", "serve", ...] to ["mcp", ...]
+
+    Args:
+        args: List of command arguments
+
+    Returns:
+        Fixed arguments list
+    """
+    if len(args) >= 2 and args[0] == "mcp" and args[1] == "serve":
+        # Remove "serve" but preserve any other args
+        return [args[0]] + args[2:]
+    return args
+
+
+def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """
+    Fix broken MCP server arguments in configuration.
+
+    Detects and fixes the outdated ["mcp", "serve"] args pattern to ["mcp"].
+    Handles both root-level mcpServers and project-specific configurations.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Tuple of (fixed_config, list_of_fixes_applied)
+
+    Example:
+        >>> config = {"mcpServers": {"kuzu-memory": {"command": "kuzu", "args": ["mcp", "serve"]}}}
+        >>> fixed, fixes = fix_broken_mcp_args(config)
+        >>> # fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        >>> # fixes == ["Fixed kuzu-memory: args ['mcp', 'serve'] -> ['mcp']"]
+    """
+    if not isinstance(config, dict):
+        return config, []
+
+    fixes = []
+    result = config.copy()
+
+    # Fix root-level mcpServers
+    if "mcpServers" in result and isinstance(result["mcpServers"], dict):
+        for server_name, server_config in result["mcpServers"].items():
+            if not isinstance(server_config, dict):
+                continue
+
+            if _needs_mcp_args_fix(server_name, server_config):
+                old_args = server_config["args"].copy()
+                new_args = _fix_mcp_args(old_args)
+                result["mcpServers"][server_name]["args"] = new_args
+                fixes.append(f"Fixed {server_name}: args {old_args} -> {new_args}")
+                logger.debug(f"Fixed broken MCP args in {server_name}: {old_args} -> {new_args}")
+
+    # Fix project-specific configurations (Claude Hooks pattern)
+    if "projects" in result and isinstance(result["projects"], dict):
+        for project_path, project_config in result["projects"].items():
+            if not isinstance(project_config, dict):
+                continue
+
+            if "mcpServers" in project_config and isinstance(
+                project_config["mcpServers"], dict
+            ):
+                for server_name, server_config in project_config["mcpServers"].items():
+                    if not isinstance(server_config, dict):
+                        continue
+
+                    if _needs_mcp_args_fix(server_name, server_config):
+                        old_args = server_config["args"].copy()
+                        new_args = _fix_mcp_args(old_args)
+                        result["projects"][project_path]["mcpServers"][server_name][
+                            "args"
+                        ] = new_args
+                        fixes.append(
+                            f"Fixed {server_name} in project {project_path}: args {old_args} -> {new_args}"
+                        )
+                        logger.debug(
+                            f"Fixed broken MCP args in {server_name} (project {project_path}): {old_args} -> {new_args}"
+                        )
+
+    return result, fixes

@@ -268,7 +268,7 @@ class ClaudeDesktopInstaller:
             # Use the kuzu-memory command directly with MCP mode
             return {
                 "command": self.kuzu_command,
-                "args": ["mcp", "serve"],
+                "args": ["mcp"],
                 "env": {
                     "KUZU_MEMORY_DB": str(self.memory_db),
                     "KUZU_MEMORY_MODE": "mcp"
@@ -278,7 +278,7 @@ class ClaudeDesktopInstaller:
             # Fallback to assuming kuzu-memory is in PATH
             return {
                 "command": "kuzu-memory",
-                "args": ["mcp", "serve"],
+                "args": ["mcp"],
                 "env": {
                     "KUZU_MEMORY_DB": str(self.memory_db),
                     "KUZU_MEMORY_MODE": "mcp"

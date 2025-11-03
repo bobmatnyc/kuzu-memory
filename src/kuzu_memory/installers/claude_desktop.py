@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseInstaller, InstallationResult
+from .json_utils import fix_broken_mcp_args
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +299,13 @@ retention:
                         backup_files=[],
                         warnings=[f"Backup available at: {backup_path}" if backup_path else ""],
                     )
+
+            # Auto-fix broken MCP configurations
+            config, fixes = fix_broken_mcp_args(config)
+            if fixes:
+                logger.info(f"Auto-fixed {len(fixes)} broken MCP configuration(s)")
+                for fix in fixes:
+                    logger.debug(fix)
 
             # Ensure mcpServers section exists
             if "mcpServers" not in config:
@@ -982,6 +990,13 @@ retention:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse existing config: {e}")
                 return
+
+        # Auto-fix broken MCP configurations
+        config, fixes = fix_broken_mcp_args(config)
+        if fixes:
+            logger.info(f"Auto-fixed {len(fixes)} broken MCP configuration(s)")
+            for fix in fixes:
+                logger.debug(fix)
 
         # Ensure mcpServers section exists
         if "mcpServers" not in config:
