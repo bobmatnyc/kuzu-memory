@@ -342,6 +342,99 @@ class MCPClientSimulator:
             logger.error(f"Batch request error: {e}")
             return None
 
+    async def send_batch_request(self, requests: list[dict]) -> list[dict]:
+        """
+        Send a batch of JSON-RPC requests following JSON-RPC 2.0 spec.
+
+        This method properly handles:
+        - Regular requests (with id) that get responses
+        - Notifications (without id) that don't get responses
+        - Error handling per request
+        - Response ID matching
+
+        Args:
+            requests: List of JSON-RPC request dictionaries
+
+        Returns:
+            List of JSON-RPC response dictionaries (excluding notifications)
+        """
+        if not self.process:
+            raise RuntimeError("Not connected to server")
+
+        import time
+
+        responses = []
+
+        # Process each request individually to ensure proper JSON-RPC 2.0 semantics
+        for request in requests:
+            try:
+                # Check if this is a notification (no id field)
+                is_notification = "id" not in request
+
+                # Track request if it has an ID
+                if not is_notification:
+                    client_request = ClientRequest(
+                        request_id=request["id"],
+                        method=request.get("method", ""),
+                        params=request.get("params"),
+                        sent_at=time.time(),
+                    )
+
+                # Send individual request
+                request_str = json.dumps(request) + "\n"
+                self.process.stdin.write(request_str)
+                self.process.stdin.flush()
+
+                # Only read response for non-notifications
+                if not is_notification:
+                    try:
+                        response_line = await asyncio.wait_for(
+                            asyncio.to_thread(self.process.stdout.readline),
+                            timeout=self.timeout,
+                        )
+
+                        if response_line:
+                            response = json.loads(response_line.strip())
+                            responses.append(response)
+
+                            # Update tracking
+                            client_request.response = response
+                            client_request.received_at = time.time()
+
+                            # Add to session
+                            if self.current_session:
+                                self.current_session.requests.append(client_request)
+
+                    except TimeoutError:
+                        # Create error response for timeout
+                        error_response = {
+                            "jsonrpc": "2.0",
+                            "id": request["id"],
+                            "error": {
+                                "code": -32603,
+                                "message": f"Request timeout after {self.timeout}s",
+                            },
+                        }
+                        responses.append(error_response)
+
+                        client_request.error = f"Timeout after {self.timeout}s"
+                        if self.current_session:
+                            self.current_session.requests.append(client_request)
+
+            except Exception as e:
+                # Create error response for any processing error
+                if "id" in request:
+                    error_response = {
+                        "jsonrpc": "2.0",
+                        "id": request["id"],
+                        "error": {"code": -32603, "message": f"Internal error: {str(e)}"},
+                    }
+                    responses.append(error_response)
+
+                logger.error(f"Error processing batch request: {e}")
+
+        return responses
+
     async def stress_test(self, num_requests: int, request_delay_ms: float = 0) -> ClientSession:
         """
         Perform stress test with multiple rapid requests.

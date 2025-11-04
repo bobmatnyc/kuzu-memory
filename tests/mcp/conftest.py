@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import pytest_asyncio
 
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -30,7 +31,7 @@ def project_root() -> Path:
     return Path(__file__).parent.parent.parent
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def mcp_server(project_root: Path) -> MCPServer:
     """
     Create MCP server instance for testing.
@@ -45,7 +46,7 @@ async def mcp_server(project_root: Path) -> MCPServer:
     return server
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def connection_tester(project_root: Path) -> MCPConnectionTester:
     """
     Create connection tester instance.
@@ -240,7 +241,7 @@ def performance_thresholds() -> dict[str, float]:
     }
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def running_server(connection_tester: MCPConnectionTester):
     """
     Start MCP server and ensure it's running.
@@ -304,7 +305,7 @@ def stress_test_params() -> dict[str, int]:
 # Phase 4: Additional Integration Test Fixtures
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def mcp_client(project_root: Path):
     """
     Create and connect an MCP client simulator.
@@ -328,23 +329,34 @@ async def mcp_client(project_root: Path):
     await client.disconnect()
 
 
-@pytest.fixture
-async def initialized_client(mcp_client):
+@pytest_asyncio.fixture
+async def initialized_client(project_root: Path):
     """
     Create initialized MCP client ready for operations.
 
     Args:
-        mcp_client: Connected MCP client
+        project_root: Project root path
 
-    Returns:
-        Initialized MCP client
+    Yields:
+        Initialized and connected MCP client
     """
-    await mcp_client.initialize()
+    from tests.mcp.fixtures.mock_clients import MCPClientSimulator
+
+    client = MCPClientSimulator(project_root=project_root, timeout=10.0)
+
+    connected = await client.connect()
+    if not connected:
+        pytest.skip("Failed to connect to MCP server")
+
+    await client.initialize()
     await asyncio.sleep(0.1)  # Brief stabilization
-    return mcp_client
+
+    yield client
+
+    await client.disconnect()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def multiple_clients(project_root: Path):
     """
     Create multiple connected MCP clients for concurrent testing.
@@ -479,7 +491,7 @@ def tool_execution_scenarios() -> dict[str, dict[str, Any]]:
     }
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def session_with_history(mcp_client):
     """
     Create client session with operation history.
