@@ -38,7 +38,9 @@ class TestClaudeHooksInstaller:
         assert "mcpServers" in config["projects"][project_key]
         assert "kuzu-memory" in config["projects"][project_key]["mcpServers"]
 
-    def test_update_global_mcp_config_preserves_existing_projects(self, tmp_path, monkeypatch):
+    def test_update_global_mcp_config_preserves_existing_projects(
+        self, tmp_path, monkeypatch
+    ):
         """Test MCP config preserves other projects."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -46,7 +48,9 @@ class TestClaudeHooksInstaller:
         # Create global config with existing project
         global_config_path = tmp_path / ".claude.json"
         config = {
-            "projects": {"/other/project": {"mcpServers": {"other-server": {"command": "other"}}}}
+            "projects": {
+                "/other/project": {"mcpServers": {"other-server": {"command": "other"}}}
+            }
         }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
@@ -68,7 +72,9 @@ class TestClaudeHooksInstaller:
         assert project_key in result["projects"]
         assert "kuzu-memory" in result["projects"][project_key]["mcpServers"]
 
-    def test_update_global_mcp_config_preserves_other_mcp_servers(self, tmp_path, monkeypatch):
+    def test_update_global_mcp_config_preserves_other_mcp_servers(
+        self, tmp_path, monkeypatch
+    ):
         """Test MCP config preserves other servers in same project."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -79,7 +85,11 @@ class TestClaudeHooksInstaller:
 
         # Create global config with existing server in same project
         global_config_path = tmp_path / ".claude.json"
-        config = {"projects": {project_key: {"mcpServers": {"other-server": {"command": "other"}}}}}
+        config = {
+            "projects": {
+                project_key: {"mcpServers": {"other-server": {"command": "other"}}}
+            }
+        }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
@@ -127,7 +137,9 @@ class TestClaudeHooksInstaller:
         assert "kuzu-memory" not in result["mcpServers"]
         assert "other-server" in result["mcpServers"]
 
-    def test_clean_legacy_mcp_locations_removes_from_settings(self, tmp_path, monkeypatch):
+    def test_clean_legacy_mcp_locations_removes_from_settings(
+        self, tmp_path, monkeypatch
+    ):
         """Test cleanup removes MCP from settings.local.json."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -162,7 +174,9 @@ class TestClaudeHooksInstaller:
         assert "kuzu-memory" not in result.get("mcpServers", {})
         assert "other-server" in result.get("mcpServers", {})
 
-    def test_clean_legacy_mcp_locations_handles_empty_mcpservers(self, tmp_path, monkeypatch):
+    def test_clean_legacy_mcp_locations_handles_empty_mcpservers(
+        self, tmp_path, monkeypatch
+    ):
         """Test cleanup removes empty mcpServers dict."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -236,7 +250,9 @@ class TestClaudeHooksInstaller:
             result = json.load(f)
 
         # Args should be fixed to just ["mcp"]
-        assert result["projects"][project_key]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert result["projects"][project_key]["mcpServers"]["kuzu-memory"]["args"] == [
+            "mcp"
+        ]
 
         # Check that appropriate logging occurred
         assert any("Auto-fixed" in record.message for record in caplog.records)

@@ -101,14 +101,14 @@ cli(['mcp', 'serve'])
 
     # 2. Startup message should NOT be in stdout
     stdout_full = response_line.decode() + stdout_rest
-    assert "Starting MCP server" not in stdout_full, (
-        "Startup message found in stdout - violates MCP protocol! All logging must go to stderr."
-    )
+    assert (
+        "Starting MCP server" not in stdout_full
+    ), "Startup message found in stdout - violates MCP protocol! All logging must go to stderr."
 
     # 3. Startup message SHOULD be in stderr
-    assert "Starting MCP server" in stderr_all, (
-        f"Startup message not found in stderr. stderr content: {stderr_all[:200]}"
-    )
+    assert (
+        "Starting MCP server" in stderr_all
+    ), f"Startup message not found in stderr. stderr content: {stderr_all[:200]}"
 
     # 4. Verify stdout contains only JSON-RPC
     for line in stdout_full.strip().split("\n"):

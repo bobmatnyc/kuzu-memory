@@ -46,7 +46,9 @@ class EmbeddingsCache(ICache):
         self._max_similarity_results = max_similarity_results
 
         # Separate caches for embeddings and similarity results
-        self._embedding_cache = LRUCache(max_size=max_embeddings, default_ttl=embedding_ttl)
+        self._embedding_cache = LRUCache(
+            max_size=max_embeddings, default_ttl=embedding_ttl
+        )
         self._similarity_cache = LRUCache(
             max_size=max_similarity_results, default_ttl=similarity_ttl
         )
@@ -132,7 +134,9 @@ class EmbeddingsCache(ICache):
         """
         # Create key based on query and candidate embeddings
         query_hash = self._hash_embedding(query_embedding)
-        candidate_hashes = [self._hash_embedding(emb) for _, emb in candidate_embeddings]
+        candidate_hashes = [
+            self._hash_embedding(emb) for _, emb in candidate_embeddings
+        ]
 
         similarity_key = f"sim_{query_hash}_{hash(tuple(candidate_hashes))}"
 
@@ -245,7 +249,9 @@ class EmbeddingsCache(ICache):
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in either cache."""
-        return await self._embedding_cache.exists(key) or await self._similarity_cache.exists(key)
+        return await self._embedding_cache.exists(
+            key
+        ) or await self._similarity_cache.exists(key)
 
     async def clear(self) -> None:
         """Clear both caches."""
@@ -260,7 +266,9 @@ class EmbeddingsCache(ICache):
         result.update(similarity_result)
         return result
 
-    async def set_multi(self, items: dict[str, Any], ttl: timedelta | None = None) -> None:
+    async def set_multi(
+        self, items: dict[str, Any], ttl: timedelta | None = None
+    ) -> None:
         """Set multiple values."""
         for key, value in items.items():
             await self.set(key, value, ttl)

@@ -89,11 +89,15 @@ class AuggieMCPInstaller(BaseInstaller):
                 augment_dir.mkdir(parents=True, exist_ok=True)
                 logger.info(f"Created Auggie config directory: {augment_dir}")
             except Exception as e:
-                errors.append(f"Cannot create Auggie config directory {augment_dir}: {e}")
+                errors.append(
+                    f"Cannot create Auggie config directory {augment_dir}: {e}"
+                )
 
         return errors
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
+    def install(
+        self, force: bool = False, dry_run: bool = False, **kwargs
+    ) -> InstallationResult:
         """
         Install MCP configuration for Auggie.
 
@@ -123,7 +127,9 @@ class AuggieMCPInstaller(BaseInstaller):
                 )
 
             # Load existing configuration
-            existing_config = load_json_config(config_path) if config_path.exists() else {}
+            existing_config = (
+                load_json_config(config_path) if config_path.exists() else {}
+            )
 
             # Auto-fix broken MCP configurations
             existing_config, fixes = fix_broken_mcp_args(existing_config)
@@ -176,7 +182,9 @@ class AuggieMCPInstaller(BaseInstaller):
                 # Use new config (force mode or no existing config)
                 merged_config = kuzu_config
                 if force and existing_config:
-                    self.warnings.append("Force mode: existing configuration will be backed up")
+                    self.warnings.append(
+                        "Force mode: existing configuration will be backed up"
+                    )
 
             # Validate merged configuration
             validation_errors = validate_mcp_config(merged_config)
@@ -197,7 +205,9 @@ class AuggieMCPInstaller(BaseInstaller):
                 if config_path.exists():
                     message += f"\nWould preserve {len(existing_config.get('mcpServers', {}))} existing server(s)"
                 if kuzu_already_exists and not force:
-                    message += "\nWould update existing kuzu-memory server configuration"
+                    message += (
+                        "\nWould update existing kuzu-memory server configuration"
+                    )
                 else:
                     message += "\nWould add new kuzu-memory server configuration"
                 return InstallationResult(
@@ -228,7 +238,9 @@ class AuggieMCPInstaller(BaseInstaller):
 
             # Success message
             server_count = len(merged_config.get("mcpServers", {}))
-            message = f"Successfully installed MCP configuration for {self.ai_system_name}"
+            message = (
+                f"Successfully installed MCP configuration for {self.ai_system_name}"
+            )
             message += f"\nConfiguration file: {config_path}"
             message += f"\nMCP servers configured: {server_count}"
             message += f"\nProject: {self.project_root}"

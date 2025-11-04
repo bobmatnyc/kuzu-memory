@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from kuzu_memory.__version__ import __version__
+
 from .protocol import (
     BatchRequestHandler,
     JSONRPCError,
@@ -21,7 +23,6 @@ from .protocol import (
     JSONRPCProtocol,
 )
 from .server import KuzuMemoryMCPServer as MCPServer
-from kuzu_memory.__version__ import __version__
 
 # Set up logging
 logging.basicConfig(
@@ -45,7 +46,9 @@ class MCPProtocolHandler:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
         if "error" in request and "method" not in request:
-            return JSONRPCMessage.create_response(request.get("id"), error=request["error"])
+            return JSONRPCMessage.create_response(
+                request.get("id"), error=request["error"]
+            )
 
         request_id = request.get("id")
         method = request.get("method", "")
@@ -123,8 +126,12 @@ class MCPProtocolHandler:
                     try:
                         from .testing.health_checker import MCPHealthChecker
 
-                        health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
-                        result = await health_checker.check_health(detailed=False, retry=False)
+                        health_checker = MCPHealthChecker(
+                            project_root=Path.cwd(), timeout=2.0
+                        )
+                        result = await health_checker.check_health(
+                            detailed=False, retry=False
+                        )
 
                         return JSONRPCMessage.create_response(
                             request_id,
@@ -173,14 +180,20 @@ class MCPProtocolHandler:
                 return None
             return JSONRPCMessage.create_response(
                 request_id,
-                error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"),
+                error=JSONRPCError(
+                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
+                ),
             )
 
-    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_tool(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
         # Map tool names to server methods
         if not hasattr(self.server, tool_name):
-            raise JSONRPCError(JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}")
+            raise JSONRPCError(
+                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
+            )
 
         try:
             # Get the tool method
@@ -487,7 +500,9 @@ class MCPProtocolHandler:
                 # Send error response if possible
                 error_response = JSONRPCMessage.create_response(
                     None,
-                    error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"),
+                    error=JSONRPCError(
+                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
+                    ),
                 )
                 self.protocol.write_message(error_response)
 

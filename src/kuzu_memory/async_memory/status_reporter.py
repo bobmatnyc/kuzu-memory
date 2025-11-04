@@ -80,7 +80,9 @@ class MemoryStatusReporter:
         self.lock = threading.Lock()
 
         # Callbacks for different report levels
-        self.callbacks: dict[ReportLevel, list[Callable]] = {level: [] for level in ReportLevel}
+        self.callbacks: dict[ReportLevel, list[Callable]] = {
+            level: [] for level in ReportLevel
+        }
 
         # Last seen task states (to detect changes)
         self.last_task_states: dict[str, TaskStatus] = {}
@@ -138,7 +140,9 @@ class MemoryStatusReporter:
 
         logger.info("Stopped memory status reporter")
 
-    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]):
+    def add_callback(
+        self, level: ReportLevel, callback: Callable[[StatusReport], None]
+    ):
         """
         Add a callback for status reports at a specific level.
 

@@ -304,7 +304,9 @@ class TestMCPDiagnostics:
         diagnostics = MCPDiagnostics()
 
         # Mock the connection tester
-        with patch("kuzu_memory.mcp.testing.diagnostics.MCPConnectionTester") as mock_tester_class:
+        with patch(
+            "kuzu_memory.mcp.testing.diagnostics.MCPConnectionTester"
+        ) as mock_tester_class:
             mock_tester = MagicMock()
             mock_tester_class.return_value = mock_tester
 
@@ -374,7 +376,9 @@ class TestMCPDiagnostics:
             diagnostics = MCPDiagnostics(project_root=Path(tmpdir))
 
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=0, stdout="Success", stderr="")
+                mock_run.return_value = MagicMock(
+                    returncode=0, stdout="Success", stderr=""
+                )
 
                 result = await diagnostics.auto_fix_configuration()
 

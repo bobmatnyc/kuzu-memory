@@ -97,7 +97,9 @@ class TestGitSyncManager:
         """Test initialization when gitpython not installed."""
         # Mock the import to raise ImportError
         with patch.dict("sys.modules", {"git": None}):
-            with patch("builtins.__import__", side_effect=ImportError("No module named 'git'")):
+            with patch(
+                "builtins.__import__", side_effect=ImportError("No module named 'git'")
+            ):
                 manager = GitSyncManager(
                     repo_path=tmp_path,
                     config=config,

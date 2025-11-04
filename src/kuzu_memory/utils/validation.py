@@ -21,7 +21,9 @@ MAX_CONFIDENCE = 1.0  # Max confidence score
 # Regex patterns for validation
 VALID_MEMORY_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_]{1,64}$")
 VALID_ENTITY_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9\s\-_\.]{1,100}$")
-SAFE_TEXT_PATTERN = re.compile(r"^[\w\s\.\,\!\?\-\(\)\[\]\{\}:;\'\"@#$%&*+=<>/\\|`~]*$", re.UNICODE)
+SAFE_TEXT_PATTERN = re.compile(
+    r"^[\w\s\.\,\!\?\-\(\)\[\]\{\}:;\'\"@#$%&*+=<>/\\|`~]*$", re.UNICODE
+)
 
 
 def validate_text_input(
@@ -67,7 +69,9 @@ def validate_text_input(
 
     # Check for potentially dangerous content
     if "\x00" in text:
-        raise ValidationError(field_name, "contains null bytes", "null bytes not allowed")
+        raise ValidationError(
+            field_name, "contains null bytes", "null bytes not allowed"
+        )
 
     # Normalize whitespace
     cleaned_text = " ".join(text.split())
@@ -101,7 +105,9 @@ def validate_memory_id(memory_id: str) -> str:
     return memory_id
 
 
-def validate_confidence_score(confidence: float, field_name: str = "confidence") -> float:
+def validate_confidence_score(
+    confidence: float, field_name: str = "confidence"
+) -> float:
     """
     Validate confidence score.
 
@@ -146,7 +152,9 @@ def validate_database_path(db_path: str | Path) -> Path:
             raise ValidationError("db_path", db_path, "cannot be empty")
         db_path = Path(db_path)
     elif not isinstance(db_path, Path):
-        raise ValidationError("db_path", str(type(db_path)), "must be a string or Path object")
+        raise ValidationError(
+            "db_path", str(type(db_path)), "must be a string or Path object"
+        )
 
     # Convert to absolute path for validation
     abs_path = db_path.resolve()
@@ -208,7 +216,9 @@ def validate_config_dict(config: dict[str, Any]) -> dict[str, Any]:
     if "recall" in config:
         recall_config = config["recall"]
         if not isinstance(recall_config, dict):
-            raise ValidationError("config.recall", str(type(recall_config)), "must be a dictionary")
+            raise ValidationError(
+                "config.recall", str(type(recall_config)), "must be a dictionary"
+            )
 
         if "max_memories" in recall_config:
             max_memories = recall_config["max_memories"]
@@ -246,7 +256,9 @@ def validate_entity_name(entity_name: str) -> str:
         raise ValidationError("entity_name", str(type(entity_name)), "must be a string")
 
     if not entity_name.strip():
-        raise ValidationError("entity_name", entity_name, "cannot be empty or whitespace-only")
+        raise ValidationError(
+            "entity_name", entity_name, "cannot be empty or whitespace-only"
+        )
 
     if not VALID_ENTITY_NAME_PATTERN.match(entity_name):
         raise ValidationError(
@@ -258,7 +270,9 @@ def validate_entity_name(entity_name: str) -> str:
     return entity_name.strip()
 
 
-def validate_memory_list(memories: list[Any], max_count: int = MAX_MEMORY_COUNT) -> list[Any]:
+def validate_memory_list(
+    memories: list[Any], max_count: int = MAX_MEMORY_COUNT
+) -> list[Any]:
     """
     Validate list of memories.
 

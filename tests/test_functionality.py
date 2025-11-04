@@ -75,7 +75,9 @@ def test_basic_memory_operations():
                 recall_results = []
                 for query in test_queries:
                     start_time = time.time()
-                    context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=5)
+                    context = memory.attach_memories(
+                        prompt=query, user_id=user_id, max_memories=5
+                    )
                     recall_time = (time.time() - start_time) * 1000
 
                     recall_results.append(
@@ -92,7 +94,9 @@ def test_basic_memory_operations():
                     print(
                         f"     Memories: {len(context.memories)}, Confidence: {context.confidence:.2f}"
                     )
-                    print(f"     Time: {recall_time:.1f}ms, Strategy: {context.strategy_used}")
+                    print(
+                        f"     Time: {recall_time:.1f}ms, Strategy: {context.strategy_used}"
+                    )
 
                     # Show top memory
                     if context.memories:
@@ -101,9 +105,9 @@ def test_basic_memory_operations():
 
                 # Test 3: Performance validation
                 print("\n⚡ Performance Analysis:")
-                avg_recall_time = sum(r["recall_time_ms"] for r in recall_results) / len(
-                    recall_results
-                )
+                avg_recall_time = sum(
+                    r["recall_time_ms"] for r in recall_results
+                ) / len(recall_results)
                 max_recall_time = max(r["recall_time_ms"] for r in recall_results)
 
                 print(f"  Average recall time: {avg_recall_time:.1f}ms")
@@ -194,7 +198,9 @@ def test_auggie_integration():
                     enhanced_length = len(enhancement["enhanced_prompt"])
                     enhancement_ratio = enhanced_length / original_length
 
-                    executed_rules = enhancement["rule_modifications"].get("executed_rules", [])
+                    executed_rules = enhancement["rule_modifications"].get(
+                        "executed_rules", []
+                    )
 
                     enhancement_results.append(
                         {
@@ -244,7 +250,9 @@ def test_auggie_integration():
                     learning_results.append(learning_result)
 
                     print(f"  💬 Prompt: {scenario['prompt']}")
-                    print(f"     Quality score: {learning_result.get('quality_score', 0):.2f}")
+                    print(
+                        f"     Quality score: {learning_result.get('quality_score', 0):.2f}"
+                    )
                     print(
                         f"     Memories created: {len(learning_result.get('extracted_memories', []))}"
                     )
@@ -277,21 +285,27 @@ def test_auggie_integration():
                 test_prompt = "What Python web framework should I use for my new API?"
                 enhancement = auggie.enhance_prompt(test_prompt, user_id)
 
-                executed_rules = enhancement["rule_modifications"].get("executed_rules", [])
+                executed_rules = enhancement["rule_modifications"].get(
+                    "executed_rules", []
+                )
                 custom_rule_applied = any(
                     rule["rule_id"] == custom_rule_id for rule in executed_rules
                 )
 
                 print("  🔍 Testing custom rule:")
                 print(f"     Prompt: {test_prompt}")
-                print(f"     Custom rule applied: {'✅' if custom_rule_applied else '❌'}")
+                print(
+                    f"     Custom rule applied: {'✅' if custom_rule_applied else '❌'}"
+                )
 
                 # Test 5: Integration statistics
                 print("\n📊 Integration statistics:")
                 stats = auggie.get_integration_statistics()
 
                 print(f"  Prompts enhanced: {stats['integration']['prompts_enhanced']}")
-                print(f"  Responses learned: {stats['integration']['responses_learned']}")
+                print(
+                    f"  Responses learned: {stats['integration']['responses_learned']}"
+                )
                 print(f"  Rules triggered: {stats['integration']['rules_triggered']}")
                 print(f"  Memories created: {stats['integration']['memories_created']}")
 
@@ -336,21 +350,29 @@ def test_memory_persistence():
             # Session 1: Store memories
             print("📝 Session 1: Storing memories...")
             with KuzuMemory(db_path=db_path) as memory1:
-                test_content = "I'm a data scientist specializing in machine learning and Python."
+                test_content = (
+                    "I'm a data scientist specializing in machine learning and Python."
+                )
                 memory_ids = memory1.generate_memories(test_content, user_id=user_id)
                 print(f"  ✓ Stored {len(memory_ids)} memories")
 
                 # Verify immediate recall
-                context = memory1.attach_memories("What's my specialization?", user_id=user_id)
+                context = memory1.attach_memories(
+                    "What's my specialization?", user_id=user_id
+                )
                 print(f"  ✓ Immediate recall: {len(context.memories)} memories found")
 
             # Session 2: Verify persistence
             print("\n🔍 Session 2: Verifying persistence...")
             with KuzuMemory(db_path=db_path) as memory2:
-                context = memory2.attach_memories("What's my specialization?", user_id=user_id)
+                context = memory2.attach_memories(
+                    "What's my specialization?", user_id=user_id
+                )
 
                 if len(context.memories) > 0:
-                    print(f"  ✅ Persistence verified: {len(context.memories)} memories recalled")
+                    print(
+                        f"  ✅ Persistence verified: {len(context.memories)} memories recalled"
+                    )
                     print(f"     Content: {context.memories[0].content[:60]}...")
                     return True
                 else:
@@ -387,7 +409,9 @@ def main():
             success = test_func()
             duration = time.time() - start_time
 
-            test_results.append({"name": test_name, "success": success, "duration": duration})
+            test_results.append(
+                {"name": test_name, "success": success, "duration": duration}
+            )
 
             status = "✅ PASSED" if success else "❌ FAILED"
             print(f"\n{status} - {test_name} ({duration:.1f}s)")
@@ -427,7 +451,9 @@ def main():
         print("\n🎉 ALL TESTS PASSED! KuzuMemory is working correctly.")
         return 0
     else:
-        print(f"\n⚠️  {total_tests - passed_tests} test(s) failed. Please check the output above.")
+        print(
+            f"\n⚠️  {total_tests - passed_tests} test(s) failed. Please check the output above."
+        )
         return 1
 
 
