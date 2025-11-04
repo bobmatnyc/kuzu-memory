@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.41] - 2025-11-04
+
+### Fixed
+
+- **MCP Args Auto-Fix Extension** - Extended automatic repair of broken MCP configuration args to all installers
+  - Added auto-fix support to Cursor installer
+  - Added auto-fix support to VSCode installer
+  - Added auto-fix support to Windsurf installer
+  - Added auto-fix support to Auggie MCP installer
+  - Fixes legacy `["mcp", "serve"]` args to correct `["mcp"]` format
+  - Preserves additional arguments (e.g., `--verbose`, `--debug`)
+  - Only affects kuzu-memory servers, other MCP servers unchanged
+  - Transparent operation with INFO/DEBUG logging
+  - 25 comprehensive tests added (100% pass rate)
+
 ## [1.4.40] - 2025-11-04
 
 ### Changed
@@ -756,7 +771,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.40...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...HEAD
+[1.4.41]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.40...v1.4.41
 [1.4.40]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.39...v1.4.40
 [1.4.39]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.38...v1.4.39
 [1.4.38]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.37...v1.4.38
