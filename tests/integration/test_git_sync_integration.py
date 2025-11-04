@@ -350,6 +350,16 @@ class TestGitSyncIntegration:
             capture_output=True,
         )
 
+        # Get the current branch name (could be main or master)
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        main_branch = result.stdout.strip()
+
         # Create feature branch
         subprocess.run(
             ["git", "checkout", "-b", "feature/test"],
@@ -367,9 +377,9 @@ class TestGitSyncIntegration:
             capture_output=True,
         )
 
-        # Merge back to main
+        # Merge back to main branch
         subprocess.run(
-            ["git", "checkout", "master"],
+            ["git", "checkout", main_branch],
             cwd=git_repo,
             check=True,
             capture_output=True,

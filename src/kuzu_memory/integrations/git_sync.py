@@ -135,16 +135,17 @@ class GitSyncManager:
                 logger.debug(f"Skipping pattern '{skip_pattern}': {message[:50]}...")
                 return False
 
-        # Check significant prefixes
+        # Check merge commits FIRST (before prefix matching)
+        # This ensures merge commits are included even without conventional prefixes
+        if self.config.include_merge_commits and len(commit.parents) > 1:
+            logger.debug(f"Including merge commit: {message[:50]}...")
+            return True
+
+        # Then check significant prefixes
         for prefix in self.config.significant_prefixes:
             if message.lower().startswith(prefix.lower()):
                 logger.debug(f"Significant commit '{prefix}': {message[:50]}...")
                 return True
-
-        # Include merge commits if configured
-        if self.config.include_merge_commits and len(commit.parents) > 1:
-            logger.debug(f"Including merge commit: {message[:50]}...")
-            return True
 
         return False
 
@@ -409,8 +410,9 @@ class GitSyncManager:
 
             for branch in branches:
                 try:
-                    # Get commits from this branch
-                    commits = list(self._repo.iter_commits(branch))  # type: ignore[union-attr]
+                    # Get commits from this branch (iter_commits returns newest first)
+                    # Reverse to process oldest first for stable chronological ordering
+                    commits = list(reversed(list(self._repo.iter_commits(branch))))  # type: ignore[union-attr]
 
                     for commit in commits:
                         # Skip if already processed
