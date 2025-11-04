@@ -389,6 +389,26 @@ class TestServerInfo:
 
         await mcp_client.disconnect()
 
+    @pytest.mark.asyncio
+    async def test_server_version_matches_package(self, mcp_client):
+        """Test that server version matches package version."""
+        await mcp_client.connect()
+
+        response = await mcp_client.send_request("initialize", {"protocolVersion": "2025-06-18"})
+
+        if response and "result" in response:
+            server_info = response["result"].get("serverInfo", {})
+            server_version = server_info.get("version", "")
+
+            # Import package version
+            from kuzu_memory.__version__ import __version__
+
+            assert server_version == __version__, (
+                f"Server version {server_version} does not match package version {__version__}"
+            )
+
+        await mcp_client.disconnect()
+
 
 @pytest.mark.compliance
 class TestProtocolUpgrade:

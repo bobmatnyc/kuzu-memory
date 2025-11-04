@@ -15,6 +15,8 @@ from typing import Any
 
 from pydantic import AnyUrl
 
+from kuzu_memory.__version__ import __version__
+
 # MCP SDK imports (will be dynamically imported if available)
 try:
     from mcp.server import NotificationOptions, Server
@@ -378,7 +380,7 @@ class KuzuMemoryMCPServer:
         # Use stdin/stdout for MCP communication
         init_options = InitializationOptions(
             server_name="kuzu-memory",
-            server_version="1.0.0",
+            server_version=__version__,
             capabilities=self.server.get_capabilities(
                 notification_options=NotificationOptions(),
                 experimental_capabilities={},

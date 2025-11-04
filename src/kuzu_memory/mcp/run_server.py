@@ -21,6 +21,7 @@ from .protocol import (
     JSONRPCProtocol,
 )
 from .server import KuzuMemoryMCPServer as MCPServer
+from kuzu_memory.__version__ import __version__
 
 # Set up logging
 logging.basicConfig(
@@ -76,7 +77,7 @@ class MCPProtocolHandler:
                 result = {
                     "protocolVersion": response_version,
                     "capabilities": {"tools": {}, "prompts": {}, "resources": {}},
-                    "serverInfo": {"name": "kuzu-memory-mcp", "version": "1.0.0"},
+                    "serverInfo": {"name": "kuzu-memory-mcp", "version": __version__},
                 }
                 return JSONRPCMessage.create_response(request_id, result)
 
