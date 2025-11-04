@@ -9,6 +9,8 @@ from pathlib import Path
 
 import click
 
+from ..installers.base import InstalledSystem
+from ..installers.json_utils import fix_broken_mcp_args, load_json_config, save_json_config
 from ..installers.registry import get_installer
 from ..utils.project_setup import find_project_root
 from .cli_utils import rich_panel, rich_print
@@ -25,14 +27,168 @@ AVAILABLE_INTEGRATIONS = [
 ]
 
 
+def _repair_all_mcp_configs() -> tuple[int, list[str]]:
+    """
+    Scan and repair broken MCP configurations across all projects.
+
+    Checks ~/.claude.json and fixes any broken ["mcp", "serve"] args.
+
+    Returns:
+        Tuple of (num_fixes, list_of_fix_messages)
+    """
+    global_config_path = Path.home() / ".claude.json"
+
+    if not global_config_path.exists():
+        return 0, []
+
+    try:
+        # Load global config
+        config = load_json_config(global_config_path)
+
+        # Fix broken args
+        fixed_config, fixes = fix_broken_mcp_args(config)
+
+        # Save if fixes were applied
+        if fixes:
+            save_json_config(global_config_path, fixed_config)
+            return len(fixes), fixes
+
+        return 0, []
+
+    except Exception as e:
+        return 0, [f"Failed to repair MCP configs: {e}"]
+
+
+def _detect_installed_systems(project_root: Path) -> list[InstalledSystem]:
+    """
+    Detect which AI systems are installed in the project.
+
+    Checks for installation markers for each supported integration.
+
+    Args:
+        project_root: Project root directory
+
+    Returns:
+        List of detected installed systems
+    """
+    installed_systems = []
+
+    # Check each integration
+    for integration_name in AVAILABLE_INTEGRATIONS:
+        try:
+            installer = get_installer(integration_name, project_root)
+            if installer:
+                detected = installer.detect_installation()
+                if detected.is_installed:
+                    installed_systems.append(detected)
+        except Exception:
+            # Skip integrations that fail detection
+            continue
+
+    return installed_systems
+
+
+def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None:
+    """
+    Show interactive menu for detected systems.
+
+    Args:
+        installed_systems: List of detected systems
+
+    Returns:
+        Selected integration name or None if cancelled
+    """
+    if not installed_systems:
+        rich_print("No installed systems detected in this project.", style="yellow")
+        rich_print("\n💡 Available integrations:", style="cyan")
+        for name in AVAILABLE_INTEGRATIONS:
+            rich_print(f"  • {name}")
+        rich_print("\nRun: kuzu-memory install <integration>", style="dim")
+        return None
+
+    # Show detected systems
+    rich_panel(
+        f"Detected {len(installed_systems)} installed system(s)",
+        title="🔍 Detection Results",
+        style="cyan",
+    )
+
+    for i, system in enumerate(installed_systems, 1):
+        # Status icon
+        if system.health_status == "healthy":
+            status_icon = "✅"
+            status_color = "green"
+        elif system.health_status == "needs_repair":
+            status_icon = "⚠️"
+            status_color = "yellow"
+        else:
+            status_icon = "❌"
+            status_color = "red"
+
+        # MCP status
+        mcp_status = "MCP configured" if system.has_mcp else "MCP not configured"
+
+        rich_print(
+            f"\n{i}. {status_icon} {system.name} ({system.health_status})",
+            style=status_color,
+        )
+        rich_print(f"   Files: {len(system.files_present)}/{system.details['total_files']}")
+        rich_print(f"   {mcp_status}")
+
+    # Show options
+    rich_print("\n📋 Options:", style="cyan")
+    rich_print("1. Reinstall/repair detected system")
+    rich_print("2. Install a different system")
+    rich_print("3. Cancel")
+
+    # Get user choice
+    choice = click.prompt(
+        "\nEnter choice",
+        type=click.IntRange(1, 3),
+        default=1,
+        show_default=True,
+    )
+
+    if choice == 1:
+        # Reinstall detected system
+        if len(installed_systems) == 1:
+            return installed_systems[0].name
+        else:
+            # Multiple systems - ask which one
+            rich_print("\nWhich system to reinstall?")
+            for i, system in enumerate(installed_systems, 1):
+                rich_print(f"{i}. {system.name}")
+            system_choice = click.prompt(
+                "Enter system number",
+                type=click.IntRange(1, len(installed_systems)),
+                default=1,
+            )
+            return installed_systems[system_choice - 1].name
+
+    elif choice == 2:
+        # Install different system
+        rich_print("\n💡 Available integrations:", style="cyan")
+        for i, name in enumerate(AVAILABLE_INTEGRATIONS, 1):
+            rich_print(f"{i}. {name}")
+        system_choice = click.prompt(
+            "Enter integration number",
+            type=click.IntRange(1, len(AVAILABLE_INTEGRATIONS)),
+        )
+        return AVAILABLE_INTEGRATIONS[system_choice - 1]
+
+    else:
+        # Cancel
+        return None
+
+
 @click.command(name="install")
-@click.argument("integration", type=click.Choice(AVAILABLE_INTEGRATIONS))
+@click.argument("integration", type=click.Choice(AVAILABLE_INTEGRATIONS), required=False)
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.option("--force", is_flag=True, help="Force reinstall")
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 def install_command(
-    integration: str,
+    integration: str | None,
     project_root: str | None,
     force: bool,
     dry_run: bool,
@@ -40,6 +196,8 @@ def install_command(
 ) -> None:
     """
     Install kuzu-memory integration.
+
+    If no integration is specified, auto-detects installed systems and offers to repair/reinstall.
 
     Installs the right components for each platform automatically:
       • claude-code: MCP server + hooks (complete integration)
@@ -52,6 +210,7 @@ def install_command(
 
     \b
     Examples:
+        kuzu-memory install                    # Auto-detect and repair
         kuzu-memory install claude-code
         kuzu-memory install claude-desktop
         kuzu-memory install cursor --dry-run
@@ -67,6 +226,23 @@ def install_command(
                 root = find_project_root()
             except Exception:
                 root = Path.cwd()
+
+        # Auto-detect if no integration specified
+        if integration is None:
+            rich_panel(
+                f"Detecting installed systems in {root.name}...",
+                title="🔍 Auto-Detection",
+                style="cyan",
+            )
+
+            detected_systems = _detect_installed_systems(root)
+            integration = _show_detection_menu(detected_systems)
+
+            if integration is None:
+                rich_print("\nInstallation cancelled.", style="yellow")
+                sys.exit(0)
+
+            rich_print(f"\n✓ Selected: {integration}", style="green")
 
         # Show installation header
         rich_panel(
@@ -115,6 +291,18 @@ def install_command(
                 rich_print("\n⚠️  Warnings:", style="yellow")
                 for warning in result.warnings:
                     rich_print(f"  • {warning}", style="yellow")
+
+            # Post-install: Auto-repair broken MCP configurations across all projects
+            if not dry_run:
+                num_fixes, fix_messages = _repair_all_mcp_configs()
+                if num_fixes > 0:
+                    rich_print(
+                        f"\n🔧 Auto-repaired {num_fixes} broken MCP configuration(s) in other projects",
+                        style="cyan",
+                    )
+                    if verbose:
+                        for msg in fix_messages:
+                            rich_print(f"  • {msg}", style="dim")
 
             # Show next steps based on integration
             rich_print("\n🎯 Next Steps:", style="cyan")

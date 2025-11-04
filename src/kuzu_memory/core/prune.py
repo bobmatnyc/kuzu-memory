@@ -9,7 +9,7 @@ with safety checks and backup capabilities.
 import logging
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -78,7 +78,8 @@ class SafePruningStrategy(PruningStrategy):
 
     def __init__(self):
         super().__init__(
-            "safe", "Prune old, minimal-impact git commits (>90 days, <2 files or <200 bytes)"
+            "safe",
+            "Prune old, minimal-impact git commits (>90 days, <2 files or <200 bytes)",
         )
         self.min_age_days = 90
         self.max_changed_files = 2
@@ -167,7 +168,10 @@ class IntelligentPruningStrategy(PruningStrategy):
         if changed_files >= self.max_changed_files:
             return False, f"too many files ({changed_files} files)"
 
-        return True, f"old + unimportant + small scope ({age_days}d, {changed_files} files)"
+        return (
+            True,
+            f"old + unimportant + small scope ({age_days}d, {changed_files} files)",
+        )
 
 
 class AggressivePruningStrategy(PruningStrategy):
@@ -217,7 +221,10 @@ class AggressivePruningStrategy(PruningStrategy):
         metadata = memory.get("metadata", {})
         changed_files = metadata.get("changed_files", 0)
         if age_days > self.moderate_age_days and changed_files < self.max_changed_files:
-            return True, f"moderately old + minimal files ({age_days}d, {changed_files} files)"
+            return (
+                True,
+                f"moderately old + minimal files ({age_days}d, {changed_files} files)",
+            )
 
         # Small content
         content_size = len(memory.get("content", ""))
@@ -297,7 +304,7 @@ class MemoryPruner:
                 continue
 
             # Check if should prune
-            should_prune, reason = strategy.should_prune(memory)
+            should_prune, _reason = strategy.should_prune(memory)
 
             if should_prune:
                 to_prune.append(memory)
@@ -355,7 +362,6 @@ class MemoryPruner:
         Returns:
             Path to backup file
         """
-        import time
 
         db_path = Path(self.memory.db_path)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -374,7 +380,10 @@ class MemoryPruner:
         return backup_path
 
     def prune(
-        self, strategy_name: str = "safe", execute: bool = False, create_backup: bool = True
+        self,
+        strategy_name: str = "safe",
+        execute: bool = False,
+        create_backup: bool = True,
     ) -> PruneResult:
         """
         Execute pruning operation.

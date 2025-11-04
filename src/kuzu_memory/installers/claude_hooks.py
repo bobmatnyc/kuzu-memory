@@ -139,7 +139,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                     with open(global_config_path, "w") as f:
                         json.dump(config, f, indent=2)
 
-                    warnings.append("Moved MCP config from top-level ~/.claude.json to projects section")
+                    warnings.append(
+                        "Moved MCP config from top-level ~/.claude.json to projects section"
+                    )
                     logger.info("Cleaned top-level MCP config from ~/.claude.json")
             except Exception as e:
                 logger.warning(f"Failed to clean top-level MCP config: {e}")
@@ -805,7 +807,11 @@ exec {kuzu_cmd} "$@"
         return content
 
     def install(
-        self, force: bool = False, dry_run: bool = False, verbose: bool = False, **kwargs
+        self,
+        force: bool = False,
+        dry_run: bool = False,
+        verbose: bool = False,
+        **kwargs,
     ) -> InstallationResult:
         """
         Install Claude Code hooks for KuzuMemory.
@@ -1179,7 +1185,10 @@ exec {kuzu_cmd} "$@"
                     project_key = str(self.project_root.resolve())
                     if "projects" in config and project_key in config["projects"]:
                         project_config = config["projects"][project_key]
-                        if "mcpServers" in project_config and "kuzu-memory" in project_config["mcpServers"]:
+                        if (
+                            "mcpServers" in project_config
+                            and "kuzu-memory" in project_config["mcpServers"]
+                        ):
                             # Backup before modifying
                             backup_path = global_config_path.with_suffix(".json.backup")
                             shutil.copy(global_config_path, backup_path)
@@ -1197,7 +1206,9 @@ exec {kuzu_cmd} "$@"
                             with open(global_config_path, "w") as f:
                                 json.dump(config, f, indent=2)
 
-                            logger.info(f"Removed MCP server from ~/.claude.json for project: {self.project_root.name}")
+                            logger.info(
+                                f"Removed MCP server from ~/.claude.json for project: {self.project_root.name}"
+                            )
                 except Exception as e:
                     logger.warning(f"Failed to remove MCP config from ~/.claude.json: {e}")
                     self.warnings.append(f"Could not remove MCP config from global file: {e}")
@@ -1257,20 +1268,7 @@ exec {kuzu_cmd} "$@"
         )
 
         # Check if MCP server is configured in ~/.claude.json (correct location)
-        global_config_path = Path.home() / ".claude.json"
-        if global_config_path.exists():
-            try:
-                with open(global_config_path) as f:
-                    config = json.load(f)
-                project_key = str(self.project_root.resolve())
-                status["mcp_configured"] = (
-                    "projects" in config
-                    and project_key in config["projects"]
-                    and "mcpServers" in config["projects"][project_key]
-                    and "kuzu-memory" in config["projects"][project_key]["mcpServers"]
-                )
-            except Exception:
-                pass
+        status["mcp_configured"] = self._check_mcp_configured()
 
         # Warn if MCP config is in legacy location (settings.local.json)
         if settings_config.exists():
@@ -1292,3 +1290,27 @@ exec {kuzu_cmd} "$@"
         status["database_path"] = str(db_path)
 
         return status
+
+    def _check_mcp_configured(self) -> bool:
+        """
+        Check if MCP server is configured in ~/.claude.json.
+
+        Returns:
+            True if MCP is configured, False otherwise
+        """
+        global_config_path = Path.home() / ".claude.json"
+        if not global_config_path.exists():
+            return False
+
+        try:
+            with open(global_config_path) as f:
+                config = json.load(f)
+            project_key = str(self.project_root.resolve())
+            return (
+                "projects" in config
+                and project_key in config["projects"]
+                and "mcpServers" in config["projects"][project_key]
+                and "kuzu-memory" in config["projects"][project_key]["mcpServers"]
+            )
+        except Exception:
+            return False

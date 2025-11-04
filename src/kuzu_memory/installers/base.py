@@ -40,6 +40,20 @@ class InstallationResult:
         self.backup_files = [Path(f) for f in self.backup_files]
 
 
+@dataclass
+class InstalledSystem:
+    """Information about a detected installed system."""
+
+    name: str
+    ai_system: str
+    is_installed: bool
+    health_status: str  # "healthy", "needs_repair", "broken"
+    files_present: list[Path]
+    files_missing: list[Path]
+    has_mcp: bool
+    details: dict[str, Any]
+
+
 class BaseInstaller(ABC):
     """
     Base class for AI system installers.
@@ -322,3 +336,61 @@ class BaseInstaller(ABC):
             status["backup_count"] = len(backups)
 
         return status
+
+    def detect_installation(self) -> InstalledSystem:
+        """
+        Detect if this system is installed and its health status.
+
+        Returns:
+            InstalledSystem object with detection details
+        """
+        files_present = []
+        files_missing = []
+
+        # Check required files
+        for file_pattern in self.required_files:
+            file_path = self.project_root / file_pattern
+            if file_path.exists():
+                files_present.append(file_path)
+            else:
+                files_missing.append(file_path)
+
+        is_installed = len(files_present) > 0
+        all_files_present = len(files_missing) == 0
+
+        # Determine health status
+        if not is_installed:
+            health_status = "not_installed"
+        elif all_files_present:
+            health_status = "healthy"
+        else:
+            health_status = "needs_repair"
+
+        # Check MCP configuration (subclass can override)
+        has_mcp = self._check_mcp_configured()
+
+        return InstalledSystem(
+            name=self.ai_system_name,
+            ai_system=self.ai_system_name,
+            is_installed=is_installed,
+            health_status=health_status,
+            files_present=files_present,
+            files_missing=files_missing,
+            has_mcp=has_mcp,
+            details={
+                "total_files": len(self.required_files),
+                "present_count": len(files_present),
+                "missing_count": len(files_missing),
+            },
+        )
+
+    def _check_mcp_configured(self) -> bool:
+        """
+        Check if MCP server is configured for this system.
+
+        Subclasses should override to provide specific checks.
+
+        Returns:
+            True if MCP is configured, False otherwise
+        """
+        return False

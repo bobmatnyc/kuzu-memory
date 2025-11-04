@@ -548,7 +548,9 @@ def enhance(ctx, prompt, max_memories, output_format):
 )
 @click.option("--execute", is_flag=True, help="Actually prune memories (default is dry-run)")
 @click.option(
-    "--backup/--no-backup", default=True, help="Create backup before pruning (default: yes)"
+    "--backup/--no-backup",
+    default=True,
+    help="Create backup before pruning (default: yes)",
 )
 @click.option("--force", is_flag=True, help="Skip confirmation prompts")
 @click.pass_context
@@ -606,8 +608,10 @@ def prune(ctx, strategy, execute, backup, force):
             total_memories = memory.get_memory_count()
             db_size = memory.get_database_size()
 
-            rich_print(f"\n📊 Analyzing memories for pruning...\n", style="blue")
-            rich_print(f"   Database: {total_memories:,} memories, {db_size / (1024*1024):.1f} MB")
+            rich_print("\n📊 Analyzing memories for pruning...\n", style="blue")
+            rich_print(
+                f"   Database: {total_memories:,} memories, {db_size / (1024 * 1024):.1f} MB"
+            )
             rich_print(f"   Strategy: {strategy}")
             rich_print(f"   Mode: {'EXECUTE' if execute else 'DRY-RUN'}\n")
 
@@ -629,11 +633,13 @@ def prune(ctx, strategy, execute, backup, force):
             )
 
             rich_panel(
-                f"Analysis Complete ({analysis_time_ms:.0f}ms)", title="📋 Prune Report", style="green"
+                f"Analysis Complete ({analysis_time_ms:.0f}ms)",
+                title="📋 Prune Report",
+                style="green",
             )
 
             # Summary
-            rich_print(f"\n🔍 Summary:", style="bold blue")
+            rich_print("\n🔍 Summary:", style="bold blue")
             rich_print(
                 f"   Memories to prune: {stats.memories_to_prune:,} ({prune_percentage:.1f}%)",
                 style="yellow",
@@ -646,21 +652,21 @@ def prune(ctx, strategy, execute, backup, force):
 
             # By age breakdown
             if any(stats.by_age.values()):
-                rich_print(f"\n📅 By Age:", style="bold blue")
+                rich_print("\n📅 By Age:", style="bold blue")
                 for age_range, count in stats.by_age.items():
                     if count > 0:
                         rich_print(f"   {age_range}: {count:,} memories")
 
             # By size breakdown
             if any(stats.by_size.values()):
-                rich_print(f"\n📏 By Size:", style="bold blue")
+                rich_print("\n📏 By Size:", style="bold blue")
                 for size_range, count in stats.by_size.items():
                     if count > 0:
                         rich_print(f"   {size_range}: {count:,} memories")
 
             # By source breakdown
             if stats.by_source:
-                rich_print(f"\n📦 By Source:", style="bold blue")
+                rich_print("\n📦 By Source:", style="bold blue")
                 for source, count in sorted(
                     stats.by_source.items(), key=lambda x: x[1], reverse=True
                 ):
@@ -669,17 +675,18 @@ def prune(ctx, strategy, execute, backup, force):
             # Savings estimate
             content_mb = stats.estimated_content_savings_bytes / (1024 * 1024)
             db_mb = stats.estimated_db_savings_bytes / (1024 * 1024)
-            db_percentage = (
-                (stats.estimated_db_savings_bytes / db_size * 100) if db_size > 0 else 0
-            )
+            db_percentage = (stats.estimated_db_savings_bytes / db_size * 100) if db_size > 0 else 0
 
-            rich_print(f"\n💾 Expected Savings:", style="bold blue")
+            rich_print("\n💾 Expected Savings:", style="bold blue")
             rich_print(f"   Content: {content_mb:.2f} MB")
             rich_print(f"   Database: ~{db_mb:.0f} MB (~{db_percentage:.1f}%, estimated)")
 
             # Execute or show dry-run message
             if execute:
-                rich_print(f"\n⚠️  WARNING: About to prune {stats.memories_to_prune:,} memories!", style="bold red")
+                rich_print(
+                    f"\n⚠️  WARNING: About to prune {stats.memories_to_prune:,} memories!",
+                    style="bold red",
+                )
 
                 # Confirmation prompt unless --force
                 if not force:
@@ -691,12 +698,12 @@ def prune(ctx, strategy, execute, backup, force):
                         return
 
                 # Execute pruning
-                rich_print(f"\n🚀 Executing prune...", style="blue")
+                rich_print("\n🚀 Executing prune...", style="blue")
                 result = pruner.prune(strategy, execute=True, create_backup=backup)
 
                 if result.success:
                     rich_print(
-                        f"\n✅ Pruning completed successfully!",
+                        "\n✅ Pruning completed successfully!",
                         style="bold green",
                     )
                     rich_print(f"   Memories pruned: {result.memories_pruned:,}")
@@ -710,23 +717,21 @@ def prune(ctx, strategy, execute, backup, force):
                     actual_reduction = db_size - final_size
                     actual_percentage = (actual_reduction / db_size * 100) if db_size > 0 else 0
 
-                    rich_print(f"\n📊 Final Database:", style="bold blue")
+                    rich_print("\n📊 Final Database:", style="bold blue")
                     rich_print(f"   Memories: {final_count:,} (was {total_memories:,})")
                     rich_print(
-                        f"   Size: {final_size / (1024*1024):.1f} MB (was {db_size / (1024*1024):.1f} MB)"
+                        f"   Size: {final_size / (1024 * 1024):.1f} MB (was {db_size / (1024 * 1024):.1f} MB)"
                     )
                     rich_print(
-                        f"   Reduction: {actual_reduction / (1024*1024):.1f} MB ({actual_percentage:.1f}%)"
+                        f"   Reduction: {actual_reduction / (1024 * 1024):.1f} MB ({actual_percentage:.1f}%)"
                     )
                 else:
                     rich_print(f"\n❌ Pruning failed: {result.error}", style="red")
                     sys.exit(1)
             else:
                 # Dry-run mode
-                rich_print(
-                    f"\n⚠️  DRY RUN MODE - No changes made.", style="bold yellow"
-                )
-                rich_print(f"   Use --execute to perform pruning.", style="dim")
+                rich_print("\n⚠️  DRY RUN MODE - No changes made.", style="bold yellow")
+                rich_print("   Use --execute to perform pruning.", style="dim")
 
     except Exception as e:
         if ctx.obj.get("debug"):

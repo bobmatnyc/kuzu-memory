@@ -231,7 +231,7 @@ def config(ctx, output: str | None):
             "mcpServers": {
                 "kuzu-memory": {
                     "command": "kuzu-memory",
-                    "args": ["mcp", "serve"],
+                    "args": ["mcp"],
                     "env": {"KUZU_MEMORY_PROJECT": "${PROJECT_ROOT}"},
                 }
             }

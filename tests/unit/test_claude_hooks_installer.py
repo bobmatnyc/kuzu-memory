@@ -46,9 +46,7 @@ class TestClaudeHooksInstaller:
         # Create global config with existing project
         global_config_path = tmp_path / ".claude.json"
         config = {
-            "projects": {
-                "/other/project": {"mcpServers": {"other-server": {"command": "other"}}}
-            }
+            "projects": {"/other/project": {"mcpServers": {"other-server": {"command": "other"}}}}
         }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
@@ -81,9 +79,7 @@ class TestClaudeHooksInstaller:
 
         # Create global config with existing server in same project
         global_config_path = tmp_path / ".claude.json"
-        config = {
-            "projects": {project_key: {"mcpServers": {"other-server": {"command": "other"}}}}
-        }
+        config = {"projects": {project_key: {"mcpServers": {"other-server": {"command": "other"}}}}}
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
@@ -144,7 +140,10 @@ class TestClaudeHooksInstaller:
         claude_dir.mkdir()
         settings_path = claude_dir / "settings.local.json"
         settings = {
-            "mcpServers": {"kuzu-memory": {"command": "mcp"}, "other-server": {"command": "other"}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "mcp"},
+                "other-server": {"command": "other"},
+            }
         }
         with open(settings_path, "w") as f:
             json.dump(settings, f, indent=2)
@@ -202,6 +201,7 @@ class TestClaudeHooksInstaller:
     def test_auto_fix_broken_mcp_args(self, tmp_path, monkeypatch, caplog):
         """Test auto-fix of broken MCP args during config update."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Mock Path.home() to use tmp_path
@@ -219,7 +219,7 @@ class TestClaudeHooksInstaller:
                     "mcpServers": {
                         "kuzu-memory": {
                             "command": "kuzu-memory",
-                            "args": ["mcp", "serve"]  # Broken pattern
+                            "args": ["mcp", "serve"],  # Broken pattern
                         }
                     }
                 }

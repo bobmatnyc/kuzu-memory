@@ -268,7 +268,7 @@ def _fix_mcp_args(args: list) -> list:
     """
     if len(args) >= 2 and args[0] == "mcp" and args[1] == "serve":
         # Remove "serve" but preserve any other args
-        return [args[0]] + args[2:]
+        return [args[0], *args[2:]]
     return args
 
 
@@ -316,9 +316,7 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
             if not isinstance(project_config, dict):
                 continue
 
-            if "mcpServers" in project_config and isinstance(
-                project_config["mcpServers"], dict
-            ):
+            if "mcpServers" in project_config and isinstance(project_config["mcpServers"], dict):
                 for server_name, server_config in project_config["mcpServers"].items():
                     if not isinstance(server_config, dict):
                         continue
@@ -326,9 +324,9 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                     if _needs_mcp_args_fix(server_name, server_config):
                         old_args = server_config["args"].copy()
                         new_args = _fix_mcp_args(old_args)
-                        result["projects"][project_path]["mcpServers"][server_name][
-                            "args"
-                        ] = new_args
+                        result["projects"][project_path]["mcpServers"][server_name]["args"] = (
+                            new_args
+                        )
                         fixes.append(
                             f"Fixed {server_name} in project {project_path}: args {old_args} -> {new_args}"
                         )

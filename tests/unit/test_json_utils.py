@@ -336,12 +336,7 @@ class TestFixBrokenMcpArgs:
     def test_fix_broken_args_in_root_mcpServers(self):
         """Test fixing broken args in root-level mcpServers."""
         config = {
-            "mcpServers": {
-                "kuzu-memory": {
-                    "command": "kuzu-memory",
-                    "args": ["mcp", "serve"]
-                }
-            }
+            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
         }
 
         fixed, fixes = fix_broken_mcp_args(config)
@@ -356,14 +351,18 @@ class TestFixBrokenMcpArgs:
             "mcpServers": {
                 "kuzu-memory": {
                     "command": "kuzu-memory",
-                    "args": ["mcp", "serve", "--verbose", "--debug"]
+                    "args": ["mcp", "serve", "--verbose", "--debug"],
                 }
             }
         }
 
         fixed, fixes = fix_broken_mcp_args(config)
 
-        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp", "--verbose", "--debug"]
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == [
+            "mcp",
+            "--verbose",
+            "--debug",
+        ]
         assert len(fixes) == 1
 
     def test_fix_broken_args_in_project_specific(self):
@@ -374,7 +373,7 @@ class TestFixBrokenMcpArgs:
                     "mcpServers": {
                         "kuzu-memory": {
                             "command": "kuzu-memory",
-                            "args": ["mcp", "serve"]
+                            "args": ["mcp", "serve"],
                         }
                     }
                 }
@@ -391,14 +390,8 @@ class TestFixBrokenMcpArgs:
         """Test that only kuzu-memory servers are fixed."""
         config = {
             "mcpServers": {
-                "other-server": {
-                    "command": "other",
-                    "args": ["mcp", "serve"]
-                },
-                "kuzu-memory": {
-                    "command": "kuzu-memory",
-                    "args": ["mcp", "serve"]
-                }
+                "other-server": {"command": "other", "args": ["mcp", "serve"]},
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]},
             }
         }
 
@@ -413,14 +406,7 @@ class TestFixBrokenMcpArgs:
 
     def test_no_fix_needed_for_correct_args(self):
         """Test that correct args are not modified."""
-        config = {
-            "mcpServers": {
-                "kuzu-memory": {
-                    "command": "kuzu-memory",
-                    "args": ["mcp"]
-                }
-            }
-        }
+        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}}
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -438,13 +424,7 @@ class TestFixBrokenMcpArgs:
 
     def test_handles_missing_args_field(self):
         """Test handling of server config without args field."""
-        config = {
-            "mcpServers": {
-                "kuzu-memory": {
-                    "command": "kuzu-memory"
-                }
-            }
-        }
+        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory"}}}
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -453,14 +433,7 @@ class TestFixBrokenMcpArgs:
 
     def test_handles_malformed_args(self):
         """Test handling of malformed args field."""
-        config = {
-            "mcpServers": {
-                "kuzu-memory": {
-                    "command": "kuzu-memory",
-                    "args": "not a list"
-                }
-            }
-        }
+        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": "not a list"}}}
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -472,14 +445,11 @@ class TestFixBrokenMcpArgs:
         """Test fixing multiple broken servers."""
         config = {
             "mcpServers": {
-                "kuzu-memory": {
-                    "command": "kuzu-memory",
-                    "args": ["mcp", "serve"]
-                },
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]},
                 "kuzu-memory-dev": {
                     "command": "kuzu-memory",
-                    "args": ["mcp", "serve", "--debug"]
-                }
+                    "args": ["mcp", "serve", "--debug"],
+                },
             }
         }
 
@@ -492,12 +462,7 @@ class TestFixBrokenMcpArgs:
     def test_case_insensitive_server_name_matching(self):
         """Test that server name matching is case-insensitive."""
         config = {
-            "mcpServers": {
-                "KUZU-MEMORY": {
-                    "command": "kuzu-memory",
-                    "args": ["mcp", "serve"]
-                }
-            }
+            "mcpServers": {"KUZU-MEMORY": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
         }
 
         fixed, fixes = fix_broken_mcp_args(config)
