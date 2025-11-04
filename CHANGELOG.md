@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.41] - 2025-11-04
 
+### Changed
+- Version bump
+
+## [1.4.41] - 2025-11-04
+
 ### Fixed
 
 - **MCP Args Auto-Fix Extension** - Extended automatic repair of broken MCP configuration args to all installers
@@ -772,6 +777,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing**: Comprehensive test coverage with benchmarks
 
 [Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...HEAD
+[1.4.41]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...v1.4.41
 [1.4.41]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.40...v1.4.41
 [1.4.40]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.39...v1.4.40
 [1.4.39]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.38...v1.4.39
