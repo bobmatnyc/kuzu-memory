@@ -189,10 +189,10 @@ class TestGitSyncIntegration:
         # Set sync timestamp to now
         sync_time = datetime.now()
 
-        # Wait a moment to ensure timestamp difference
+        # Wait to ensure distinct git timestamps (git uses 1-second resolution)
         import time
 
-        time.sleep(0.1)
+        time.sleep(1.1)
 
         # Create second commit
         test_file.write_text("second")
