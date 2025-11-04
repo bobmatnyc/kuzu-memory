@@ -20,7 +20,7 @@ from .protocol import (
     JSONRPCMessage,
     JSONRPCProtocol,
 )
-from .server import MCPServer
+from .server import KuzuMemoryMCPServer as MCPServer
 
 # Set up logging
 logging.basicConfig(

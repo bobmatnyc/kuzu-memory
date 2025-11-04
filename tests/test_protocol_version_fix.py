@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from kuzu_memory.mcp.run_server import MCPProtocolHandler
-from kuzu_memory.mcp.server import MCPServer
+from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
 
 
 @pytest.mark.asyncio

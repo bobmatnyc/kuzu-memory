@@ -15,7 +15,7 @@ import pytest
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from kuzu_memory.mcp.server import MCPServer
+from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
 from kuzu_memory.mcp.testing.connection_tester import MCPConnectionTester
 
 
