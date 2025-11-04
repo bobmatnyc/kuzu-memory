@@ -11,6 +11,7 @@ from .base import BaseInstaller, InstallationResult
 from .json_utils import (
     create_mcp_server_config,
     expand_variables,
+    fix_broken_mcp_args,
     get_standard_variables,
     load_json_config,
     merge_json_configs,
@@ -120,6 +121,13 @@ class VSCodeInstaller(BaseInstaller):
 
             # Load existing configuration
             existing_config = load_json_config(config_path) if config_path.exists() else {}
+
+            # Auto-fix broken MCP configurations
+            existing_config, fixes = fix_broken_mcp_args(existing_config)
+            if fixes:
+                logger.info(f"Auto-fixed {len(fixes)} broken MCP configuration(s)")
+                for fix in fixes:
+                    logger.debug(fix)
 
             # Normalize format if needed
             if existing_config:

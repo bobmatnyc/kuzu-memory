@@ -303,3 +303,4 @@ docs/hooks-verification-report.md
 # Claude MPM temp directories
 src/.claude-mpm/
 .claude-mpm/
+TEST_REPORT_MCP_ARGS_AUTOFIX.md
