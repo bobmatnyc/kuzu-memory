@@ -10,7 +10,11 @@ from pathlib import Path
 import click
 
 from ..installers.base import InstalledSystem
-from ..installers.json_utils import fix_broken_mcp_args, load_json_config, save_json_config
+from ..installers.json_utils import (
+    fix_broken_mcp_args,
+    load_json_config,
+    save_json_config,
+)
 from ..installers.registry import get_installer
 from ..utils.project_setup import find_project_root
 from .cli_utils import rich_panel, rich_print
