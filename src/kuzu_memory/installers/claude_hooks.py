@@ -1683,6 +1683,7 @@ exec {kuzu_cmd} "$@"
         Tested hooks:
         - session-start: Tests SessionStart hook handler
         - enhance: Tests UserPromptSubmit enhancement hook
+        - learn: Tests PostToolUse learning hook
 
         Returns:
             List of warning messages for any hook execution failures
@@ -1696,6 +1697,7 @@ exec {kuzu_cmd} "$@"
         hook_tests = [
             ("session-start", {"hook_event_name": "SessionStart"}),
             ("enhance", {"prompt": "test prompt"}),
+            ("learn", {"content": "test learning content"}),
         ]
 
         for hook_name, test_input in hook_tests:
