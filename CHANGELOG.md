@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.43] - 2025-11-05
+
+### Added
+- **Universal Auto-Repair**: Automatically fixes broken MCP args on every CLI command
+  - Auto-detects and repairs legacy `["mcp", "serve"]` syntax to `["mcp"]`
+  - Zero user interaction required - all fixes happen automatically
+  - System-wide detection and repair on install
+- **MCP Migration**: Migrates broken project-specific configs to local .mcp.json files
+  - Migrates 23+ broken MCP installations from unsupported ~/.claude.json location
+  - Preserves existing MCP servers (e.g., mcp-vector-search) during migration
+  - Creates timestamped backups before configuration changes
+- **Complete Hook Verification**: Added learn hook to installation testing
+  - Now all 3 hooks verified (session-start, enhance, learn)
+  - Comprehensive installation verification coverage
+
+### Fixed
+- Auto-repairs broken MCP configurations without user intervention
+- Migrates legacy project-specific configs to proper local .mcp.json files
+- Improves reliability of MCP installations across all projects
+
 ## [1.4.42] - 2025-11-04
 
 ### Added
@@ -802,7 +822,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.42...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.43...HEAD
+[1.4.43]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.42...v1.4.43
 [1.4.42]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...v1.4.42
 [1.4.41]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...v1.4.41
 [1.4.41]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.40...v1.4.41
