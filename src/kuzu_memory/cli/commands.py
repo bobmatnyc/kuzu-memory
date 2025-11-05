@@ -37,6 +37,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _silent_repair_mcp_configs() -> None:
+    """
+    Silently repair broken MCP configurations before running commands.
+
+    This runs automatically on every CLI invocation to ensure configs
+    are always in the correct state. No user interaction required.
+
+    Auto-detects and fixes the broken ["mcp", "serve"] args pattern
+    to the correct ["mcp"] pattern across all projects in ~/.claude.json.
+    """
+    try:
+        # Import here to avoid circular imports
+        from ..installers.json_utils import fix_broken_mcp_args, load_json_config, save_json_config
+
+        claude_json = Path.home() / ".claude.json"
+        if not claude_json.exists():
+            return  # No config to repair
+
+        # Read current config
+        config = load_json_config(claude_json)
+
+        # Apply auto-fix
+        fixed_config, fixes = fix_broken_mcp_args(config)
+
+        if fixes:
+            # Write repaired config
+            save_json_config(claude_json, fixed_config, indent=2)
+
+            # Log repairs (info level, not visible to user unless --debug)
+            logger.info(f"Auto-repaired {len(fixes)} broken MCP configuration(s)")
+            for fix in fixes:
+                logger.debug(fix)
+
+    except Exception as e:
+        # Silent failure - don't block other commands
+        logger.debug(f"Auto-repair skipped: {e}")
+
+
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="kuzu-memory")
 @click.option("--debug", is_flag=True, help="Enable debug logging")
@@ -92,6 +130,12 @@ def cli(ctx, debug, config, db_path, project_root):
 
     Use 'kuzu-memory COMMAND --help' for detailed help on any command.
     """
+    # Auto-repair MCP configs before running any command
+    # Skip for help/version commands to avoid unnecessary overhead
+    skip_repair_commands = {None, "help", "--help", "--version"}
+    if ctx.invoked_subcommand not in skip_repair_commands:
+        _silent_repair_mcp_configs()
+
     # Initialize context object
     ctx.ensure_object(dict)
 
