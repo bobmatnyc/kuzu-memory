@@ -129,9 +129,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                     config = json.load(f)
 
                 # Only remove from top-level mcpServers (not from projects)
-                if "mcpServers" in config and "kuzu-memory" in config.get(
-                    "mcpServers", {}
-                ):
+                if "mcpServers" in config and "kuzu-memory" in config.get("mcpServers", {}):
                     del config["mcpServers"]["kuzu-memory"]
 
                     # Backup and write
@@ -155,9 +153,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                 with open(local_settings) as f:
                     settings = json.load(f)
 
-                if "mcpServers" in settings and "kuzu-memory" in settings.get(
-                    "mcpServers", {}
-                ):
+                if "mcpServers" in settings and "kuzu-memory" in settings.get("mcpServers", {}):
                     del settings["mcpServers"]["kuzu-memory"]
                     if not settings["mcpServers"]:
                         del settings["mcpServers"]
@@ -165,9 +161,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                     with open(local_settings, "w") as f:
                         json.dump(settings, f, indent=2)
 
-                    warnings.append(
-                        "Moved MCP config from settings.local.json to ~/.claude.json"
-                    )
+                    warnings.append("Moved MCP config from settings.local.json to ~/.claude.json")
                     logger.info("Cleaned MCP config from settings.local.json")
             except Exception as e:
                 logger.warning(f"Failed to clean settings.local.json MCP config: {e}")
@@ -247,9 +241,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         # Warn about Claude Desktop (but don't fail)
         if not self.claude_config_dir:
-            logger.info(
-                "Claude Desktop not detected - will create local configuration only"
-            )
+            logger.info("Claude Desktop not detected - will create local configuration only")
 
         return errors
 
@@ -296,24 +288,14 @@ class ClaudeHooksInstaller(BaseInstaller):
         python_exe = Path(sys.executable)
         installer_kuzu_path = python_exe.parent / "kuzu-memory"
 
-        if installer_kuzu_path.exists() and self._verify_mcp_support(
-            installer_kuzu_path
-        ):
+        if installer_kuzu_path.exists() and self._verify_mcp_support(installer_kuzu_path):
             self._kuzu_command_path = str(installer_kuzu_path)
-            logger.info(
-                f"Using kuzu-memory from installer environment at: {installer_kuzu_path}"
-            )
+            logger.info(f"Using kuzu-memory from installer environment at: {installer_kuzu_path}")
             return str(installer_kuzu_path)
 
         # Priority 2: Check for pipx installation (most reliable for MCP server)
         pipx_paths = [
-            Path.home()
-            / ".local"
-            / "pipx"
-            / "venvs"
-            / "kuzu-memory"
-            / "bin"
-            / "kuzu-memory",
+            Path.home() / ".local" / "pipx" / "venvs" / "kuzu-memory" / "bin" / "kuzu-memory",
             Path.home() / ".local" / "bin" / "kuzu-memory",  # pipx ensurepath location
         ]
 
@@ -342,9 +324,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                 # Verify MCP support before using
                 if self._verify_mcp_support(command_path):
                     self._kuzu_command_path = command_path
-                    logger.info(
-                        f"Found kuzu-memory with MCP support at: {command_path}"
-                    )
+                    logger.info(f"Found kuzu-memory with MCP support at: {command_path}")
                     return command_path
                 else:
                     logger.warning(
@@ -966,9 +946,7 @@ exec {kuzu_cmd} "$@"
                     )
                 except Exception as e:
                     logger.warning(f"Failed to read existing settings.local.json: {e}")
-                    self.warnings.append(
-                        f"Could not read existing settings.local.json: {e}"
-                    )
+                    self.warnings.append(f"Could not read existing settings.local.json: {e}")
             else:
                 self.files_created.append(settings_path)
                 logger.info(
@@ -1007,9 +985,7 @@ exec {kuzu_cmd} "$@"
                     existing_settings["hooks"][hook_type] = []
                 # Remove existing kuzu-memory handlers (both direct and script-based)
                 existing_settings["hooks"][hook_type] = [
-                    h
-                    for h in existing_settings["hooks"][hook_type]
-                    if not self._is_kuzu_hook(h)
+                    h for h in existing_settings["hooks"][hook_type] if not self._is_kuzu_hook(h)
                 ]
                 # Add new kuzu-memory handlers
                 existing_settings["hooks"][hook_type].extend(handlers)
@@ -1059,9 +1035,7 @@ exec {kuzu_cmd} "$@"
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only
             if self.mcp_config_path and self.mcp_config_path.exists():
-                logger.debug(
-                    "Claude Desktop MCP server registration skipped (not supported)"
-                )
+                logger.debug("Claude Desktop MCP server registration skipped (not supported)")
                 self.warnings.append(
                     "Claude Desktop MCP integration not supported - using Claude Code hooks only"
                 )
@@ -1112,9 +1086,7 @@ exec {kuzu_cmd} "$@"
                         logger.info(f"Initialized kuzu-memory database at {db_path}")
                     self.files_created.append(db_path / "memories.db")
                 except Exception as e:
-                    self.warnings.append(
-                        f"Failed to initialize kuzu-memory database: {e}"
-                    )
+                    self.warnings.append(f"Failed to initialize kuzu-memory database: {e}")
 
             # Test the installation (skip in dry-run mode)
             if not dry_run:
@@ -1239,7 +1211,7 @@ exec {kuzu_cmd} "$@"
                     warnings.append(f"Invalid hook event: {event_name}")
 
             # Validate command paths
-            for event_name, handlers in hooks.items():
+            for _event_name, handlers in hooks.items():
                 for handler_group in handlers:
                     for hook in handler_group.get("hooks", []):
                         command = hook.get("command", "")
@@ -1249,9 +1221,7 @@ exec {kuzu_cmd} "$@"
                             if cmd_path and not Path(cmd_path).exists():
                                 warnings.append(f"Hook command not found: {cmd_path}")
                             elif cmd_path and not cmd_path.startswith("/"):
-                                warnings.append(
-                                    f"Hook command path not absolute: {cmd_path}"
-                                )
+                                warnings.append(f"Hook command path not absolute: {cmd_path}")
 
         except json.JSONDecodeError as e:
             warnings.append(f"Invalid JSON in settings.local.json: {e}")
@@ -1379,7 +1349,7 @@ exec {kuzu_cmd} "$@"
         modified = False
 
         hooks = config.get("hooks", {})
-        for event_name, handlers in hooks.items():
+        for _event_name, handlers in hooks.items():
             for handler_group in handlers:
                 for hook in handler_group.get("hooks", []):
                     command = hook.get("command", "")
@@ -1388,7 +1358,10 @@ exec {kuzu_cmd} "$@"
                     legacy_patterns = [
                         ("kuzu-memory enhance", "kuzu-memory hooks enhance"),
                         ("kuzu-memory learn", "kuzu-memory hooks learn"),
-                        ("kuzu-memory session-start", "kuzu-memory hooks session-start"),
+                        (
+                            "kuzu-memory session-start",
+                            "kuzu-memory hooks session-start",
+                        ),
                     ]
 
                     for old_pattern, new_pattern in legacy_patterns:
@@ -1443,9 +1416,7 @@ exec {kuzu_cmd} "$@"
 
         return warnings
 
-    def _run_hook_test(
-        self, hook_cmd: str, test_input: dict
-    ) -> subprocess.CompletedProcess:
+    def _run_hook_test(self, hook_cmd: str, test_input: dict) -> subprocess.CompletedProcess:
         """
         Run a single hook command test.
 
@@ -1533,12 +1504,8 @@ exec {kuzu_cmd} "$@"
                                 f"Removed MCP server from ~/.claude.json for project: {self.project_root.name}"
                             )
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to remove MCP config from ~/.claude.json: {e}"
-                    )
-                    self.warnings.append(
-                        f"Could not remove MCP config from global file: {e}"
-                    )
+                    logger.warning(f"Failed to remove MCP config from ~/.claude.json: {e}")
+                    self.warnings.append(f"Could not remove MCP config from global file: {e}")
 
             return InstallationResult(
                 success=True,
@@ -1602,10 +1569,7 @@ exec {kuzu_cmd} "$@"
             try:
                 with open(settings_config) as f:
                     settings = json.load(f)
-                    if (
-                        "mcpServers" in settings
-                        and "kuzu-memory" in settings["mcpServers"]
-                    ):
+                    if "mcpServers" in settings and "kuzu-memory" in settings["mcpServers"]:
                         status["legacy_mcp_location"] = True
                         logger.warning(
                             "MCP config found in legacy location (settings.local.json). "
