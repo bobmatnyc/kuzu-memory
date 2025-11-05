@@ -244,6 +244,7 @@ $RECYCLE.BIN/
 .claude/sessions/
 .conda/
 .env.*
+!.env.local.example
 .kuzu-memory/
 .mcp-vector-search/
 .npm

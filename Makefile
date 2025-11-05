@@ -191,14 +191,25 @@ publish: build
 	@echo "📤 Publishing to PyPI..."
 	@if [ ! -f .env.local ]; then \
 		echo "❌ Error: .env.local not found"; \
-		echo "Create .env.local with PYPI_TOKEN=<your-token>"; \
+		echo "Create .env.local with: PYPI_TOKEN=<your-token>"; \
 		exit 1; \
 	fi
-	@. .env.local && \
-	export TWINE_USERNAME=__token__ && \
-	export TWINE_PASSWORD=$$PYPI_TOKEN && \
-	VERSION=$$(python3 -c "import sys; sys.path.insert(0, 'src'); from kuzu_memory.__version__ import __version__; print(__version__)") && \
-	python3 -m twine upload dist/kuzu_memory-$$VERSION*
+	@if ! grep -q "PYPI_TOKEN" .env.local; then \
+		echo "❌ Error: PYPI_TOKEN not found in .env.local"; \
+		echo "Add to .env.local: PYPI_TOKEN=<your-token>"; \
+		exit 1; \
+	fi
+	@echo "🔑 Loading PyPI credentials from .env.local..."
+	@export $$(grep -v '^#' .env.local | grep -v '^\s*$$' | xargs) && \
+		if [ -z "$$PYPI_TOKEN" ]; then \
+			echo "❌ Error: PYPI_TOKEN is empty in .env.local"; \
+			exit 1; \
+		fi && \
+		export TWINE_USERNAME=__token__ && \
+		export TWINE_PASSWORD=$$PYPI_TOKEN && \
+		VERSION=$$(python3 -c "import sys; sys.path.insert(0, 'src'); from kuzu_memory.__version__ import __version__; print(__version__)") && \
+		echo "📦 Publishing version $$VERSION to PyPI..." && \
+		python3 -m twine upload dist/kuzu_memory-$$VERSION*
 	@echo "✅ Package published to PyPI"
 
 clean:
