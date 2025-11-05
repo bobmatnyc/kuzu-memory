@@ -248,7 +248,9 @@ class TestDiagnosticsIntegration:
 class TestDiagnosticsCLI:
     """Integration tests for diagnostic CLI commands."""
 
-    @pytest.mark.skip(reason="CLI diagnose commands not yet implemented - tracked in backlog")
+    @pytest.mark.skip(
+        reason="CLI diagnose commands not yet implemented - tracked in backlog"
+    )
     def test_diagnose_config_command(self):
         """Test 'kuzu-memory mcp diagnose config' command."""
         result = subprocess.run(
@@ -260,7 +262,9 @@ class TestDiagnosticsCLI:
         assert result.returncode == 0
         assert "Check MCP configuration validity" in result.stdout
 
-    @pytest.mark.skip(reason="CLI diagnose commands not yet implemented - tracked in backlog")
+    @pytest.mark.skip(
+        reason="CLI diagnose commands not yet implemented - tracked in backlog"
+    )
     def test_diagnose_connection_command(self):
         """Test 'kuzu-memory mcp diagnose connection' command."""
         result = subprocess.run(
@@ -272,7 +276,9 @@ class TestDiagnosticsCLI:
         assert result.returncode == 0
         assert "Test MCP server connection" in result.stdout
 
-    @pytest.mark.skip(reason="CLI diagnose commands not yet implemented - tracked in backlog")
+    @pytest.mark.skip(
+        reason="CLI diagnose commands not yet implemented - tracked in backlog"
+    )
     def test_diagnose_tools_command(self):
         """Test 'kuzu-memory mcp diagnose tools' command."""
         result = subprocess.run(
@@ -284,7 +290,9 @@ class TestDiagnosticsCLI:
         assert result.returncode == 0
         assert "Test MCP tool discovery" in result.stdout
 
-    @pytest.mark.skip(reason="CLI diagnose commands not yet implemented - tracked in backlog")
+    @pytest.mark.skip(
+        reason="CLI diagnose commands not yet implemented - tracked in backlog"
+    )
     def test_diagnose_run_command(self):
         """Test 'kuzu-memory mcp diagnose run' command."""
         result = subprocess.run(

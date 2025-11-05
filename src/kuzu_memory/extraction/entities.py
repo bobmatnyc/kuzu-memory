@@ -348,7 +348,9 @@ class EntityExtractor:
                     compiled_regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
                     compiled_group.append((compiled_regex, confidence))
                 except re.error as e:
-                    logger.warning(f"Failed to compile entity pattern for {entity_type}: {e}")
+                    logger.warning(
+                        f"Failed to compile entity pattern for {entity_type}: {e}"
+                    )
                     continue
 
             if compiled_group:
@@ -380,7 +382,9 @@ class EntityExtractor:
 
             entities = []
             patterns_to_use = (
-                self.compiled_patterns if self.enable_compilation else self._get_runtime_patterns()
+                self.compiled_patterns
+                if self.enable_compilation
+                else self._get_runtime_patterns()
             )
 
             # Extract entities from each pattern group
@@ -531,7 +535,12 @@ class EntityExtractor:
             return True
 
         # For position-based overlap (if we have position info)
-        if entity1.start_pos and entity2.start_pos and entity1.end_pos and entity2.end_pos:
+        if (
+            entity1.start_pos
+            and entity2.start_pos
+            and entity1.end_pos
+            and entity2.end_pos
+        ):
             # Check if they overlap in position
             overlap_start = max(entity1.start_pos, entity2.start_pos)
             overlap_end = min(entity1.end_pos, entity2.end_pos)
@@ -557,7 +566,8 @@ class EntityExtractor:
 
             # Skip entities that are mostly numbers (except for versions, dates, etc.)
             if (
-                entity.entity_type not in ["version", "date", "api_endpoint", "configuration"]
+                entity.entity_type
+                not in ["version", "date", "api_endpoint", "configuration"]
                 and sum(1 for c in entity.text if c.isdigit()) > len(entity.text) * 0.7
             ):
                 continue
@@ -629,7 +639,9 @@ class EntityExtractor:
             )[:10],
         }
 
-    def extract_entities_by_type(self, text: str, entity_types: list[str]) -> list[Entity]:
+    def extract_entities_by_type(
+        self, text: str, entity_types: list[str]
+    ) -> list[Entity]:
         """
         Extract entities of specific types only.
 
@@ -686,12 +698,19 @@ class EntityExtractor:
 
         # Person-Organization relationships
         if entity1.entity_type == "person" and entity2.entity_type == "organization":
-            if any(word in context_lower for word in ["works at", "at", "from", "with"]):
+            if any(
+                word in context_lower for word in ["works at", "at", "from", "with"]
+            ):
                 return "works_at"
 
         # Technology-Project relationships
-        if entity1.entity_type == "compound_entity" and entity2.entity_type == "technology":
-            if any(word in context_lower for word in ["uses", "built with", "using", "in"]):
+        if (
+            entity1.entity_type == "compound_entity"
+            and entity2.entity_type == "technology"
+        ):
+            if any(
+                word in context_lower for word in ["uses", "built with", "using", "in"]
+            ):
                 return "uses_technology"
 
         # File-Technology relationships

@@ -48,7 +48,9 @@ class DeduplicationEngine:
         """
         # Validate thresholds
         if not (0.0 <= near_threshold <= 1.0):
-            raise ValueError(f"near_threshold must be between 0.0 and 1.0, got {near_threshold}")
+            raise ValueError(
+                f"near_threshold must be between 0.0 and 1.0, got {near_threshold}"
+            )
         if not (0.0 <= semantic_threshold <= 1.0):
             raise ValueError(
                 f"semantic_threshold must be between 0.0 and 1.0, got {semantic_threshold}"
@@ -129,7 +131,9 @@ class DeduplicationEngine:
             "by",
         }
         words = normalized.split()
-        filtered_words = [word for word in words if word not in stop_words and len(word) > 1]
+        filtered_words = [
+            word for word in words if word not in stop_words and len(word) > 1
+        ]
 
         return " ".join(filtered_words)
 
@@ -260,7 +264,9 @@ class DeduplicationEngine:
 
         # Filter memories by type if specified
         if memory_type:
-            memories_to_check = [m for m in existing_memories if m.memory_type == memory_type]
+            memories_to_check = [
+                m for m in existing_memories if m.memory_type == memory_type
+            ]
         else:
             memories_to_check = existing_memories
 
@@ -292,7 +298,9 @@ class DeduplicationEngine:
                 continue
 
             # Layer 3: Semantic similarity (token overlap)
-            token_overlap = self._calculate_token_overlap(new_content_clean, memory.content)
+            token_overlap = self._calculate_token_overlap(
+                new_content_clean, memory.content
+            )
 
             if token_overlap >= self.semantic_threshold:
                 # Check if this might be an update rather than a duplicate

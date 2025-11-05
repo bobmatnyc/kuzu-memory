@@ -21,7 +21,9 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_repairs_broken_config(self, mock_home, mock_load, mock_fix, mock_save, tmp_path):
+    def test_repairs_broken_config(
+        self, mock_home, mock_load, mock_fix, mock_save, tmp_path
+    ):
         """Test that broken configs are repaired silently."""
         # Setup
         claude_json = tmp_path / ".claude.json"
@@ -55,7 +57,9 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_no_repair_when_no_fixes_needed(self, mock_home, mock_load, mock_fix, mock_save, tmp_path):
+    def test_no_repair_when_no_fixes_needed(
+        self, mock_home, mock_load, mock_fix, mock_save, tmp_path
+    ):
         """Test that config is not written when no fixes are needed."""
         # Setup
         claude_json = tmp_path / ".claude.json"
@@ -113,7 +117,9 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_repairs_multiple_projects(self, mock_home, mock_load, mock_fix, mock_save, tmp_path):
+    def test_repairs_multiple_projects(
+        self, mock_home, mock_load, mock_fix, mock_save, tmp_path
+    ):
         """Test repairing multiple project-specific configurations."""
         # Setup
         claude_json = tmp_path / ".claude.json"
@@ -126,12 +132,18 @@ class TestSilentRepairMcpConfigs:
             "projects": {
                 "/project1": {
                     "mcpServers": {
-                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+                        "kuzu-memory": {
+                            "command": "kuzu-memory",
+                            "args": ["mcp", "serve"],
+                        }
                     }
                 },
                 "/project2": {
                     "mcpServers": {
-                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+                        "kuzu-memory": {
+                            "command": "kuzu-memory",
+                            "args": ["mcp", "serve"],
+                        }
                     }
                 },
             },
@@ -141,10 +153,14 @@ class TestSilentRepairMcpConfigs:
             "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}},
             "projects": {
                 "/project1": {
-                    "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}
+                    }
                 },
                 "/project2": {
-                    "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}
+                    }
                 },
             },
         }
@@ -169,7 +185,9 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_only_fixes_kuzu_memory_servers(self, mock_home, mock_load, mock_fix, tmp_path):
+    def test_only_fixes_kuzu_memory_servers(
+        self, mock_home, mock_load, mock_fix, tmp_path
+    ):
         """Test that only kuzu-memory servers are fixed."""
         # Setup
         claude_json = tmp_path / ".claude.json"
@@ -185,7 +203,10 @@ class TestSilentRepairMcpConfigs:
         # fix_broken_mcp_args should only fix kuzu-memory
         fixed_config = {
             "mcpServers": {
-                "other-server": {"command": "other", "args": ["mcp", "serve"]},  # Unchanged
+                "other-server": {
+                    "command": "other",
+                    "args": ["mcp", "serve"],
+                },  # Unchanged
                 "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]},  # Fixed
             }
         }

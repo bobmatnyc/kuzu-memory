@@ -16,7 +16,11 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseInstaller, InstallationError, InstallationResult
-from .json_utils import fix_broken_mcp_args, load_json_config, merge_json_configs, save_json_config
+from .json_utils import (
+    fix_broken_mcp_args,
+    load_json_config,
+    save_json_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +134,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                     config = json.load(f)
 
                 # Only remove from top-level mcpServers (not from projects)
-                if "mcpServers" in config and "kuzu-memory" in config.get("mcpServers", {}):
+                if "mcpServers" in config and "kuzu-memory" in config.get(
+                    "mcpServers", {}
+                ):
                     del config["mcpServers"]["kuzu-memory"]
 
                     # Backup and write
@@ -154,7 +160,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                 with open(local_settings) as f:
                     settings = json.load(f)
 
-                if "mcpServers" in settings and "kuzu-memory" in settings.get("mcpServers", {}):
+                if "mcpServers" in settings and "kuzu-memory" in settings.get(
+                    "mcpServers", {}
+                ):
                     del settings["mcpServers"]["kuzu-memory"]
                     if not settings["mcpServers"]:
                         del settings["mcpServers"]
@@ -162,7 +170,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                     with open(local_settings, "w") as f:
                         json.dump(settings, f, indent=2)
 
-                    warnings.append("Moved MCP config from settings.local.json to ~/.claude.json")
+                    warnings.append(
+                        "Moved MCP config from settings.local.json to ~/.claude.json"
+                    )
                     logger.info("Cleaned MCP config from settings.local.json")
             except Exception as e:
                 logger.warning(f"Failed to clean settings.local.json MCP config: {e}")
@@ -242,7 +252,9 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         # Warn about Claude Desktop (but don't fail)
         if not self.claude_config_dir:
-            logger.info("Claude Desktop not detected - will create local configuration only")
+            logger.info(
+                "Claude Desktop not detected - will create local configuration only"
+            )
 
         return errors
 
@@ -289,14 +301,24 @@ class ClaudeHooksInstaller(BaseInstaller):
         python_exe = Path(sys.executable)
         installer_kuzu_path = python_exe.parent / "kuzu-memory"
 
-        if installer_kuzu_path.exists() and self._verify_mcp_support(installer_kuzu_path):
+        if installer_kuzu_path.exists() and self._verify_mcp_support(
+            installer_kuzu_path
+        ):
             self._kuzu_command_path = str(installer_kuzu_path)
-            logger.info(f"Using kuzu-memory from installer environment at: {installer_kuzu_path}")
+            logger.info(
+                f"Using kuzu-memory from installer environment at: {installer_kuzu_path}"
+            )
             return str(installer_kuzu_path)
 
         # Priority 2: Check for pipx installation (most reliable for MCP server)
         pipx_paths = [
-            Path.home() / ".local" / "pipx" / "venvs" / "kuzu-memory" / "bin" / "kuzu-memory",
+            Path.home()
+            / ".local"
+            / "pipx"
+            / "venvs"
+            / "kuzu-memory"
+            / "bin"
+            / "kuzu-memory",
             Path.home() / ".local" / "bin" / "kuzu-memory",  # pipx ensurepath location
         ]
 
@@ -325,7 +347,9 @@ class ClaudeHooksInstaller(BaseInstaller):
                 # Verify MCP support before using
                 if self._verify_mcp_support(command_path):
                     self._kuzu_command_path = command_path
-                    logger.info(f"Found kuzu-memory with MCP support at: {command_path}")
+                    logger.info(
+                        f"Found kuzu-memory with MCP support at: {command_path}"
+                    )
                     return command_path
                 else:
                     logger.warning(
@@ -820,12 +844,14 @@ exec {kuzu_cmd} "$@"
             project_dir = Path(project_path)
             mcp_json = project_dir / ".mcp.json"
 
-            broken_installs.append({
-                "project_path": project_path,
-                "config": kuzu_config,
-                "has_local_mcp_json": mcp_json.exists(),
-                "project_exists": project_dir.exists(),
-            })
+            broken_installs.append(
+                {
+                    "project_path": project_path,
+                    "config": kuzu_config,
+                    "has_local_mcp_json": mcp_json.exists(),
+                    "project_exists": project_dir.exists(),
+                }
+            )
 
         return broken_installs
 
@@ -861,7 +887,10 @@ exec {kuzu_cmd} "$@"
             # Check if kuzu-memory already exists
             if "kuzu-memory" in existing.get("mcpServers", {}):
                 if not force:
-                    return False, "kuzu-memory already in .mcp.json (use --force to overwrite)"
+                    return (
+                        False,
+                        "kuzu-memory already in .mcp.json (use --force to overwrite)",
+                    )
         else:
             existing = {"mcpServers": {}}
 
@@ -984,7 +1013,7 @@ exec {kuzu_cmd} "$@"
             return results
 
         logger.info(f"🔧 Detected {len(broken)} broken MCP installation(s)")
-        print(f"\n🔧 Migrating MCP configurations...")
+        print("\n🔧 Migrating MCP configurations...")
 
         migrated_projects = []
 
@@ -994,11 +1023,13 @@ exec {kuzu_cmd} "$@"
             # Skip if project directory doesn't exist
             if not install["project_exists"]:
                 results["skipped"] += 1
-                results["details"].append({
-                    "project": str(project_path),
-                    "status": "skipped",
-                    "reason": "Project directory does not exist",
-                })
+                results["details"].append(
+                    {
+                        "project": str(project_path),
+                        "status": "skipped",
+                        "reason": "Project directory does not exist",
+                    }
+                )
                 logger.debug(f"Skipping {project_path.name}: directory not found")
                 continue
 
@@ -1012,25 +1043,31 @@ exec {kuzu_cmd} "$@"
             if success:
                 results["migrated"] += 1
                 migrated_projects.append(install["project_path"])
-                results["details"].append({
-                    "project": str(project_path),
-                    "status": "success",
-                    "message": message,
-                })
+                results["details"].append(
+                    {
+                        "project": str(project_path),
+                        "status": "success",
+                        "message": message,
+                    }
+                )
                 print(f"  ✓ Migrated {project_path.name} to local .mcp.json")
             else:
                 results["failed"] += 1
-                results["details"].append({
-                    "project": str(project_path),
-                    "status": "failed",
-                    "reason": message,
-                })
+                results["details"].append(
+                    {
+                        "project": str(project_path),
+                        "status": "failed",
+                        "reason": message,
+                    }
+                )
                 logger.warning(f"Failed to migrate {project_path.name}: {message}")
                 print(f"  ✗ Failed to migrate {project_path.name}: {message}")
 
         # Clean up broken location for successfully migrated projects
         if migrated_projects:
-            cleanup_success, cleanup_msg = self._cleanup_broken_configs(migrated_projects)
+            cleanup_success, cleanup_msg = self._cleanup_broken_configs(
+                migrated_projects
+            )
             if cleanup_success:
                 logger.info(cleanup_msg)
                 print(f"\n💾 {cleanup_msg}")
@@ -1127,7 +1164,9 @@ exec {kuzu_cmd} "$@"
                 # In dry-run mode, just detect and report
                 broken = self._detect_broken_mcp_installations()
                 if broken:
-                    print(f"\n🔧 Would migrate {len(broken)} broken MCP installation(s):")
+                    print(
+                        f"\n🔧 Would migrate {len(broken)} broken MCP installation(s):"
+                    )
                     for install in broken[:5]:  # Show first 5
                         project_path = Path(install["project_path"])
                         print(f"  - {project_path.name}")
@@ -1244,7 +1283,9 @@ exec {kuzu_cmd} "$@"
                     )
                 except Exception as e:
                     logger.warning(f"Failed to read existing settings.local.json: {e}")
-                    self.warnings.append(f"Could not read existing settings.local.json: {e}")
+                    self.warnings.append(
+                        f"Could not read existing settings.local.json: {e}"
+                    )
             else:
                 self.files_created.append(settings_path)
                 logger.info(
@@ -1283,7 +1324,9 @@ exec {kuzu_cmd} "$@"
                     existing_settings["hooks"][hook_type] = []
                 # Remove existing kuzu-memory handlers (both direct and script-based)
                 existing_settings["hooks"][hook_type] = [
-                    h for h in existing_settings["hooks"][hook_type] if not self._is_kuzu_hook(h)
+                    h
+                    for h in existing_settings["hooks"][hook_type]
+                    if not self._is_kuzu_hook(h)
                 ]
                 # Add new kuzu-memory handlers
                 existing_settings["hooks"][hook_type].extend(handlers)
@@ -1333,7 +1376,9 @@ exec {kuzu_cmd} "$@"
             # Note: Claude Desktop MCP server registration is not supported
             # This installer focuses on Claude Code hooks only
             if self.mcp_config_path and self.mcp_config_path.exists():
-                logger.debug("Claude Desktop MCP server registration skipped (not supported)")
+                logger.debug(
+                    "Claude Desktop MCP server registration skipped (not supported)"
+                )
                 self.warnings.append(
                     "Claude Desktop MCP integration not supported - using Claude Code hooks only"
                 )
@@ -1384,7 +1429,9 @@ exec {kuzu_cmd} "$@"
                         logger.info(f"Initialized kuzu-memory database at {db_path}")
                     self.files_created.append(db_path / "memories.db")
                 except Exception as e:
-                    self.warnings.append(f"Failed to initialize kuzu-memory database: {e}")
+                    self.warnings.append(
+                        f"Failed to initialize kuzu-memory database: {e}"
+                    )
 
             # Test the installation (skip in dry-run mode)
             if not dry_run:
@@ -1519,7 +1566,9 @@ exec {kuzu_cmd} "$@"
                             if cmd_path and not Path(cmd_path).exists():
                                 warnings.append(f"Hook command not found: {cmd_path}")
                             elif cmd_path and not cmd_path.startswith("/"):
-                                warnings.append(f"Hook command path not absolute: {cmd_path}")
+                                warnings.append(
+                                    f"Hook command path not absolute: {cmd_path}"
+                                )
 
         except json.JSONDecodeError as e:
             warnings.append(f"Invalid JSON in settings.local.json: {e}")
@@ -1665,7 +1714,9 @@ exec {kuzu_cmd} "$@"
                     for old_pattern, new_pattern in legacy_patterns:
                         if old_pattern in command and "hooks" not in command:
                             hook["command"] = command.replace(old_pattern, new_pattern)
-                            messages.append(f"Updated syntax: {old_pattern} → {new_pattern}")
+                            messages.append(
+                                f"Updated syntax: {old_pattern} → {new_pattern}"
+                            )
                             modified = True
 
         return modified, messages
@@ -1702,9 +1753,13 @@ exec {kuzu_cmd} "$@"
 
         for hook_name, test_input in hook_tests:
             try:
-                result = self._run_hook_test(f"{kuzu_cmd} hooks {hook_name}", test_input)
+                result = self._run_hook_test(
+                    f"{kuzu_cmd} hooks {hook_name}", test_input
+                )
                 if result.returncode != 0:
-                    stderr_preview = result.stderr[:100] if result.stderr else "no stderr"
+                    stderr_preview = (
+                        result.stderr[:100] if result.stderr else "no stderr"
+                    )
                     warnings.append(
                         f"Hook 'hooks {hook_name}' failed with exit code "
                         f"{result.returncode}: {stderr_preview}"
@@ -1716,7 +1771,9 @@ exec {kuzu_cmd} "$@"
 
         return warnings
 
-    def _run_hook_test(self, hook_cmd: str, test_input: dict) -> subprocess.CompletedProcess:
+    def _run_hook_test(
+        self, hook_cmd: str, test_input: dict
+    ) -> subprocess.CompletedProcess:
         """
         Run a single hook command test.
 
@@ -1804,8 +1861,12 @@ exec {kuzu_cmd} "$@"
                                 f"Removed MCP server from ~/.claude.json for project: {self.project_root.name}"
                             )
                 except Exception as e:
-                    logger.warning(f"Failed to remove MCP config from ~/.claude.json: {e}")
-                    self.warnings.append(f"Could not remove MCP config from global file: {e}")
+                    logger.warning(
+                        f"Failed to remove MCP config from ~/.claude.json: {e}"
+                    )
+                    self.warnings.append(
+                        f"Could not remove MCP config from global file: {e}"
+                    )
 
             return InstallationResult(
                 success=True,
@@ -1869,7 +1930,10 @@ exec {kuzu_cmd} "$@"
             try:
                 with open(settings_config) as f:
                     settings = json.load(f)
-                    if "mcpServers" in settings and "kuzu-memory" in settings["mcpServers"]:
+                    if (
+                        "mcpServers" in settings
+                        and "kuzu-memory" in settings["mcpServers"]
+                    ):
                         status["legacy_mcp_location"] = True
                         logger.warning(
                             "MCP config found in legacy location (settings.local.json). "

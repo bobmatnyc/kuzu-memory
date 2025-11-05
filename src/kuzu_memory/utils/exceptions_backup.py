@@ -139,7 +139,9 @@ class DatabaseLockError(DatabaseError):
 
     def __init__(self, db_path: str, timeout: float = 5.0, pid: int | None = None):
         message = f"Database at '{db_path}' is locked by another process"
-        suggestion = f"Wait {timeout}s and try again, or check for other KuzuMemory instances"
+        suggestion = (
+            f"Wait {timeout}s and try again, or check for other KuzuMemory instances"
+        )
 
         context = {"db_path": db_path, "timeout": timeout}
         if pid:
@@ -218,7 +220,9 @@ class DatabaseVersionError(DatabaseError):
 class DatabaseConnectionError(DatabaseError):
     """Failed to connect to database."""
 
-    def __init__(self, db_path: str, cause: Exception | None = None, retry_count: int = 0):
+    def __init__(
+        self, db_path: str, cause: Exception | None = None, retry_count: int = 0
+    ):
         message = f"Failed to connect to database at '{db_path}'"
         if retry_count > 0:
             message += f" after {retry_count} attempts"
@@ -292,7 +296,9 @@ class RecallError(KuzuMemoryError):
     """Error during memory recall/retrieval."""
 
     def __init__(self, query: str, error_details: str):
-        message = f"Failed to recall memories for query '{query[:50]}...': {error_details}"
+        message = (
+            f"Failed to recall memories for query '{query[:50]}...': {error_details}"
+        )
         suggestion = "Try a simpler query or check database connectivity"
         super().__init__(
             message=message,
@@ -307,7 +313,9 @@ class PerformanceError(KuzuMemoryError):
     """Operation exceeded performance requirements."""
 
     def __init__(self, operation: str, actual_time: float, max_time: float):
-        message = f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
+        message = (
+            f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
+        )
         suggestion = "Consider optimizing database indices or reducing query complexity"
         super().__init__(
             message=message,
@@ -356,10 +364,14 @@ def raise_if_invalid_path(path: str) -> None:
 
     # Additional path validation could be added here
     if len(path) > 255:
-        raise ValidationError("path", path[:50] + "...", "path too long (max 255 chars)")
+        raise ValidationError(
+            "path", path[:50] + "...", "path too long (max 255 chars)"
+        )
 
 
-def raise_if_performance_exceeded(operation: str, actual_time: float, max_time: float) -> None:
+def raise_if_performance_exceeded(
+    operation: str, actual_time: float, max_time: float
+) -> None:
     """Raise PerformanceError if operation exceeded time limit."""
     if actual_time > max_time:
         raise PerformanceError(operation, actual_time, max_time)
@@ -624,7 +636,9 @@ class ErrorRecoveryManager:
     """Manages automatic error recovery strategies."""
 
     @staticmethod
-    def should_retry(error: KuzuMemoryError, attempt: int, max_attempts: int = 3) -> bool:
+    def should_retry(
+        error: KuzuMemoryError, attempt: int, max_attempts: int = 3
+    ) -> bool:
         """Determine if an error should trigger a retry."""
         if attempt >= max_attempts:
             return False
