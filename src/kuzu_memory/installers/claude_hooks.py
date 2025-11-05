@@ -1144,14 +1144,23 @@ exec {kuzu_cmd} "$@"
 
     def _test_installation(self) -> list[str]:
         """
-        Test the installation to ensure everything works.
+        Test the installation and auto-repair any issues.
+
+        Performs comprehensive verification of the Claude Code hooks installation:
+        1. Tests kuzu-memory CLI availability and basic functionality
+        2. Validates hooks configuration in settings.local.json
+        3. Auto-repairs common configuration issues
+        4. Tests that hook commands execute successfully with sample inputs
+
+        This method is called automatically during installation to catch
+        configuration errors early and provide actionable warnings.
 
         Returns:
-            List of warning messages if any tests fail
+            List of warning messages if any tests fail. Empty list if all tests pass.
         """
         warnings = []
 
-        # Test kuzu-memory CLI
+        # Test 1: CLI availability
         try:
             result = subprocess.run(
                 ["kuzu-memory", "status", "--format", "json"],
@@ -1165,10 +1174,296 @@ exec {kuzu_cmd} "$@"
         except subprocess.SubprocessError as e:
             warnings.append(f"kuzu-memory test failed: {e}")
 
+        # Test 2: Validate and repair configuration
+        initial_warnings = self._validate_hooks_config()
+        if initial_warnings:
+            # Attempt auto-repair
+            success, repair_messages = self._repair_hooks_config()
+            if success:
+                # Re-validate after repair
+                remaining_warnings = self._validate_hooks_config()
+                if not remaining_warnings:
+                    # Repair succeeded - show what was fixed
+                    for msg in repair_messages:
+                        if "✓" in msg or "Updated" in msg or "Migrated" in msg:
+                            self.logger.info(msg)
+                else:
+                    # Some issues remain after repair
+                    warnings.extend(remaining_warnings)
+            else:
+                # Repair failed
+                warnings.extend(initial_warnings)
+                warnings.extend([f"Auto-repair: {msg}" for msg in repair_messages])
+
+        # Test 3: Test hook commands
+        hook_warnings = self._test_hook_commands()
+        if hook_warnings:
+            # Could add hook execution auto-repair here in future
+            warnings.extend(hook_warnings)
+
         # MCP server testing skipped (Claude Desktop not supported)
         logger.debug("MCP server testing skipped (Claude Desktop not supported)")
 
         return warnings
+
+    def _validate_hooks_config(self) -> list[str]:
+        """
+        Validate hooks configuration file.
+
+        Checks settings.local.json for common configuration issues:
+        - JSON syntax errors
+        - Invalid hook event names (must be valid Claude Code events)
+        - Missing or non-absolute command paths
+        - Non-existent command executables
+
+        This validation catches configuration errors before they cause
+        runtime failures during Claude Code hook execution.
+
+        Returns:
+            List of warning messages for any configuration issues
+        """
+        warnings = []
+        settings_path = self.project_root / ".claude" / "settings.local.json"
+
+        if not settings_path.exists():
+            warnings.append("settings.local.json not found")
+            return warnings
+
+        try:
+            with open(settings_path) as f:
+                config = json.load(f)
+
+            hooks = config.get("hooks", {})
+            for event_name in hooks.keys():
+                if event_name not in VALID_CLAUDE_CODE_EVENTS:
+                    warnings.append(f"Invalid hook event: {event_name}")
+
+            # Validate command paths
+            for event_name, handlers in hooks.items():
+                for handler_group in handlers:
+                    for hook in handler_group.get("hooks", []):
+                        command = hook.get("command", "")
+                        if "kuzu" in command.lower():
+                            cmd_parts = command.split()
+                            cmd_path = cmd_parts[0] if cmd_parts else ""
+                            if cmd_path and not Path(cmd_path).exists():
+                                warnings.append(f"Hook command not found: {cmd_path}")
+                            elif cmd_path and not cmd_path.startswith("/"):
+                                warnings.append(
+                                    f"Hook command path not absolute: {cmd_path}"
+                                )
+
+        except json.JSONDecodeError as e:
+            warnings.append(f"Invalid JSON in settings.local.json: {e}")
+        except Exception as e:
+            warnings.append(f"Failed to validate hooks config: {e}")
+
+        return warnings
+
+    def _repair_hooks_config(self) -> tuple[bool, list[str]]:
+        """
+        Attempt to repair hooks configuration issues.
+
+        Returns:
+            (success: bool, messages: list[str]) - Whether repair succeeded and log messages
+        """
+        messages = []
+        settings_path = self.project_root / ".claude" / "settings.local.json"
+
+        if not settings_path.exists():
+            messages.append("Settings file doesn't exist yet (will be created)")
+            return True, messages
+
+        try:
+            # Read current config
+            with open(settings_path) as f:
+                config = json.load(f)
+
+            # Create backup
+            backup_path = settings_path.with_suffix(".json.backup")
+            with open(backup_path, "w") as f:
+                json.dump(config, f, indent=2)
+            messages.append(f"Created backup: {backup_path.name}")
+
+            # Apply fixes
+            modified = False
+
+            # Fix 1: Update command paths
+            fixed_paths, path_messages = self._fix_command_paths(config)
+            modified = modified or fixed_paths
+            messages.extend(path_messages)
+
+            # Fix 2: Migrate legacy event names
+            fixed_events, event_messages = self._migrate_legacy_events(config)
+            modified = modified or fixed_events
+            messages.extend(event_messages)
+
+            # Fix 3: Fix legacy command syntax
+            fixed_syntax, syntax_messages = self._fix_legacy_command_syntax(config)
+            modified = modified or fixed_syntax
+            messages.extend(syntax_messages)
+
+            # Write repaired config if modified
+            if modified:
+                with open(settings_path, "w") as f:
+                    json.dump(config, f, indent=2)
+                messages.append("✓ Configuration repaired successfully")
+                return True, messages
+            else:
+                messages.append("Configuration is correct, no repairs needed")
+                return True, messages
+
+        except Exception as e:
+            messages.append(f"Failed to repair config: {e}")
+            return False, messages
+
+    def _fix_command_paths(self, config: dict) -> tuple[bool, list[str]]:
+        """Fix incorrect or relative command paths."""
+        messages = []
+        modified = False
+        correct_path = self._get_kuzu_memory_command_path()
+
+        hooks = config.get("hooks", {})
+        for event_name, handlers in hooks.items():
+            for handler_group in handlers:
+                for hook in handler_group.get("hooks", []):
+                    command = hook.get("command", "")
+                    if "kuzu" in command.lower():
+                        cmd_parts = command.split()
+                        if cmd_parts:
+                            old_path = cmd_parts[0]
+                            # Check if path is wrong or relative
+                            if old_path != correct_path or not old_path.startswith("/"):
+                                # Update to correct path
+                                cmd_parts[0] = correct_path
+                                hook["command"] = " ".join(cmd_parts)
+                                messages.append(f"Updated command path in {event_name}")
+                                modified = True
+
+        return modified, messages
+
+    def _migrate_legacy_events(self, config: dict) -> tuple[bool, list[str]]:
+        """Migrate legacy event names to current format."""
+        messages = []
+        modified = False
+
+        # Event name migration map
+        legacy_to_new = {
+            "user_prompt_submit": "UserPromptSubmit",
+            "post_tool_use": "PostToolUse",
+            "session_start": "SessionStart",
+            "stop": "Stop",
+            "subagent_stop": "SubagentStop",
+        }
+
+        hooks = config.get("hooks", {})
+        for old_name, new_name in legacy_to_new.items():
+            if old_name in hooks:
+                hooks[new_name] = hooks.pop(old_name)
+                messages.append(f"Migrated event: {old_name} → {new_name}")
+                modified = True
+
+        # Remove invalid event names
+        valid_events = VALID_CLAUDE_CODE_EVENTS
+        invalid_events = [name for name in hooks.keys() if name not in valid_events]
+        for invalid_name in invalid_events:
+            hooks.pop(invalid_name)
+            messages.append(f"Removed invalid event: {invalid_name}")
+            modified = True
+
+        return modified, messages
+
+    def _fix_legacy_command_syntax(self, config: dict) -> tuple[bool, list[str]]:
+        """Fix legacy command syntax (add 'hooks' subcommand)."""
+        messages = []
+        modified = False
+
+        hooks = config.get("hooks", {})
+        for event_name, handlers in hooks.items():
+            for handler_group in handlers:
+                for hook in handler_group.get("hooks", []):
+                    command = hook.get("command", "")
+
+                    # Check for legacy syntax patterns
+                    legacy_patterns = [
+                        ("kuzu-memory enhance", "kuzu-memory hooks enhance"),
+                        ("kuzu-memory learn", "kuzu-memory hooks learn"),
+                        ("kuzu-memory session-start", "kuzu-memory hooks session-start"),
+                    ]
+
+                    for old_pattern, new_pattern in legacy_patterns:
+                        if old_pattern in command and "hooks" not in command:
+                            hook["command"] = command.replace(old_pattern, new_pattern)
+                            messages.append(f"Updated syntax: {old_pattern} → {new_pattern}")
+                            modified = True
+
+        return modified, messages
+
+    def _test_hook_commands(self) -> list[str]:
+        """
+        Test that hook commands execute successfully.
+
+        Executes each hook command with sample test inputs to verify:
+        - Commands are executable and accessible
+        - Commands accept JSON input via stdin
+        - Commands complete within timeout (5 seconds)
+        - Commands exit with code 0 (success)
+
+        Tested hooks:
+        - session-start: Tests SessionStart hook handler
+        - enhance: Tests UserPromptSubmit enhancement hook
+
+        Returns:
+            List of warning messages for any hook execution failures
+        """
+        warnings = []
+
+        # Get kuzu-memory command path
+        kuzu_cmd = self._get_kuzu_memory_command_path()
+
+        # Define hook tests
+        hook_tests = [
+            ("session-start", {"hook_event_name": "SessionStart"}),
+            ("enhance", {"prompt": "test prompt"}),
+        ]
+
+        for hook_name, test_input in hook_tests:
+            try:
+                result = self._run_hook_test(f"{kuzu_cmd} hooks {hook_name}", test_input)
+                if result.returncode != 0:
+                    stderr_preview = result.stderr[:100] if result.stderr else "no stderr"
+                    warnings.append(
+                        f"Hook 'hooks {hook_name}' failed with exit code "
+                        f"{result.returncode}: {stderr_preview}"
+                    )
+            except subprocess.TimeoutExpired:
+                warnings.append(f"Hook 'hooks {hook_name}' timed out after 5 seconds")
+            except Exception as e:
+                warnings.append(f"Hook 'hooks {hook_name}' test failed: {e}")
+
+        return warnings
+
+    def _run_hook_test(
+        self, hook_cmd: str, test_input: dict
+    ) -> subprocess.CompletedProcess:
+        """
+        Run a single hook command test.
+
+        Args:
+            hook_cmd: Full command to execute (space-separated string)
+            test_input: Dictionary to send as JSON input via stdin
+
+        Returns:
+            CompletedProcess result from subprocess.run
+        """
+        return subprocess.run(
+            hook_cmd.split(),
+            input=json.dumps(test_input),
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(self.project_root),
+        )
 
     def uninstall(self, **kwargs) -> InstallationResult:
         """
