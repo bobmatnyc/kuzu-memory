@@ -11,11 +11,12 @@ import platform
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .base import BaseInstaller, InstallationError, InstallationResult
-from .json_utils import fix_broken_mcp_args
+from .json_utils import fix_broken_mcp_args, load_json_config, merge_json_configs, save_json_config
 
 logger = logging.getLogger(__name__)
 
@@ -775,6 +776,278 @@ cd "$(dirname "$0")/.."
 exec {kuzu_cmd} "$@"
 """
 
+    def _detect_broken_mcp_installations(self) -> list[dict[str, Any]]:
+        """
+        Detect kuzu-memory MCP servers in broken location.
+
+        Scans ~/.claude.json for MCP servers configured in the unsupported
+        projects[path].mcpServers location. Claude Code ignores this location.
+
+        Returns:
+            List of broken installations with metadata:
+            [
+                {
+                    "project_path": "/absolute/path",
+                    "config": {"type": "stdio", "command": "...", ...},
+                    "has_local_mcp_json": bool,
+                    "project_exists": bool
+                }
+            ]
+        """
+        claude_json = Path.home() / ".claude.json"
+        if not claude_json.exists():
+            return []
+
+        try:
+            config = load_json_config(claude_json)
+        except Exception as e:
+            logger.warning(f"Failed to read ~/.claude.json: {e}")
+            return []
+
+        broken_installs = []
+
+        for project_path, project_config in config.get("projects", {}).items():
+            if not isinstance(project_config, dict):
+                continue
+
+            if "mcpServers" not in project_config:
+                continue
+
+            kuzu_config = project_config["mcpServers"].get("kuzu-memory")
+            if not kuzu_config:
+                continue
+
+            project_dir = Path(project_path)
+            mcp_json = project_dir / ".mcp.json"
+
+            broken_installs.append({
+                "project_path": project_path,
+                "config": kuzu_config,
+                "has_local_mcp_json": mcp_json.exists(),
+                "project_exists": project_dir.exists(),
+            })
+
+        return broken_installs
+
+    def _migrate_to_local_mcp_json(
+        self,
+        project_path: Path,
+        kuzu_config: dict[str, Any],
+        force: bool = False,
+    ) -> tuple[bool, str]:
+        """
+        Migrate MCP config from ~/.claude.json to .mcp.json.
+
+        Creates or updates the project-local .mcp.json file with the kuzu-memory
+        MCP server configuration. Preserves any existing MCP servers in .mcp.json.
+
+        Args:
+            project_path: Absolute path to project directory
+            kuzu_config: MCP server configuration to migrate
+            force: If True, overwrite existing kuzu-memory in .mcp.json
+
+        Returns:
+            (success: bool, message: str)
+        """
+        mcp_json = project_path / ".mcp.json"
+
+        # Load or create .mcp.json
+        if mcp_json.exists():
+            try:
+                existing = load_json_config(mcp_json)
+            except Exception as e:
+                return False, f"Cannot read existing .mcp.json: {e}"
+
+            # Check if kuzu-memory already exists
+            if "kuzu-memory" in existing.get("mcpServers", {}):
+                if not force:
+                    return False, "kuzu-memory already in .mcp.json (use --force to overwrite)"
+        else:
+            existing = {"mcpServers": {}}
+
+        # Add/update kuzu-memory
+        if "mcpServers" not in existing:
+            existing["mcpServers"] = {}
+        existing["mcpServers"]["kuzu-memory"] = kuzu_config
+
+        # Write to .mcp.json
+        try:
+            save_json_config(mcp_json, existing, indent=2)
+            return True, f"Migrated to {mcp_json.name}"
+        except Exception as e:
+            return False, f"Failed to write .mcp.json: {e}"
+
+    def _cleanup_broken_configs(self, project_paths: list[str]) -> tuple[bool, str]:
+        """
+        Remove kuzu-memory from projects[path].mcpServers in ~/.claude.json.
+
+        Creates a timestamped backup before modifying ~/.claude.json.
+        Removes kuzu-memory entries from the unsupported location and cleans
+        up empty structures.
+
+        Args:
+            project_paths: List of project paths to clean up (absolute path strings)
+
+        Returns:
+            (success: bool, message: str)
+        """
+        claude_json = Path.home() / ".claude.json"
+        if not claude_json.exists():
+            return True, "~/.claude.json does not exist"
+
+        try:
+            config = load_json_config(claude_json)
+        except Exception as e:
+            return False, f"Failed to read ~/.claude.json: {e}"
+
+        # Create timestamped backup
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = claude_json.with_suffix(f".json.backup.{timestamp}")
+        try:
+            shutil.copy(claude_json, backup_path)
+            logger.info(f"Created backup: {backup_path}")
+        except Exception as e:
+            return False, f"Failed to create backup: {e}"
+
+        # Remove kuzu-memory from each project
+        modified = False
+        for project_path in project_paths:
+            if "projects" not in config or project_path not in config["projects"]:
+                continue
+
+            project_config = config["projects"][project_path]
+            if not isinstance(project_config, dict):
+                continue
+
+            if "mcpServers" not in project_config:
+                continue
+
+            if "kuzu-memory" not in project_config["mcpServers"]:
+                continue
+
+            # Remove kuzu-memory
+            del project_config["mcpServers"]["kuzu-memory"]
+            modified = True
+
+            # Clean up empty structures
+            if not project_config["mcpServers"]:
+                del project_config["mcpServers"]
+            if not config["projects"][project_path]:
+                del config["projects"][project_path]
+
+        # Remove empty projects section
+        if "projects" in config and not config["projects"]:
+            del config["projects"]
+
+        # Write updated config if modified
+        if modified:
+            try:
+                save_json_config(claude_json, config, indent=2)
+                return True, f"Cleaned up ~/.claude.json (backup: {backup_path.name})"
+            except Exception as e:
+                return False, f"Failed to write ~/.claude.json: {e}"
+        else:
+            return True, "No cleanup needed"
+
+    def _migrate_broken_mcp_configs(self, force: bool = False) -> dict[str, Any]:
+        """
+        Migrate all broken MCP installations to .mcp.json.
+
+        This is the main orchestration method that:
+        1. Detects broken installations in ~/.claude.json
+        2. Migrates each to project-local .mcp.json
+        3. Cleans up broken entries from ~/.claude.json
+
+        Args:
+            force: If True, overwrite existing kuzu-memory in .mcp.json files
+
+        Returns:
+            Migration results dictionary:
+            {
+                "detected": int,
+                "migrated": int,
+                "failed": int,
+                "skipped": int,
+                "details": [...]
+            }
+        """
+        broken = self._detect_broken_mcp_installations()
+        results = {
+            "detected": len(broken),
+            "migrated": 0,
+            "failed": 0,
+            "skipped": 0,
+            "details": [],
+        }
+
+        if not broken:
+            return results
+
+        logger.info(f"🔧 Detected {len(broken)} broken MCP installation(s)")
+        print(f"\n🔧 Migrating MCP configurations...")
+
+        migrated_projects = []
+
+        for install in broken:
+            project_path = Path(install["project_path"])
+
+            # Skip if project directory doesn't exist
+            if not install["project_exists"]:
+                results["skipped"] += 1
+                results["details"].append({
+                    "project": str(project_path),
+                    "status": "skipped",
+                    "reason": "Project directory does not exist",
+                })
+                logger.debug(f"Skipping {project_path.name}: directory not found")
+                continue
+
+            # Migrate to .mcp.json
+            success, message = self._migrate_to_local_mcp_json(
+                project_path,
+                install["config"],
+                force=force,
+            )
+
+            if success:
+                results["migrated"] += 1
+                migrated_projects.append(install["project_path"])
+                results["details"].append({
+                    "project": str(project_path),
+                    "status": "success",
+                    "message": message,
+                })
+                print(f"  ✓ Migrated {project_path.name} to local .mcp.json")
+            else:
+                results["failed"] += 1
+                results["details"].append({
+                    "project": str(project_path),
+                    "status": "failed",
+                    "reason": message,
+                })
+                logger.warning(f"Failed to migrate {project_path.name}: {message}")
+                print(f"  ✗ Failed to migrate {project_path.name}: {message}")
+
+        # Clean up broken location for successfully migrated projects
+        if migrated_projects:
+            cleanup_success, cleanup_msg = self._cleanup_broken_configs(migrated_projects)
+            if cleanup_success:
+                logger.info(cleanup_msg)
+                print(f"\n💾 {cleanup_msg}")
+            else:
+                logger.warning(f"Cleanup failed: {cleanup_msg}")
+                print(f"\n⚠ Cleanup warning: {cleanup_msg}")
+
+        # Print summary
+        if results["migrated"] > 0:
+            print(f"\n📦 Migration complete: {results['migrated']} project(s) migrated")
+        if results["failed"] > 0:
+            print(f"⚠ Failed to migrate {results['failed']} project(s)")
+        if results["skipped"] > 0:
+            print(f"⏭ Skipped {results['skipped']} project(s) (directory not found)")
+
+        return results
+
     def _get_template_path(self, filename: str) -> Path:
         """Get path to hook template file."""
         template_dir = Path(__file__).parent / "templates" / "claude_hooks"
@@ -835,6 +1108,31 @@ exec {kuzu_cmd} "$@"
             errors = self.check_prerequisites()
             if errors:
                 raise InstallationError(f"Prerequisites not met: {'; '.join(errors)}")
+
+            # Migrate broken MCP configurations BEFORE installing new config
+            # This ensures all projects use the supported .mcp.json location
+            if not dry_run:
+                migration_results = self._migrate_broken_mcp_configs(force=force)
+                if migration_results["detected"] > 0:
+                    # Add migration info to warnings for reporting
+                    if migration_results["migrated"] > 0:
+                        self.warnings.append(
+                            f"Migrated {migration_results['migrated']} project(s) from broken MCP location"
+                        )
+                    if migration_results["failed"] > 0:
+                        self.warnings.append(
+                            f"Failed to migrate {migration_results['failed']} project(s) - see logs for details"
+                        )
+            else:
+                # In dry-run mode, just detect and report
+                broken = self._detect_broken_mcp_installations()
+                if broken:
+                    print(f"\n🔧 Would migrate {len(broken)} broken MCP installation(s):")
+                    for install in broken[:5]:  # Show first 5
+                        project_path = Path(install["project_path"])
+                        print(f"  - {project_path.name}")
+                    if len(broken) > 5:
+                        print(f"  ... and {len(broken) - 5} more")
 
             # Create or update CLAUDE.md (always update if exists)
             claude_md_path = self.project_root / "CLAUDE.md"

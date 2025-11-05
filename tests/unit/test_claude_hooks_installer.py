@@ -561,3 +561,407 @@ class TestClaudeHooksInstaller:
         # (might have warnings about command not found, but not about event names)
         invalid_event_warnings = [w for w in warnings if "Invalid hook event" in w]
         assert len(invalid_event_warnings) == 0
+
+    def test_detect_broken_mcp_installations_empty(self, tmp_path, monkeypatch):
+        """Test detection when no broken installations exist."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+        installer = ClaudeHooksInstaller(project_path)
+
+        broken = installer._detect_broken_mcp_installations()
+        assert broken == []
+
+    def test_detect_broken_mcp_installations_finds_broken(self, tmp_path, monkeypatch):
+        """Test detection finds broken installations."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Create projects
+        project1 = tmp_path / "project1"
+        project1.mkdir()
+        project2 = tmp_path / "project2"
+        project2.mkdir()
+
+        # Create global config with broken MCP configs
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                str(project1): {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "type": "stdio",
+                            "command": "kuzu-memory",
+                            "args": ["mcp"],
+                        }
+                    }
+                },
+                str(project2): {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "type": "stdio",
+                            "command": "kuzu-memory",
+                            "args": ["mcp"],
+                        }
+                    }
+                },
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        installer = ClaudeHooksInstaller(project1)
+        broken = installer._detect_broken_mcp_installations()
+
+        assert len(broken) == 2
+        assert broken[0]["project_path"] == str(project1)
+        assert broken[0]["project_exists"] is True
+        assert broken[0]["config"]["command"] == "kuzu-memory"
+
+    def test_detect_broken_mcp_installations_handles_missing_dirs(self, tmp_path, monkeypatch):
+        """Test detection handles missing project directories."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Create global config with non-existent project
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                "/nonexistent/project": {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "type": "stdio",
+                            "command": "kuzu-memory",
+                            "args": ["mcp"],
+                        }
+                    }
+                }
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+        installer = ClaudeHooksInstaller(project_path)
+        broken = installer._detect_broken_mcp_installations()
+
+        assert len(broken) == 1
+        assert broken[0]["project_exists"] is False
+
+    def test_migrate_to_local_mcp_json_creates_new(self, tmp_path):
+        """Test migration creates new .mcp.json."""
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        kuzu_config = {
+            "type": "stdio",
+            "command": "kuzu-memory",
+            "args": ["mcp"],
+            "env": {"KUZU_MEMORY_DB": str(project_path / "kuzu-memories")},
+        }
+
+        installer = ClaudeHooksInstaller(project_path)
+        success, message = installer._migrate_to_local_mcp_json(project_path, kuzu_config)
+
+        assert success is True
+        assert "Migrated to" in message
+
+        # Verify .mcp.json was created
+        mcp_json = project_path / ".mcp.json"
+        assert mcp_json.exists()
+
+        with open(mcp_json) as f:
+            result = json.load(f)
+
+        assert "mcpServers" in result
+        assert "kuzu-memory" in result["mcpServers"]
+        assert result["mcpServers"]["kuzu-memory"] == kuzu_config
+
+    def test_migrate_to_local_mcp_json_preserves_existing_servers(self, tmp_path):
+        """Test migration preserves other MCP servers."""
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # Create existing .mcp.json with another server
+        mcp_json = project_path / ".mcp.json"
+        existing_config = {
+            "mcpServers": {
+                "other-server": {
+                    "type": "stdio",
+                    "command": "other-server",
+                }
+            }
+        }
+        with open(mcp_json, "w") as f:
+            json.dump(existing_config, f)
+
+        kuzu_config = {
+            "type": "stdio",
+            "command": "kuzu-memory",
+            "args": ["mcp"],
+        }
+
+        installer = ClaudeHooksInstaller(project_path)
+        success, message = installer._migrate_to_local_mcp_json(project_path, kuzu_config)
+
+        assert success is True
+
+        # Verify both servers exist
+        with open(mcp_json) as f:
+            result = json.load(f)
+
+        assert "other-server" in result["mcpServers"]
+        assert "kuzu-memory" in result["mcpServers"]
+
+    def test_migrate_to_local_mcp_json_skips_existing_without_force(self, tmp_path):
+        """Test migration skips if kuzu-memory already exists."""
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # Create existing .mcp.json with kuzu-memory
+        mcp_json = project_path / ".mcp.json"
+        existing_config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "type": "stdio",
+                    "command": "old-command",
+                }
+            }
+        }
+        with open(mcp_json, "w") as f:
+            json.dump(existing_config, f)
+
+        kuzu_config = {
+            "type": "stdio",
+            "command": "new-command",
+        }
+
+        installer = ClaudeHooksInstaller(project_path)
+        success, message = installer._migrate_to_local_mcp_json(project_path, kuzu_config, force=False)
+
+        assert success is False
+        assert "already in .mcp.json" in message
+
+        # Verify original config preserved
+        with open(mcp_json) as f:
+            result = json.load(f)
+
+        assert result["mcpServers"]["kuzu-memory"]["command"] == "old-command"
+
+    def test_migrate_to_local_mcp_json_overwrites_with_force(self, tmp_path):
+        """Test migration overwrites with force=True."""
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # Create existing .mcp.json with kuzu-memory
+        mcp_json = project_path / ".mcp.json"
+        existing_config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "type": "stdio",
+                    "command": "old-command",
+                }
+            }
+        }
+        with open(mcp_json, "w") as f:
+            json.dump(existing_config, f)
+
+        kuzu_config = {
+            "type": "stdio",
+            "command": "new-command",
+        }
+
+        installer = ClaudeHooksInstaller(project_path)
+        success, message = installer._migrate_to_local_mcp_json(project_path, kuzu_config, force=True)
+
+        assert success is True
+
+        # Verify config was updated
+        with open(mcp_json) as f:
+            result = json.load(f)
+
+        assert result["mcpServers"]["kuzu-memory"]["command"] == "new-command"
+
+    def test_cleanup_broken_configs_removes_entries(self, tmp_path, monkeypatch):
+        """Test cleanup removes broken entries from ~/.claude.json."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Create projects
+        project1 = tmp_path / "project1"
+        project1.mkdir()
+        project2 = tmp_path / "project2"
+        project2.mkdir()
+
+        # Create global config
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                str(project1): {
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu"},
+                        "other-server": {"command": "other"},
+                    }
+                },
+                str(project2): {
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu"},
+                    }
+                },
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        installer = ClaudeHooksInstaller(project1)
+        success, message = installer._cleanup_broken_configs([str(project1), str(project2)])
+
+        assert success is True
+        assert "Cleaned up" in message
+
+        # Verify backup was created
+        backups = list(tmp_path.glob(".claude.json.backup.*"))
+        assert len(backups) == 1
+
+        # Verify kuzu-memory was removed
+        with open(global_config_path) as f:
+            result = json.load(f)
+
+        # project1 should still exist (has other-server)
+        assert str(project1) in result["projects"]
+        assert "kuzu-memory" not in result["projects"][str(project1)]["mcpServers"]
+        assert "other-server" in result["projects"][str(project1)]["mcpServers"]
+
+        # project2 should be removed (only had kuzu-memory)
+        assert str(project2) not in result["projects"]
+
+    def test_cleanup_broken_configs_creates_backup(self, tmp_path, monkeypatch):
+        """Test cleanup creates timestamped backup."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project = tmp_path / "project"
+        project.mkdir()
+
+        # Create global config
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                str(project): {
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu"},
+                    }
+                }
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        installer = ClaudeHooksInstaller(project)
+        success, message = installer._cleanup_broken_configs([str(project)])
+
+        assert success is True
+
+        # Verify backup exists and has correct format
+        backups = list(tmp_path.glob(".claude.json.backup.*"))
+        assert len(backups) == 1
+        assert backups[0].name.startswith(".claude.json.backup.202")
+
+        # Verify backup contains original content
+        with open(backups[0]) as f:
+            backup = json.load(f)
+        assert backup == config
+
+    def test_migrate_broken_mcp_configs_full_workflow(self, tmp_path, monkeypatch, capsys):
+        """Test full migration workflow."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Create projects
+        project1 = tmp_path / "project1"
+        project1.mkdir()
+        project2 = tmp_path / "project2"
+        project2.mkdir()
+
+        # Create global config with broken installations
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                str(project1): {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "type": "stdio",
+                            "command": "kuzu-memory",
+                            "args": ["mcp"],
+                        }
+                    }
+                },
+                str(project2): {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "type": "stdio",
+                            "command": "kuzu-memory",
+                            "args": ["mcp"],
+                        }
+                    }
+                },
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        installer = ClaudeHooksInstaller(project1)
+        results = installer._migrate_broken_mcp_configs()
+
+        # Check results
+        assert results["detected"] == 2
+        assert results["migrated"] == 2
+        assert results["failed"] == 0
+        assert results["skipped"] == 0
+
+        # Check output
+        captured = capsys.readouterr()
+        assert "Migrating MCP configurations" in captured.out
+        assert "Migration complete: 2 project(s) migrated" in captured.out
+
+        # Verify .mcp.json files were created
+        assert (project1 / ".mcp.json").exists()
+        assert (project2 / ".mcp.json").exists()
+
+        # Verify configs are correct
+        with open(project1 / ".mcp.json") as f:
+            mcp1 = json.load(f)
+        assert "kuzu-memory" in mcp1["mcpServers"]
+
+        # Verify cleanup happened
+        with open(global_config_path) as f:
+            cleaned = json.load(f)
+        assert "projects" not in cleaned or not cleaned.get("projects")
+
+    def test_migrate_broken_mcp_configs_skips_missing_dirs(self, tmp_path, monkeypatch, capsys):
+        """Test migration skips non-existent directories."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Create global config with non-existent project
+        global_config_path = tmp_path / ".claude.json"
+        config = {
+            "projects": {
+                "/nonexistent/project": {
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu"},
+                    }
+                }
+            }
+        }
+        with open(global_config_path, "w") as f:
+            json.dump(config, f)
+
+        project = tmp_path / "project"
+        project.mkdir()
+        installer = ClaudeHooksInstaller(project)
+        results = installer._migrate_broken_mcp_configs()
+
+        assert results["detected"] == 1
+        assert results["migrated"] == 0
+        assert results["skipped"] == 1
+
+        # Check output
+        captured = capsys.readouterr()
+        assert "Skipped 1 project(s)" in captured.out
