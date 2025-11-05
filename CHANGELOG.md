@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.42] - 2025-11-04
+
+### Added
+
+- **Hook Configuration Verification & Auto-Repair** for Claude Code installation
+  - Automatic validation of hooks configuration in settings.local.json
+  - Auto-repair of 6 common configuration issues:
+    1. Invalid hook event names (non-Claude Code events)
+    2. Missing or non-existent command paths
+    3. Non-absolute command paths (relative paths)
+    4. Legacy event name migration (snake_case → camelCase)
+    5. Legacy command syntax fixes (add 'hooks' subcommand)
+    6. Invalid hook configurations
+  - Creates automatic backup before repairs (*.json.backup)
+  - Comprehensive verification during installation process
+  - 8 new test cases covering validation and repair scenarios
+  - Transparent operation with INFO/DEBUG logging
+  - Zero-config for users - auto-repair runs during installation
+  - Improves installation reliability and user experience
+
+### Changed
+
+- Enhanced `_test_installation()` method to include configuration verification
+- Added defensive programming with graceful error handling
+- Improved installation success feedback with repair status messages
+
 ## [1.4.41] - 2025-11-04
 
 ### Changed
