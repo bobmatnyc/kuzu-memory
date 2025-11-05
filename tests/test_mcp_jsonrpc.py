@@ -30,9 +30,7 @@ def test_mcp_server():
     print("Starting MCP JSON-RPC test...")
 
     # Start the MCP server
-    server_path = (
-        Path(__file__).parent / "src" / "kuzu_memory" / "mcp" / "run_server.py"
-    )
+    server_path = Path(__file__).parent / "src" / "kuzu_memory" / "mcp" / "run_server.py"
     process = subprocess.Popen(
         [sys.executable, str(server_path)],
         stdin=subprocess.PIPE,
@@ -50,18 +48,14 @@ def test_mcp_server():
         request = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
         response = send_request(process, request)
         print(f"Request: {json.dumps(request, indent=2)}")
-        print(
-            f"Response: {json.dumps(response, indent=2) if response else 'No response'}"
-        )
+        print(f"Response: {json.dumps(response, indent=2) if response else 'No response'}")
 
         # Test 2: List tools
         print("\n2. Testing tools/list...")
         request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
         response = send_request(process, request)
         print(f"Request: {json.dumps(request, indent=2)}")
-        print(
-            f"Response: {json.dumps(response, indent=2) if response else 'No response'}"
-        )
+        print(f"Response: {json.dumps(response, indent=2) if response else 'No response'}")
 
         # Test 3: Call enhance tool
         print("\n3. Testing tools/call with enhance...")
@@ -79,9 +73,7 @@ def test_mcp_server():
         }
         response = send_request(process, request)
         print(f"Request: {json.dumps(request, indent=2)}")
-        print(
-            f"Response: {json.dumps(response, indent=2) if response else 'No response'}"
-        )
+        print(f"Response: {json.dumps(response, indent=2) if response else 'No response'}")
 
         # Test 4: Notification (no response expected)
         print("\n4. Testing notification (no ID)...")
@@ -100,9 +92,7 @@ def test_mcp_server():
         request = {"jsonrpc": "2.0", "id": 5, "method": "invalid/method", "params": {}}
         response = send_request(process, request)
         print(f"Request: {json.dumps(request, indent=2)}")
-        print(
-            f"Response: {json.dumps(response, indent=2) if response else 'No response'}"
-        )
+        print(f"Response: {json.dumps(response, indent=2) if response else 'No response'}")
 
         # Test 6: Batch request
         print("\n6. Testing batch request...")
@@ -123,9 +113,7 @@ def test_mcp_server():
         request = {"jsonrpc": "2.0", "id": 8, "method": "shutdown", "params": {}}
         response = send_request(process, request)
         print(f"Request: {json.dumps(request, indent=2)}")
-        print(
-            f"Response: {json.dumps(response, indent=2) if response else 'No response'}"
-        )
+        print(f"Response: {json.dumps(response, indent=2) if response else 'No response'}")
 
         print("\n✅ All tests completed!")
 

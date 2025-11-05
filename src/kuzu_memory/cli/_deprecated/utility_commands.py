@@ -27,12 +27,8 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option(
-    "--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance"
-)
-@click.option(
-    "--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)"
-)
+@click.option("--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance")
+@click.option("--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)")
 @click.pass_context
 def optimize(ctx, enable_cli, disable_cli):
     """
@@ -60,9 +56,7 @@ def optimize(ctx, enable_cli, disable_cli):
         current_config = config_loader.load_config(project_root)
 
         if enable_cli and disable_cli:
-            rich_print(
-                "❌ Cannot enable and disable CLI adapter at the same time", style="red"
-            )
+            rich_print("❌ Cannot enable and disable CLI adapter at the same time", style="red")
             sys.exit(1)
 
         changes_made = []
@@ -82,9 +76,7 @@ def optimize(ctx, enable_cli, disable_cli):
             rich_print(
                 f"  CLI Adapter: {'✅ Enabled' if current_config.storage.use_cli_adapter else '❌ Disabled'}"
             )
-            rich_print(
-                f"  Connection Pool Size: {current_config.storage.connection_pool_size}"
-            )
+            rich_print(f"  Connection Pool Size: {current_config.storage.connection_pool_size}")
             rich_print(f"  Cache TTL: {current_config.caching.ttl_seconds}s")
 
             # CLI Adapter optimization
@@ -106,13 +98,9 @@ def optimize(ctx, enable_cli, disable_cli):
                     new_pool_size = int(new_pool_size)
                     if new_pool_size != current_config.storage.connection_pool_size:
                         current_config.storage.connection_pool_size = new_pool_size
-                        changes_made.append(
-                            f"🔧 Set connection pool size to {new_pool_size}"
-                        )
+                        changes_made.append(f"🔧 Set connection pool size to {new_pool_size}")
                 except ValueError:
-                    rich_print(
-                        "⚠️  Invalid pool size, keeping current value", style="yellow"
-                    )
+                    rich_print("⚠️  Invalid pool size, keeping current value", style="yellow")
 
             # Cache optimization
             if rich_confirm("Optimize caching settings?", default=True):
@@ -126,9 +114,7 @@ def optimize(ctx, enable_cli, disable_cli):
                         current_config.caching.ttl_seconds = new_ttl
                         changes_made.append(f"⏱️  Set cache TTL to {new_ttl}s")
                 except ValueError:
-                    rich_print(
-                        "⚠️  Invalid TTL value, keeping current value", style="yellow"
-                    )
+                    rich_print("⚠️  Invalid TTL value, keeping current value", style="yellow")
 
         if changes_made:
             # Save configuration
@@ -274,9 +260,7 @@ def setup(ctx, advanced):
                             auggie.setup_project_integration()
                             rich_print("   ✅ Auggie integration configured")
                         except Exception as e:
-                            rich_print(
-                                f"   ⚠️  Auggie setup failed: {e}", style="yellow"
-                            )
+                            rich_print(f"   ⚠️  Auggie setup failed: {e}", style="yellow")
             except ImportError:
                 rich_print("   [i]  Auggie integration not available")
 
@@ -359,9 +343,7 @@ def tips(ctx):
         )
 
         # Interactive help
-        if rich_confirm(
-            "\nWould you like specific help with any topic?", default=False
-        ):
+        if rich_confirm("\nWould you like specific help with any topic?", default=False):
             topic = rich_prompt(
                 "Enter topic (getting-started, performance, ai-integration, config)",
                 default="",
@@ -692,19 +674,13 @@ def temporal_analysis(ctx, memory_id, memory_type, limit, output_format):
 
                 # Summary statistics
                 avg_age = sum(a["age_days"] for a in analyses) / len(analyses)
-                avg_score = sum(a["final_temporal_score"] for a in analyses) / len(
-                    analyses
-                )
-                recent_boost_count = sum(
-                    1 for a in analyses if a["recent_boost_applied"]
-                )
+                avg_score = sum(a["final_temporal_score"] for a in analyses) / len(analyses)
+                recent_boost_count = sum(1 for a in analyses if a["recent_boost_applied"])
 
                 rich_print("\n📊 Summary:")
                 rich_print(f"  Average Age: {avg_age:.1f} days")
                 rich_print(f"  Average Temporal Score: {avg_score:.3f}")
-                rich_print(
-                    f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories"
-                )
+                rich_print(f"  Recent Boost Applied: {recent_boost_count}/{len(analyses)} memories")
 
     except Exception as e:
         if ctx.obj.get("debug"):

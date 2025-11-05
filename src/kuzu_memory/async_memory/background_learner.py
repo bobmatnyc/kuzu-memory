@@ -86,9 +86,7 @@ class BackgroundLearner:
         success = self.queue_manager.submit_task(task)
 
         if success:
-            logger.info(
-                f"Submitted learning task {task.task_id} for: {content[:50]}..."
-            )
+            logger.info(f"Submitted learning task {task.task_id} for: {content[:50]}...")
             return task.task_id
         else:
             logger.warning("Failed to submit learning task - queue full")
@@ -146,8 +144,7 @@ class BackgroundLearner:
             **self.stats,
             "queue_stats": queue_stats,
             "avg_learning_time_ms": (
-                self.stats["total_learning_time_ms"]
-                / max(1, self.stats["memories_learned"])
+                self.stats["total_learning_time_ms"] / max(1, self.stats["memories_learned"])
             ),
         }
 

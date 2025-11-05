@@ -35,9 +35,7 @@ class MemoryRanker:
         self.config = config or {}
 
         # Initialize enhanced temporal decay engine
-        self.temporal_decay_engine = TemporalDecayEngine(
-            self.config.get("temporal_decay", {})
-        )
+        self.temporal_decay_engine = TemporalDecayEngine(self.config.get("temporal_decay", {}))
 
         # Ranking weights (can be configured)
         # Note: recency weight is now managed by temporal decay engine
@@ -164,9 +162,7 @@ class MemoryRanker:
         scores["recency"] = self.temporal_decay_engine.calculate_temporal_score(memory)
 
         # Type relevance score
-        scores["type_relevance"] = self._calculate_type_relevance_score(
-            memory, context_type
-        )
+        scores["type_relevance"] = self._calculate_type_relevance_score(memory, context_type)
 
         # Access frequency score
         scores["access_frequency"] = self._calculate_access_frequency_score(memory)
@@ -176,9 +172,7 @@ class MemoryRanker:
             scores = self._apply_user_preferences(scores, memory, user_preferences)
 
         # Calculate weighted final score
-        final_score = sum(
-            scores[component] * self.weights[component] for component in scores
-        )
+        final_score = sum(scores[component] * self.weights[component] for component in scores)
 
         return min(final_score, 1.0)  # Cap at 1.0
 
@@ -217,16 +211,11 @@ class MemoryRanker:
                     entity_bonus += 0.05
 
         # TF-IDF-like scoring for important terms
-        tfidf_score = self._calculate_tfidf_similarity(
-            memory_content_lower, query_lower
-        )
+        tfidf_score = self._calculate_tfidf_similarity(memory_content_lower, query_lower)
 
         # Combine scores
         similarity_score = (
-            jaccard_score * 0.4
-            + phrase_bonus * 0.3
-            + entity_bonus * 0.2
-            + tfidf_score * 0.1
+            jaccard_score * 0.4 + phrase_bonus * 0.3 + entity_bonus * 0.2 + tfidf_score * 0.1
         )
 
         return min(similarity_score, 1.0)
@@ -278,9 +267,7 @@ class MemoryRanker:
 
         return recency_score
 
-    def _calculate_type_relevance_score(
-        self, memory: Memory, context_type: str
-    ) -> float:
+    def _calculate_type_relevance_score(self, memory: Memory, context_type: str) -> float:
         """Calculate type relevance score based on context."""
         type_scores = self.type_relevance_scores.get(memory.memory_type, {})
         return type_scores.get(context_type, type_scores.get("general", 0.5))
@@ -292,9 +279,7 @@ class MemoryRanker:
 
         # Apply logarithmic scaling to prevent over-weighting highly accessed memories
         if memory.access_count > 0:
-            log_score = math.log(memory.access_count + 1) / math.log(
-                101
-            )  # log base 101
+            log_score = math.log(memory.access_count + 1) / math.log(101)  # log base 101
             return (normalized_access + log_score) / 2
 
         return 0.0
@@ -338,15 +323,12 @@ class MemoryRanker:
         scores["importance"] = memory.importance
         scores["confidence"] = memory.confidence
         scores["recency"] = self.temporal_decay_engine.calculate_temporal_score(memory)
-        scores["type_relevance"] = self._calculate_type_relevance_score(
-            memory, context_type
-        )
+        scores["type_relevance"] = self._calculate_type_relevance_score(memory, context_type)
         scores["access_frequency"] = self._calculate_access_frequency_score(memory)
 
         # Calculate weighted contributions
         weighted_scores = {
-            component: scores[component] * self.weights[component]
-            for component in scores
+            component: scores[component] * self.weights[component] for component in scores
         }
 
         final_score = sum(weighted_scores.values())
@@ -360,7 +342,5 @@ class MemoryRanker:
             "memory_type": memory.memory_type.value,
             "memory_age_days": (datetime.now() - memory.created_at).days,
             "access_count": memory.access_count,
-            "temporal_decay_details": self.temporal_decay_engine.get_decay_explanation(
-                memory
-            ),
+            "temporal_decay_details": self.temporal_decay_engine.get_decay_explanation(memory),
         }

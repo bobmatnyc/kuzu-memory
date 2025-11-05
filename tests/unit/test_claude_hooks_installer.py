@@ -38,9 +38,7 @@ class TestClaudeHooksInstaller:
         assert "mcpServers" in config["projects"][project_key]
         assert "kuzu-memory" in config["projects"][project_key]["mcpServers"]
 
-    def test_update_global_mcp_config_preserves_existing_projects(
-        self, tmp_path, monkeypatch
-    ):
+    def test_update_global_mcp_config_preserves_existing_projects(self, tmp_path, monkeypatch):
         """Test MCP config preserves other projects."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -48,9 +46,7 @@ class TestClaudeHooksInstaller:
         # Create global config with existing project
         global_config_path = tmp_path / ".claude.json"
         config = {
-            "projects": {
-                "/other/project": {"mcpServers": {"other-server": {"command": "other"}}}
-            }
+            "projects": {"/other/project": {"mcpServers": {"other-server": {"command": "other"}}}}
         }
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
@@ -72,9 +68,7 @@ class TestClaudeHooksInstaller:
         assert project_key in result["projects"]
         assert "kuzu-memory" in result["projects"][project_key]["mcpServers"]
 
-    def test_update_global_mcp_config_preserves_other_mcp_servers(
-        self, tmp_path, monkeypatch
-    ):
+    def test_update_global_mcp_config_preserves_other_mcp_servers(self, tmp_path, monkeypatch):
         """Test MCP config preserves other servers in same project."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -85,11 +79,7 @@ class TestClaudeHooksInstaller:
 
         # Create global config with existing server in same project
         global_config_path = tmp_path / ".claude.json"
-        config = {
-            "projects": {
-                project_key: {"mcpServers": {"other-server": {"command": "other"}}}
-            }
-        }
+        config = {"projects": {project_key: {"mcpServers": {"other-server": {"command": "other"}}}}}
         with open(global_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
@@ -137,9 +127,7 @@ class TestClaudeHooksInstaller:
         assert "kuzu-memory" not in result["mcpServers"]
         assert "other-server" in result["mcpServers"]
 
-    def test_clean_legacy_mcp_locations_removes_from_settings(
-        self, tmp_path, monkeypatch
-    ):
+    def test_clean_legacy_mcp_locations_removes_from_settings(self, tmp_path, monkeypatch):
         """Test cleanup removes MCP from settings.local.json."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -174,9 +162,7 @@ class TestClaudeHooksInstaller:
         assert "kuzu-memory" not in result.get("mcpServers", {})
         assert "other-server" in result.get("mcpServers", {})
 
-    def test_clean_legacy_mcp_locations_handles_empty_mcpservers(
-        self, tmp_path, monkeypatch
-    ):
+    def test_clean_legacy_mcp_locations_handles_empty_mcpservers(self, tmp_path, monkeypatch):
         """Test cleanup removes empty mcpServers dict."""
         # Mock Path.home() to use tmp_path
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -250,9 +236,7 @@ class TestClaudeHooksInstaller:
             result = json.load(f)
 
         # Args should be fixed to just ["mcp"]
-        assert result["projects"][project_key]["mcpServers"]["kuzu-memory"]["args"] == [
-            "mcp"
-        ]
+        assert result["projects"][project_key]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
 
         # Check that appropriate logging occurred
         assert any("Auto-fixed" in record.message for record in caplog.records)
@@ -316,17 +300,13 @@ class TestClaudeHooksInstaller:
                 "user_prompt_submit": [  # Legacy snake_case
                     {
                         "matcher": "*",
-                        "hooks": [
-                            {"type": "command", "command": "/path/kuzu hooks enhance"}
-                        ],
+                        "hooks": [{"type": "command", "command": "/path/kuzu hooks enhance"}],
                     }
                 ],
                 "post_tool_use": [  # Legacy snake_case
                     {
                         "matcher": "*",
-                        "hooks": [
-                            {"type": "command", "command": "/path/kuzu hooks learn"}
-                        ],
+                        "hooks": [{"type": "command", "command": "/path/kuzu hooks learn"}],
                     }
                 ],
             }
@@ -340,12 +320,9 @@ class TestClaudeHooksInstaller:
         # Check repair succeeded
         assert success is True
         assert any(
-            "Migrated event: user_prompt_submit → UserPromptSubmit" in msg
-            for msg in messages
+            "Migrated event: user_prompt_submit → UserPromptSubmit" in msg for msg in messages
         )
-        assert any(
-            "Migrated event: post_tool_use → PostToolUse" in msg for msg in messages
-        )
+        assert any("Migrated event: post_tool_use → PostToolUse" in msg for msg in messages)
 
         # Check config was updated
         with open(settings_path) as f:
@@ -379,9 +356,7 @@ class TestClaudeHooksInstaller:
                 "UserPromptSubmit": [  # Valid event
                     {
                         "matcher": "*",
-                        "hooks": [
-                            {"type": "command", "command": "/path/kuzu hooks enhance"}
-                        ],
+                        "hooks": [{"type": "command", "command": "/path/kuzu hooks enhance"}],
                     }
                 ],
             }
@@ -553,9 +528,7 @@ class TestClaudeHooksInstaller:
                 "user_prompt_submit": [  # Legacy event name
                     {
                         "matcher": "*",
-                        "hooks": [
-                            {"type": "command", "command": "kuzu-memory enhance"}
-                        ],
+                        "hooks": [{"type": "command", "command": "kuzu-memory enhance"}],
                     }
                 ]
             }
@@ -645,9 +618,7 @@ class TestClaudeHooksInstaller:
         assert broken[0]["project_exists"] is True
         assert broken[0]["config"]["command"] == "kuzu-memory"
 
-    def test_detect_broken_mcp_installations_handles_missing_dirs(
-        self, tmp_path, monkeypatch
-    ):
+    def test_detect_broken_mcp_installations_handles_missing_dirs(self, tmp_path, monkeypatch):
         """Test detection handles missing project directories."""
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
@@ -690,9 +661,7 @@ class TestClaudeHooksInstaller:
         }
 
         installer = ClaudeHooksInstaller(project_path)
-        success, message = installer._migrate_to_local_mcp_json(
-            project_path, kuzu_config
-        )
+        success, message = installer._migrate_to_local_mcp_json(project_path, kuzu_config)
 
         assert success is True
         assert "Migrated to" in message
@@ -733,9 +702,7 @@ class TestClaudeHooksInstaller:
         }
 
         installer = ClaudeHooksInstaller(project_path)
-        success, message = installer._migrate_to_local_mcp_json(
-            project_path, kuzu_config
-        )
+        success, _message = installer._migrate_to_local_mcp_json(project_path, kuzu_config)
 
         assert success is True
 
@@ -807,7 +774,7 @@ class TestClaudeHooksInstaller:
         }
 
         installer = ClaudeHooksInstaller(project_path)
-        success, message = installer._migrate_to_local_mcp_json(
+        success, _message = installer._migrate_to_local_mcp_json(
             project_path, kuzu_config, force=True
         )
 
@@ -850,9 +817,7 @@ class TestClaudeHooksInstaller:
             json.dump(config, f)
 
         installer = ClaudeHooksInstaller(project1)
-        success, message = installer._cleanup_broken_configs(
-            [str(project1), str(project2)]
-        )
+        success, message = installer._cleanup_broken_configs([str(project1), str(project2)])
 
         assert success is True
         assert "Cleaned up" in message
@@ -895,7 +860,7 @@ class TestClaudeHooksInstaller:
             json.dump(config, f)
 
         installer = ClaudeHooksInstaller(project)
-        success, message = installer._cleanup_broken_configs([str(project)])
+        success, _message = installer._cleanup_broken_configs([str(project)])
 
         assert success is True
 
@@ -909,9 +874,7 @@ class TestClaudeHooksInstaller:
             backup = json.load(f)
         assert backup == config
 
-    def test_migrate_broken_mcp_configs_full_workflow(
-        self, tmp_path, monkeypatch, capsys
-    ):
+    def test_migrate_broken_mcp_configs_full_workflow(self, tmp_path, monkeypatch, capsys):
         """Test full migration workflow."""
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
@@ -976,9 +939,7 @@ class TestClaudeHooksInstaller:
             cleaned = json.load(f)
         assert "projects" not in cleaned or not cleaned.get("projects")
 
-    def test_migrate_broken_mcp_configs_skips_missing_dirs(
-        self, tmp_path, monkeypatch, capsys
-    ):
+    def test_migrate_broken_mcp_configs_skips_missing_dirs(self, tmp_path, monkeypatch, capsys):
         """Test migration skips non-existent directories."""
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
