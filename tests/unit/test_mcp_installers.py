@@ -51,9 +51,7 @@ class TestCursorInstaller:
         config_path = tmp_path / ".cursor" / "mcp.json"
         config_path.parent.mkdir(parents=True)
 
-        existing_config = {
-            "mcpServers": {"existing-server": {"command": "existing-cmd"}}
-        }
+        existing_config = {"mcpServers": {"existing-server": {"command": "existing-cmd"}}}
 
         with open(config_path, "w") as f:
             json.dump(existing_config, f)
@@ -185,9 +183,7 @@ class TestVSCodeInstaller:
         config_path = tmp_path / ".vscode" / "mcp.json"
         config_path.parent.mkdir(parents=True)
 
-        existing_config = {
-            "mcpServers": {"github-mcp": {"command": "github-mcp-server"}}
-        }
+        existing_config = {"mcpServers": {"github-mcp": {"command": "github-mcp-server"}}}
 
         with open(config_path, "w") as f:
             json.dump(existing_config, f)
@@ -380,9 +376,7 @@ class TestAuggieMCPInstaller:
         config_path = fake_home / ".augment" / "settings.json"
         config_path.parent.mkdir(parents=True)
 
-        existing_config = {
-            "mcpServers": {"existing-server": {"command": "existing-cmd"}}
-        }
+        existing_config = {"mcpServers": {"existing-server": {"command": "existing-cmd"}}}
 
         with open(config_path, "w") as f:
             json.dump(existing_config, f)

@@ -30,9 +30,7 @@ class TestToolExecution:
             await client.initialize()
 
             # Call enhance tool
-            response = await client.call_tool(
-                "enhance", {"prompt": "test prompt", "limit": 5}
-            )
+            response = await client.call_tool("enhance", {"prompt": "test prompt", "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -81,9 +79,7 @@ class TestToolExecution:
             await client.initialize()
 
             # Call recall tool
-            response = await client.call_tool(
-                "recall", {"query": "test query", "limit": 5}
-            )
+            response = await client.call_tool("recall", {"query": "test query", "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -256,9 +252,7 @@ class TestToolDiscovery:
                 ]
 
                 for tool in expected_tools:
-                    assert (
-                        tool in tool_names
-                    ), f"Missing tool: {tool}, found: {tool_names}"
+                    assert tool in tool_names, f"Missing tool: {tool}, found: {tool_names}"
 
         finally:
             await client.disconnect()
@@ -371,9 +365,7 @@ class TestToolParameterValidation:
             await client.initialize()
 
             # Call with extra parameter
-            response = await client.call_tool(
-                "stats", {"format": "json", "extra_param": "ignored"}
-            )
+            response = await client.call_tool("stats", {"format": "json", "extra_param": "ignored"})
 
             assert response is not None
             # Should ignore extra param
@@ -477,9 +469,7 @@ class TestToolConcurrency:
             # Retrieve multiple times
             responses = []
             for _ in range(3):
-                response = await client.call_tool(
-                    "recall", {"query": "consistency", "limit": 5}
-                )
+                response = await client.call_tool("recall", {"query": "consistency", "limit": 5})
                 responses.append(response)
 
             # All should return consistent results

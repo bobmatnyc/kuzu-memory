@@ -40,9 +40,7 @@ logger = logging.getLogger(__name__)
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="kuzu-memory")
 @click.option("--debug", is_flag=True, help="Enable debug logging")
-@click.option(
-    "--config", type=click.Path(exists=True), help="Path to configuration file"
-)
+@click.option("--config", type=click.Path(exists=True), help="Path to configuration file")
 @click.option(
     "--db-path",
     type=click.Path(),
@@ -247,9 +245,7 @@ def quickstart(ctx, skip_demo):
                 "Enter a question about your project",
                 default="How should I structure my code?",
             )
-            ctx.invoke(
-                enhance, prompt=sample_prompt, max_memories=3, output_format="context"
-            )
+            ctx.invoke(enhance, prompt=sample_prompt, max_memories=3, output_format="context")
 
         # Step 4: Show stats
         rich_print("\n📊 Step 4: Project Status")
@@ -272,13 +268,9 @@ def quickstart(ctx, skip_demo):
         # Step 6: Memory Recall
         rich_print("\n" + "─" * 50)
         rich_print("🔍 [bold magenta]Step 6: Try Memory Recall[/bold magenta]")
-        rich_print(
-            "Recall uses semantic search to find relevant memories based on your query.\n"
-        )
+        rich_print("Recall uses semantic search to find relevant memories based on your query.\n")
         if rich_confirm("Would you like to try querying your memories?", default=True):
-            query = rich_prompt(
-                "Enter a search query", default="Python project structure"
-            )
+            query = rich_prompt("Enter a search query", default="Python project structure")
             ctx.invoke(
                 recall,
                 prompt=query,
@@ -417,9 +409,7 @@ def demo(ctx):
         time.sleep(1)
 
         # Step 3: Store Sample Memories
-        rich_print(
-            "\n💾 Step 2: Storing Sample Memories (All Types)", style="bold cyan"
-        )
+        rich_print("\n💾 Step 2: Storing Sample Memories (All Types)", style="bold cyan")
         rich_print("Demonstrating all cognitive memory types...\n")
         time.sleep(0.5)
 
@@ -463,9 +453,7 @@ def demo(ctx):
             )
             time.sleep(0.3)
 
-        rich_print(
-            f"\n✅ Stored {len(sample_memories)} diverse memories!", style="green"
-        )
+        rich_print(f"\n✅ Stored {len(sample_memories)} diverse memories!", style="green")
         time.sleep(1)
 
         # Step 4: Demonstrate Memory Recall
@@ -499,9 +487,7 @@ def demo(ctx):
         )
         time.sleep(0.5)
 
-        ctx.invoke(
-            enhance, prompt=original_prompt, max_memories=3, output_format="context"
-        )
+        ctx.invoke(enhance, prompt=original_prompt, max_memories=3, output_format="context")
         time.sleep(1.5)
 
         # Step 6: View Statistics
@@ -573,9 +559,7 @@ cli.add_command(doctor)  # 7. Diagnostics and health checks
 cli.add_command(help_group, name="help")  # 8. Help and examples
 cli.add_command(git)  # 9. Git commit history synchronization
 cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
-cli.add_command(
-    mcp_server
-)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
+cli.add_command(mcp_server)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead
@@ -588,9 +572,7 @@ cli.add_command(demo)
 # Backward compatibility: 'stats' command as alias to 'status'
 @click.command()
 @click.option("--validate", is_flag=True, help="Run health validation checks")
-@click.option(
-    "--project", "show_project", is_flag=True, help="Show detailed project information"
-)
+@click.option("--project", "show_project", is_flag=True, help="Show detailed project information")
 @click.option("--detailed", is_flag=True, help="Show detailed statistics")
 @click.option(
     "--format",
@@ -629,9 +611,7 @@ def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format
 # Alias: 'health' as alias for 'status'
 @click.command()
 @click.option("--validate", is_flag=True, help="Run health validation checks")
-@click.option(
-    "--project", "show_project", is_flag=True, help="Show detailed project information"
-)
+@click.option("--project", "show_project", is_flag=True, help="Show detailed project information")
 @click.option("--detailed", is_flag=True, help="Show detailed statistics")
 @click.option(
     "--format",

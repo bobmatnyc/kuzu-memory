@@ -49,9 +49,7 @@ def exponential_backoff(
                     last_exception = e
 
                     if attempt == max_retries:
-                        logger.error(
-                            f"{func.__name__} failed after {max_retries} retries: {e}"
-                        )
+                        logger.error(f"{func.__name__} failed after {max_retries} retries: {e}")
                         raise
 
                     # Calculate delay with exponential backoff
@@ -73,9 +71,7 @@ def exponential_backoff(
             if last_exception:
                 raise last_exception
             # If somehow we get here with no exception, raise a runtime error
-            raise RuntimeError(
-                f"{func.__name__} failed all retries without capturing exception"
-            )
+            raise RuntimeError(f"{func.__name__} failed all retries without capturing exception")
 
         return wrapper
 
@@ -165,9 +161,7 @@ class CircuitBreaker:
         """Check if enough time has passed to attempt reset."""
         if self.last_failure_time is None:
             return False
-        return (
-            datetime.now() - self.last_failure_time
-        ).total_seconds() >= self.recovery_timeout
+        return (datetime.now() - self.last_failure_time).total_seconds() >= self.recovery_timeout
 
     def _on_success(self) -> None:
         """Handle successful call."""
@@ -183,9 +177,7 @@ class CircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = self.State.OPEN
-            logger.error(
-                f"{self.name}: Circuit breaker opened after {self.failure_count} failures"
-            )
+            logger.error(f"{self.name}: Circuit breaker opened after {self.failure_count} failures")
 
     def reset(self) -> None:
         """Manually reset the circuit breaker."""

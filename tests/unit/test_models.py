@@ -118,9 +118,7 @@ class TestMemory:
         now = datetime.now()
 
         # Memory that never expires (use SEMANTIC type which has no retention period)
-        permanent_memory = Memory(
-            content="Test", memory_type=MemoryType.SEMANTIC, valid_to=None
-        )
+        permanent_memory = Memory(content="Test", memory_type=MemoryType.SEMANTIC, valid_to=None)
         assert permanent_memory.is_valid()
         assert permanent_memory.is_valid(now + timedelta(days=365))
 
@@ -250,9 +248,7 @@ class TestMemoryContext:
             Memory(content="Memory 3", confidence=0.8),
         ]
 
-        context = MemoryContext(
-            original_prompt="Test", enhanced_prompt="Test", memories=memories
-        )
+        context = MemoryContext(original_prompt="Test", enhanced_prompt="Test", memories=memories)
 
         # Should calculate average confidence
         expected_confidence = (0.9 + 0.7 + 0.8) / 3
@@ -318,9 +314,7 @@ class TestMemoryContext:
             ),
         ]
 
-        context = MemoryContext(
-            original_prompt="Test", enhanced_prompt="Test", memories=memories
-        )
+        context = MemoryContext(original_prompt="Test", enhanced_prompt="Test", memories=memories)
 
         summary = context.get_memory_summary()
 

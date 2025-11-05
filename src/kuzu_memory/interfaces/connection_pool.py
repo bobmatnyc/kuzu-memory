@@ -33,9 +33,7 @@ class IConnection(ABC):
         pass
 
     @abstractmethod
-    async def execute_many(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
-    ) -> list[Any]:
+    async def execute_many(self, queries: list[tuple[str, dict[str, Any] | None]]) -> list[Any]:
         """
         Execute multiple queries on this connection.
 
@@ -111,9 +109,7 @@ class IConnectionPool(ABC):
         pass
 
     @abstractmethod
-    async def execute_many(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
-    ) -> list[Any]:
+    async def execute_many(self, queries: list[tuple[str, dict[str, Any] | None]]) -> list[Any]:
         """
         Execute multiple queries using connections from the pool.
 

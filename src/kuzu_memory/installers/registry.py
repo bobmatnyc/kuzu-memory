@@ -42,9 +42,7 @@ class InstallerRegistry:
         self.register("auggie", AuggieInstaller)
         self.register("auggie-mcp", AuggieMCPInstaller)  # Auggie MCP server integration
         self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
-        self.register(
-            "claude-desktop", SmartClaudeDesktopInstaller
-        )  # Smart auto-detection
+        self.register("claude-desktop", SmartClaudeDesktopInstaller)  # Smart auto-detection
         self.register("universal", UniversalInstaller)
 
         # MCP-specific installers (Priority 1)

@@ -115,9 +115,7 @@ def time_sync(
 
     def decorator(func: F) -> F:
         if asyncio.iscoroutinefunction(func):
-            raise TypeError(
-                f"Function {func.__name__} is async, use @time_async instead"
-            )
+            raise TypeError(f"Function {func.__name__} is async, use @time_async instead")
 
         metric_name = name or f"{func.__module__}.{func.__name__}"
 
@@ -151,9 +149,7 @@ def time_sync(
                     try:
                         loop = asyncio.get_running_loop()
                         loop.create_task(
-                            _global_monitor.record_timing(
-                                metric_name, duration_ms, tags
-                            )
+                            _global_monitor.record_timing(metric_name, duration_ms, tags)
                         )
                     except RuntimeError:
                         # No event loop, skip metric recording
@@ -225,17 +221,13 @@ class performance_tracker:
             loop = asyncio.get_running_loop()
 
             # Record timing
-            loop.create_task(
-                _global_monitor.record_timing(self.name, duration_ms, self.tags)
-            )
+            loop.create_task(_global_monitor.record_timing(self.name, duration_ms, self.tags))
 
             # Record error if exception occurred
             if exc_type:
                 error_tags = {**self.tags, "error_type": exc_type.__name__}
                 loop.create_task(
-                    _global_monitor.increment_counter(
-                        f"{self.name}.errors", tags=error_tags
-                    )
+                    _global_monitor.increment_counter(f"{self.name}.errors", tags=error_tags)
                 )
 
         except RuntimeError:
@@ -260,9 +252,7 @@ class performance_tracker:
         # Record error if exception occurred
         if exc_type:
             error_tags = {**self.tags, "error_type": exc_type.__name__}
-            await _global_monitor.increment_counter(
-                f"{self.name}.errors", tags=error_tags
-            )
+            await _global_monitor.increment_counter(f"{self.name}.errors", tags=error_tags)
 
         # Log slow operations
         if self.log_slow and self.threshold_ms and duration_ms > self.threshold_ms:
@@ -276,13 +266,9 @@ class performance_tracker:
 def time_recall(func: F) -> F:
     """Decorator for memory recall operations (100ms threshold)."""
     return (
-        time_async(
-            name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"}
-        )(func)
+        time_async(name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"})(func)
         if asyncio.iscoroutinefunction(func)
-        else time_sync(
-            name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"}
-        )(func)
+        else time_sync(name="memory.recall", threshold_ms=100.0, tags={"operation": "recall"})(func)
     )
 
 
@@ -306,24 +292,18 @@ def time_generation(func: F) -> F:
 def time_database(func: F) -> F:
     """Decorator for database operations (50ms threshold)."""
     return (
-        time_async(
-            name="database.query", threshold_ms=50.0, tags={"operation": "database"}
-        )(func)
+        time_async(name="database.query", threshold_ms=50.0, tags={"operation": "database"})(func)
         if asyncio.iscoroutinefunction(func)
-        else time_sync(
-            name="database.query", threshold_ms=50.0, tags={"operation": "database"}
-        )(func)
+        else time_sync(name="database.query", threshold_ms=50.0, tags={"operation": "database"})(
+            func
+        )
     )
 
 
 def time_cache(func: F) -> F:
     """Decorator for cache operations (10ms threshold)."""
     return (
-        time_async(
-            name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"}
-        )(func)
+        time_async(name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"})(func)
         if asyncio.iscoroutinefunction(func)
-        else time_sync(
-            name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"}
-        )(func)
+        else time_sync(name="cache.operation", threshold_ms=10.0, tags={"operation": "cache"})(func)
     )

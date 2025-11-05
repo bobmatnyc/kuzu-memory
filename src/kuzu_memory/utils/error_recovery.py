@@ -186,9 +186,7 @@ class ErrorRecoveryManager:
         }
 
         # Recovery strategies for different error types
-        self.recovery_strategies: dict[
-            str, Callable[[Exception, str, dict[str, Any]], bool]
-        ] = {
+        self.recovery_strategies: dict[str, Callable[[Exception, str, dict[str, Any]], bool]] = {
             "DatabaseError": self._recover_database_error,
             "PerformanceError": self._recover_performance_error,
             "CacheError": self._recover_cache_error,
@@ -223,9 +221,7 @@ class ErrorRecoveryManager:
             try:
                 if attempt > 0:
                     self.recovery_stats["recovery_attempts"] += 1
-                    delay = self.base_delay * (
-                        2 ** (attempt - 1)
-                    )  # Exponential backoff
+                    delay = self.base_delay * (2 ** (attempt - 1))  # Exponential backoff
                     logger.info(
                         f"Retrying {operation_name} (attempt {attempt + 1}/{self.max_retries + 1}) after {delay}s delay"
                     )
@@ -246,19 +242,13 @@ class ErrorRecoveryManager:
 
                 if attempt < self.max_retries:
                     # Try to apply recovery strategy
-                    recovered = self._apply_recovery_strategy(
-                        e, operation_name, context or {}
-                    )
+                    recovered = self._apply_recovery_strategy(e, operation_name, context or {})
                     if not recovered:
-                        logger.warning(
-                            f"Recovery strategy failed for {operation_name}: {e}"
-                        )
+                        logger.warning(f"Recovery strategy failed for {operation_name}: {e}")
                 else:
                     # Final attempt failed
                     self.recovery_stats["failed_recoveries"] += 1
-                    logger.error(
-                        f"All recovery attempts failed for {operation_name}: {e}"
-                    )
+                    logger.error(f"All recovery attempts failed for {operation_name}: {e}")
 
         # All attempts failed
         if last_exception:
@@ -266,9 +256,7 @@ class ErrorRecoveryManager:
         else:
             from .exceptions import KuzuMemoryError
 
-            raise KuzuMemoryError(
-                f"Operation {operation_name} failed after all recovery attempts"
-            )
+            raise KuzuMemoryError(f"Operation {operation_name} failed after all recovery attempts")
 
     def _apply_recovery_strategy(
         self, error: Exception, operation_name: str, context: dict[str, Any]
@@ -289,17 +277,13 @@ class ErrorRecoveryManager:
 
             # Try exact match first
             if error_type in self.recovery_strategies:
-                return self.recovery_strategies[error_type](
-                    error, operation_name, context
-                )
+                return self.recovery_strategies[error_type](error, operation_name, context)
 
             # Try parent class matches
             for base_class in error.__class__.__mro__[1:]:  # Skip the exact class
                 base_name = base_class.__name__
                 if base_name in self.recovery_strategies:
-                    return self.recovery_strategies[base_name](
-                        error, operation_name, context
-                    )
+                    return self.recovery_strategies[base_name](error, operation_name, context)
 
             # No specific strategy found, apply general recovery
             return self._recover_general_error(error, operation_name, context)
@@ -458,9 +442,7 @@ class ErrorRecoveryManager:
         else:
             stats_dict["avg_attempts_per_recovery"] = 0.0
 
-        stats_dict["total_operations"] = (
-            stats_dict["total_errors"] + stats_dict["recovered_errors"]
-        )
+        stats_dict["total_operations"] = stats_dict["total_errors"] + stats_dict["recovered_errors"]
 
         return stats_dict
 
