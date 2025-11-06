@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.45] - 2025-11-06
+
+### Fixed
+- **Non-Interactive Installation**: Removed interactive prompts - installer now auto-selects detected system
+  - Eliminated user confirmation dialogs for smoother automation
+  - Automatically proceeds with detected Claude Code/MCP installation
+  - Improves CI/CD integration and scripting workflows
+- **Improved Migration Messages**: Changed alarming "Failed to migrate" to reassuring "Already configured"
+  - Returns `success=True` for already-configured projects (better semantic correctness)
+  - Reduced log noise (WARNING → DEBUG for idempotent operations)
+  - Split migration summary into successful and already-configured counts
+  - Clearer user feedback distinguishes new migrations from skipped ones
+
 ## [1.4.44] - 2025-11-05
 
 ### Changed
@@ -827,7 +840,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.44...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.45...HEAD
+[1.4.45]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.44...v1.4.45
 [1.4.44]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.43...v1.4.44
 [1.4.43]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.42...v1.4.43
 [1.4.42]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.41...v1.4.42
