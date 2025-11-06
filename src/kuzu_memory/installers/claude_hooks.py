@@ -868,8 +868,8 @@ exec {kuzu_cmd} "$@"
             if "kuzu-memory" in existing.get("mcpServers", {}):
                 if not force:
                     return (
-                        False,
-                        "kuzu-memory already in .mcp.json (use --force to overwrite)",
+                        True,
+                        "already configured",
                     )
         else:
             existing = {"mcpServers": {}}
@@ -1021,16 +1021,30 @@ exec {kuzu_cmd} "$@"
             )
 
             if success:
-                results["migrated"] += 1
-                migrated_projects.append(install["project_path"])
-                results["details"].append(
-                    {
-                        "project": str(project_path),
-                        "status": "success",
-                        "message": message,
-                    }
-                )
-                print(f"  ✓ Migrated {project_path.name} to local .mcp.json")
+                if message == "already configured":
+                    # Project already has kuzu-memory in .mcp.json - this is good!
+                    results["skipped"] += 1
+                    results["details"].append(
+                        {
+                            "project": str(project_path),
+                            "status": "skipped",
+                            "reason": "Already configured",
+                        }
+                    )
+                    logger.debug(f"Skipped {project_path.name}: already configured")
+                    print(f"  ✓ Already configured: {project_path.name}")
+                else:
+                    # Successfully migrated
+                    results["migrated"] += 1
+                    migrated_projects.append(install["project_path"])
+                    results["details"].append(
+                        {
+                            "project": str(project_path),
+                            "status": "success",
+                            "message": message,
+                        }
+                    )
+                    print(f"  ✓ Migrated {project_path.name} to local .mcp.json")
             else:
                 results["failed"] += 1
                 results["details"].append(
@@ -1041,7 +1055,7 @@ exec {kuzu_cmd} "$@"
                     }
                 )
                 logger.warning(f"Failed to migrate {project_path.name}: {message}")
-                print(f"  ✗ Failed to migrate {project_path.name}: {message}")
+                print(f"  ⚠ Failed to migrate {project_path.name}: {message}")
 
         # Clean up broken location for successfully migrated projects
         if migrated_projects:
@@ -1058,8 +1072,18 @@ exec {kuzu_cmd} "$@"
             print(f"\n📦 Migration complete: {results['migrated']} project(s) migrated")
         if results["failed"] > 0:
             print(f"⚠ Failed to migrate {results['failed']} project(s)")
-        if results["skipped"] > 0:
-            print(f"⏭ Skipped {results['skipped']} project(s) (directory not found)")
+
+        # Count different types of skipped projects
+        already_configured = sum(
+            1 for detail in results["details"]
+            if detail["status"] == "skipped" and detail["reason"] == "Already configured"
+        )
+        dir_not_found = results["skipped"] - already_configured
+
+        if already_configured > 0:
+            print(f"ℹ️  {already_configured} project(s) already configured")
+        if dir_not_found > 0:
+            print(f"⏭ Skipped {dir_not_found} project(s) (directory not found)")
 
         return results
 

@@ -94,13 +94,13 @@ def _detect_installed_systems(project_root: Path) -> list[InstalledSystem]:
 
 def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None:
     """
-    Show interactive menu for detected systems.
+    Auto-select detected system for repair/reinstall.
 
     Args:
         installed_systems: List of detected systems
 
     Returns:
-        Selected integration name or None if cancelled
+        Selected integration name or None if no systems detected
     """
     if not installed_systems:
         rich_print("No installed systems detected in this project.", style="yellow")
@@ -139,50 +139,16 @@ def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None
         rich_print(f"   Files: {len(system.files_present)}/{system.details['total_files']}")
         rich_print(f"   {mcp_status}")
 
-    # Show options
-    rich_print("\n📋 Options:", style="cyan")
-    rich_print("1. Reinstall/repair detected system")
-    rich_print("2. Install a different system")
-    rich_print("3. Cancel")
+    # Auto-select first detected system for repair/reinstall
+    selected_system = installed_systems[0].name
 
-    # Get user choice
-    choice = click.prompt(
-        "\nEnter choice",
-        type=click.IntRange(1, 3),
-        default=1,
-        show_default=True,
-    )
-
-    if choice == 1:
-        # Reinstall detected system
-        if len(installed_systems) == 1:
-            return installed_systems[0].name
-        else:
-            # Multiple systems - ask which one
-            rich_print("\nWhich system to reinstall?")
-            for i, system in enumerate(installed_systems, 1):
-                rich_print(f"{i}. {system.name}")
-            system_choice = click.prompt(
-                "Enter system number",
-                type=click.IntRange(1, len(installed_systems)),
-                default=1,
-            )
-            return installed_systems[system_choice - 1].name
-
-    elif choice == 2:
-        # Install different system
-        rich_print("\n💡 Available integrations:", style="cyan")
-        for i, name in enumerate(AVAILABLE_INTEGRATIONS, 1):
-            rich_print(f"{i}. {name}")
-        system_choice = click.prompt(
-            "Enter integration number",
-            type=click.IntRange(1, len(AVAILABLE_INTEGRATIONS)),
-        )
-        return AVAILABLE_INTEGRATIONS[system_choice - 1]
-
+    if len(installed_systems) == 1:
+        rich_print(f"\n🔄 Auto-selected: {selected_system} (reinstall/repair)", style="cyan")
     else:
-        # Cancel
-        return None
+        rich_print(f"\n🔄 Auto-selected: {selected_system} (first detected system)", style="cyan")
+        rich_print("   💡 To install a specific system, use: kuzu-memory install <integration>", style="dim")
+
+    return selected_system
 
 
 @click.command(name="install")
