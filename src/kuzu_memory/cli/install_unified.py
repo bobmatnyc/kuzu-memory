@@ -452,7 +452,10 @@ def repair_command(
 
         if not detected_systems:
             rich_print("No installed systems detected in this project.", style="yellow")
-            rich_print("\n💡 Run 'kuzu-memory install <integration>' to install first.", style="dim")
+            rich_print(
+                "\n💡 Run 'kuzu-memory install <integration>' to install first.",
+                style="dim",
+            )
             sys.exit(0)
 
         # Show detected systems

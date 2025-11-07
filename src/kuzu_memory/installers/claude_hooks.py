@@ -1075,13 +1075,14 @@ exec {kuzu_cmd} "$@"
 
         # Count different types of skipped projects
         already_configured = sum(
-            1 for detail in results["details"]
+            1
+            for detail in results["details"]
             if detail["status"] == "skipped" and detail["reason"] == "Already configured"
         )
         dir_not_found = results["skipped"] - already_configured
 
         if already_configured > 0:
-            print(f"ℹ️  {already_configured} project(s) already configured")
+            print(f"Info: {already_configured} project(s) already configured")
         if dir_not_found > 0:
             print(f"⏭ Skipped {dir_not_found} project(s) (directory not found)")
 

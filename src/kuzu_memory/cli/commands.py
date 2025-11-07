@@ -24,7 +24,12 @@ from .git_commands import git
 from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
-from .install_unified import install_command, remove_command, repair_command, uninstall_command
+from .install_unified import (
+    install_command,
+    remove_command,
+    repair_command,
+    uninstall_command,
+)
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
