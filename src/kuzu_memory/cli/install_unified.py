@@ -145,8 +145,14 @@ def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None
     if len(installed_systems) == 1:
         rich_print(f"\n🔄 Auto-selected: {selected_system} (reinstall/repair)", style="cyan")
     else:
-        rich_print(f"\n🔄 Auto-selected: {selected_system} (first detected system)", style="cyan")
-        rich_print("   💡 To install a specific system, use: kuzu-memory install <integration>", style="dim")
+        rich_print(
+            f"\n🔄 Auto-selected: {selected_system} (first detected system)",
+            style="cyan",
+        )
+        rich_print(
+            "   💡 To install a specific system, use: kuzu-memory install <integration>",
+            style="dim",
+        )
 
     return selected_system
 
@@ -407,4 +413,87 @@ def remove_command(
     )
 
 
-__all__ = ["install_command", "remove_command", "uninstall_command"]
+@click.command(name="repair")
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option("--verbose", is_flag=True, help="Show detailed output")
+def repair_command(
+    project_root: str | None,
+    verbose: bool,
+) -> None:
+    """
+    Repair broken MCP configurations across all detected frameworks.
+
+    Scans for installed systems and fixes broken ["mcp", "serve"] args to ["mcp"].
+    This command is useful when MCP servers fail due to incorrect args configuration.
+
+    \\b
+    Examples:
+        kuzu-memory repair                  # Auto-detect and repair all
+        kuzu-memory repair --verbose        # Show detailed repair info
+    """
+    try:
+        # Determine project root
+        if project_root:
+            root = Path(project_root).resolve()
+        else:
+            try:
+                root = find_project_root()
+            except Exception:
+                root = Path.cwd()
+
+        rich_panel(
+            f"Scanning for broken MCP configurations in {root.name}...",
+            title="🔧 MCP Configuration Repair",
+            style="cyan",
+        )
+
+        # Detect installed systems
+        detected_systems = _detect_installed_systems(root)
+
+        if not detected_systems:
+            rich_print("No installed systems detected in this project.", style="yellow")
+            rich_print("\n💡 Run 'kuzu-memory install <integration>' to install first.", style="dim")
+            sys.exit(0)
+
+        # Show detected systems
+        rich_print(f"\n✓ Found {len(detected_systems)} installed system(s):", style="green")
+        for system in detected_systems:
+            rich_print(f"  • {system.name}", style="cyan")
+
+        # Run global MCP config repair
+        rich_print("\n🔍 Checking MCP configurations...", style="cyan")
+        num_fixes, fix_messages = _repair_all_mcp_configs()
+
+        if num_fixes > 0:
+            rich_panel(
+                f"Fixed {num_fixes} broken MCP configuration(s)",
+                title="✅ Repair Complete",
+                style="green",
+            )
+            if verbose or num_fixes <= 5:
+                rich_print("\n📝 Repairs applied:")
+                for msg in fix_messages:
+                    rich_print(f"  • {msg}", style="green")
+        else:
+            rich_panel(
+                "No broken MCP configurations found. All configs are healthy!",
+                title="✅ All Good",
+                style="green",
+            )
+
+        # Show next steps
+        rich_print("\n🎯 Next Steps:", style="cyan")
+        rich_print("1. Reload or restart your AI coding assistant")
+        rich_print("2. MCP server should now start correctly with args: ['mcp']")
+        rich_print("3. Check MCP server status in your AI assistant's settings")
+
+    except Exception as e:
+        rich_print(f"❌ Repair failed: {e}", style="red")
+        if verbose:
+            import traceback
+
+            traceback.print_exc()
+        sys.exit(1)
+
+
+__all__ = ["install_command", "remove_command", "repair_command", "uninstall_command"]

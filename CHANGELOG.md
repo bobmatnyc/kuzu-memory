@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Repair Command**: New `kuzu-memory repair` command for manual MCP config repair
+  - Auto-detects all installed frameworks in a project
+  - Fixes broken `["mcp", "serve"]` args to correct `["mcp"]` format
+  - Works across all detected systems (Claude Code, Desktop, Cursor, VSCode, etc.)
+  - Provides verbose output for detailed repair information
+  - Complements automatic repair on CLI invocation
+
 <!-- towncrier release notes start -->
 
 ## [1.4.45] - 2025-11-06

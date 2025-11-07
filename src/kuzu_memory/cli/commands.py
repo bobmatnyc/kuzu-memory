@@ -24,7 +24,7 @@ from .git_commands import git
 from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
-from .install_unified import install_command, remove_command, uninstall_command
+from .install_unified import install_command, remove_command, repair_command, uninstall_command
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
@@ -114,6 +114,7 @@ def cli(ctx, debug, config, db_path, project_root):
       kuzu-memory install <integration>   # Install for an IDE/tool
       kuzu-memory uninstall <integration> # Uninstall integration
       kuzu-memory remove <integration>    # Alias for uninstall
+      kuzu-memory repair                  # Repair broken MCP configs
 
     \b
     📦 AVAILABLE INTEGRATIONS:
@@ -601,6 +602,7 @@ cli.add_command(init)  # 1. Initialize project
 cli.add_command(install_command)  # 2. Install integrations (ONE WAY)
 cli.add_command(uninstall_command)  # 3. Uninstall integrations
 cli.add_command(remove_command)  # 4. Remove (alias for uninstall)
+cli.add_command(repair_command)  # 5. Repair broken MCP configs
 cli.add_command(memory)  # 5. Memory operations (store, learn, recall, enhance, recent)
 cli.add_command(status)  # 6. System status and info
 cli.add_command(doctor)  # 7. Diagnostics and health checks
