@@ -1120,12 +1120,846 @@ class MCPDiagnostics:
                 duration_ms=(time.time() - start) * 1000,
             )
 
-    async def run_full_diagnostics(self, auto_fix: bool = False) -> DiagnosticReport:
+    async def check_hooks(self) -> list[DiagnosticResult]:
+        """
+        Check Claude Code hooks configuration and execution.
+
+        Tests:
+        1. Hook configuration validation
+        2. Hook execution tests
+        3. Hook environment
+        4. Diagnostic results
+
+        Returns:
+            List of diagnostic results for hooks checks
+        """
+        results = []
+
+        # 1. Hook Configuration Validation
+        settings_path = self.project_root / ".claude" / "settings.local.json"
+        start = time.time()
+
+        if not settings_path.exists():
+            results.append(
+                DiagnosticResult(
+                    check_name="hooks_config_exists",
+                    success=False,
+                    severity=DiagnosticSeverity.INFO,
+                    message="Hooks configuration file not found (optional)",
+                    error=f"File not found: {settings_path}",
+                    fix_suggestion="Run: kuzu-memory install add claude-code to create hooks configuration",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+            return results
+
+        try:
+            with open(settings_path) as f:
+                config = json.load(f)
+
+            results.append(
+                DiagnosticResult(
+                    check_name="hooks_config_valid",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"Hooks configuration file is valid JSON: {settings_path}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+            # Validate hook events
+            start = time.time()
+            hooks = config.get("hooks", {})
+            valid_events = {"UserPromptSubmit", "Stop", "PostToolUse", "SessionStart", "PreToolUse", "SubagentStop", "Notification", "SessionEnd", "PreCompact"}
+            invalid_events = set(hooks.keys()) - valid_events
+
+            if invalid_events:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_event_names",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message=f"Invalid hook event names detected: {invalid_events}",
+                        error=f"Invalid events: {', '.join(invalid_events)}",
+                        fix_suggestion="Run: kuzu-memory install add claude-code --force to fix event names",
+                        metadata={"invalid_events": list(invalid_events)},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_event_names",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Hook event names are valid ({len(hooks)} events)",
+                        metadata={"events": list(hooks.keys())},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+
+            # Check for duplicate hook entries
+            start = time.time()
+            duplicates_found = False
+            for event_name, handlers in hooks.items():
+                if not isinstance(handlers, list):
+                    continue
+                seen_commands = set()
+                for handler_group in handlers:
+                    for hook in handler_group.get("hooks", []):
+                        command = hook.get("command", "")
+                        if "kuzu" in command.lower():
+                            if command in seen_commands:
+                                duplicates_found = True
+                            seen_commands.add(command)
+
+            if duplicates_found:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_no_duplicates",
+                        success=False,
+                        severity=DiagnosticSeverity.WARNING,
+                        message="Duplicate hook entries detected",
+                        error="Multiple identical hook commands found",
+                        fix_suggestion="Run: kuzu-memory install add claude-code --force to remove duplicates",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_no_duplicates",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="No duplicate hook entries found",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+
+            # Validate hook command paths are absolute
+            start = time.time()
+            non_absolute_paths = []
+            missing_executables = []
+
+            for event_name, handlers in hooks.items():
+                if not isinstance(handlers, list):
+                    continue
+                for handler_group in handlers:
+                    for hook in handler_group.get("hooks", []):
+                        command = hook.get("command", "")
+                        if "kuzu" in command.lower():
+                            cmd_parts = command.split()
+                            if cmd_parts:
+                                cmd_path = cmd_parts[0]
+                                # Check if path is absolute
+                                if not cmd_path.startswith("/"):
+                                    non_absolute_paths.append((event_name, cmd_path))
+                                # Check if executable exists
+                                elif not Path(cmd_path).exists():
+                                    missing_executables.append((event_name, cmd_path))
+
+            if non_absolute_paths:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_absolute_paths",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Hook commands use relative paths (should be absolute)",
+                        error=f"Relative paths found in {len(non_absolute_paths)} hook(s)",
+                        fix_suggestion="Run: kuzu-memory install add claude-code --force to fix paths",
+                        metadata={"non_absolute": [f"{e}: {p}" for e, p in non_absolute_paths]},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            elif missing_executables:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_executable_exists",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Hook command executables not found",
+                        error=f"Missing executables in {len(missing_executables)} hook(s)",
+                        fix_suggestion="Run: kuzu-memory install add claude-code --force to fix paths",
+                        metadata={"missing": [f"{e}: {p}" for e, p in missing_executables]},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hooks_command_paths",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="Hook command paths are absolute and executables exist",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+
+        except json.JSONDecodeError as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="hooks_config_valid",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Hooks configuration contains invalid JSON",
+                    error=str(e),
+                    fix_suggestion="Fix JSON syntax errors in .claude/settings.local.json",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+            return results
+
+        # 2. Hook Execution Tests
+        # Test session-start hook
+        start = time.time()
+        try:
+            test_input = {"hook_event_name": "SessionStart"}
+            result = subprocess.run(
+                ["kuzu-memory", "hooks", "session-start"],
+                input=json.dumps(test_input),
+                capture_output=True,
+                text=True,
+                timeout=5,
+                cwd=str(self.project_root),
+            )
+
+            if result.returncode == 0:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_session_start_execution",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="session-start hook executes successfully",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_session_start_execution",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="session-start hook execution failed",
+                        error=f"Exit code {result.returncode}: {result.stderr[:200]}",
+                        fix_suggestion="Check hook script and permissions",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except subprocess.TimeoutExpired:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_session_start_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="session-start hook execution timeout",
+                    error="Command took longer than 5 seconds",
+                    fix_suggestion="Check hook implementation for performance issues",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_session_start_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="session-start hook execution error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # Test enhance hook
+        start = time.time()
+        try:
+            test_input = {"prompt": "test prompt", "context": "test context"}
+            result = subprocess.run(
+                ["kuzu-memory", "hooks", "enhance"],
+                input=json.dumps(test_input),
+                capture_output=True,
+                text=True,
+                timeout=5,
+                cwd=str(self.project_root),
+            )
+
+            if result.returncode == 0:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_enhance_execution",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="enhance hook executes successfully",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_enhance_execution",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="enhance hook execution failed",
+                        error=f"Exit code {result.returncode}: {result.stderr[:200]}",
+                        fix_suggestion="Check hook script and database initialization",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except subprocess.TimeoutExpired:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_enhance_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="enhance hook execution timeout",
+                    error="Command took longer than 5 seconds",
+                    fix_suggestion="Check hook implementation for performance issues",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_enhance_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="enhance hook execution error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # Test learn hook
+        start = time.time()
+        try:
+            # Create a temporary transcript file for testing
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as tf:
+                transcript_path = tf.name
+                # Write a test transcript entry
+                test_transcript = {
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "Test assistant response"}]
+                    }
+                }
+                tf.write(json.dumps(test_transcript) + "\n")
+
+            test_input = {"transcript_path": transcript_path}
+            result = subprocess.run(
+                ["kuzu-memory", "hooks", "learn"],
+                input=json.dumps(test_input),
+                capture_output=True,
+                text=True,
+                timeout=5,
+                cwd=str(self.project_root),
+            )
+
+            # Clean up temp file
+            try:
+                Path(transcript_path).unlink()
+            except Exception:
+                pass
+
+            if result.returncode == 0:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_learn_execution",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="learn hook executes successfully",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_learn_execution",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="learn hook execution failed",
+                        error=f"Exit code {result.returncode}: {result.stderr[:200]}",
+                        fix_suggestion="Check hook script and database initialization",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except subprocess.TimeoutExpired:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_learn_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="learn hook execution timeout",
+                    error="Command took longer than 5 seconds",
+                    fix_suggestion="Check hook implementation for performance issues",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_learn_execution",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="learn hook execution error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 3. Hook Environment Checks
+        # Check log directory
+        start = time.time()
+        log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+        if log_dir.exists() and os.access(log_dir, os.W_OK):
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_log_directory",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message=f"Hook log directory exists and is writable: {log_dir}",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_log_directory",
+                    success=False,
+                    severity=DiagnosticSeverity.WARNING,
+                    message="Hook log directory not writable",
+                    error=f"Directory: {log_dir}",
+                    fix_suggestion=f"Ensure {log_dir} exists and is writable, or set KUZU_HOOK_LOG_DIR",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # Check cache directory
+        start = time.time()
+        cache_file = log_dir / ".kuzu_learn_cache.json"
+        cache_dir_ok = log_dir.exists() and os.access(log_dir, os.W_OK)
+        results.append(
+            DiagnosticResult(
+                check_name="hook_cache_directory",
+                success=cache_dir_ok,
+                severity=DiagnosticSeverity.SUCCESS if cache_dir_ok else DiagnosticSeverity.WARNING,
+                message=f"Hook cache directory {'is' if cache_dir_ok else 'is not'} accessible",
+                metadata={"cache_file": str(cache_file)},
+                duration_ms=(time.time() - start) * 1000,
+            )
+        )
+
+        # Verify PROJECT_ROOT detection
+        start = time.time()
+        try:
+            from ...utils.project_setup import find_project_root
+            detected_root = find_project_root()
+            if detected_root == self.project_root:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_project_root_detection",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"PROJECT_ROOT correctly detected: {detected_root}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="hook_project_root_detection",
+                        success=False,
+                        severity=DiagnosticSeverity.WARNING,
+                        message="PROJECT_ROOT detection mismatch",
+                        error=f"Expected: {self.project_root}, Detected: {detected_root}",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="hook_project_root_detection",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="PROJECT_ROOT detection failed",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        return results
+
+    async def check_server_lifecycle(self) -> list[DiagnosticResult]:
+        """
+        Check MCP server lifecycle (startup, health, shutdown).
+
+        Tests:
+        1. Server startup
+        2. Server health during operation
+        3. Server shutdown
+        4. Error recovery
+
+        Returns:
+            List of diagnostic results for server lifecycle checks
+        """
+        results = []
+
+        # Use MCPConnectionTester for server lifecycle testing
+        tester = MCPConnectionTester(project_root=self.project_root, timeout=10.0)
+
+        # 1. Server Startup Test
+        start = time.time()
+        start_result = await tester.start_server()
+        results.append(
+            DiagnosticResult(
+                check_name="server_startup",
+                success=start_result.success,
+                severity=DiagnosticSeverity.SUCCESS if start_result.success else DiagnosticSeverity.CRITICAL,
+                message=start_result.message,
+                error=start_result.error,
+                fix_suggestion="Check server installation: pip show kuzu-memory" if not start_result.success else None,
+                metadata=start_result.metadata,
+                duration_ms=(time.time() - start) * 1000,
+            )
+        )
+
+        if not start_result.success:
+            return results  # Cannot proceed without server
+
+        # 2. Server Health During Operation
+        # Test ping requests
+        start = time.time()
+        try:
+            ping_msg = {"jsonrpc": "2.0", "method": "ping", "id": 1}
+            response = await asyncio.wait_for(
+                tester._send_request(ping_msg),
+                timeout=5.0
+            )
+
+            if response:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_ping_response",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="Server responds to ping within timeout",
+                        metadata={"response_time_ms": (time.time() - start) * 1000},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_ping_response",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Server ping timeout",
+                        error="No response received within 5 seconds",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except TimeoutError:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_ping_response",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Server ping timeout",
+                    error="Request timed out after 5 seconds",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_ping_response",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Server ping error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # Test protocol initialization
+        start = time.time()
+        try:
+            init_msg = {
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "id": 2,
+                "params": {"protocolVersion": "2024-11-05"},
+            }
+            response = await asyncio.wait_for(
+                tester._send_request(init_msg),
+                timeout=5.0
+            )
+
+            if response and "result" in response:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_protocol_init",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message="Server protocol initialization successful",
+                        metadata={"protocol_version": response["result"].get("protocolVersion")},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_protocol_init",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Server protocol initialization failed",
+                        error=response.get("error", "Unknown error") if response else "No response",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except TimeoutError:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_protocol_init",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Protocol initialization timeout",
+                    error="Request timed out after 5 seconds",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_protocol_init",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Protocol initialization error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # List available tools
+        start = time.time()
+        try:
+            tools_msg = {"jsonrpc": "2.0", "method": "tools/list", "id": 3}
+            response = await asyncio.wait_for(
+                tester._send_request(tools_msg),
+                timeout=5.0
+            )
+
+            if response and "result" in response:
+                tools = response["result"].get("tools", [])
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_tools_list",
+                        success=True,
+                        severity=DiagnosticSeverity.SUCCESS,
+                        message=f"Server tools list successful ({len(tools)} tools)",
+                        metadata={"tool_count": len(tools), "tools": [t.get("name") for t in tools]},
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            else:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_tools_list",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Server tools list failed",
+                        error=response.get("error", "Unknown error") if response else "No response",
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+        except TimeoutError:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_tools_list",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Tools list timeout",
+                    error="Request timed out after 5 seconds",
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_tools_list",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Tools list error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        # 3. Server Shutdown Test
+        start = time.time()
+        try:
+            # Send graceful shutdown
+            if tester.process:
+                tester.process.terminate()
+                await asyncio.sleep(0.5)
+
+                # Check if process terminated
+                if tester.process.poll() is not None:
+                    exit_code = tester.process.returncode
+                    if exit_code == 0 or exit_code == -15:  # 0 = clean exit, -15 = SIGTERM
+                        results.append(
+                            DiagnosticResult(
+                                check_name="server_shutdown_graceful",
+                                success=True,
+                                severity=DiagnosticSeverity.SUCCESS,
+                                message="Server shutdown graceful (clean exit)",
+                                metadata={"exit_code": exit_code},
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                    else:
+                        results.append(
+                            DiagnosticResult(
+                                check_name="server_shutdown_graceful",
+                                success=False,
+                                severity=DiagnosticSeverity.WARNING,
+                                message="Server shutdown with non-zero exit code",
+                                error=f"Exit code: {exit_code}",
+                                metadata={"exit_code": exit_code},
+                                duration_ms=(time.time() - start) * 1000,
+                            )
+                        )
+                else:
+                    # Process didn't terminate - force kill
+                    tester.process.kill()
+                    await asyncio.sleep(0.5)
+                    results.append(
+                        DiagnosticResult(
+                            check_name="server_shutdown_graceful",
+                            success=False,
+                            severity=DiagnosticSeverity.WARNING,
+                            message="Server required force kill",
+                            error="Process did not respond to SIGTERM within 0.5 seconds",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+
+                # Check for zombie processes
+                await asyncio.sleep(0.5)
+                zombie_check = subprocess.run(
+                    ["ps", "-ef"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if str(tester.process.pid) not in zombie_check.stdout:
+                    results.append(
+                        DiagnosticResult(
+                            check_name="server_cleanup_resources",
+                            success=True,
+                            severity=DiagnosticSeverity.SUCCESS,
+                            message="No zombie processes detected after shutdown",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+                else:
+                    results.append(
+                        DiagnosticResult(
+                            check_name="server_cleanup_resources",
+                            success=False,
+                            severity=DiagnosticSeverity.WARNING,
+                            message="Zombie process detected after shutdown",
+                            error=f"Process {tester.process.pid} still in process table",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+        except Exception as e:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_shutdown",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Server shutdown test error",
+                    error=str(e),
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+        finally:
+            # Ensure cleanup
+            await tester.stop_server()
+
+        # 4. Error Recovery Test
+        start = time.time()
+        restart_result = await tester.start_server()
+        if restart_result.success:
+            # Test that server responds after restart
+            try:
+                test_msg = {"jsonrpc": "2.0", "method": "ping", "id": 99}
+                response = await asyncio.wait_for(
+                    tester._send_request(test_msg),
+                    timeout=5.0
+                )
+
+                if response:
+                    results.append(
+                        DiagnosticResult(
+                            check_name="server_restart_recovery",
+                            success=True,
+                            severity=DiagnosticSeverity.SUCCESS,
+                            message="Server successfully restarted and responds to requests",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+                else:
+                    results.append(
+                        DiagnosticResult(
+                            check_name="server_restart_recovery",
+                            success=False,
+                            severity=DiagnosticSeverity.WARNING,
+                            message="Server restarted but does not respond to requests",
+                            error="No response to ping after restart",
+                            duration_ms=(time.time() - start) * 1000,
+                        )
+                    )
+            except Exception as e:
+                results.append(
+                    DiagnosticResult(
+                        check_name="server_restart_recovery",
+                        success=False,
+                        severity=DiagnosticSeverity.ERROR,
+                        message="Server restart recovery test failed",
+                        error=str(e),
+                        duration_ms=(time.time() - start) * 1000,
+                    )
+                )
+            finally:
+                await tester.stop_server()
+        else:
+            results.append(
+                DiagnosticResult(
+                    check_name="server_restart_recovery",
+                    success=False,
+                    severity=DiagnosticSeverity.ERROR,
+                    message="Server failed to restart",
+                    error=restart_result.error,
+                    duration_ms=(time.time() - start) * 1000,
+                )
+            )
+
+        return results
+
+    async def run_full_diagnostics(
+        self,
+        auto_fix: bool = False,
+        check_hooks: bool = True,
+        check_server_lifecycle: bool = True,
+    ) -> DiagnosticReport:
         """
         Run complete diagnostic suite.
 
         Args:
             auto_fix: Attempt to automatically fix issues
+            check_hooks: Run hooks diagnostic checks
+            check_server_lifecycle: Run server lifecycle diagnostic checks
 
         Returns:
             Complete diagnostic report
@@ -1157,6 +1991,18 @@ class MCPDiagnostics:
                 perf_results = await self.check_performance()
                 for result in perf_results:
                     report.add_result(result)
+
+        # Run hooks checks if requested
+        if check_hooks:
+            hooks_results = await self.check_hooks()
+            for result in hooks_results:
+                report.add_result(result)
+
+        # Run server lifecycle checks if requested
+        if check_server_lifecycle:
+            lifecycle_results = await self.check_server_lifecycle()
+            for result in lifecycle_results:
+                report.add_result(result)
 
         # Auto-fix if requested and there are failures
         if auto_fix and report.failed > 0:

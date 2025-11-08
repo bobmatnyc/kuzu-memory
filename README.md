@@ -163,6 +163,29 @@ kuzu-memory memory enhance "What's my coding preference?"
 kuzu-memory status
 ```
 
+### Keeping KuzuMemory Updated
+
+**Check for updates:**
+```bash
+kuzu-memory update --check-only
+```
+
+**Check and upgrade:**
+```bash
+kuzu-memory update
+```
+
+**Silent check (for scripts/cron):**
+```bash
+kuzu-memory update --check-only --quiet
+# Exit code 0 = up to date, 2 = update available
+```
+
+**JSON output:**
+```bash
+kuzu-memory update --check-only --format json
+```
+
 ### Git History Sync
 
 Automatically import project commit history as memories:
@@ -337,6 +360,95 @@ pytest tests/mcp/performance/ --benchmark-only
 - ❌ Does NOT check Claude Desktop (use `kuzu-memory install claude-desktop` instead)
 
 See [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Reference](docs/MCP_DIAGNOSTICS.md) for complete documentation.
+
+## 🩺 System Diagnostics
+
+The `kuzu-memory doctor` command provides comprehensive health checks and diagnostics for your KuzuMemory installation.
+
+### Quick Start
+
+```bash
+# Run full diagnostics (29 checks)
+kuzu-memory doctor
+
+# With verbose output
+kuzu-memory doctor diagnose --verbose
+
+# Selective testing
+kuzu-memory doctor diagnose --no-server-lifecycle  # Skip server checks
+kuzu-memory doctor diagnose --no-hooks            # Skip hooks checks
+
+# JSON output for automation
+kuzu-memory doctor diagnose --format json > diagnostics.json
+```
+
+### What Gets Tested
+
+**Configuration Checks (11)**:
+- Database directory and file
+- Project metadata files (PROJECT.md, README.md)
+- Hook scripts and configuration
+- Claude Code settings (.claude/config.local.json)
+- MCP server configuration
+
+**Hooks Diagnostics (12)**:
+- Hook configuration validation
+- Event name validation (UserPromptSubmit, Stop)
+- Command path verification
+- Hook execution tests (session-start, enhance, learn)
+- Environment validation (logs, cache, project root)
+
+**Server Lifecycle Checks (7)**:
+- Server startup validation
+- Health checks (ping, protocol, tools)
+- Graceful shutdown
+- Resource cleanup (zombie process detection)
+- Restart/recovery capability
+
+**Performance Metrics**:
+- Startup time
+- Protocol latency
+- Throughput testing
+
+### Understanding Results
+
+**Severity Levels**:
+- ✅ SUCCESS: Check passed
+- ℹ️ INFO: Informational message (not an error)
+- ⚠️ WARNING: Issue found but not critical
+- ❌ ERROR: Problem that should be fixed
+- 🔴 CRITICAL: Serious issue requiring immediate attention
+
+**Auto-Fix Suggestions**:
+Most failures include a "Fix:" suggestion with a specific command to resolve the issue.
+
+### Performance Benchmarks
+
+From QA testing:
+- Full diagnostics: ~4.5 seconds (29 checks)
+- Hooks only: ~1.6 seconds (12 checks)
+- Server only: ~3.0 seconds (7 checks)
+- Core only: ~0.25 seconds (11 checks)
+
+### Troubleshooting
+
+**Common Issues**:
+
+1. **MCP server not configured (INFO)**
+   - Fix: `kuzu-memory install add claude-code`
+
+2. **Hook executable not found (ERROR)**
+   - Fix: `kuzu-memory install add claude-code --force`
+
+3. **Database not initialized (CRITICAL)**
+   - Fix: `kuzu-memory init` or reinstall
+
+### Exit Codes
+
+- 0: All checks passed (or INFO level only)
+- 1: Some checks failed
+
+See [Diagnostics Reference](docs/diagnostics-reference.md) for detailed check documentation.
 
 ## 🤝 Contributing
 

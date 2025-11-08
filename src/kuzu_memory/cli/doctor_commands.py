@@ -34,9 +34,11 @@ from .enums import OutputFormat
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
+@click.option("--server-lifecycle/--no-server-lifecycle", default=True, help="Run server lifecycle diagnostics (default: enabled)")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
+def doctor(ctx, fix: bool, verbose: bool, output, format: str, hooks: bool, server_lifecycle: bool, project_root):
     """
     🩺 Diagnose and fix PROJECT issues.
 
@@ -45,6 +47,7 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
     - Project memory database (kuzu-memories/)
     - Claude Code MCP configuration (.claude/config.local.json)
     - Claude Code hooks (if configured)
+    - MCP server lifecycle (startup, health, shutdown)
 
     Does NOT check user-level configurations:
     - Claude Desktop (use install commands instead)
@@ -57,6 +60,9 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
 
       # Auto-fix issues (non-interactive)
       kuzu-memory doctor --fix
+
+      # Skip hooks and lifecycle checks
+      kuzu-memory doctor --no-hooks --no-server-lifecycle
 
       # MCP-specific diagnostics
       kuzu-memory doctor mcp
@@ -78,6 +84,8 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
             output=output,
             format=format,
             fix=fix,
+            hooks=hooks,
+            server_lifecycle=server_lifecycle,
             project_root=project_root,
         )
 
@@ -96,14 +104,16 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, project_root):
     help="Output format (default: text)",
 )
 @click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
+@click.option("--server-lifecycle/--no-server-lifecycle", default=True, help="Run server lifecycle diagnostics (default: enabled)")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
+def diagnose(ctx, verbose: bool, output, format: str, fix: bool, hooks: bool, server_lifecycle: bool, project_root):
     """
     Run full PROJECT diagnostic suite.
 
     Performs comprehensive checks on project-level configuration,
-    connection, tool discovery, and performance.
+    connection, tool discovery, performance, hooks, and server lifecycle.
 
     Does NOT check user-level (Claude Desktop) configurations.
     """
@@ -115,7 +125,11 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, project_root):
         diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
 
         # Run diagnostics
-        report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=fix))
+        report = asyncio.run(diagnostics.run_full_diagnostics(
+            auto_fix=fix,
+            check_hooks=hooks,
+            check_server_lifecycle=server_lifecycle,
+        ))
 
         # Generate output based on format
         if format == "json":

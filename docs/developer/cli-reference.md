@@ -322,6 +322,512 @@ Status:
 
 ---
 
+## 🩺 **Diagnostic Commands**
+
+### **`kuzu-memory doctor`**
+Comprehensive system diagnostics and health checks.
+
+**Usage:**
+```bash
+kuzu-memory doctor [SUBCOMMAND] [OPTIONS]
+```
+
+**Subcommands:**
+- `diagnose` - Run full diagnostic suite (default)
+- `health` - Quick health check
+- `mcp` - MCP-specific diagnostics
+- `connection` - Test MCP connection
+
+**Global Options:**
+- `--verbose`, `-v` - Enable verbose output
+- `--output FILE`, `-o FILE` - Save report to file
+- `--format FORMAT`, `-f FORMAT` - Output format: text, json, html (default: text)
+- `--fix` - Attempt automatic fixes
+- `--hooks/--no-hooks` - Enable/disable hooks diagnostics (default: enabled)
+- `--server-lifecycle/--no-server-lifecycle` - Enable/disable server lifecycle tests (default: enabled)
+- `--project-root PATH` - Specify project root directory
+
+**Examples:**
+```bash
+# Run full diagnostics (29 checks, ~4.5s)
+kuzu-memory doctor
+
+# Same as above (explicit)
+kuzu-memory doctor diagnose
+
+# With verbose output
+kuzu-memory doctor --verbose
+
+# Skip server lifecycle checks (faster, ~1.6s)
+kuzu-memory doctor --no-server-lifecycle
+
+# Skip hooks checks (~3.0s)
+kuzu-memory doctor --no-hooks
+
+# Core configuration only (~0.25s)
+kuzu-memory doctor --no-hooks --no-server-lifecycle
+
+# Auto-fix issues
+kuzu-memory doctor --fix
+
+# JSON output for automation
+kuzu-memory doctor --format json --output diagnostics.json
+
+# HTML report
+kuzu-memory doctor --format html --output report.html
+```
+
+**Output:**
+```
+🔍 Running full diagnostics...
+
+=== Configuration Checks (11/11 passed) ===
+✅ memory_database_directory: Found at /project/kuzu-memory/
+✅ memory_database_file: Database initialized and accessible
+✅ memory_database_initialization: Schema v1.4 initialized
+✅ project_info_file: Found at /project/PROJECT.md
+ℹ️ memory_readme_file: Not found (optional)
+✅ kuzu_memory_config: Valid configuration
+ℹ️ claude_code_config_exists: Not configured
+✅ claude_code_config_valid: Valid MCP configuration
+✅ mcp_server_configured: kuzu-memory server ready
+ℹ️ claude_instructions_file: Not found (optional)
+ℹ️ mcp_environment_variables: No environment variables set
+
+=== Hooks Diagnostics (12/12 passed) ===
+✅ hooks_config_exists: Found at .claude/settings.local.json
+✅ hooks_config_valid: Valid hooks configuration
+✅ hooks_event_names: Valid events (UserPromptSubmit, Stop)
+✅ hooks_command_paths: Valid paths
+✅ hooks_executable_exists: Found at /usr/local/bin/kuzu-memory
+✅ hooks_absolute_paths: All commands use absolute paths
+✅ hooks_no_duplicates: No duplicate hooks
+✅ hook_session_start_execution: Hook executed (0.3s)
+✅ hook_enhance_execution: Enhanced prompt (0.8s)
+✅ hook_learn_execution: Learning queued
+✅ hook_project_root_detection: Detected /project
+✅ hook_log_directory: Writable at .kuzu-memory/logs/
+
+=== Server Lifecycle Checks (7/7 passed) ===
+✅ server_startup: Server started (PID: 12345, 1.2s)
+✅ server_protocol_init: Protocol initialized (v2024-11-05, 0.5s)
+✅ server_ping_response: Pong received (18ms)
+✅ server_tools_list: 4 tools available
+✅ server_shutdown_graceful: Clean shutdown (0.8s)
+✅ server_cleanup_resources: All resources released
+✅ server_restart_recovery: Server restarted (1.1s)
+
+✅ All diagnostics passed successfully! (29/29 checks, 4.5s)
+```
+
+**What Gets Tested:**
+
+**Configuration Checks (11):**
+- Database directory and files
+- Project metadata files
+- Configuration validity
+- Claude Code MCP setup
+- Environment variables
+
+**Hooks Diagnostics (12):**
+- Hook configuration validity
+- Event name validation
+- Command path verification
+- Hook execution tests
+- Environment setup
+
+**Server Lifecycle (7):**
+- Server startup
+- Protocol initialization
+- Ping/pong communication
+- Tools discovery
+- Graceful shutdown
+- Resource cleanup
+- Restart recovery
+
+**Performance Benchmarks:**
+- Full diagnostics: ~4.5s (29 checks)
+- Hooks only: ~1.6s (12 checks)
+- Server only: ~3.0s (7 checks)
+- Core only: ~0.25s (11 checks)
+
+---
+
+### **`kuzu-memory doctor diagnose`**
+Run full diagnostic suite (default command).
+
+**Usage:**
+```bash
+kuzu-memory doctor diagnose [OPTIONS]
+```
+
+**Options:**
+Same as main `doctor` command.
+
+**Examples:**
+```bash
+# Explicit diagnose command
+kuzu-memory doctor diagnose
+
+# With auto-fix
+kuzu-memory doctor diagnose --fix
+
+# Selective testing
+kuzu-memory doctor diagnose --no-server-lifecycle
+```
+
+---
+
+### **`kuzu-memory doctor health`**
+Quick health check for continuous monitoring.
+
+**Usage:**
+```bash
+kuzu-memory doctor health [OPTIONS]
+```
+
+**Options:**
+- `--detailed` - Show detailed health information
+- `--json` - Output in JSON format
+- `--continuous` - Continuous monitoring mode
+- `--interval SECONDS` - Check interval (default: 5)
+- `--project-root PATH` - Specify project root
+
+**Examples:**
+```bash
+# Quick health check
+kuzu-memory doctor health
+
+# Detailed status
+kuzu-memory doctor health --detailed
+
+# JSON output
+kuzu-memory doctor health --json
+
+# Continuous monitoring (every 5 seconds)
+kuzu-memory doctor health --continuous
+
+# Custom interval (every 30 seconds)
+kuzu-memory doctor health --continuous --interval 30
+```
+
+**Output:**
+```
+🏥 System Health: ✅ HEALTHY
+Check Duration: 45.23ms
+Timestamp: 2025-11-07 14:30:45
+```
+
+**Output (Detailed):**
+```
+=== System Health Status ===
+
+Connection Status: ✅ HEALTHY
+  Latency: 23ms
+  Success Rate: 100%
+  Last Response: 2025-11-07 14:30:45
+
+Resource Usage: ✅ HEALTHY
+  Memory: 15MB
+  Connections: 2
+  Queue Depth: 0
+
+Tool Status: ✅ HEALTHY
+  - enhance: Available (avg: 45ms)
+  - recall: Available (avg: 3ms)
+  - learn: Available (async)
+  - stats: Available (avg: 10ms)
+
+Overall Status: ✅ HEALTHY
+Uptime: 2h 15m
+```
+
+**Output (JSON):**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-07T14:30:45Z",
+  "connection": {
+    "status": "healthy",
+    "latency_ms": 23,
+    "success_rate": 1.0
+  },
+  "resources": {
+    "memory_mb": 15,
+    "connections": 2
+  },
+  "overall": "healthy"
+}
+```
+
+---
+
+### **`kuzu-memory doctor mcp`**
+MCP-specific diagnostics for server configuration and tools.
+
+**Usage:**
+```bash
+kuzu-memory doctor mcp [OPTIONS]
+```
+
+**Options:**
+- `--verbose`, `-v` - Show detailed output
+- `--output FILE` - Save report to file
+- `--project-root PATH` - Specify project root
+
+**Examples:**
+```bash
+# MCP diagnostics
+kuzu-memory doctor mcp
+
+# Verbose output
+kuzu-memory doctor mcp --verbose
+
+# Save report
+kuzu-memory doctor mcp --output mcp-report.txt
+```
+
+**Output:**
+```
+🔍 Running MCP diagnostics...
+
+Configuration:
+✅ claude_code_config_valid: Valid MCP configuration
+✅ mcp_server_configured: kuzu-memory server ready
+
+Tools:
+✅ tools_discovery: 4 tools found
+✅ tool_schemas_valid: All schemas valid
+✅ tool_execution: All tools callable
+
+✅ MCP diagnostics passed (6/6 checks)
+```
+
+---
+
+### **`kuzu-memory doctor connection`**
+Test MCP server connection and protocol.
+
+**Usage:**
+```bash
+kuzu-memory doctor connection [OPTIONS]
+```
+
+**Options:**
+- `--verbose`, `-v` - Show detailed connection logs
+- `--output FILE` - Save connection test report
+- `--project-root PATH` - Specify project root
+
+**Examples:**
+```bash
+# Test connection
+kuzu-memory doctor connection
+
+# With verbose logging
+kuzu-memory doctor connection --verbose
+
+# Save results
+kuzu-memory doctor connection --output connection-test.txt
+```
+
+**Output:**
+```
+🔗 Testing MCP server connection...
+
+Server Startup:
+✅ server_startup: Server started (PID: 12345, 1.2s)
+
+Protocol:
+✅ server_protocol_init: Protocol initialized (0.5s)
+✅ server_ping_response: Pong received (18ms)
+
+Communication:
+✅ stdio_connection: Bidirectional
+✅ jsonrpc_compliance: JSON-RPC 2.0 compliant
+
+✅ Connection tests passed (5/5 checks)
+```
+
+---
+
+### **`kuzu-memory update`**
+Check for and install kuzu-memory updates from PyPI.
+
+**Usage:**
+```bash
+kuzu-memory update [OPTIONS]
+```
+
+**Options:**
+- `--check-only` - Only check for updates without upgrading
+- `--pre` - Include pre-release versions
+- `--format [text|json]` - Output format (default: text)
+- `--quiet`, `-q` - Silent mode, no output unless update available
+
+**Exit Codes:**
+- `0` - No update available or upgrade successful
+- `1` - Error occurred
+- `2` - Update available (with --check-only)
+
+**Examples:**
+
+Basic check and upgrade:
+```bash
+kuzu-memory update
+# 🔍 Checking for updates...
+#
+# ╭─── 📦 Update Available ────────────────────────────╮
+# │ Current version: 1.4.46                            │
+# │ Latest version:  1.4.50                            │
+# │ Update type:     🔧 Patch                          │
+# │ Released:        2025-11-10                        │
+# │                                                    │
+# │ Release notes:   https://pypi.org/project/...      │
+# │                                                    │
+# │ To upgrade, run:                                   │
+# │   pip install --upgrade kuzu-memory                │
+# │                                                    │
+# │ Or use: kuzu-memory update (without --check-only) │
+# ╰────────────────────────────────────────────────────╯
+#
+# 🚀 Upgrade now? (y/N): y
+# 📦 Upgrading kuzu-memory...
+# ✅ Successfully upgraded to the latest version!
+```
+
+Check only (no upgrade):
+```bash
+kuzu-memory update --check-only
+# 📦 Update Available
+# Current version: 1.4.46
+# Latest version:  1.4.50
+# Update type:     🔧 Patch
+# Released:        2025-11-10
+```
+
+Already up to date:
+```bash
+kuzu-memory update --check-only
+# ✅ You are running the latest version!
+# Current version: 1.4.46
+# Latest version:  1.4.46
+```
+
+Include pre-releases:
+```bash
+kuzu-memory update --pre
+# Checks for beta, alpha, and release candidate versions
+```
+
+JSON output for automation:
+```bash
+kuzu-memory update --check-only --format json
+{
+  "current_version": "1.4.46",
+  "latest_version": "1.4.50",
+  "update_available": true,
+  "version_type": "patch",
+  "release_date": "2025-11-10",
+  "release_url": "https://pypi.org/project/kuzu-memory/1.4.50/",
+  "error": null
+}
+```
+
+Silent mode for scripts:
+```bash
+#!/bin/bash
+kuzu-memory update --check-only --quiet
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 2 ]; then
+  echo "Update available!"
+  # Send notification
+  kuzu-memory update --check-only --format json | mail -s "Update Available" admin@example.com
+elif [ $EXIT_CODE -eq 0 ]; then
+  echo "Up to date"
+else
+  echo "Error checking for updates"
+fi
+```
+
+**Version Types:**
+- 🚀 **Major** - Breaking changes (e.g., 1.x.x → 2.0.0)
+- ✨ **Minor** - New features (e.g., 1.4.x → 1.5.0)
+- 🔧 **Patch** - Bug fixes (e.g., 1.4.46 → 1.4.47)
+
+**Automation Examples:**
+
+Cron job (daily check):
+```bash
+# Add to crontab: crontab -e
+0 9 * * * /usr/local/bin/kuzu-memory update --check-only --quiet || echo "KuzuMemory update available" | mail -s "Update Notice" admin@example.com
+```
+
+GitHub Actions workflow:
+```yaml
+name: Check KuzuMemory Updates
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Daily at 9 AM
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install kuzu-memory
+        run: pip install kuzu-memory
+
+      - name: Check for updates
+        id: update-check
+        run: |
+          kuzu-memory update --check-only --format json > update.json
+          cat update.json
+
+      - name: Notify on update
+        if: steps.update-check.outputs.exit-code == 2
+        run: |
+          # Send notification (Slack, email, etc.)
+          echo "Update available!"
+```
+
+Docker health check:
+```dockerfile
+HEALTHCHECK --interval=24h --timeout=10s \
+  CMD kuzu-memory update --check-only --quiet || exit 1
+```
+
+Python integration:
+```python
+import subprocess
+import json
+
+def check_for_updates():
+    """Check if kuzu-memory update is available."""
+    try:
+        result = subprocess.run([
+            'kuzu-memory', 'update', '--check-only', '--format', 'json', '--quiet'
+        ], capture_output=True, text=True, timeout=15)
+
+        if result.returncode == 2:
+            # Update available
+            data = json.loads(result.stdout)
+            return {
+                'available': True,
+                'current': data['current_version'],
+                'latest': data['latest_version'],
+                'type': data['version_type']
+            }
+        elif result.returncode == 0:
+            # Up to date
+            return {'available': False}
+        else:
+            # Error
+            return {'error': 'Failed to check for updates'}
+    except Exception as e:
+        return {'error': str(e)}
+```
+
+---
+
 ## 🔧 **Utility Commands**
 
 ### **`kuzu-memory remember`**
@@ -498,9 +1004,11 @@ KuzuMemory uses standard exit codes for programmatic integration:
 
 - `0` - Success
 - `1` - General error
-- `2` - Invalid arguments
+- `2` - Update available (when using `update --check-only`)
 - `3` - Database error
 - `4` - Timeout error
 - `5` - Permission error
+
+**Note:** Exit code `2` is specifically used by `kuzu-memory update --check-only` to indicate an update is available, allowing for easy script-based detection of updates.
 
 **This comprehensive CLI provides everything needed for memory operations and AI integration.** 🎯✨

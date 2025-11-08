@@ -33,6 +33,7 @@ from .install_unified import (
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
 from .status_commands import status
+from .update_commands import update
 
 # Set up logging for CLI
 logging.basicConfig(
@@ -615,6 +616,7 @@ cli.add_command(help_group, name="help")  # 8. Help and examples
 cli.add_command(git)  # 9. Git commit history synchronization
 cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
 cli.add_command(mcp_server)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
+cli.add_command(update)  # 12. Check for and install updates from PyPI
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead

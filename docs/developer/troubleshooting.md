@@ -6,7 +6,28 @@
 
 ## 🎯 **Quick Diagnostics**
 
-### **Health Check Commands**
+### **Automated Diagnostics (Recommended)**
+```bash
+# Run comprehensive diagnostics (29 checks, ~4.5s)
+kuzu-memory doctor
+
+# With verbose output for debugging
+kuzu-memory doctor --verbose
+
+# Auto-fix detected issues
+kuzu-memory doctor --fix
+
+# Quick health check
+kuzu-memory doctor health
+
+# Test MCP connection
+kuzu-memory doctor connection
+
+# Generate JSON report for analysis
+kuzu-memory doctor --format json --output diagnostics.json
+```
+
+### **Manual Health Check Commands**
 ```bash
 # Basic system check
 kuzu-memory --version
@@ -22,14 +43,60 @@ time kuzu-memory enhance "performance test"
 kuzu-memory recent --limit 1 --format json
 ```
 
+### **Diagnostic Tool Output Interpretation**
+
+The `kuzu-memory doctor` command provides severity-coded results:
+
+| Symbol | Severity | Meaning | Action |
+|--------|----------|---------|--------|
+| ✅ | SUCCESS | Check passed | None |
+| ℹ️ | INFO | Informational (not an error) | Optional |
+| ⚠️ | WARNING | Non-critical issue | Consider fixing |
+| ❌ | ERROR | Should be fixed | Follow fix suggestion |
+| 🔴 | CRITICAL | Requires immediate action | Fix immediately |
+
+**Example Doctor Output:**
+```bash
+$ kuzu-memory doctor
+
+=== Configuration Checks (10/11 passed) ===
+✅ memory_database_directory: Found at /project/kuzu-memory/
+❌ memory_database_file: Database not initialized
+  Fix: kuzu-memory init
+
+=== Hooks Diagnostics (12/12 passed) ===
+✅ hooks_config_valid: Valid hooks configuration
+...
+
+=== Server Lifecycle Checks (7/7 passed) ===
+✅ server_startup: Server started (PID: 12345, 1.2s)
+...
+
+⚠️ Some checks failed (28/29 passed)
+Run with --fix to attempt automatic repairs
+```
+
+**Exit Codes:**
+- `0` - All checks passed (or INFO only)
+- `1` - Some checks failed
+
 ### **Common Error Patterns**
-| Error Pattern | Likely Cause | Quick Fix |
-|---------------|--------------|-----------|
-| `Command not found` | Installation issue | `pip install kuzu-memory` |
-| `Database not initialized` | Missing init | `kuzu-memory init` |
-| `Permission denied` | File permissions | `chmod -R 755 kuzu-memories/` |
-| `Timeout expired` | Performance issue | Check system resources |
-| `JSON decode error` | Corrupted output | Clear cache, restart |
+| Error Pattern | Likely Cause | Quick Fix | Doctor Check |
+|---------------|--------------|-----------|--------------|
+| `Command not found` | Installation issue | `pip install kuzu-memory` | N/A |
+| `Database not initialized` | Missing init | `kuzu-memory init` | `memory_database_file` |
+| `Permission denied` | File permissions | `chmod -R 755 kuzu-memories/` | `memory_database_directory` |
+| `Timeout expired` | Performance issue | Check system resources | `server_startup` |
+| `JSON decode error` | Corrupted config | `kuzu-memory doctor --fix` | `*_config_valid` |
+| `Hook not found` | Missing executable | `kuzu-memory install add claude-code --force` | `hooks_executable_exists` |
+| `Server won't start` | Port/lock issues | `pkill -f "kuzu-memory mcp"` | `server_startup` |
+
+**Troubleshooting Workflow:**
+1. Run `kuzu-memory doctor` to identify issues
+2. Review failed checks and fix suggestions
+3. Apply fixes: `kuzu-memory doctor --fix` or manual commands
+4. Re-run diagnostics to verify fixes
+5. If issues persist, check detailed logs with `--verbose`
 
 ---
 
@@ -113,12 +180,20 @@ pip install -r requirements.txt --constraint constraints.txt
 # Symptom
 ERROR: KuzuMemory not initialized. Run 'kuzu-memory init' first.
 
-# Diagnosis
+# Automated Diagnosis (Recommended)
+kuzu-memory doctor
+# Check: memory_database_file (CRITICAL)
+# Fix suggestion will be provided
+
+# Manual Diagnosis
 ls -la kuzu-memories/
 kuzu-memory project
 
 # Solutions
-# Initialize in current directory
+# Auto-fix with doctor command
+kuzu-memory doctor --fix
+
+# Or manual initialization
 kuzu-memory init
 
 # Force reinitialize
@@ -321,6 +396,237 @@ cat > kuzu-config.json << EOF
   }
 }
 EOF
+```
+
+---
+
+## 🔄 **Update Command Issues**
+
+### **Problem: Version comparison shows incorrect results**
+
+```bash
+# Symptom
+kuzu-memory update --check-only
+# ERROR: Failed to compare versions
+# WARNING: packaging library not found
+```
+
+**Root cause:**
+- Missing `packaging` library for proper version comparison
+
+**Solution:**
+```bash
+# Ensure packaging library is installed
+pip install --upgrade kuzu-memory  # Installs all dependencies including packaging
+
+# Or install packaging directly
+pip install packaging
+
+# Verify installation
+python -c "from packaging.version import Version; print('OK')"
+```
+
+---
+
+### **Problem: Can't connect to PyPI**
+
+```bash
+# Symptom
+kuzu-memory update --check-only
+# ⚠️  Update Check Failed
+# Failed to check for updates:
+# Network error: [Errno 11001] getaddrinfo failed
+```
+
+**Root cause:**
+- Network connectivity issues
+- Firewall blocking PyPI
+- Proxy configuration needed
+
+**Solution:**
+```bash
+# Test PyPI access
+curl https://pypi.org/pypi/kuzu-memory/json
+ping pypi.org
+
+# Check proxy settings
+echo $https_proxy
+echo $HTTPS_PROXY
+
+# Set proxy if needed
+export https_proxy=http://proxy.example.com:8080
+export HTTPS_PROXY=http://proxy.example.com:8080
+
+# Try update again
+kuzu-memory update --check-only
+
+# Alternative: Use direct pip command
+pip index versions kuzu-memory
+```
+
+---
+
+### **Problem: Upgrade fails with permission error**
+
+```bash
+# Symptom
+kuzu-memory update
+# ❌ Upgrade failed:
+# ERROR: Could not install packages due to an OSError: [Errno 13] Permission denied
+```
+
+**Root cause:**
+- Insufficient permissions to install packages
+- System-wide installation requires elevated privileges
+
+**Solution:**
+```bash
+# Option 1: User installation (recommended)
+pip install --upgrade --user kuzu-memory
+
+# Option 2: pipx (best for CLI tools)
+pipx upgrade kuzu-memory
+
+# Option 3: System-wide (requires sudo)
+sudo pip install --upgrade kuzu-memory
+
+# Option 4: Virtual environment
+source venv/bin/activate
+pip install --upgrade kuzu-memory
+```
+
+---
+
+### **Problem: Update command times out**
+
+```bash
+# Symptom
+kuzu-memory update --check-only
+# ERROR: Network error: timeout
+# Operation timed out after 10 seconds
+```
+
+**Root cause:**
+- Slow network connection
+- PyPI temporarily unreachable
+- Network congestion
+
+**Solution:**
+```bash
+# Check internet connectivity
+ping 8.8.8.8
+curl -I https://pypi.org
+
+# Wait and retry
+sleep 60
+kuzu-memory update --check-only
+
+# Use manual pip commands (no timeout limit)
+pip index versions kuzu-memory
+pip install --upgrade kuzu-memory
+
+# Check if behind VPN/proxy
+# May need to configure proxy settings
+```
+
+---
+
+### **Problem: JSON output is malformed**
+
+```bash
+# Symptom
+kuzu-memory update --check-only --format json | jq .
+# parse error: Invalid numeric literal at line 1, column 10
+```
+
+**Root cause:**
+- Error messages mixed with JSON output
+- Debug output interfering with JSON
+
+**Solution:**
+```bash
+# Redirect stderr to avoid mixing with JSON
+kuzu-memory update --check-only --format json 2>/dev/null | jq .
+
+# Or capture separately
+kuzu-memory update --check-only --format json > update.json 2> update.err
+cat update.json | jq .
+
+# Check for errors
+if [ -s update.err ]; then
+  echo "Errors occurred:"
+  cat update.err
+fi
+
+# Use quiet mode to reduce output
+kuzu-memory update --check-only --format json --quiet
+```
+
+---
+
+### **Problem: False positive - says update available when already updated**
+
+```bash
+# Symptom
+# Just upgraded to 1.4.50
+kuzu-memory update --check-only
+# Update available: 1.4.50 (but already on 1.4.50)
+```
+
+**Root cause:**
+- Multiple installations of kuzu-memory
+- Version mismatch between environments
+- Cached version information
+
+**Solution:**
+```bash
+# Check which kuzu-memory is being used
+which kuzu-memory
+kuzu-memory --version
+
+# Check all installations
+pip list | grep kuzu-memory
+pip show kuzu-memory
+
+# Verify Python environment
+python -c "import kuzu_memory; print(kuzu_memory.__version__)"
+
+# Clean reinstall
+pip uninstall kuzu-memory -y
+pip install kuzu-memory
+
+# Verify version
+kuzu-memory --version
+kuzu-memory update --check-only
+```
+
+---
+
+### **Problem: Pre-release detection not working**
+
+```bash
+# Symptom
+kuzu-memory update --pre --check-only
+# Shows stable version instead of pre-release
+```
+
+**Root cause:**
+- No pre-release versions available
+- Pre-release filter not working correctly
+
+**Solution:**
+```bash
+# Check PyPI directly for all versions
+curl -s https://pypi.org/pypi/kuzu-memory/json | jq -r '.releases | keys[]' | sort -V | tail -10
+
+# Verify packaging library is installed
+python -c "from packaging.version import Version; print('OK')"
+
+# Try manual pip command
+pip index versions kuzu-memory
+
+# Check if any pre-releases exist
+curl -s https://pypi.org/pypi/kuzu-memory/json | jq -r '.releases | keys[]' | grep -E '(a|b|rc|dev|alpha|beta)'
 ```
 
 ---
@@ -706,6 +1012,59 @@ result = debug_subprocess_call([
 ---
 
 ## 📊 **Monitoring and Health Checks**
+
+### **Using Doctor Command for Monitoring**
+
+**Continuous Health Monitoring:**
+```bash
+# Monitor health every 30 seconds
+kuzu-memory doctor health --continuous --interval 30
+
+# With JSON output for logging
+kuzu-memory doctor health --continuous --interval 60 --json > health-log.jsonl
+```
+
+**Automated Checks in Scripts:**
+```bash
+#!/bin/bash
+# health-monitor.sh
+
+# Run diagnostics and capture exit code
+kuzu-memory doctor --format json > /tmp/diagnostics.json
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ All checks passed"
+    exit 0
+else
+    echo "❌ Some checks failed"
+    # Parse and alert on critical issues
+    CRITICAL=$(jq '.has_critical_errors' /tmp/diagnostics.json)
+    if [ "$CRITICAL" = "true" ]; then
+        echo "🔴 CRITICAL ERRORS DETECTED"
+        # Send alert (email, Slack, etc.)
+        curl -X POST https://hooks.slack.com/... \
+            -d "{\"text\": \"KuzuMemory critical errors detected\"}"
+    fi
+    exit 1
+fi
+```
+
+**Cron Job for Regular Checks:**
+```bash
+# Add to crontab (check every hour)
+0 * * * * cd /path/to/project && kuzu-memory doctor --format json >> /var/log/kuzu-memory-health.log 2>&1
+
+# Daily full diagnostics report
+0 6 * * * cd /path/to/project && kuzu-memory doctor --verbose --format html --output /var/www/reports/daily-diagnostics.html
+```
+
+**Docker Health Check:**
+```dockerfile
+# In Dockerfile
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD kuzu-memory doctor health --json || exit 1
+```
 
 ### **Health Check Script**
 ```python
