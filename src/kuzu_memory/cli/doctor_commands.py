@@ -35,10 +35,23 @@ from .enums import OutputFormat
     help="Output format (default: text)",
 )
 @click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
-@click.option("--server-lifecycle/--no-server-lifecycle", default=True, help="Run server lifecycle diagnostics (default: enabled)")
+@click.option(
+    "--server-lifecycle/--no-server-lifecycle",
+    default=True,
+    help="Run server lifecycle diagnostics (default: enabled)",
+)
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def doctor(ctx, fix: bool, verbose: bool, output, format: str, hooks: bool, server_lifecycle: bool, project_root):
+def doctor(
+    ctx,
+    fix: bool,
+    verbose: bool,
+    output,
+    format: str,
+    hooks: bool,
+    server_lifecycle: bool,
+    project_root,
+):
     """
     🩺 Diagnose and fix PROJECT issues.
 
@@ -105,10 +118,23 @@ def doctor(ctx, fix: bool, verbose: bool, output, format: str, hooks: bool, serv
 )
 @click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
 @click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
-@click.option("--server-lifecycle/--no-server-lifecycle", default=True, help="Run server lifecycle diagnostics (default: enabled)")
+@click.option(
+    "--server-lifecycle/--no-server-lifecycle",
+    default=True,
+    help="Run server lifecycle diagnostics (default: enabled)",
+)
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def diagnose(ctx, verbose: bool, output, format: str, fix: bool, hooks: bool, server_lifecycle: bool, project_root):
+def diagnose(
+    ctx,
+    verbose: bool,
+    output,
+    format: str,
+    fix: bool,
+    hooks: bool,
+    server_lifecycle: bool,
+    project_root,
+):
     """
     Run full PROJECT diagnostic suite.
 
@@ -125,11 +151,13 @@ def diagnose(ctx, verbose: bool, output, format: str, fix: bool, hooks: bool, se
         diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
 
         # Run diagnostics
-        report = asyncio.run(diagnostics.run_full_diagnostics(
-            auto_fix=fix,
-            check_hooks=hooks,
-            check_server_lifecycle=server_lifecycle,
-        ))
+        report = asyncio.run(
+            diagnostics.run_full_diagnostics(
+                auto_fix=fix,
+                check_hooks=hooks,
+                check_server_lifecycle=server_lifecycle,
+            )
+        )
 
         # Generate output based on format
         if format == "json":

@@ -1170,7 +1170,17 @@ class MCPDiagnostics:
             # Validate hook events
             start = time.time()
             hooks = config.get("hooks", {})
-            valid_events = {"UserPromptSubmit", "Stop", "PostToolUse", "SessionStart", "PreToolUse", "SubagentStop", "Notification", "SessionEnd", "PreCompact"}
+            valid_events = {
+                "UserPromptSubmit",
+                "Stop",
+                "PostToolUse",
+                "SessionStart",
+                "PreToolUse",
+                "SubagentStop",
+                "Notification",
+                "SessionEnd",
+                "PreCompact",
+            }
             invalid_events = set(hooks.keys()) - valid_events
 
             if invalid_events:
@@ -1201,7 +1211,7 @@ class MCPDiagnostics:
             # Check for duplicate hook entries
             start = time.time()
             duplicates_found = False
-            for event_name, handlers in hooks.items():
+            for _event_name, handlers in hooks.items():
                 if not isinstance(handlers, list):
                     continue
                 seen_commands = set()
@@ -1433,13 +1443,14 @@ class MCPDiagnostics:
         try:
             # Create a temporary transcript file for testing
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as tf:
+
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tf:
                 transcript_path = tf.name
                 # Write a test transcript entry
                 test_transcript = {
                     "message": {
                         "role": "assistant",
-                        "content": [{"type": "text", "text": "Test assistant response"}]
+                        "content": [{"type": "text", "text": "Test assistant response"}],
                     }
                 }
                 tf.write(json.dumps(test_transcript) + "\n")
@@ -1541,7 +1552,9 @@ class MCPDiagnostics:
             DiagnosticResult(
                 check_name="hook_cache_directory",
                 success=cache_dir_ok,
-                severity=DiagnosticSeverity.SUCCESS if cache_dir_ok else DiagnosticSeverity.WARNING,
+                severity=(
+                    DiagnosticSeverity.SUCCESS if cache_dir_ok else DiagnosticSeverity.WARNING
+                ),
                 message=f"Hook cache directory {'is' if cache_dir_ok else 'is not'} accessible",
                 metadata={"cache_file": str(cache_file)},
                 duration_ms=(time.time() - start) * 1000,
@@ -1552,6 +1565,7 @@ class MCPDiagnostics:
         start = time.time()
         try:
             from ...utils.project_setup import find_project_root
+
             detected_root = find_project_root()
             if detected_root == self.project_root:
                 results.append(
@@ -1613,10 +1627,18 @@ class MCPDiagnostics:
             DiagnosticResult(
                 check_name="server_startup",
                 success=start_result.success,
-                severity=DiagnosticSeverity.SUCCESS if start_result.success else DiagnosticSeverity.CRITICAL,
+                severity=(
+                    DiagnosticSeverity.SUCCESS
+                    if start_result.success
+                    else DiagnosticSeverity.CRITICAL
+                ),
                 message=start_result.message,
                 error=start_result.error,
-                fix_suggestion="Check server installation: pip show kuzu-memory" if not start_result.success else None,
+                fix_suggestion=(
+                    "Check server installation: pip show kuzu-memory"
+                    if not start_result.success
+                    else None
+                ),
                 metadata=start_result.metadata,
                 duration_ms=(time.time() - start) * 1000,
             )
@@ -1630,10 +1652,7 @@ class MCPDiagnostics:
         start = time.time()
         try:
             ping_msg = {"jsonrpc": "2.0", "method": "ping", "id": 1}
-            response = await asyncio.wait_for(
-                tester._send_request(ping_msg),
-                timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(ping_msg), timeout=5.0)
 
             if response:
                 results.append(
@@ -1689,10 +1708,7 @@ class MCPDiagnostics:
                 "id": 2,
                 "params": {"protocolVersion": "2024-11-05"},
             }
-            response = await asyncio.wait_for(
-                tester._send_request(init_msg),
-                timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(init_msg), timeout=5.0)
 
             if response and "result" in response:
                 results.append(
@@ -1712,7 +1728,9 @@ class MCPDiagnostics:
                         success=False,
                         severity=DiagnosticSeverity.ERROR,
                         message="Server protocol initialization failed",
-                        error=response.get("error", "Unknown error") if response else "No response",
+                        error=(
+                            response.get("error", "Unknown error") if response else "No response"
+                        ),
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1743,10 +1761,7 @@ class MCPDiagnostics:
         start = time.time()
         try:
             tools_msg = {"jsonrpc": "2.0", "method": "tools/list", "id": 3}
-            response = await asyncio.wait_for(
-                tester._send_request(tools_msg),
-                timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(tools_msg), timeout=5.0)
 
             if response and "result" in response:
                 tools = response["result"].get("tools", [])
@@ -1756,7 +1771,10 @@ class MCPDiagnostics:
                         success=True,
                         severity=DiagnosticSeverity.SUCCESS,
                         message=f"Server tools list successful ({len(tools)} tools)",
-                        metadata={"tool_count": len(tools), "tools": [t.get("name") for t in tools]},
+                        metadata={
+                            "tool_count": len(tools),
+                            "tools": [t.get("name") for t in tools],
+                        },
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1767,7 +1785,9 @@ class MCPDiagnostics:
                         success=False,
                         severity=DiagnosticSeverity.ERROR,
                         message="Server tools list failed",
-                        error=response.get("error", "Unknown error") if response else "No response",
+                        error=(
+                            response.get("error", "Unknown error") if response else "No response"
+                        ),
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1846,10 +1866,7 @@ class MCPDiagnostics:
                 # Check for zombie processes
                 await asyncio.sleep(0.5)
                 zombie_check = subprocess.run(
-                    ["ps", "-ef"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2
+                    ["ps", "-ef"], capture_output=True, text=True, timeout=2
                 )
                 if str(tester.process.pid) not in zombie_check.stdout:
                     results.append(
@@ -1894,10 +1911,7 @@ class MCPDiagnostics:
             # Test that server responds after restart
             try:
                 test_msg = {"jsonrpc": "2.0", "method": "ping", "id": 99}
-                response = await asyncio.wait_for(
-                    tester._send_request(test_msg),
-                    timeout=5.0
-                )
+                response = await asyncio.wait_for(tester._send_request(test_msg), timeout=5.0)
 
                 if response:
                     results.append(

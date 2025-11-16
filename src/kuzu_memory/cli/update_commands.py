@@ -84,7 +84,9 @@ class VersionChecker:
 
             return {
                 "version": latest,
-                "release_date": release_date.split("T")[0] if "T" in release_date else release_date,
+                "release_date": (
+                    release_date.split("T")[0] if "T" in release_date else release_date
+                ),
                 "release_url": f"https://pypi.org/project/kuzu-memory/{latest}/",
                 "error": None,
             }
@@ -98,7 +100,7 @@ class VersionChecker:
         except json.JSONDecodeError:
             return {"error": "Failed to parse PyPI response"}
         except Exception as e:
-            return {"error": f"Unexpected error: {str(e)}"}
+            return {"error": f"Unexpected error: {e!s}"}
 
     def compare_versions(self, latest: str) -> dict[str, Any]:
         """
@@ -205,7 +207,9 @@ def _run_upgrade() -> dict[str, Any]:
 
 
 def _format_text_output(
-    check_result: dict[str, Any], comparison: dict[str, Any], upgrade_result: dict[str, Any] | None = None
+    check_result: dict[str, Any],
+    comparison: dict[str, Any],
+    upgrade_result: dict[str, Any] | None = None,
 ) -> None:
     """Format and print text output using rich."""
     # Handle errors
@@ -291,7 +295,9 @@ def _format_text_output(
 
 
 def _format_json_output(
-    check_result: dict[str, Any], comparison: dict[str, Any], upgrade_result: dict[str, Any] | None = None
+    check_result: dict[str, Any],
+    comparison: dict[str, Any],
+    upgrade_result: dict[str, Any] | None = None,
 ) -> None:
     """Format and print JSON output."""
     output = {
@@ -438,4 +444,4 @@ def update(ctx, check_only: bool, pre: bool, format: str, quiet: bool):
         sys.exit(1)
 
 
-__all__ = ["update", "VersionChecker"]
+__all__ = ["VersionChecker", "update"]
