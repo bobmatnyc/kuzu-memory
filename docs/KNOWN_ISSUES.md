@@ -1,8 +1,10 @@
-# Known Issues - KuzuMemory v1.3.2
+# Known Issues - KuzuMemory
 
 **Status**: Production Ready with Known Limitations
-**Last Updated**: 2025-10-12
-**Version**: v1.3.2
+**Last Updated**: 2025-10-12 (v1.3.2)
+**Current Version**: v1.4.47
+
+> **Note**: This document was last updated at v1.3.2. For the latest issues and fixes, see [CHANGELOG.md](../CHANGELOG.md).
 
 ---
 

@@ -1,6 +1,8 @@
-# KuzuMemory Integration Summary - v1.1.0 Production Ready
+# KuzuMemory Integration Summary - Historical Reference (v1.1.0)
 
-## 🎯 Production-Ready Memory System
+> **Note**: This document reflects the integration status at v1.1.0. Current version is v1.4.47. See [CHANGELOG.md](../CHANGELOG.md) for latest features.
+
+## 🎯 Production-Ready Memory System (v1.1.0)
 
 KuzuMemory v1.1.0 is now published on PyPI and provides comprehensive integration with Claude Desktop and compatibility with claude-mpm hooks. This is a production-ready AI memory system with verified performance and reliability.
 

@@ -633,6 +633,74 @@ curl -s https://pypi.org/pypi/kuzu-memory/json | jq -r '.releases | keys[]' | gr
 
 ## 🔗 **Integration Issues**
 
+### **Problem: MCP Server Fails to Start (Broken Args)**
+
+**Symptom:**
+```bash
+# Claude Code or Claude Desktop shows error:
+"MCP server failed to start"
+"Error: Unknown command 'serve'"
+```
+
+**Diagnosis:**
+```bash
+# Check MCP configuration
+cat .claude/config.local.json | grep -A 5 '"kuzu-memory"'
+# Look for: "args": ["mcp", "serve"]  ← BROKEN
+
+# Or check Claude Desktop
+cat ~/.config/Claude/claude_desktop_config.json | grep -A 5 '"kuzu-memory"'
+```
+
+**Root Cause:**
+Older versions of KuzuMemory used `["mcp", "serve"]` as MCP args, but newer versions use `["mcp"]` only. The `serve` subcommand was removed in v1.4.x.
+
+**Solution 1: Automatic Repair (Recommended)**
+```bash
+# Auto-detect and fix all broken configurations
+kuzu-memory repair
+
+# Output:
+# 🔧 Scanning for MCP configurations...
+# ⚠️  Found broken args: ["mcp", "serve"]
+# ✅ Fixed: ["mcp"]
+# 📄 Backup: .claude/config.local.json.backup-20251115-223045
+# ✅ Repair complete!
+
+# Verify fix
+kuzu-memory doctor mcp
+```
+
+**Solution 2: Manual Fix**
+```bash
+# For Claude Code (.claude/config.local.json)
+# Change:
+"args": ["mcp", "serve"]
+# To:
+"args": ["mcp"]
+
+# For Claude Desktop (~/.config/Claude/claude_desktop_config.json)
+# Same change
+
+# Restart Claude Code or Claude Desktop
+```
+
+**Solution 3: Reinstall**
+```bash
+# Force reinstall (overwrites config)
+kuzu-memory install claude-code --force
+
+# Or for Claude Desktop
+kuzu-memory install claude-desktop --force
+```
+
+**Prevention:**
+- Run `kuzu-memory repair` after upgrading
+- Use `kuzu-memory doctor` regularly to catch issues early
+- Keep backups of working configurations
+
+---
+
 ### **Problem: CLI Integration Failures**
 ```python
 # Symptom

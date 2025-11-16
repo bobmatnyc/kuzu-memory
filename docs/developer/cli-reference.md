@@ -650,6 +650,75 @@ Communication:
 
 ---
 
+### **`kuzu-memory repair`**
+Auto-fix broken MCP configurations across all detected frameworks.
+
+**Usage:**
+```bash
+kuzu-memory repair [OPTIONS]
+```
+
+**Options:**
+- `--project-root PATH` - Specify project root directory
+- `--verbose` - Show detailed repair information
+
+**What it fixes:**
+- Broken `["mcp", "serve"]` args → `["mcp"]` (common MCP startup issue)
+- Auto-detects Claude Code, Claude Desktop, Cursor, VS Code, Windsurf
+- Creates backups before making changes
+- Shows clear before/after comparison
+
+**Examples:**
+```bash
+# Auto-detect and repair all installed systems
+kuzu-memory repair
+# 🔧 Scanning for MCP configurations...
+#
+# ╭─── 📦 Found 2 systems ─────────────────────────╮
+# │ • Claude Code    (.claude/config.local.json)  │
+# │ • Claude Desktop (~/.config/Claude/config.json)│
+# ╰────────────────────────────────────────────────╯
+#
+# 🔍 Checking Claude Code configuration...
+# ⚠️  Found broken args: ["mcp", "serve"]
+# ✅ Fixed: ["mcp"]
+# 📄 Backup: .claude/config.local.json.backup-20251115-223045
+#
+# 🔍 Checking Claude Desktop configuration...
+# ✅ Configuration OK (no changes needed)
+#
+# ✅ Repair complete! 1 configuration fixed.
+
+# Show detailed repair information
+kuzu-memory repair --verbose
+# Shows full JSON diffs before/after changes
+```
+
+**When to use:**
+- MCP server fails to start with args-related errors
+- After upgrading from older KuzuMemory versions
+- When integrations stop working unexpectedly
+- To verify configurations across multiple systems
+
+**Safety:**
+- Always creates timestamped backups before changes
+- Never modifies configurations that are already correct
+- Atomic operations (all or nothing)
+- Can be run multiple times safely (idempotent)
+
+**Output:**
+The command provides clear feedback about:
+- Which systems were detected
+- What issues were found
+- What changes were made
+- Where backups were saved
+
+**Related commands:**
+- `kuzu-memory doctor` - Diagnose issues
+- `kuzu-memory install <system>` - Reinstall from scratch
+
+---
+
 ### **`kuzu-memory update`**
 Check for and install kuzu-memory updates from PyPI.
 

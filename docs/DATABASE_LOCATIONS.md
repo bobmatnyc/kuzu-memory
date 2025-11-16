@@ -69,11 +69,13 @@ memory = KuzuMemory(db_path=Path("/custom/path/memories.db"))
 3. **For Scripts**: Can use either depending on needs
 4. **For Testing**: Use a separate test database path
 
-## Current Status (v1.1.1)
+## Current Status
+
+> **Note**: Historical status from v1.1.1. Current version is v1.4.47. See [CHANGELOG.md](../CHANGELOG.md) for latest updates.
 
 - ✅ Project detection working correctly
 - ✅ Both database locations functional
-- ⚠️ Minor initialization issue with metadata (being fixed)
+- ✅ All initialization issues resolved
 - ✅ Recall and storage working properly
 
 ## Migration

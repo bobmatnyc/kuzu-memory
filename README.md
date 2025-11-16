@@ -36,7 +36,7 @@ pip install kuzu-memory
 pip install kuzu-memory[dev]
 ```
 
-**Now available on PyPI!** KuzuMemory v1.1.0 is published and ready for production use.
+**Now available on PyPI!** KuzuMemory v1.4.47 is published and ready for production use.
 
 ### AI Integration
 
@@ -175,16 +175,50 @@ kuzu-memory update --check-only
 kuzu-memory update
 ```
 
+**Include pre-releases:**
+```bash
+kuzu-memory update --pre
+```
+
 **Silent check (for scripts/cron):**
 ```bash
 kuzu-memory update --check-only --quiet
 # Exit code 0 = up to date, 2 = update available
 ```
 
-**JSON output:**
+**JSON output for automation:**
 ```bash
 kuzu-memory update --check-only --format json
 ```
+
+The update command queries PyPI for the latest version and uses pip to upgrade. It's safe to run anytime and will preserve your database and configuration files.
+
+### Repair Command
+
+**Auto-fix broken MCP configurations:**
+
+If your MCP server fails to start due to configuration issues, the repair command can automatically fix common problems:
+
+```bash
+# Auto-detect and repair all installed systems
+kuzu-memory repair
+
+# Show detailed repair information
+kuzu-memory repair --verbose
+```
+
+**What it fixes:**
+- Broken `["mcp", "serve"]` args → `["mcp"]` (common MCP server startup issue)
+- Auto-detects Claude Code, Claude Desktop, Cursor, VS Code, Windsurf configurations
+- Creates backups before making changes
+- Shows clear before/after comparison
+
+**When to use:**
+- MCP server fails to start with args-related errors
+- After upgrading from older versions
+- When integrations stop working unexpectedly
+
+See [Troubleshooting Guide](docs/developer/troubleshooting.md) for more repair scenarios.
 
 ### Git History Sync
 
@@ -363,24 +397,42 @@ See [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Referenc
 
 ## 🩺 System Diagnostics
 
-The `kuzu-memory doctor` command provides comprehensive health checks and diagnostics for your KuzuMemory installation.
+The `kuzu-memory doctor` command provides comprehensive health checks and diagnostics for your project-level KuzuMemory installation.
 
 ### Quick Start
 
 ```bash
-# Run full diagnostics (29 checks)
+# Run full diagnostics (interactive, 29 checks)
 kuzu-memory doctor
 
-# With verbose output
-kuzu-memory doctor diagnose --verbose
+# Auto-fix detected issues (non-interactive)
+kuzu-memory doctor --fix
+
+# Quick health check
+kuzu-memory doctor health
+
+# MCP-specific diagnostics
+kuzu-memory doctor mcp
+
+# Test database connection
+kuzu-memory doctor connection
 
 # Selective testing
-kuzu-memory doctor diagnose --no-server-lifecycle  # Skip server checks
-kuzu-memory doctor diagnose --no-hooks            # Skip hooks checks
+kuzu-memory doctor --no-server-lifecycle  # Skip server checks
+kuzu-memory doctor --no-hooks            # Skip hooks checks
 
 # JSON output for automation
-kuzu-memory doctor diagnose --format json > diagnostics.json
+kuzu-memory doctor --format json > diagnostics.json
+
+# Save report to file
+kuzu-memory doctor --output report.html --format html
 ```
+
+**New in v1.4.x:**
+- `--fix` flag for automatic issue resolution
+- Multiple output formats (text, JSON, HTML)
+- Focused diagnostic commands (health, mcp, connection)
+- Enhanced error messages with fix suggestions
 
 ### What Gets Tested
 
