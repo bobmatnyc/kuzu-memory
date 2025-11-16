@@ -1,6 +1,6 @@
 # Archived Documentation - Deprecated 2025-11-15
 
-This directory contains documentation that has been deprecated as of November 15, 2025 (v1.4.47).
+This directory contains documentation that has been deprecated as of November 15, 2025 (v1.4.48).
 
 ## Deprecated Installer Documentation
 
@@ -23,7 +23,7 @@ For current installation documentation, see:
 
 These files were deprecated as part of the v1.4.x documentation cleanup initiative. The installer consolidation happened in v1.3.x, with the unified installer (`kuzu-memory install <system>`) replacing the old approach.
 
-**Current Version**: v1.4.47
+**Current Version**: v1.4.48
 **Deprecation Date**: November 15, 2025
 **Reason**: Installer consolidation and documentation streamlining
 

@@ -36,7 +36,7 @@ pip install kuzu-memory
 pip install kuzu-memory[dev]
 ```
 
-**Now available on PyPI!** KuzuMemory v1.4.47 is published and ready for production use.
+**Now available on PyPI!** KuzuMemory v1.4.48 is published and ready for production use.
 
 ### AI Integration
 

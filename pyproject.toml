@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kuzu-memory"
-version = "1.4.47"
+version = "1.4.48"
 description = "Lightweight, embedded graph-based memory system for AI applications"
 readme = "README.md"
 license = {text = "MIT"}

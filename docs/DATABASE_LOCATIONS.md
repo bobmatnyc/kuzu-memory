@@ -71,7 +71,7 @@ memory = KuzuMemory(db_path=Path("/custom/path/memories.db"))
 
 ## Current Status
 
-> **Note**: Historical status from v1.1.1. Current version is v1.4.47. See [CHANGELOG.md](../CHANGELOG.md) for latest updates.
+> **Note**: Historical status from v1.1.1. Current version is v1.4.48. See [CHANGELOG.md](../CHANGELOG.md) for latest updates.
 
 - ✅ Project detection working correctly
 - ✅ Both database locations functional

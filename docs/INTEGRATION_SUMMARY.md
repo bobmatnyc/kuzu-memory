@@ -1,6 +1,6 @@
 # KuzuMemory Integration Summary - Historical Reference (v1.1.0)
 
-> **Note**: This document reflects the integration status at v1.1.0. Current version is v1.4.47. See [CHANGELOG.md](../CHANGELOG.md) for latest features.
+> **Note**: This document reflects the integration status at v1.1.0. Current version is v1.4.48. See [CHANGELOG.md](../CHANGELOG.md) for latest features.
 
 ## 🎯 Production-Ready Memory System (v1.1.0)
 
