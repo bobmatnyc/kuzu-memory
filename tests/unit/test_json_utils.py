@@ -469,3 +469,141 @@ class TestFixBrokenMcpArgs:
 
         assert fixed["mcpServers"]["KUZU-MEMORY"]["args"] == ["mcp"]
         assert len(fixes) == 1
+
+    def test_fix_python_module_pattern(self):
+        """Test fixing python -m kuzu_memory.mcp.server pattern."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "/usr/bin/python",
+                    "args": ["-m", "kuzu_memory.mcp.server"],
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert fixed["mcpServers"]["kuzu-memory"]["command"] == "kuzu-memory"
+        assert len(fixes) == 2  # Both args and command fixed
+
+    def test_fix_python_module_pattern_with_extra_args(self):
+        """Test fixing python -m pattern while preserving extra arguments."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {
+                    "command": "/path/to/venv/bin/python",
+                    "args": ["-m", "kuzu_memory.mcp.server", "--verbose"],
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp", "--verbose"]
+        assert fixed["mcpServers"]["kuzu-memory"]["command"] == "kuzu-memory"
+        assert len(fixes) == 2
+
+    def test_fix_python_module_in_project_specific(self):
+        """Test fixing python -m pattern in project-specific config."""
+        config = {
+            "projects": {
+                "/path/to/project": {
+                    "mcpServers": {
+                        "kuzu-memory": {
+                            "command": "/usr/local/bin/python",
+                            "args": ["-m", "kuzu_memory.mcp.server"],
+                        }
+                    }
+                }
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        assert (
+            fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["args"]
+            == ["mcp"]
+        )
+        assert (
+            fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["command"]
+            == "kuzu-memory"
+        )
+        assert len(fixes) == 2
+        assert all("/path/to/project" in fix for fix in fixes)
+
+    def test_only_fixes_python_with_module_args(self):
+        """Test that python command is only fixed when paired with -m args."""
+        config = {
+            "mcpServers": {
+                # This should NOT be fixed (python without -m args)
+                "other-python": {"command": "/usr/bin/python", "args": ["script.py"]},
+                # This should be fixed
+                "kuzu-memory": {
+                    "command": "/usr/bin/python",
+                    "args": ["-m", "kuzu_memory.mcp.server"],
+                },
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        # Other python command should be untouched
+        assert fixed["mcpServers"]["other-python"]["command"] == "/usr/bin/python"
+        assert fixed["mcpServers"]["other-python"]["args"] == ["script.py"]
+
+        # Kuzu-memory should be fixed
+        assert fixed["mcpServers"]["kuzu-memory"]["command"] == "kuzu-memory"
+        assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert len(fixes) == 2
+
+    def test_backward_compatibility_with_mcp_serve_pattern(self):
+        """Test that old ['mcp', 'serve'] pattern still works."""
+        config = {
+            "mcpServers": {
+                "kuzu-memory-old": {"command": "kuzu-memory", "args": ["mcp", "serve"]},
+                "kuzu-memory-python": {
+                    "command": "/usr/bin/python",
+                    "args": ["-m", "kuzu_memory.mcp.server"],
+                },
+            }
+        }
+
+        fixed, fixes = fix_broken_mcp_args(config)
+
+        # Old pattern fixed
+        assert fixed["mcpServers"]["kuzu-memory-old"]["args"] == ["mcp"]
+        # Python pattern fixed
+        assert fixed["mcpServers"]["kuzu-memory-python"]["args"] == ["mcp"]
+        assert fixed["mcpServers"]["kuzu-memory-python"]["command"] == "kuzu-memory"
+        # Should have 3 fixes: 1 for old pattern args, 2 for python pattern (args + command)
+        assert len(fixes) == 3
+
+    def test_python_command_variations(self):
+        """Test various python command path formats."""
+        test_cases = [
+            "/usr/bin/python",
+            "/usr/local/bin/python",
+            "/home/user/.venv/bin/python",
+            "python",  # Should NOT match - doesn't end with path separator
+        ]
+
+        for python_path in test_cases:
+            config = {
+                "mcpServers": {
+                    "kuzu-memory": {
+                        "command": python_path,
+                        "args": ["-m", "kuzu_memory.mcp.server"],
+                    }
+                }
+            }
+
+            fixed, fixes = fix_broken_mcp_args(config)
+
+            if python_path.endswith("python"):
+                # Should be fixed
+                assert fixed["mcpServers"]["kuzu-memory"]["command"] == "kuzu-memory"
+                assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+            else:
+                # Should not be fixed
+                assert fixed["mcpServers"]["kuzu-memory"]["command"] == python_path

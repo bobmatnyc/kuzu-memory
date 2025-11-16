@@ -232,7 +232,9 @@ def _needs_mcp_args_fix(server_name: str, server_config: dict) -> bool:
     """
     Check if server config needs args fix.
 
-    Only fixes kuzu-memory servers with the outdated ["mcp", "serve"] pattern.
+    Only fixes kuzu-memory servers with outdated patterns:
+    - ["mcp", "serve"]
+    - ["-m", "kuzu_memory.mcp.server"]
 
     Args:
         server_name: Name of the MCP server
@@ -250,15 +252,25 @@ def _needs_mcp_args_fix(server_name: str, server_config: dict) -> bool:
     if not isinstance(args, list) or len(args) < 2:
         return False
 
-    # Check for the broken pattern: ["mcp", "serve"]
-    return args[0] == "mcp" and args[1] == "serve"
+    # Check for broken patterns
+    # Pattern 1: ["mcp", "serve"]
+    if args[0] == "mcp" and args[1] == "serve":
+        return True
+
+    # Pattern 2: ["-m", "kuzu_memory.mcp.server"]
+    if args[0] == "-m" and args[1] == "kuzu_memory.mcp.server":
+        return True
+
+    return False
 
 
 def _fix_mcp_args(args: list) -> list:
     """
-    Fix MCP args by removing 'serve' after 'mcp'.
+    Fix MCP args by converting old patterns to ["mcp"].
 
-    Transforms ["mcp", "serve", ...] to ["mcp", ...]
+    Transforms:
+    - ["mcp", "serve", ...] to ["mcp", ...]
+    - ["-m", "kuzu_memory.mcp.server", ...] to ["mcp", ...]
 
     Args:
         args: List of command arguments
@@ -266,17 +278,74 @@ def _fix_mcp_args(args: list) -> list:
     Returns:
         Fixed arguments list
     """
-    if len(args) >= 2 and args[0] == "mcp" and args[1] == "serve":
-        # Remove "serve" but preserve any other args
-        return [args[0], *args[2:]]
+    if len(args) >= 2:
+        # Pattern 1: ["mcp", "serve", ...]
+        if args[0] == "mcp" and args[1] == "serve":
+            # Remove "serve" but preserve any other args
+            return [args[0], *args[2:]]
+
+        # Pattern 2: ["-m", "kuzu_memory.mcp.server", ...]
+        if args[0] == "-m" and args[1] == "kuzu_memory.mcp.server":
+            # Replace with ["mcp"] and preserve any other args
+            return ["mcp", *args[2:]]
+
     return args
+
+
+def _needs_command_fix(server_name: str, server_config: dict) -> bool:
+    """
+    Check if server config needs command fix.
+
+    Detects python command with -m kuzu_memory.mcp.server args pattern.
+    Only fixes kuzu-memory servers.
+
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+
+    Returns:
+        True if command needs to be fixed
+    """
+    # Only fix kuzu-memory servers
+    if "kuzu-memory" not in server_name.lower():
+        return False
+
+    command = server_config.get("command", "")
+    args = server_config.get("args")
+
+    # Check if command ends with 'python' (any path) and args are python module pattern
+    if not isinstance(command, str) or not command.endswith("python"):
+        return False
+
+    if not isinstance(args, list) or len(args) < 2:
+        return False
+
+    # Check for python module invocation pattern
+    return args[0] == "-m" and args[1] == "kuzu_memory.mcp.server"
+
+
+def _fix_command(command: str) -> str:
+    """
+    Fix command from python path to kuzu-memory.
+
+    Args:
+        command: Original command (e.g., /path/to/python)
+
+    Returns:
+        Fixed command (kuzu-memory)
+    """
+    return "kuzu-memory"
 
 
 def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """
-    Fix broken MCP server arguments in configuration.
+    Fix broken MCP server arguments and commands in configuration.
 
-    Detects and fixes the outdated ["mcp", "serve"] args pattern to ["mcp"].
+    Detects and fixes outdated patterns:
+    - Args: ["mcp", "serve"] -> ["mcp"]
+    - Args: ["-m", "kuzu_memory.mcp.server"] -> ["mcp"]
+    - Command: /path/to/python (with -m args) -> kuzu-memory
+
     Handles both root-level mcpServers and project-specific configurations.
 
     Args:
@@ -303,12 +372,27 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
             if not isinstance(server_config, dict):
                 continue
 
-            if _needs_mcp_args_fix(server_name, server_config):
+            # Check both fixes before applying (since fixing args changes detection logic)
+            needs_args_fix = _needs_mcp_args_fix(server_name, server_config)
+            needs_cmd_fix = _needs_command_fix(server_name, server_config)
+
+            # Fix args if needed
+            if needs_args_fix:
                 old_args = server_config["args"].copy()
                 new_args = _fix_mcp_args(old_args)
                 result["mcpServers"][server_name]["args"] = new_args
                 fixes.append(f"Fixed {server_name}: args {old_args} -> {new_args}")
                 logger.debug(f"Fixed broken MCP args in {server_name}: {old_args} -> {new_args}")
+
+            # Fix command if needed (for python -m pattern)
+            if needs_cmd_fix:
+                old_command = server_config["command"]
+                new_command = _fix_command(old_command)
+                result["mcpServers"][server_name]["command"] = new_command
+                fixes.append(f"Fixed {server_name}: command '{old_command}' -> '{new_command}'")
+                logger.debug(
+                    f"Fixed broken MCP command in {server_name}: '{old_command}' -> '{new_command}'"
+                )
 
     # Fix project-specific configurations (Claude Hooks pattern)
     if "projects" in result and isinstance(result["projects"], dict):
@@ -321,7 +405,12 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                     if not isinstance(server_config, dict):
                         continue
 
-                    if _needs_mcp_args_fix(server_name, server_config):
+                    # Check both fixes before applying (since fixing args changes detection logic)
+                    needs_args_fix = _needs_mcp_args_fix(server_name, server_config)
+                    needs_cmd_fix = _needs_command_fix(server_name, server_config)
+
+                    # Fix args if needed
+                    if needs_args_fix:
                         old_args = server_config["args"].copy()
                         new_args = _fix_mcp_args(old_args)
                         result["projects"][project_path]["mcpServers"][server_name]["args"] = (
@@ -332,6 +421,20 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                         )
                         logger.debug(
                             f"Fixed broken MCP args in {server_name} (project {project_path}): {old_args} -> {new_args}"
+                        )
+
+                    # Fix command if needed (for python -m pattern)
+                    if needs_cmd_fix:
+                        old_command = server_config["command"]
+                        new_command = _fix_command(old_command)
+                        result["projects"][project_path]["mcpServers"][server_name]["command"] = (
+                            new_command
+                        )
+                        fixes.append(
+                            f"Fixed {server_name} in project {project_path}: command '{old_command}' -> '{new_command}'"
+                        )
+                        logger.debug(
+                            f"Fixed broken MCP command in {server_name} (project {project_path}): '{old_command}' -> '{new_command}'"
                         )
 
     return result, fixes
