@@ -16,7 +16,7 @@ from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
-# Import top-level command groups (9 total now with hooks)
+# Import top-level command groups (10 total now with setup)
 from .cli_utils import rich_panel, rich_print, rich_table
 from .doctor_commands import doctor
 from .enums import OutputFormat
@@ -32,6 +32,7 @@ from .install_unified import (
 )
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
+from .setup_commands import setup
 from .status_commands import status
 from .update_commands import update
 
@@ -108,12 +109,16 @@ def cli(ctx, debug, config, db_path, project_root):
     Stores and recalls project-specific information with sub-100ms response times.
 
     \b
-    🚀 QUICK START:
-      kuzu-memory init                    # Initialize project memory
-      kuzu-memory install claude-code     # Install integration
+    🚀 QUICK START (RECOMMENDED):
+      kuzu-memory setup                   # Smart setup (auto-detects everything)
       kuzu-memory remember "info"         # Store information
       kuzu-memory enhance "prompt"        # Enhance AI prompts
       kuzu-memory learn "content"         # Learn asynchronously
+
+    \b
+    🛠️  ADVANCED (MANUAL CONTROL):
+      kuzu-memory init                    # Just initialize database
+      kuzu-memory install claude-code     # Just install integration
 
     \b
     🔧 INSTALLATION (ONE WAY):
@@ -196,8 +201,11 @@ def cli(ctx, debug, config, db_path, project_root):
                     rich_panel(
                         "Welcome to KuzuMemory! 🚀\n\n"
                         "It looks like this project isn't initialized yet.\n"
-                        "Get started with: kuzu-memory init\n\n"
-                        "Or try the interactive quickstart: kuzu-memory quickstart",
+                        "Get started with the smart setup (recommended):\n\n"
+                        "  kuzu-memory setup\n\n"
+                        "Or try the interactive quickstart:\n\n"
+                        "  kuzu-memory quickstart\n\n"
+                        "💡 The 'setup' command auto-detects and configures everything!",
                         title="🧠 KuzuMemory",
                         style="blue",
                     )
@@ -604,19 +612,25 @@ def demo(ctx):
 
 
 # Register top-level commands (clean architecture)
-cli.add_command(init)  # 1. Initialize project
-cli.add_command(install_command)  # 2. Install integrations (ONE WAY)
+# PRIMARY COMMAND (recommended for users)
+cli.add_command(setup)  # 0. Smart setup (RECOMMENDED - combines init + install)
+
+# INDIVIDUAL COMMANDS (for advanced users who need granular control)
+cli.add_command(init)  # 1. Initialize project (manual)
+cli.add_command(install_command)  # 2. Install integrations (manual - ONE WAY)
 cli.add_command(uninstall_command)  # 3. Uninstall integrations
 cli.add_command(remove_command)  # 4. Remove (alias for uninstall)
 cli.add_command(repair_command)  # 5. Repair broken MCP configs
-cli.add_command(memory)  # 5. Memory operations (store, learn, recall, enhance, recent)
-cli.add_command(status)  # 6. System status and info
-cli.add_command(doctor)  # 7. Diagnostics and health checks
-cli.add_command(help_group, name="help")  # 8. Help and examples
-cli.add_command(git)  # 9. Git commit history synchronization
-cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
-cli.add_command(mcp_server)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
-cli.add_command(update)  # 12. Check for and install updates from PyPI
+
+# CORE FUNCTIONALITY
+cli.add_command(memory)  # 6. Memory operations (store, learn, recall, enhance, recent)
+cli.add_command(status)  # 7. System status and info
+cli.add_command(doctor)  # 8. Diagnostics and health checks
+cli.add_command(help_group, name="help")  # 9. Help and examples
+cli.add_command(git)  # 10. Git commit history synchronization
+cli.add_command(hooks_group, name="hooks")  # 11. Hook system integrations (DEPRECATED)
+cli.add_command(mcp_server)  # 12. MCP server (stdio mode) - replaces deprecated mcp install group
+cli.add_command(update)  # 13. Check for and install updates from PyPI
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead

@@ -38,9 +38,42 @@ pip install kuzu-memory[dev]
 
 **Now available on PyPI!** KuzuMemory v1.4.48 is published and ready for production use.
 
-### AI Integration
+### Smart Setup (Recommended - ONE Command!)
 
-KuzuMemory can be integrated with various AI systems following the **ONE PATH** principle:
+The easiest way to get started is with the smart `setup` command:
+
+```bash
+# Navigate to your project directory
+cd /path/to/your/project
+
+# Run smart setup - auto-detects and configures everything
+kuzu-memory setup
+
+# That's it! The setup command will:
+# ✅ Initialize the memory database
+# ✅ Detect your AI tools (Claude Code, Cursor, VS Code, etc.)
+# ✅ Install/update integrations automatically
+# ✅ Verify everything is working
+```
+
+**Options**:
+```bash
+# Preview what would happen (dry run)
+kuzu-memory setup --dry-run
+
+# Setup for specific AI tool
+kuzu-memory setup --integration claude-code
+
+# Initialize only (skip AI tool installation)
+kuzu-memory setup --skip-install
+
+# Force reinstall everything
+kuzu-memory setup --force
+```
+
+### Manual Installation (Advanced Users)
+
+If you need granular control, KuzuMemory can be installed manually with various AI systems following the **ONE PATH** principle:
 
 ```bash
 # Install Claude Code integration (MCP + hooks)
