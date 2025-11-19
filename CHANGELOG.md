@@ -47,6 +47,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.49] - 2025-11-19
+
+### Added
+- **Smart Setup Command**: One-command project configuration
+  - `kuzu-memory setup` - Intelligent setup that combines init and install
+  - Auto-detects existing installations and updates them as needed
+  - Initializes memory database if not present
+  - Detects which AI tools are installed in your project
+  - Installs/updates integrations automatically
+  - Verifies everything is working correctly
+  - Supports dry-run mode (`--dry-run`) for previewing changes
+  - Supports specific integration selection (`--integration <name>`)
+  - Supports force reinstall (`--force`)
+  - Supports skip install (`--skip-install`) for init-only
+  - This is now the **RECOMMENDED** way to get started with KuzuMemory
+  - Existing `init` and `install` commands remain available for advanced users
+  - Maintains "ONE PATH" principle with simplified user experience
+
 ## [1.4.48] - 2025-11-15
 
 ### Changed
@@ -898,7 +916,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.48...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.49...HEAD
+[1.4.49]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.48...v1.4.49
 [1.4.48]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.47...v1.4.48
 [1.4.47]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.46...v1.4.47
 [1.4.46]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.45...v1.4.46
