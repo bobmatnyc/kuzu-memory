@@ -23,7 +23,7 @@ from ..utils.project_setup import (
     get_project_db_path,
     get_project_memories_dir,
 )
-from .cli_utils import rich_panel, rich_print, rich_table
+from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import install_command
 
@@ -51,6 +51,7 @@ def _validate_database(db_path: Path) -> tuple[bool, str]:
 
         # Check basic accessibility by trying to access it
         import os
+
         if not os.access(db_path, os.R_OK):
             return False, f"Database is not readable: {db_path}"
 
@@ -93,6 +94,7 @@ def _validate_mcp_config(platform: str, project_root: Path) -> tuple[bool, str, 
 
         # Validate config has correct args
         import json
+
         try:
             with open(config_path) as f:
                 config = json.load(f)
@@ -107,7 +109,11 @@ def _validate_mcp_config(platform: str, project_root: Path) -> tuple[bool, str, 
 
             # Check args are correct
             if args != ["mcp"]:
-                return False, f"MCP server has incorrect args: {args} (should be ['mcp'])", config_path
+                return (
+                    False,
+                    f"MCP server has incorrect args: {args} (should be ['mcp'])",
+                    config_path,
+                )
 
             return True, f"MCP config valid at {config_path}", config_path
 
@@ -137,7 +143,13 @@ def _detect_available_platforms(project_root: Path) -> list[str]:
     available = detector.detect_available()
 
     # Only include platforms with working installers
-    supported_platforms = {"claude-code", "claude-desktop", "cursor", "vscode", "windsurf"}
+    supported_platforms = {
+        "claude-code",
+        "claude-desktop",
+        "cursor",
+        "vscode",
+        "windsurf",
+    }
     return [
         system.installer_name
         for system in available
@@ -224,27 +236,35 @@ def setup(ctx, platform, dry_run, force, skip_init, skip_install):
                 rich_print(f"✓ Auto-detected platform: {platform}", style="green")
             else:
                 rich_print("✗ No compatible platforms detected", style="red")
-                rich_print("\nAvailable platforms: claude-code, claude-desktop, cursor, vscode, windsurf")
+                rich_print(
+                    "\nAvailable platforms: claude-code, claude-desktop, cursor, vscode, windsurf"
+                )
                 rich_print("Specify with: kuzu-memory setup --platform <name>")
                 sys.exit(1)
         else:
             rich_print(f"✓ Using specified platform: {platform}", style="green")
 
         if available_platforms:
-            rich_print(f"  Other available platforms: {', '.join(available_platforms)}", style="dim")
+            rich_print(
+                f"  Other available platforms: {', '.join(available_platforms)}",
+                style="dim",
+            )
 
         # Phase 2: Initialization
         if not skip_init:
             rich_print("\n📦 Phase 2: Database Initialization", style="bold cyan")
 
             db_path = get_project_db_path(project_root)
-            memories_dir = get_project_memories_dir(project_root)
+            _memories_dir = get_project_memories_dir(project_root)
 
             if db_path.exists() and not force:
                 rich_print(f"✓ Database already exists at {db_path}", style="green")
             else:
                 if dry_run:
-                    rich_print(f"[DRY RUN] Would initialize database at {db_path}", style="yellow")
+                    rich_print(
+                        f"[DRY RUN] Would initialize database at {db_path}",
+                        style="yellow",
+                    )
                 else:
                     rich_print(f"Initializing database at {db_path}...")
                     ctx.invoke(init, force=force, config_path=None)
@@ -279,7 +299,7 @@ def setup(ctx, platform, dry_run, force, skip_init, skip_install):
 
         # Check 2: MCP Config
         if not skip_install:
-            mcp_valid, mcp_msg, config_path = _validate_mcp_config(platform, project_root)
+            mcp_valid, mcp_msg, _config_path = _validate_mcp_config(platform, project_root)
             validation_results.append(("MCP Config", mcp_valid, mcp_msg))
 
         # Check 3: kuzu-memory in PATH
@@ -310,8 +330,7 @@ def setup(ctx, platform, dry_run, force, skip_init, skip_install):
                 f"• Enhance prompts: kuzu-memory enhance 'Your question'\n"
                 f"• Check status: kuzu-memory status\n"
                 f"• View recent: kuzu-memory recent\n\n"
-                f"Platform-specific:\n"
-                + _get_platform_next_steps(platform),
+                f"Platform-specific:\n" + _get_platform_next_steps(platform),
                 title="✅ Setup Successful",
                 style="green",
             )

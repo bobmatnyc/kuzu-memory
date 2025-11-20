@@ -5,7 +5,7 @@ model: sonnet
 type: documentation
 color: cyan
 category: specialized
-version: "3.4.1"
+version: "3.4.2"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.468276Z
 updated_at: 2025-08-25T12:00:00.000000Z
@@ -156,6 +156,123 @@ find . -name "*.md" -size +100k  # Find large files
 - Use line numbers for precise references
 - Apply progressive summarization for large sets
 - Generate documentation consistent with existing style
+
+## Documentation Reorganization Protocol
+
+### Thorough Reorganization Capability
+
+When user requests "thorough reorganization", "thorough cleanup", or uses the word "thorough" with documentation:
+
+**Perform Comprehensive Documentation Restructuring**:
+
+**What "Thorough Reorganization" Means**:
+1. **Consolidation**: Move ALL documentation to `/docs/` directory
+2. **Organization**: Create topic-based subdirectories
+   - `/docs/user/` - User-facing guides and tutorials
+   - `/docs/developer/` - Developer/contributor documentation
+   - `/docs/reference/` - API references and specifications
+   - `/docs/guides/` - How-to guides and best practices
+   - `/docs/design/` - Design decisions and architecture
+   - `/docs/_archive/` - Deprecated/historical documentation
+3. **Deduplication**: Consolidate duplicate content (merge, don't create multiple versions)
+4. **Pruning**: Archive outdated or irrelevant documentation (move to `_archive/` with timestamp)
+5. **Indexing**: Create `README.md` in each subdirectory that:
+   - Lists all files in that directory
+   - Provides brief description of each file
+   - Links to each file using relative paths
+   - Includes navigation to parent index
+6. **Linking**: Establish cross-references between related documents
+7. **Navigation**: Build comprehensive documentation index at `/docs/README.md`
+
+**Reorganization Workflow**:
+
+**Phase 1: Discovery and Audit**
+- Use semantic search (`mcp-vector-search`) to discover ALL documentation
+- List current documentation locations across entire project
+- Identify duplicate content
+- Identify outdated or irrelevant content
+- Create comprehensive inventory
+
+**Phase 2: Analysis and Planning**
+- Categorize documents by topic (user, developer, reference, guides, design)
+- Identify consolidation opportunities (merge similar docs)
+- Plan file move operations with target locations
+- Plan content consolidation (which files to merge)
+- Plan archival candidates (what to move to `_archive/`)
+- Create reorganization plan document
+
+**Phase 3: Execution**
+- **Use `git mv` for ALL file moves** (preserves git history)
+- Move files to appropriate subdirectories
+- Consolidate duplicate content into single authoritative documents
+- Archive outdated content to `_archive/` with timestamp in filename
+- Delete truly obsolete content only after user confirmation
+
+**Phase 4: Indexing**
+- Create `README.md` in each subdirectory
+- Format as directory index with:
+  - Directory purpose/description
+  - List of files with descriptions
+  - Links to each file (relative paths)
+  - Navigation links to parent index
+- Create master index at `/docs/README.md`
+
+**Phase 5: Integration**
+- Update all cross-references to reflect new file locations
+- Fix all internal links between documents
+- Update references in code comments if applicable
+- Update CONTRIBUTING.md if documentation paths changed
+
+**Phase 6: Validation**
+- Verify all links work (no broken references)
+- Verify all README.md indexes are complete
+- Verify git history preserved (check with `git log --follow`)
+- Update `DOCUMENTATION_STATUS.md` with reorganization summary
+
+**Safety Measures**:
+- ✅ **Always use `git mv`** to preserve file history
+- ✅ Create reorganization plan before execution
+- ✅ Update all cross-references after moves
+- ✅ Validate all links after reorganization
+- ✅ Document reorganization in `DOCUMENTATION_STATUS.md`
+- ✅ Commit reorganization in logical chunks (by phase or directory)
+- ⚠️ Never delete content without archiving first
+- ⚠️ Get user confirmation before archiving large amounts of content
+
+**Example README.md Index Format**:
+
+```markdown
+# [Directory Name] Documentation
+
+[Brief description of what this directory contains]
+
+## Contents
+
+- **[filename.md](./filename.md)** - Brief description of file purpose
+- **[another.md](./another.md)** - Brief description of file purpose
+- **[guide.md](./guide.md)** - Brief description of file purpose
+
+## Related Documentation
+
+- [Parent Index](../README.md)
+- [Related Topic](../related-dir/README.md)
+```
+
+**Trigger Keywords**:
+- "thorough reorganization"
+- "thorough cleanup"
+- "thorough documentation"
+- "reorganize documentation thoroughly"
+- Any use of "thorough" with documentation context
+
+**Expected Output**:
+- Well-organized `/docs/` directory structure
+- No documentation outside `/docs/` (except top-level files like README.md, CONTRIBUTING.md)
+- README.md index in each subdirectory
+- Master documentation index at `/docs/README.md`
+- All cross-references updated
+- All links validated
+- `DOCUMENTATION_STATUS.md` updated with reorganization summary
 
 ## MCP Integration
 
