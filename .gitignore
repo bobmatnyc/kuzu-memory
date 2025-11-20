@@ -305,3 +305,4 @@ docs/hooks-verification-report.md
 src/.claude-mpm/
 .claude-mpm/
 TEST_REPORT_MCP_ARGS_AUTOFIX.md
+.cursor/

@@ -32,6 +32,7 @@ from .install_unified import (
 )
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
+from .setup_commands import setup
 from .status_commands import status
 from .update_commands import update
 
@@ -109,6 +110,7 @@ def cli(ctx, debug, config, db_path, project_root):
 
     \b
     🚀 QUICK START:
+      kuzu-memory setup                   # Complete setup (init + install + validate)
       kuzu-memory init                    # Initialize project memory
       kuzu-memory install claude-code     # Install integration
       kuzu-memory remember "info"         # Store information
@@ -604,19 +606,20 @@ def demo(ctx):
 
 
 # Register top-level commands (clean architecture)
+cli.add_command(setup)  # 0. Complete setup (init + install + validate)
 cli.add_command(init)  # 1. Initialize project
 cli.add_command(install_command)  # 2. Install integrations (ONE WAY)
 cli.add_command(uninstall_command)  # 3. Uninstall integrations
 cli.add_command(remove_command)  # 4. Remove (alias for uninstall)
 cli.add_command(repair_command)  # 5. Repair broken MCP configs
-cli.add_command(memory)  # 5. Memory operations (store, learn, recall, enhance, recent)
-cli.add_command(status)  # 6. System status and info
-cli.add_command(doctor)  # 7. Diagnostics and health checks
-cli.add_command(help_group, name="help")  # 8. Help and examples
-cli.add_command(git)  # 9. Git commit history synchronization
-cli.add_command(hooks_group, name="hooks")  # 10. Hook system integrations (DEPRECATED)
-cli.add_command(mcp_server)  # 11. MCP server (stdio mode) - replaces deprecated mcp install group
-cli.add_command(update)  # 12. Check for and install updates from PyPI
+cli.add_command(memory)  # 6. Memory operations (store, learn, recall, enhance, recent)
+cli.add_command(status)  # 7. System status and info
+cli.add_command(doctor)  # 8. Diagnostics and health checks
+cli.add_command(help_group, name="help")  # 9. Help and examples
+cli.add_command(git)  # 10. Git commit history synchronization
+cli.add_command(hooks_group, name="hooks")  # 11. Hook system integrations (DEPRECATED)
+cli.add_command(mcp_server)  # 12. MCP server (stdio mode) - replaces deprecated mcp install group
+cli.add_command(update)  # 13. Check for and install updates from PyPI
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead
