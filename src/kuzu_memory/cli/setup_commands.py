@@ -30,7 +30,7 @@ from .install_unified import _detect_installed_systems
 @click.option(
     "--integration",
     type=click.Choice(
-        ["claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "auggie"],
+        ["claude-code", "claude-desktop", "codex", "cursor", "vscode", "windsurf", "auggie"],
         case_sensitive=False,
     ),
     help="Specific integration to install (auto-detects if not specified)",

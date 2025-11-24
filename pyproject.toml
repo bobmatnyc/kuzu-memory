@@ -36,6 +36,7 @@ dependencies = [
     "gitpython>=3.1.0",     # Git repository integration
     "mcp>=1.0.0",           # Model Context Protocol SDK for MCP server integration
     "packaging>=20.0",      # Version comparison for update checker
+    "tomli-w>=1.0.0",       # TOML writing support (tomllib is read-only)
 ]
 
 [project.optional-dependencies]

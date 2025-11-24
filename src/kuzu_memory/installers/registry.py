@@ -16,6 +16,7 @@ from .claude_desktop import (
     SmartClaudeDesktopInstaller,
 )
 from .claude_hooks import ClaudeHooksInstaller
+from .codex_installer import CodexInstaller
 from .cursor_installer import CursorInstaller
 from .universal import UniversalInstaller
 from .vscode_installer import VSCodeInstaller
@@ -43,6 +44,7 @@ class InstallerRegistry:
         self.register("auggie-mcp", AuggieMCPInstaller)  # Auggie MCP server integration
         self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
         self.register("claude-desktop", SmartClaudeDesktopInstaller)  # Smart auto-detection
+        self.register("codex", CodexInstaller)  # Codex MCP server integration
         self.register("universal", UniversalInstaller)
 
         # MCP-specific installers (Priority 1)

@@ -23,6 +23,7 @@ from .cli_utils import rich_panel, rich_print
 AVAILABLE_INTEGRATIONS = [
     "claude-code",
     "claude-desktop",
+    "codex",
     "cursor",
     "vscode",
     "windsurf",
