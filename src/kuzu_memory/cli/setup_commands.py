@@ -10,13 +10,12 @@ from pathlib import Path
 
 import click
 
-from ..installers.registry import get_installer
 from ..utils.project_setup import (
     find_project_root,
     get_project_db_path,
     get_project_memories_dir,
 )
-from .cli_utils import rich_confirm, rich_panel, rich_print
+from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
 
@@ -30,7 +29,15 @@ from .install_unified import _detect_installed_systems
 @click.option(
     "--integration",
     type=click.Choice(
-        ["claude-code", "claude-desktop", "codex", "cursor", "vscode", "windsurf", "auggie"],
+        [
+            "claude-code",
+            "claude-desktop",
+            "codex",
+            "cursor",
+            "vscode",
+            "windsurf",
+            "auggie",
+        ],
         case_sensitive=False,
     ),
     help="Specific integration to install (auto-detects if not specified)",
@@ -134,9 +141,7 @@ def setup(ctx, skip_install: bool, integration: str | None, force: bool, dry_run
         # Initialize or update database
         if not already_initialized or force:
             if dry_run:
-                rich_print(
-                    "\n[DRY RUN] Would initialize memory database at:", style="yellow"
-                )
+                rich_print("\n[DRY RUN] Would initialize memory database at:", style="yellow")
                 rich_print(f"  {db_path}", style="dim")
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
@@ -196,9 +201,7 @@ def setup(ctx, skip_install: bool, integration: str | None, force: bool, dry_run
                             f"\n⚙️  {action} {target_integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(
-                            ctx, target_integration, project_root, force=True
-                        )
+                        _install_integration(ctx, target_integration, project_root, force=True)
                 else:
                     rich_print(
                         f"\n✅ {target_integration} integration is up to date",
@@ -288,8 +291,7 @@ def setup(ctx, skip_install: bool, integration: str | None, force: bool, dry_run
             raise
         rich_print(f"\n❌ Setup failed: {e}", style="red")
         rich_print(
-            "\n💡 Try running with --debug for more details:\n"
-            "   kuzu-memory --debug setup",
+            "\n💡 Try running with --debug for more details:\n   kuzu-memory --debug setup",
             style="dim",
         )
         sys.exit(1)

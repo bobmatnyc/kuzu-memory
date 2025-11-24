@@ -6,6 +6,7 @@ Installs MCP server configuration for Codex (global configuration).
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from .base import BaseInstaller, InstallationResult
 from .json_utils import expand_variables, get_standard_variables
@@ -50,7 +51,7 @@ class CodexInstaller(BaseInstaller):
         """Get path to Codex configuration file."""
         return Path.home() / ".codex" / "config.toml"
 
-    def _create_kuzu_server_config(self) -> dict:
+    def _create_kuzu_server_config(self) -> dict[str, Any]:
         """
         Create KuzuMemory MCP server configuration for Codex.
 
@@ -95,9 +96,7 @@ class CodexInstaller(BaseInstaller):
 
         return errors
 
-    def install(
-        self, force: bool = False, dry_run: bool = False, **kwargs
-    ) -> InstallationResult:
+    def install(self, force: bool = False, dry_run: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install MCP configuration for Codex.
 

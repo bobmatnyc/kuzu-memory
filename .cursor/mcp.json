@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "kuzu-memory": {
+      "command": "kuzu-memory",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "KUZU_MEMORY_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
+        "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/kuzu-memories"
+      }
+    }
+  }
+}

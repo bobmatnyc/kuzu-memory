@@ -521,10 +521,7 @@ class TestFixBrokenMcpArgs:
 
         fixed, fixes = fix_broken_mcp_args(config)
 
-        assert (
-            fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["args"]
-            == ["mcp"]
-        )
+        assert fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
         assert (
             fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["command"]
             == "kuzu-memory"
@@ -598,7 +595,7 @@ class TestFixBrokenMcpArgs:
                 }
             }
 
-            fixed, fixes = fix_broken_mcp_args(config)
+            fixed, _fixes = fix_broken_mcp_args(config)
 
             if python_path.endswith("python"):
                 # Should be fixed

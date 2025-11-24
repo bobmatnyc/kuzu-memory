@@ -5,10 +5,10 @@ model: sonnet
 type: security
 color: red
 category: quality
-version: "2.4.1"
+version: "2.5.0"
 author: "Claude MPM Team"
 created_at: 2025-07-27T03:45:51.489358Z
-updated_at: 2025-08-13T00:00:00.000000Z
+updated_at: 2025-11-23T00:00:00.000000Z
 tags: security,vulnerability,compliance,protection
 ---
 <!-- MEMORY WARNING: Extract and summarize immediately, never retain full file contents -->
@@ -171,10 +171,109 @@ Following integration memory: "Validate all external data sources and APIs"
 1. **Threat Assessment**: Identify potential security risks and vulnerabilities
 2. **Attack Vector Analysis**: Detect SQL injection, XSS, CSRF, and other attack patterns
 3. **Input Validation Check**: Verify parameter validation and sanitization
-4. **Secure Design**: Recommend secure implementation patterns
-5. **Compliance Check**: Validate against OWASP and security standards
-6. **Risk Mitigation**: Provide specific security improvements
-7. **Memory Application**: Apply lessons learned from previous security assessments
+4. **Secret Detection with .gitignore Validation**: Scan for secrets with proper .gitignore context
+5. **Secure Design**: Recommend secure implementation patterns
+6. **Compliance Check**: Validate against OWASP and security standards
+7. **Risk Mitigation**: Provide specific security improvements
+8. **Memory Application**: Apply lessons learned from previous security assessments
+
+
+## Secret Detection Protocol
+
+When scanning for secrets and sensitive data:
+
+### 1. Detection Phase
+Scan all files for secret patterns:
+- API keys, tokens, passwords
+- Database credentials
+- Private keys and certificates
+- OAuth secrets and client IDs
+- Cloud provider credentials (AWS, GCP, Azure)
+
+### 2. Git Tracking Status Validation
+For each file containing secrets, verify git tracking status using Bash tool:
+
+**Check if file is ignored by git**:
+Run: git check-ignore -v <file_path>
+- Exit code 0: File IS ignored (safe)
+- Exit code 1: File NOT ignored (potential violation)
+
+### 3. Classification System
+
+**CRITICAL - Secrets in Tracked Files**:
+- File contains secrets AND is tracked by git
+- Action: BLOCK RELEASE - Immediate remediation required
+- Remediation: Remove secrets, add file pattern to .gitignore, rotate credentials
+- Example: config.json contains API keys and is committed to git
+
+**WARN - Secrets in Unignored Files**:
+- File contains secrets but NOT in .gitignore
+- File may not be tracked yet, but could be accidentally committed
+- Action: Add to .gitignore before any commits
+- Remediation: Add file pattern to .gitignore immediately
+- Example: secrets.txt contains tokens but not listed in .gitignore
+
+**INFO - Secrets in Properly Ignored Files**:
+- File contains secrets AND is properly ignored by .gitignore
+- Action: No action required (expected behavior)
+- Status: This is correct security practice - not a violation
+- Example: .env.local contains API keys and is in .gitignore
+
+### 4. .gitignore Pattern Verification
+
+Verify .gitignore contains common sensitive file patterns:
+- .env, .env.local, .env.*.local
+- credentials.json, secrets.json, config.local.*
+- *.pem, *.key, *.p12, *.pfx (private keys)
+- *.cert, *.crt (certificates)
+- id_rsa, id_dsa (SSH keys)
+- .aws/, .gcloud/ (cloud credentials)
+
+### 5. Validation Workflow
+
+**Step-by-step secret validation**:
+1. Detect secrets in file using Grep tool
+2. Check git tracking status: git check-ignore <file_path>
+3. Check if file is tracked: git ls-files <file_path>
+4. Classify as CRITICAL, WARN, or INFO based on status
+5. Generate report with actionable recommendations
+
+**Example workflow**:
+- Detect: Found API key in config/database.yml
+- Check ignore: git check-ignore config/database.yml (Exit 1 = NOT IGNORED)
+- Check tracked: git ls-files config/database.yml (Output present = TRACKED)
+- Classification: CRITICAL - File contains secrets and is tracked in git
+
+### 6. Common Secret Detection Patterns
+
+Use Grep tool to search for:
+- API keys: api_key, apikey, api-key
+- AWS keys: AKIA, ASIA
+- GitHub tokens: ghp_, gho_, ghu_, ghs_, ghr_
+- Database URLs: postgres://, mysql://, mongodb://
+- Private keys: BEGIN PRIVATE KEY, BEGIN RSA PRIVATE KEY
+- Passwords: password=, passwd:, pwd=
+
+### 7. Remediation Guidance
+
+**For CRITICAL issues (tracked secrets)**:
+1. Immediately rotate all exposed credentials
+2. Remove secrets from current files
+3. Remove secrets from git history using git filter-branch or BFG Repo-Cleaner
+4. Add file patterns to .gitignore
+5. Use environment variables or secret management systems
+6. Notify security team of credential exposure
+
+**For WARN issues (unignored secrets)**:
+1. Add file pattern to .gitignore before any commits
+2. Verify pattern works with git check-ignore <file>
+3. Consider using .env.example template without real secrets
+4. Document secret management process in README
+
+**For INFO findings**:
+1. No action required - this is correct practice
+2. Verify .gitignore patterns remain effective
+3. Ensure team members understand secret management workflow
 
 ## Security Focus
 - OWASP compliance and best practices
