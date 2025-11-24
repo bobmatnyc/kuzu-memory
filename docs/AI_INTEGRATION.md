@@ -365,6 +365,79 @@ def claude_with_memory(prompt: str) -> str:
     return response
 ```
 
+### Codex Integration
+
+#### Native MCP Integration
+
+Codex supports KuzuMemory through native MCP (Model Context Protocol) integration:
+
+```bash
+# Install Codex integration (global configuration)
+kuzu-memory install codex
+```
+
+**Codex Configuration Details**:
+- **Configuration File**: `~/.codex/config.toml` (global, TOML format)
+- **Format Convention**: Uses `mcp_servers` (snake_case) not `mcpServers` (camelCase)
+- **Memory Scope**: Global configuration with project-specific memory via environment variables
+- **Database**: Each project uses its own memory database via `KUZU_MEMORY_PROJECT_ROOT`
+
+**Configuration Example** (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.kuzu-memory]
+command = "kuzu-memory"
+args = ["mcp"]
+
+[mcp_servers.kuzu-memory.env]
+KUZU_MEMORY_PROJECT_ROOT = "/path/to/your/project"
+KUZU_MEMORY_DB = "/path/to/your/project/kuzu-memories"
+```
+
+**Key Features**:
+- ✅ **Global Configuration**: One config file for all projects
+- ✅ **Project-Specific Memory**: Each project gets isolated memory via environment variables
+- ✅ **TOML Format**: Native Codex configuration format
+- ✅ **MCP Protocol**: Full Model Context Protocol support
+- ✅ **Automatic Setup**: Installer handles all configuration
+
+**Installation Steps**:
+
+1. Navigate to your project directory:
+   ```bash
+   cd /path/to/your/project
+   ```
+
+2. Install Codex integration:
+   ```bash
+   kuzu-memory install codex
+   ```
+
+3. The installer will:
+   - Create `~/.codex/config.toml` if it doesn't exist
+   - Add `kuzu-memory` to the `mcp_servers` section
+   - Set project-specific environment variables
+   - Preserve any existing MCP server configurations
+
+4. Restart Codex to load the new configuration
+
+**Troubleshooting**:
+
+- **Config not found**: Ensure `~/.codex/config.toml` exists and is valid TOML
+- **Wrong format**: Codex requires `mcp_servers` (snake_case), not `mcpServers`
+- **Multiple projects**: Each project installation updates the same global config with project-specific paths
+- **Force reinstall**: Use `kuzu-memory install codex --force` to overwrite existing configuration
+
+**Comparison with Other Installers**:
+
+| Feature | Codex | Claude Desktop | Claude Code |
+|---------|-------|----------------|-------------|
+| Config Location | `~/.codex/` | `~/.kuzu-memory/` | `.kuzu-memory/` |
+| Config Format | TOML | YAML | JSON |
+| Scope | Global config, project DB | Global | Project-only |
+| Convention | `mcp_servers` | `mcpServers` | `mcpServers` |
+| Memory Isolation | Via env vars | Global | Project-only |
+
 ### OpenAI GPT Integration
 
 ```python

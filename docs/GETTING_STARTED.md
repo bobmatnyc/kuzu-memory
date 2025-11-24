@@ -574,6 +574,10 @@ kuzu-memory install add universal
 **Primary Installers:**
 - `claude-code` - Claude Code IDE integration with automatic hooks (`UserPromptSubmit`, `Stop`)
 - `claude-desktop` - Claude Desktop (auto-detects pipx or home)
+- `codex` - Codex IDE with MCP server (global TOML configuration)
+- `cursor` - Cursor IDE with MCP server
+- `vscode` - VS Code with Claude extension (MCP server)
+- `windsurf` - Windsurf IDE with MCP server
 - `auggie` - Auggie AI integration
 - `universal` - Universal integration files
 

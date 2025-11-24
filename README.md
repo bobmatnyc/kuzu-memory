@@ -82,6 +82,9 @@ kuzu-memory install claude-code
 # Install Claude Desktop integration (MCP only)
 kuzu-memory install claude-desktop
 
+# Install Codex integration (MCP only)
+kuzu-memory install codex
+
 # Install Cursor IDE integration (MCP only)
 kuzu-memory install cursor
 
@@ -101,6 +104,7 @@ kuzu-memory uninstall claude-code
 **Available Integrations** (ONE command per system):
 - `claude-code` - Claude Code IDE with MCP + hooks (complete integration)
 - `claude-desktop` - Claude Desktop app with MCP server (global memory)
+- `codex` - Codex IDE with MCP server (global configuration)
 - `cursor` - Cursor IDE with MCP server
 - `vscode` - VS Code with Claude extension (MCP server)
 - `windsurf` - Windsurf IDE with MCP server
@@ -122,6 +126,13 @@ kuzu-memory uninstall claude-code
 - **Memory Scope**: Shared across all Claude Desktop conversations
 - **Use Case**: Personal knowledge base and preferences
 - **Installation**: Auto-detects pipx or home directory installation
+
+**Codex** (`codex`):
+- **Configuration**: Creates `~/.codex/config.toml` in home directory (TOML format)
+- **Database**: Uses project-specific database via environment variables
+- **Memory Scope**: Global configuration, project-specific memory
+- **Use Case**: Codex IDE integration with MCP protocol
+- **Format**: Uses snake_case `mcp_servers` convention (TOML)
 
 **Auggie** (`auggie`):
 - **Configuration**: Creates `.augment/rules/` directory with enhanced integration rules
