@@ -47,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.4.50] - 2025-11-24
+
+### Changed
+- Version bump
+
 ## [1.4.49] - 2025-11-19
 
 ### Added
@@ -916,7 +921,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.49...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.50...HEAD
+[1.4.50]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.49...v1.4.50
 [1.4.49]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.48...v1.4.49
 [1.4.48]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.47...v1.4.48
 [1.4.47]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.46...v1.4.47
