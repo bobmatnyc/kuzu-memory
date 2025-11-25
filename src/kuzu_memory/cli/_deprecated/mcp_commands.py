@@ -2,9 +2,12 @@
 MCP (Model Context Protocol) commands for Claude Code integration.
 """
 
+from __future__ import annotations
+
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -20,7 +23,7 @@ from kuzu_memory.mcp import create_mcp_server
 
 
 @click.group()
-def mcp():
+def mcp() -> None:
     """
     🤖 MCP server commands and integrations.
 
@@ -45,7 +48,7 @@ def mcp():
 @click.option("--stdio", is_flag=True, default=True, help="Use stdio for communication (default)")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
+def serve(ctx: click.Context, port: int | None, stdio: bool, project_root: str | None) -> None:
     """
     Run the MCP server for Claude Code integration.
 
@@ -73,7 +76,7 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
         from kuzu_memory.mcp.run_server import main
 
         # Run the async main function
-        asyncio.run(main())
+        asyncio.run(main())  # type: ignore[no-untyped-call]
 
     except KeyboardInterrupt:
         print("\n🛑 MCP server stopped", file=sys.stderr)
@@ -90,7 +93,7 @@ def serve(ctx, port: int | None, stdio: bool, project_root: str | None):
 @click.option("--stdio", is_flag=True, default=True, help="Use stdio for communication (default)")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def start(ctx, port: int | None, stdio: bool, project_root: str | None):
+def start(ctx: click.Context, port: int | None, stdio: bool, project_root: str | None) -> None:
     """
     Start the MCP server (alias for 'serve').
 
@@ -110,7 +113,7 @@ def start(ctx, port: int | None, stdio: bool, project_root: str | None):
 
 @mcp.command()
 @click.pass_context
-def test(ctx):
+def test(ctx: click.Context) -> None:
     """
     Test MCP server functionality.
 
@@ -120,7 +123,7 @@ def test(ctx):
         rich_print("🧪 Testing MCP server...", style="blue")
 
         # Create server instance
-        server = create_mcp_server()
+        server = create_mcp_server()  # type: ignore[no-untyped-call]
 
         # Test basic operations
         tests = [
@@ -176,12 +179,12 @@ def test(ctx):
 
 @mcp.command()
 @click.pass_context
-def info(ctx):
+def info(ctx: click.Context) -> None:
     """
     Show MCP server information and configuration.
     """
     try:
-        server = create_mcp_server()
+        server = create_mcp_server()  # type: ignore[no-untyped-call]
         tools = server.get_tools()
 
         rich_panel(
@@ -216,7 +219,7 @@ def info(ctx):
 @mcp.command()
 @click.option("--output", type=click.Path(), help="Save configuration to file")
 @click.pass_context
-def config(ctx, output: str | None):
+def config(ctx: click.Context, output: str | None) -> None:
     """
     Generate MCP configuration for Claude Code.
 
@@ -227,7 +230,7 @@ def config(ctx, output: str | None):
         import json
         from pathlib import Path
 
-        config = {
+        config: dict[str, Any] = {
             "mcpServers": {
                 "kuzu-memory": {
                     "command": "kuzu-memory",
@@ -272,13 +275,13 @@ def config(ctx, output: str | None):
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def health(
-    ctx,
+    ctx: click.Context,
     detailed: bool,
     json_output: bool,
     continuous: bool,
     interval: int,
     project_root: str | None,
-):
+) -> None:
     """
     Check MCP server health and component status.
 
@@ -317,12 +320,12 @@ def health(
         health_checker = MCPHealthChecker(project_root=project_path)
 
         # Define health check function
-        async def perform_check():
+        async def perform_check() -> Any:
             result = await health_checker.check_health(detailed=detailed, retry=True)
             return result
 
         # Define display function
-        def display_health(result):
+        def display_health(result: Any) -> None:
             if json_output:
                 # JSON output
                 print(json_module.dumps(result.to_dict(), indent=2))
@@ -420,11 +423,8 @@ def health(
                     result = asyncio.run(perform_check())
                     display_health(result)
 
-                    # Wait for next check
-                    if continuous:
-                        time.sleep(interval)
-                    else:
-                        break
+                    # Wait for next check (continuous is always True here)
+                    time.sleep(interval)
 
             except KeyboardInterrupt:
                 rich_print("\n\n✋ Monitoring stopped", style="yellow")
