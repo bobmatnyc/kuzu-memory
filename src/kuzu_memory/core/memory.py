@@ -5,14 +5,18 @@ Provides the primary interface for memory operations with the two main methods:
 attach_memories() and generate_memories() with performance targets of <10ms and <20ms.
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, ParamSpec, TypeVar, cast
 
+from ..protocols import DatabaseAdapterProtocol, MemoryStoreProtocol, RecallCoordinatorProtocol
 from ..recall.coordinator import RecallCoordinator
 from ..storage.kuzu_adapter import create_kuzu_adapter
 from ..storage.memory_store import MemoryStore
@@ -44,10 +48,14 @@ from .models import Memory, MemoryContext
 
 logger = logging.getLogger(__name__)
 
+# Type variables for decorator
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def cache_key_from_args(*args, **kwargs) -> str:
+
+def cache_key_from_args(*args: Any, **kwargs: Any) -> str:
     """Generate a cache key from function arguments."""
-    key_parts = []
+    key_parts: list[str] = []
     for arg in args:
         if hasattr(arg, "__dict__"):
             # Skip self/cls arguments
@@ -59,7 +67,9 @@ def cache_key_from_args(*args, **kwargs) -> str:
     return hashlib.md5(key_str.encode()).hexdigest()
 
 
-def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
+def cached_method(
+    maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator for caching method results with TTL support.
 
@@ -68,18 +78,18 @@ def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_
         ttl_seconds: Time-to-live in seconds for cached results
     """
 
-    def decorator(func):
-        cache = {}
-        cache_times = {}
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        cache: dict[str, R] = {}
+        cache_times: dict[str, float] = {}
 
         @wraps(func)
-        def wrapper(self, *args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             # Generate cache key
             cache_key = cache_key_from_args(*args, **kwargs)
 
             # Check if cached and not expired
             if cache_key in cache:
-                cached_time = cache_times.get(cache_key, 0)
+                cached_time = cache_times.get(cache_key, 0.0)
                 if time.time() - cached_time < ttl_seconds:
                     logger.debug(f"Cache hit for {func.__name__} with key {cache_key[:8]}")
                     return cache[cache_key]
@@ -89,7 +99,7 @@ def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_
                     del cache_times[cache_key]
 
             # Cache miss, execute function
-            result = func(self, *args, **kwargs)
+            result = func(*args, **kwargs)
 
             # Store in cache with timestamp
             cache[cache_key] = result
@@ -98,21 +108,30 @@ def cached_method(maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_
             # LRU eviction if cache is too large
             if len(cache) > maxsize:
                 # Remove oldest entry
-                oldest_key = min(cache_times, key=cache_times.get)
+                oldest_key = min(cache_times, key=lambda k: cache_times[k])
                 del cache[oldest_key]
                 del cache_times[oldest_key]
 
             return result
 
         # Add cache control methods
-        wrapper.cache_clear = lambda: (cache.clear(), cache_times.clear())
-        wrapper.cache_info = lambda: {
-            "size": len(cache),
-            "maxsize": maxsize,
-            "ttl": ttl_seconds,
-        }
+        def cache_clear() -> None:
+            cache.clear()
+            cache_times.clear()
 
-        return wrapper
+        def cache_info() -> dict[str, Any]:
+            return {
+                "size": len(cache),
+                "maxsize": maxsize,
+                "ttl": ttl_seconds,
+            }
+
+        # Type-safe attribute assignment
+        typed_wrapper = cast(Any, wrapper)
+        typed_wrapper.cache_clear = cache_clear
+        typed_wrapper.cache_info = cache_info
+
+        return cast(Callable[P, R], wrapper)
 
     return decorator
 
@@ -125,13 +144,27 @@ class KuzuMemory:
     two primary methods: attach_memories() and generate_memories().
     """
 
+    # Class attributes with types
+    db_path: Path
+    config: KuzuMemoryConfig
+    container: DependencyContainer
+    db_adapter: DatabaseAdapterProtocol
+    memory_store: MemoryStoreProtocol
+    recall_coordinator: RecallCoordinatorProtocol
+    auto_git_sync: Any | None  # AutoGitSyncManager or None
+    project_root: Path
+    _user_id: str | None
+    _enable_git_sync: bool
+    _initialized_at: datetime
+    _performance_stats: dict[str, Any]
+
     def __init__(
         self,
-        db_path: Path | None = None,
-        config: dict[str, Any] | None = None,
+        db_path: Path | str | None = None,
+        config: dict[str, Any] | KuzuMemoryConfig | None = None,
         container: DependencyContainer | None = None,
         enable_git_sync: bool = True,
-    ):
+    ) -> None:
         """
         Initialize KuzuMemory.
 
@@ -148,9 +181,13 @@ class KuzuMemory:
         """
         try:
             # Set up database path
-            db_path_resolved = db_path or (Path.home() / ".kuzu-memory" / "memories.db")
-            if isinstance(db_path_resolved, str):
-                db_path_resolved = Path(db_path_resolved)
+            db_path_resolved: Path
+            if db_path is None:
+                db_path_resolved = Path.home() / ".kuzu-memory" / "memories.db"
+            elif isinstance(db_path, str):
+                db_path_resolved = Path(db_path)
+            else:
+                db_path_resolved = db_path
             self.db_path = db_path_resolved
 
             # Set up configuration
@@ -182,7 +219,7 @@ class KuzuMemory:
             self.project_root = self.db_path.parent.parent
 
             # Auto-detect git user for memory namespacing
-            self._user_id: str | None = None
+            self._user_id = None
             if self.config.memory.auto_tag_git_user:
                 if self.config.memory.user_id_override:
                     # Use manual override if provided
@@ -205,9 +242,9 @@ class KuzuMemory:
             logger.info(f"KuzuMemory initialized with database at {self.db_path}")
 
         except Exception as e:
-            if isinstance(e, ConfigurationError | DatabaseError):
+            if isinstance(e, (ConfigurationError, DatabaseError)):
                 raise
-            raise KuzuMemoryError(f"Failed to initialize KuzuMemory: {e}")
+            raise KuzuMemoryError(f"Failed to initialize KuzuMemory: {e}") from e
 
     def _initialize_components(self) -> None:
         """Initialize internal components."""
@@ -229,7 +266,7 @@ class KuzuMemory:
             if not self.container.has("recall_coordinator"):
                 # Initialize recall coordinator
                 db_adapter = self.container.get_database_adapter()
-                recall_coordinator = RecallCoordinator(db_adapter, self.config)
+                recall_coordinator = RecallCoordinator(db_adapter, self.config)  # type: ignore[arg-type]
                 self.container.register("recall_coordinator", recall_coordinator)
 
             # Get references to components
@@ -258,7 +295,7 @@ class KuzuMemory:
             }
 
         except Exception as e:
-            raise DatabaseError(f"Failed to initialize components: {e}")
+            raise DatabaseError(f"Failed to initialize components: {e}") from e
 
     def _initialize_git_sync(self) -> None:
         """
@@ -406,12 +443,12 @@ class KuzuMemory:
             # Trigger auto-sync after attach (if enabled)
             self._auto_git_sync("enhance")
 
-            return context
+            return context  # type: ignore[no-any-return]
 
         except Exception as e:
-            if isinstance(e, ValidationError | PerformanceError):
+            if isinstance(e, (ValidationError, PerformanceError)):
                 raise
-            raise KuzuMemoryError(f"attach_memories failed: {e}")
+            raise KuzuMemoryError(f"attach_memories failed: {e}") from e
 
     def remember(
         self,
@@ -440,12 +477,11 @@ class KuzuMemory:
         # Directly store the content as a memory
         # Use EPISODIC type for direct memories as they represent specific events/facts
         import uuid
-        from datetime import datetime
 
-        from .models import Memory, MemoryType
+        from .models import MemoryType
 
         # Auto-populate user_id from git if not provided in metadata
-        user_id = metadata.get("user_id") if metadata else None
+        user_id: str | None = metadata.get("user_id") if metadata else None
         if user_id is None and self._user_id is not None:
             user_id = self._user_id
 
@@ -457,6 +493,7 @@ class KuzuMemory:
             importance=0.8,  # Default importance for direct memories
             confidence=1.0,  # High confidence since it's explicit
             created_at=datetime.now(),  # Keep as datetime object
+            valid_to=None,  # No expiration by default
             user_id=user_id,
             session_id=session_id,
             agent_id=agent_id or "default",
@@ -510,7 +547,7 @@ class KuzuMemory:
 
             # Basic content validation
             if len(content) > 100000:  # 100KB limit
-                raise ValidationError("Content exceeds maximum length")
+                raise ValidationError("Content exceeds maximum length", "content", content[:100])
 
             # Auto-populate user_id from git if not provided
             effective_user_id = user_id
@@ -549,12 +586,12 @@ class KuzuMemory:
             # Trigger auto-sync after generate (if enabled)
             self._auto_git_sync("learn")
 
-            return memory_ids
+            return memory_ids  # type: ignore[no-any-return]
 
         except Exception as e:
-            if isinstance(e, ValidationError | PerformanceError):
+            if isinstance(e, (ValidationError, PerformanceError)):
                 raise
-            raise KuzuMemoryError(f"generate_memories failed: {e}")
+            raise KuzuMemoryError(f"generate_memories failed: {e}") from e
 
     @cached_method(maxsize=MEMORY_BY_ID_CACHE_SIZE, ttl_seconds=MEMORY_BY_ID_CACHE_TTL)
     def get_memory_by_id(self, memory_id: str) -> Memory | None:
@@ -568,7 +605,7 @@ class KuzuMemory:
             Memory object or None if not found
         """
         try:
-            return self.memory_store.get_memory_by_id(memory_id)
+            return self.memory_store.get_memory_by_id(memory_id)  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get memory {memory_id}: {e}")
             return None
@@ -581,12 +618,12 @@ class KuzuMemory:
             Number of memories cleaned up
         """
         try:
-            return self.memory_store.cleanup_expired_memories()
+            return self.memory_store.cleanup_expired_memories()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """
         Get recent memories, optionally filtered.
 
@@ -598,7 +635,7 @@ class KuzuMemory:
             List of recent memories
         """
         try:
-            return self.memory_store.get_recent_memories(limit=limit, **filters)
+            return self.memory_store.get_recent_memories(limit=limit, **filters)  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get recent memories: {e}")
             return []
@@ -611,7 +648,7 @@ class KuzuMemory:
             Total number of active memories
         """
         try:
-            return self.memory_store.get_memory_count()
+            return self.memory_store.get_memory_count()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get memory count: {e}")
             return 0
@@ -639,7 +676,7 @@ class KuzuMemory:
             Dictionary with memory type counts
         """
         try:
-            return self.memory_store.get_memory_type_stats()
+            return self.memory_store.get_memory_type_stats()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get memory type stats: {e}")
             return {}
@@ -652,7 +689,7 @@ class KuzuMemory:
             Dictionary with source counts
         """
         try:
-            return self.memory_store.get_source_stats()
+            return self.memory_store.get_source_stats()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get source stats: {e}")
             return {}
@@ -740,13 +777,13 @@ class KuzuMemory:
             self._performance_stats["total_memories_generated"] += len(stored_ids)
 
             logger.info(f"Batch stored {len(stored_ids)} memories")
-            return stored_ids
+            return stored_ids  # type: ignore[no-any-return]
 
         except ValidationError:
             raise
         except Exception as e:
             logger.error(f"Failed to batch store memories: {e}")
-            raise KuzuMemoryError(f"batch_store_memories failed: {e}")
+            raise KuzuMemoryError(f"batch_store_memories failed: {e}") from e
 
     @cached_method(maxsize=MEMORY_BY_ID_CACHE_SIZE * 10, ttl_seconds=MEMORY_BY_ID_CACHE_TTL)
     def batch_get_memories_by_ids(self, memory_ids: list[str]) -> list[Memory]:
@@ -795,13 +832,13 @@ class KuzuMemory:
             self._performance_stats["total_memories_recalled"] += len(memories)
 
             logger.debug(f"Batch retrieved {len(memories)} memories from {len(memory_ids)} IDs")
-            return memories
+            return memories  # type: ignore[no-any-return]
 
         except ValidationError:
             raise
         except Exception as e:
             logger.error(f"Failed to batch get memories: {e}")
-            raise KuzuMemoryError(f"batch_get_memories_by_ids failed: {e}")
+            raise KuzuMemoryError(f"batch_get_memories_by_ids failed: {e}") from e
 
     def get_memories_by_user(self, user_id: str, limit: int = 100) -> list[Memory]:
         """
@@ -815,7 +852,7 @@ class KuzuMemory:
             List of memories created by the user
         """
         try:
-            return self.memory_store.get_memories_by_user(user_id, limit)
+            return self.memory_store.get_memories_by_user(user_id, limit)  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get memories by user {user_id}: {e}")
             return []
@@ -828,7 +865,7 @@ class KuzuMemory:
             List of unique user IDs
         """
         try:
-            return self.memory_store.get_users()
+            return self.memory_store.get_users()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Failed to get users: {e}")
             return []
@@ -850,7 +887,7 @@ class KuzuMemory:
             Dictionary with statistics from all components
         """
         try:
-            stats = {
+            stats: dict[str, Any] = {
                 "system_info": {
                     "initialized_at": self._initialized_at.isoformat(),
                     "db_path": str(self.db_path),
@@ -885,8 +922,8 @@ class KuzuMemory:
         self._performance_stats["total_memories_recalled"] += memories_count
 
         # Update average time
-        total_calls = self._performance_stats["attach_memories_calls"]
-        current_avg = self._performance_stats["avg_attach_time_ms"]
+        total_calls: int = self._performance_stats["attach_memories_calls"]
+        current_avg: float = self._performance_stats["avg_attach_time_ms"]
         new_avg = ((current_avg * (total_calls - 1)) + execution_time_ms) / total_calls
         self._performance_stats["avg_attach_time_ms"] = new_avg
 
@@ -896,8 +933,8 @@ class KuzuMemory:
         self._performance_stats["total_memories_generated"] += memories_count
 
         # Update average time
-        total_calls = self._performance_stats["generate_memories_calls"]
-        current_avg = self._performance_stats["avg_generate_time_ms"]
+        total_calls: int = self._performance_stats["generate_memories_calls"]
+        current_avg: float = self._performance_stats["avg_generate_time_ms"]
         new_avg = ((current_avg * (total_calls - 1)) + execution_time_ms) / total_calls
         self._performance_stats["avg_generate_time_ms"] = new_avg
 
@@ -912,14 +949,14 @@ class KuzuMemory:
         except Exception as e:
             logger.error(f"Error closing KuzuMemory: {e}")
 
-    def __enter__(self):
+    def __enter__(self) -> KuzuMemory:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.close()
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"KuzuMemory(db_path='{self.db_path}', initialized_at='{self._initialized_at}')"
+        return f"KuzuMemory(db_path={self.db_path}, memories={self.get_memory_count()})"
