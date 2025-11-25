@@ -47,9 +47,9 @@ class ClassificationResult:
     keywords: list[str]
     entities: list[str]
     intent: str | None = None
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.metadata is None:
             self.metadata = {}
 

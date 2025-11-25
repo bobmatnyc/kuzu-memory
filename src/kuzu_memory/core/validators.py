@@ -36,7 +36,7 @@ class AttachMemoriesRequest(BaseModel):
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
 
     @validator("prompt")
-    def validate_prompt(cls, v):
+    def validate_prompt(cls, v: str) -> str:
         """Ensure prompt is not just whitespace."""
         if not v.strip():
             raise ValueError("Prompt cannot be empty or just whitespace")
@@ -54,14 +54,14 @@ class GenerateMemoriesRequest(BaseModel):
     metadata: dict[str, Any] | None = Field(None)
 
     @validator("content")
-    def validate_content(cls, v):
+    def validate_content(cls, v: str) -> str:
         """Ensure content is not just whitespace."""
         if not v.strip():
             raise ValueError("Content cannot be empty or just whitespace")
         return v
 
     @validator("metadata")
-    def validate_metadata(cls, v):
+    def validate_metadata(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
         """Ensure metadata is serializable and not too large."""
         if v is not None:
             import json
@@ -90,7 +90,7 @@ class MemoryCreationRequest(BaseModel):
     entities: list[str] | None = None
 
     @validator("entities")
-    def validate_entities(cls, v):
+    def validate_entities(cls, v: list[str] | None) -> list[str] | None:
         """Ensure entities are valid strings."""
         if v is not None:
             cleaned = []
@@ -113,7 +113,7 @@ class RecallRequest(BaseModel):
     time_range_days: conint(ge=1, le=365) | None = None
 
     @validator("query")
-    def validate_query(cls, v):
+    def validate_query(cls, v: str) -> str:
         """Ensure query is not just whitespace."""
         if not v.strip():
             raise ValueError("Query cannot be empty or just whitespace")
@@ -128,7 +128,7 @@ class BatchMemoryRequest(BaseModel):
     merge_similar: bool = Field(False, description="Whether to merge similar memories")
 
     @validator("memories")
-    def validate_batch_size(cls, v):
+    def validate_batch_size(cls, v: list[MemoryCreationRequest]) -> list[MemoryCreationRequest]:
         """Ensure batch size is reasonable."""
         if len(v) > 100:
             import logging

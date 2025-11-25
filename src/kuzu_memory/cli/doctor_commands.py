@@ -43,15 +43,15 @@ from .enums import OutputFormat
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def doctor(
-    ctx,
+    ctx: click.Context,
     fix: bool,
     verbose: bool,
-    output,
+    output: str | None,
     format: str,
     hooks: bool,
     server_lifecycle: bool,
-    project_root,
-):
+    project_root: str | None,
+) -> None:
     """
     🩺 Diagnose and fix PROJECT issues.
 
@@ -126,15 +126,15 @@ def doctor(
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def diagnose(
-    ctx,
+    ctx: click.Context,
     verbose: bool,
-    output,
+    output: str | None,
     format: str,
     fix: bool,
     hooks: bool,
     server_lifecycle: bool,
-    project_root,
-):
+    project_root: str | None,
+) -> None:
     """
     Run full PROJECT diagnostic suite.
 
@@ -245,7 +245,7 @@ def diagnose(
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def mcp(ctx, verbose, output, project_root):
+def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
     """
     PROJECT MCP-specific diagnostics.
 
@@ -318,7 +318,7 @@ def mcp(ctx, verbose, output, project_root):
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def connection(ctx, verbose, output, project_root):
+def connection(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
     """
     Test PROJECT database and MCP server connection.
 
@@ -392,7 +392,7 @@ def connection(ctx, verbose, output, project_root):
 )
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def health(ctx, detailed, json_output, continuous, interval, project_root):
+def health(ctx: click.Context, detailed: bool, json_output: bool, continuous: bool, interval: int, project_root: str | None) -> None:
     """
     Quick PROJECT health check.
 

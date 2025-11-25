@@ -10,12 +10,13 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from .. import KuzuMemory
 from ..integrations.auggie import AuggieIntegration
 
 
-def cmd_enhance_prompt(args):
+def cmd_enhance_prompt(args: argparse.Namespace) -> int:
     """Enhance a prompt using Auggie integration."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -52,7 +53,7 @@ def cmd_enhance_prompt(args):
     return 0
 
 
-def cmd_learn_response(args):
+def cmd_learn_response(args: argparse.Namespace) -> int:
     """Learn from an AI response and user feedback."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -87,7 +88,7 @@ def cmd_learn_response(args):
     return 0
 
 
-def cmd_list_rules(args):
+def cmd_list_rules(args: argparse.Namespace) -> int:
     """List all Auggie rules."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -131,7 +132,7 @@ def cmd_list_rules(args):
     return 0
 
 
-def cmd_create_rule(args):
+def cmd_create_rule(args: argparse.Namespace) -> int:
     """Create a new custom rule."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -169,7 +170,7 @@ def cmd_create_rule(args):
     return 0
 
 
-def cmd_export_rules(args):
+def cmd_export_rules(args: argparse.Namespace) -> int:
     """Export rules to a JSON file."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -185,7 +186,7 @@ def cmd_export_rules(args):
     return 0
 
 
-def cmd_import_rules(args):
+def cmd_import_rules(args: argparse.Namespace) -> int:
     """Import rules from a JSON file."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -206,7 +207,7 @@ def cmd_import_rules(args):
     return 0
 
 
-def cmd_stats(args):
+def cmd_stats(args: argparse.Namespace) -> int:
     """Show integration statistics."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -262,7 +263,7 @@ def cmd_stats(args):
     return 0
 
 
-def cmd_test_integration(args):
+def cmd_test_integration(args: argparse.Namespace) -> int:
     """Test the Auggie integration with sample data."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
@@ -326,7 +327,7 @@ def cmd_test_integration(args):
     return 0
 
 
-def main():
+def main() -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="KuzuMemory Auggie Integration CLI",
