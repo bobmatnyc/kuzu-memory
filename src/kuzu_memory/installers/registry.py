@@ -10,11 +10,6 @@ from pathlib import Path
 from .auggie import AuggieInstaller
 from .auggie_mcp_installer import AuggieMCPInstaller
 from .base import BaseInstaller
-from .claude_desktop import (
-    ClaudeDesktopHomeInstaller,
-    ClaudeDesktopPipxInstaller,
-    SmartClaudeDesktopInstaller,
-)
 from .claude_hooks import ClaudeHooksInstaller
 from .codex_installer import CodexInstaller
 from .cursor_installer import CursorInstaller
