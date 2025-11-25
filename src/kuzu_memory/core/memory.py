@@ -270,7 +270,7 @@ class KuzuMemory:
             if not self.container.has("recall_coordinator"):
                 # Initialize recall coordinator
                 recall_adapter = self.container.get_database_adapter()
-                recall_coordinator = RecallCoordinator(recall_adapter, self.config)  # type: ignore[arg-type]
+                recall_coordinator = RecallCoordinator(recall_adapter, self.config)
                 self.container.register("recall_coordinator", recall_coordinator)
 
             # Get references to components

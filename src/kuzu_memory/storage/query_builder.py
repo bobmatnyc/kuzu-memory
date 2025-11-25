@@ -362,7 +362,7 @@ class QueryBuilder:
                         params[filter_key] = filter_value.value
                     else:
                         conditions.append(f"m.{filter_key} = ${filter_key}")
-                        params[filter_key] = filter_value  # type: ignore[assignment]
+                        params[filter_key] = filter_value
 
             # Add expiration filter
             conditions.append("(m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))")
@@ -546,9 +546,9 @@ class QueryBuilder:
             # Execute each statistics query
             for stat_name, query_info in stats_queries.items():
                 try:
-                    query: str = str(query_info["query"])  # type: ignore[assignment]
+                    query: str = str(query_info["query"])
                     # Only include parameters that this query needs
-                    params_list: list[str] = query_info["params"]  # type: ignore[assignment]
+                    params_list: list[str] = query_info["params"]
                     query_params = {k: v for k, v in all_params.items() if k in params_list}
 
                     results = self.db_adapter.execute_query(query, query_params)

@@ -20,7 +20,7 @@ from queue import Empty, Queue
 from typing import Any
 
 try:
-    import kuzu  # type: ignore[import-untyped]
+    import kuzu
 except ImportError:
     kuzu = None
 
@@ -243,7 +243,7 @@ class KuzuAdapter:
         try:
             result = self.execute_query(get_query("get_schema_version"))
             if result and len(result) > 0:
-                return str(result[0]["sv.version"])  # type: ignore[no-any-return]
+                return str(result[0]["sv.version"])
             return None
 
         except Exception:
