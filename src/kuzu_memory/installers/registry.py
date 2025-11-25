@@ -7,8 +7,8 @@ Manages available installers and provides lookup functionality.
 from __future__ import annotations
 
 import logging
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from .auggie import AuggieInstaller
 from .auggie_mcp_installer import AuggieMCPInstaller

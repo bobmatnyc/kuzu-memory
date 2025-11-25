@@ -371,7 +371,8 @@ async def multiple_clients(project_root: Path):
 
     num_clients = 3
     clients = [
-        MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_clients)
+        MCPClientSimulator(project_root=project_root, timeout=10.0)
+        for _ in range(num_clients)
     ]
 
     # Connect all
@@ -525,7 +526,9 @@ def concurrent_simulator(project_root: Path):
     """
     from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator
 
-    return ConcurrentClientSimulator(num_clients=5, project_root=project_root, timeout=10.0)
+    return ConcurrentClientSimulator(
+        num_clients=5, project_root=project_root, timeout=10.0
+    )
 
 
 # Pytest configuration for async tests

@@ -12,7 +12,6 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,26 +30,30 @@ class AuggieVersion:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AuggieVersion):
             return False
-        return self.major == other.major and self.minor == other.minor and self.patch == other.patch
+        return (
+            self.major == other.major
+            and self.minor == other.minor
+            and self.patch == other.patch
+        )
 
-    def __lt__(self, other: "AuggieVersion") -> bool:
+    def __lt__(self, other: AuggieVersion) -> bool:
         if self.major != other.major:
             return self.major < other.major
         if self.minor != other.minor:
             return self.minor < other.minor
         return self.patch < other.patch
 
-    def __le__(self, other: "AuggieVersion") -> bool:
+    def __le__(self, other: AuggieVersion) -> bool:
         return self == other or self < other
 
-    def __gt__(self, other: "AuggieVersion") -> bool:
+    def __gt__(self, other: AuggieVersion) -> bool:
         return not self <= other
 
-    def __ge__(self, other: "AuggieVersion") -> bool:
+    def __ge__(self, other: AuggieVersion) -> bool:
         return not self < other
 
     @classmethod
-    def from_string(cls, version_str: str) -> Optional["AuggieVersion"]:
+    def from_string(cls, version_str: str) -> AuggieVersion | None:
         """Parse version string like '1.0.0' into AuggieVersion."""
         match = re.match(r"(\d+)\.(\d+)\.(\d+)", version_str)
         if match:
@@ -128,7 +131,9 @@ class AuggieVersionDetector:
         v1.0.0 rules don't have success metrics or decision trees.
         v2.0.0 rules have "Success Indicators" and "Decision Tree" sections.
         """
-        integration_file = self.project_root / ".augment" / "rules" / "kuzu-memory-integration.md"
+        integration_file = (
+            self.project_root / ".augment" / "rules" / "kuzu-memory-integration.md"
+        )
 
         if not integration_file.exists():
             return None
@@ -147,7 +152,9 @@ class AuggieVersionDetector:
 
             return None
         except OSError as e:
-            logger.warning(f"Failed to read integration file for version detection: {e}")
+            logger.warning(
+                f"Failed to read integration file for version detection: {e}"
+            )
             return None
 
     def write_version(self, version: AuggieVersion) -> bool:
@@ -206,7 +213,9 @@ class AuggieVersionDetector:
             "current_version": str(installed),
             "latest_version": str(CURRENT_VERSION),
             "changes": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get("changes", []),
-            "description": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get("description", ""),
+            "description": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get(
+                "description", ""
+            ),
         }
 
 

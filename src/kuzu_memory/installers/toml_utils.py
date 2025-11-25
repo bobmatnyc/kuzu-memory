@@ -20,7 +20,9 @@ except ImportError:
 try:
     import tomli_w
 except ImportError:
-    raise ImportError("tomli_w is required for TOML writing. Install with: pip install tomli-w")
+    raise ImportError(
+        "tomli_w is required for TOML writing. Install with: pip install tomli-w"
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ def load_toml_config(file_path: Path) -> dict[str, Any]:
         with open(file_path, "rb") as f:
             config = tomllib.load(f)
             logger.info(f"Loaded TOML configuration from {file_path}")
+            return config
     except tomllib.TOMLDecodeError as e:
         raise TOMLConfigError(f"Invalid TOML in {file_path}: {e}")
     except Exception as e:

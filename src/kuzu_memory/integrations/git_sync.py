@@ -503,12 +503,16 @@ class GitSyncManager:
                 # Store using batch_store_memories API (stores a list of Memory objects)
                 stored_ids = self.memory_store.batch_store_memories([memory])
                 if stored_ids:
-                    logger.debug(f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}")
+                    logger.debug(
+                        f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}"
+                    )
                     # Memory was stored, return it with the ID
                     memory.id = stored_ids[0]
                     return memory
                 else:
-                    logger.warning(f"No ID returned when storing commit {commit.hexsha[:8]}")
+                    logger.warning(
+                        f"No ID returned when storing commit {commit.hexsha[:8]}"
+                    )
                     return None
             except Exception as e:
                 logger.error(f"Failed to store memory: {e}")
@@ -536,9 +540,13 @@ class GitSyncManager:
 
         # Determine sync timestamp
         since = None
-        if mode == "incremental" or (mode == "auto" and self.config.last_sync_timestamp):
+        if mode == "incremental" or (
+            mode == "auto" and self.config.last_sync_timestamp
+        ):
             if self.config.last_sync_timestamp:
-                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(tzinfo=None)
+                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(
+                    tzinfo=None
+                )
                 logger.info(f"Incremental sync since {since}")
             else:
                 logger.info("No previous sync, performing initial sync")

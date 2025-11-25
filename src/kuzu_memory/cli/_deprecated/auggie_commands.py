@@ -90,7 +90,9 @@ def enhance(ctx, prompt, user_id, verbose):
             rich_print(f"🔍 Original Prompt: {prompt}")
             rich_print(f"👤 User ID: {user_id}")
             rich_print(f"📚 Memories Used: {enhanced_result.get('memories_count', 0)}")
-            rich_print(f"🤖 Auggie Rules Applied: {enhanced_result.get('rules_applied', 0)}")
+            rich_print(
+                f"🤖 Auggie Rules Applied: {enhanced_result.get('rules_applied', 0)}"
+            )
             rich_print("")
 
         # Display enhanced prompt
@@ -101,7 +103,9 @@ def enhance(ctx, prompt, user_id, verbose):
             rich_print(enhanced_prompt)
 
         if verbose and enhanced_result.get("context"):
-            rich_panel(enhanced_result["context"], title="📚 Context Added", style="blue")
+            rich_panel(
+                enhanced_result["context"], title="📚 Context Added", style="blue"
+            )
 
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -152,7 +156,9 @@ def learn(ctx, prompt, response, feedback, user_id, verbose):
         if verbose:
             rich_print(f"👤 User: {user_id}")
             rich_print(f"❓ Prompt: {prompt}")
-            rich_print(f"💬 Response: {response[:100]}{'...' if len(response) > 100 else ''}")
+            rich_print(
+                f"💬 Response: {response[:100]}{'...' if len(response) > 100 else ''}"
+            )
             if feedback:
                 rich_print(f"📝 Feedback: {feedback}")
 
@@ -161,11 +167,17 @@ def learn(ctx, prompt, response, feedback, user_id, verbose):
             rich_print("✅ Learning completed successfully", style="green")
 
             if verbose:
-                rich_print(f"   Memory ID: {learn_result.get('memory_id', 'N/A')[:8]}...")
-                rich_print(f"   Patterns Extracted: {learn_result.get('patterns_count', 0)}")
+                rich_print(
+                    f"   Memory ID: {learn_result.get('memory_id', 'N/A')[:8]}..."
+                )
+                rich_print(
+                    f"   Patterns Extracted: {learn_result.get('patterns_count', 0)}"
+                )
                 rich_print(f"   Rules Updated: {learn_result.get('rules_updated', 0)}")
         else:
-            rich_print("⚠️  Learning completed with no new information stored", style="yellow")
+            rich_print(
+                "⚠️  Learning completed with no new information stored", style="yellow"
+            )
 
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -291,14 +303,18 @@ def stats(ctx, verbose):
             if user_stats:
                 rich_print("\n👥 User Activity:")
                 for user_id, user_data in user_stats.items():
-                    rich_print(f"   {user_id}: {user_data.get('conversations', 0)} conversations")
+                    rich_print(
+                        f"   {user_id}: {user_data.get('conversations', 0)} conversations"
+                    )
 
             performance_stats = stats.get("performance", {})
             if performance_stats:
                 rich_print("\n⚡ Performance Metrics:")
                 for metric, value in performance_stats.items():
                     if isinstance(value, float):
-                        rich_print(f"   {metric.replace('_', ' ').title()}: {value:.2f}ms")
+                        rich_print(
+                            f"   {metric.replace('_', ' ').title()}: {value:.2f}ms"
+                        )
                     else:
                         rich_print(f"   {metric.replace('_', ' ').title()}: {value}")
 
@@ -317,8 +333,14 @@ def stats(ctx, verbose):
             if health:
                 rich_print("\n🏥 Integration Health:")
                 for component, status in health.items():
-                    icon = "✅" if status == "healthy" else "⚠️" if status == "warning" else "❌"
-                    rich_print(f"   {component.replace('_', ' ').title()}: {icon} {status}")
+                    icon = (
+                        "✅"
+                        if status == "healthy"
+                        else "⚠️" if status == "warning" else "❌"
+                    )
+                    rich_print(
+                        f"   {component.replace('_', ' ').title()}: {icon} {status}"
+                    )
 
     except Exception as e:
         if ctx.obj.get("debug"):

@@ -183,7 +183,10 @@ class AuggieInstallerV2(BaseInstaller):
             )
 
     def _upgrade_installation(
-        self, from_version: dict[str, Any], detector: AuggieVersionDetector, dry_run: bool = False
+        self,
+        from_version: dict[str, Any],
+        detector: AuggieVersionDetector,
+        dry_run: bool = False,
     ) -> InstallationResult:
         """
         Upgrade from existing version to current version.
@@ -204,7 +207,9 @@ class AuggieInstallerV2(BaseInstaller):
             migration_info = migrator.migrate()
 
             if not migration_info.get("success"):
-                raise InstallationError(migration_info.get("message", "Migration failed"))
+                raise InstallationError(
+                    migration_info.get("message", "Migration failed")
+                )
 
             backup_path = Path(migration_info.get("backup_path", ""))
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +31,9 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
-@click.option("--config-path", type=click.Path(), help="Path to save example configuration")
+@click.option(
+    "--config-path", type=click.Path(), help="Path to save example configuration"
+)
 @click.pass_context
 def init(ctx, force, config_path):
     """
@@ -64,7 +65,9 @@ def init(ctx, force, config_path):
 
         # Check if already initialized
         if db_path.exists() and not force:
-            rich_print(f"⚠️  Project already initialized at {memories_dir}", style="yellow")
+            rich_print(
+                f"⚠️  Project already initialized at {memories_dir}", style="yellow"
+            )
             rich_print("   Use --force to overwrite existing memories", style="dim")
             sys.exit(1)
 
@@ -112,12 +115,16 @@ def init(ctx, force, config_path):
 
             if auggie.is_auggie_project():
                 rich_print("\n🤖 Auggie project detected!")
-                if rich_confirm("Would you like to set up Auggie integration?", default=True):
+                if rich_confirm(
+                    "Would you like to set up Auggie integration?", default=True
+                ):
                     try:
                         auggie.setup_project_integration()
                         rich_print("✅ Auggie integration configured")
                     except Exception as e:
-                        rich_print(f"⚠️  Auggie integration setup failed: {e}", style="yellow")
+                        rich_print(
+                            f"⚠️  Auggie integration setup failed: {e}", style="yellow"
+                        )
         except ImportError:
             pass
 
@@ -237,7 +244,9 @@ def project(ctx, verbose):
                 if verbose:
                     rules_info = auggie.get_rules_summary()
                     rich_print(f"   Rules Files: {len(rules_info.get('files', []))}")
-                    rich_print(f"   Memory Rules: {len(rules_info.get('memory_rules', []))}")
+                    rich_print(
+                        f"   Memory Rules: {len(rules_info.get('memory_rules', []))}"
+                    )
         except ImportError:
             pass
 
@@ -357,7 +366,9 @@ def stats(ctx, detailed, output_format):
                         )
                         rich_print(f"   {source}: {count} ({percentage:.1f}%)")
 
-                rich_print(f"\n🕒 Recent Activity: {stats_data['recent_activity']} memories")
+                rich_print(
+                    f"\n🕒 Recent Activity: {stats_data['recent_activity']} memories"
+                )
 
                 if detailed:
                     # Additional detailed information
@@ -447,12 +458,16 @@ def cleanup(ctx, force):
             if duplicate_groups:
                 for group in duplicate_groups:
                     # Sort by created_at, keep the newest
-                    sorted_group = sorted(group, key=lambda x: x.created_at, reverse=True)
+                    sorted_group = sorted(
+                        group, key=lambda x: x.created_at, reverse=True
+                    )
                     for mem in sorted_group[1:]:  # Remove all but the newest
                         memory.delete_memory(mem.id)
                         removed_count += 1
 
-            rich_print(f"✅ Cleanup completed: {removed_count} memories removed", style="green")
+            rich_print(
+                f"✅ Cleanup completed: {removed_count} memories removed", style="green"
+            )
 
     except Exception as e:
         if ctx.obj.get("debug"):

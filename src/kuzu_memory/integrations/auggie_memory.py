@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 class LearningPattern:
     """Represents a learned pattern from conversations."""
 
-    def __init__(self, pattern_id: str, pattern_type: str, pattern_data: dict[str, Any]) -> None:
+    def __init__(
+        self, pattern_id: str, pattern_type: str, pattern_data: dict[str, Any]
+    ) -> None:
         self.pattern_id = pattern_id
         self.pattern_type = pattern_type
         self.pattern_data = pattern_data
@@ -110,7 +112,9 @@ class ResponseLearner:
                         pattern["pattern_data"],
                     )
                     self.learned_patterns[pattern["pattern_id"]] = learning_pattern
-                    learning_results["patterns_discovered"].append(pattern["pattern_id"])
+                    learning_results["patterns_discovered"].append(
+                        pattern["pattern_id"]
+                    )
                     self.pattern_discovery_count += 1
                 else:
                     # Update existing pattern
@@ -123,7 +127,9 @@ class ResponseLearner:
             learning_results["context_learned"] = context_learning
 
             # Assess response quality
-            quality_assessment = self._assess_response_quality(prompt, response, context)
+            quality_assessment = self._assess_response_quality(
+                prompt, response, context
+            )
             learning_results["quality_assessment"] = quality_assessment
             self.response_quality_cache.append(quality_assessment)
 
@@ -171,7 +177,9 @@ class ResponseLearner:
                         "pattern_data": {
                             "memories_used": memories_used,
                             "prompt_type": self._classify_prompt_type(prompt),
-                            "effectiveness": ("high" if len(response) > 100 else "medium"),
+                            "effectiveness": (
+                                "high" if len(response) > 100 else "medium"
+                            ),
                         },
                     }
                 )
@@ -186,8 +194,12 @@ class ResponseLearner:
                         "pattern_type": "domain_specific",
                         "pattern_data": {
                             "domain": domain,
-                            "question_complexity": ("high" if len(prompt) > 100 else "low"),
-                            "response_quality": ("high" if len(response) > 200 else "medium"),
+                            "question_complexity": (
+                                "high" if len(prompt) > 100 else "low"
+                            ),
+                            "response_quality": (
+                                "high" if len(response) > 200 else "medium"
+                            ),
                         },
                     }
                 )
@@ -197,7 +209,9 @@ class ResponseLearner:
 
         return patterns
 
-    def _learn_context_patterns(self, prompt: str, context: dict[str, Any]) -> list[str]:
+    def _learn_context_patterns(
+        self, prompt: str, context: dict[str, Any]
+    ) -> list[str]:
         """Learn patterns about effective context usage."""
         learned_contexts = []
 
@@ -274,7 +288,9 @@ class ResponseLearner:
                 # Check if response seems to incorporate context
                 context_keywords = set()
                 for memory in context_memories:
-                    context_keywords.update(self._extract_keywords(memory.get("content", "")))
+                    context_keywords.update(
+                        self._extract_keywords(memory.get("content", ""))
+                    )
 
                 response_keywords = set(self._extract_keywords(response))
                 keyword_overlap = len(context_keywords.intersection(response_keywords))
@@ -294,7 +310,9 @@ class ResponseLearner:
 
         return assessment
 
-    def _process_feedback(self, feedback: dict[str, Any], learning_results: dict[str, Any]):
+    def _process_feedback(
+        self, feedback: dict[str, Any], learning_results: dict[str, Any]
+    ):
         """Process user feedback to improve learning."""
         try:
             self.feedback_history.append(
@@ -348,11 +366,17 @@ class ResponseLearner:
         """Classify the type of prompt (simplified)."""
         prompt_lower = prompt.lower()
 
-        if any(word in prompt_lower for word in ["how", "what", "why", "when", "where"]):
+        if any(
+            word in prompt_lower for word in ["how", "what", "why", "when", "where"]
+        ):
             return "question"
-        elif any(word in prompt_lower for word in ["create", "generate", "make", "build"]):
+        elif any(
+            word in prompt_lower for word in ["create", "generate", "make", "build"]
+        ):
             return "generation"
-        elif any(word in prompt_lower for word in ["explain", "describe", "tell me about"]):
+        elif any(
+            word in prompt_lower for word in ["explain", "describe", "tell me about"]
+        ):
             return "explanation"
         elif any(word in prompt_lower for word in ["fix", "debug", "solve", "error"]):
             return "problem_solving"
@@ -402,9 +426,12 @@ class ResponseLearner:
         # Calculate average response quality
         if self.response_quality_cache:
             avg_quality = sum(
-                assessment["overall_score"] for assessment in self.response_quality_cache
+                assessment["overall_score"]
+                for assessment in self.response_quality_cache
             )
-            stats["average_response_quality"] = avg_quality / len(self.response_quality_cache)
+            stats["average_response_quality"] = avg_quality / len(
+                self.response_quality_cache
+            )
 
         # Top patterns by usage
         sorted_patterns = sorted(
@@ -435,7 +462,9 @@ class ResponseLearner:
         context_effectiveness = {}
         for context_type, patterns in self.context_patterns.items():
             if patterns:
-                avg_relevance = sum(p.get("relevance", 0.0) for p in patterns) / len(patterns)
+                avg_relevance = sum(p.get("relevance", 0.0) for p in patterns) / len(
+                    patterns
+                )
                 context_effectiveness[context_type] = {
                     "pattern_count": len(patterns),
                     "average_relevance": avg_relevance,
@@ -462,7 +491,9 @@ class ResponseLearner:
                     {
                         "type": "pattern_usage",
                         "message": f"Consider leveraging {len(high_confidence_patterns)} high-confidence patterns",
-                        "patterns": [p.pattern_id for p in high_confidence_patterns[:5]],
+                        "patterns": [
+                            p.pattern_id for p in high_confidence_patterns[:5]
+                        ],
                     }
                 )
 
@@ -470,7 +501,8 @@ class ResponseLearner:
             effective_contexts = {
                 context_type: data
                 for context_type, data in self.context_patterns.items()
-                if len(data) > 3 and sum(p.get("relevance", 0) for p in data) / len(data) > 0.8
+                if len(data) > 3
+                and sum(p.get("relevance", 0) for p in data) / len(data) > 0.8
             }
 
             if effective_contexts:
@@ -539,14 +571,20 @@ class ResponseLearner:
                 pattern.success_rate = pattern_data["success_rate"]
 
                 if pattern_data["created_at"]:
-                    pattern.created_at = datetime.fromisoformat(pattern_data["created_at"])
+                    pattern.created_at = datetime.fromisoformat(
+                        pattern_data["created_at"]
+                    )
                 if pattern_data["last_used"]:
-                    pattern.last_used = datetime.fromisoformat(pattern_data["last_used"])
+                    pattern.last_used = datetime.fromisoformat(
+                        pattern_data["last_used"]
+                    )
 
                 self.learned_patterns[pattern_id] = pattern
 
             # Import context patterns
-            for context_type, patterns in import_data.get("context_patterns", {}).items():
+            for context_type, patterns in import_data.get(
+                "context_patterns", {}
+            ).items():
                 self.context_patterns[context_type] = patterns
 
             logger.info(f"Learning data imported from {file_path}")
@@ -571,9 +609,7 @@ class MemorySynchronizer:
             for pattern in response_learner.learned_patterns.values():
                 if pattern.confidence > 0.7 and pattern.usage_count > 3:
                     # Create memory from high-confidence pattern
-                    memory_content = (
-                        f"Learned pattern: {pattern.pattern_type} - {pattern.pattern_data}"
-                    )
+                    memory_content = f"Learned pattern: {pattern.pattern_type} - {pattern.pattern_data}"
 
                     memory = Memory(
                         content=memory_content,

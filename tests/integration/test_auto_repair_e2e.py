@@ -90,7 +90,9 @@ class TestAutoRepairEndToEnd:
 
         # Verify other fields preserved
         assert after_config["mcpServers"]["kuzu-memory"]["command"] == "kuzu-memory"
-        assert after_config["mcpServers"]["kuzu-memory"]["env"]["PROJECT_ROOT"] == str(tmp_path)
+        assert after_config["mcpServers"]["kuzu-memory"]["env"]["PROJECT_ROOT"] == str(
+            tmp_path
+        )
 
         # Verify NO user prompts or confirmation messages in output
         assert "confirm" not in result.output.lower()
@@ -104,7 +106,9 @@ class TestAutoRepairEndToEnd:
 
         # Create broken config with multiple projects
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}},
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            },
             "projects": {
                 "/Users/test/project1": {
                     "mcpServers": {
@@ -139,12 +143,12 @@ class TestAutoRepairEndToEnd:
 
         # Verify all broken configs were fixed
         assert after_config["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
-        assert after_config["projects"]["/Users/test/project1"]["mcpServers"]["kuzu-memory"][
-            "args"
-        ] == ["mcp"]
-        assert after_config["projects"]["/Users/test/project2"]["mcpServers"]["kuzu-memory"][
-            "args"
-        ] == ["mcp"]
+        assert after_config["projects"]["/Users/test/project1"]["mcpServers"][
+            "kuzu-memory"
+        ]["args"] == ["mcp"]
+        assert after_config["projects"]["/Users/test/project2"]["mcpServers"][
+            "kuzu-memory"
+        ]["args"] == ["mcp"]
 
     @pytest.mark.integration
     def test_no_change_when_config_already_correct(self, backup_claude_config):
@@ -261,7 +265,9 @@ class TestAutoRepairEndToEnd:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         # Write broken config
@@ -330,7 +336,9 @@ class TestAutoRepairSkipsHelpCommands:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(claude_json, "w", encoding="utf-8") as f:
@@ -359,7 +367,9 @@ class TestAutoRepairSkipsHelpCommands:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(claude_json, "w", encoding="utf-8") as f:
@@ -395,7 +405,9 @@ class TestAutoRepairWithDifferentCommands:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(claude_json, "w", encoding="utf-8") as f:

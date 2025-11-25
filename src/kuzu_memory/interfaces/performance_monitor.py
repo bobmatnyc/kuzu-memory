@@ -66,7 +66,9 @@ class IPerformanceMonitor(ABC):
         pass
 
     @abstractmethod
-    async def set_gauge(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
+    async def set_gauge(
+        self, name: str, value: float, tags: dict[str, str] | None = None
+    ) -> None:
         """
         Set a gauge metric value.
 
@@ -166,7 +168,9 @@ class IPerformanceMonitor(ABC):
         pass
 
     @abstractmethod
-    async def get_summary(self, period: timedelta = timedelta(hours=1)) -> dict[str, Any]:
+    async def get_summary(
+        self, period: timedelta = timedelta(hours=1)
+    ) -> dict[str, Any]:
         """
         Get summary statistics for recent metrics.
 

@@ -108,7 +108,9 @@ class RecallCoordinator:
 
             # Check cache first
             if self.cache:
-                cached_context = self.cache.get_recall_result(clean_prompt, strategy, max_memories)
+                cached_context = self.cache.get_recall_result(
+                    clean_prompt, strategy, max_memories
+                )
                 if cached_context:
                     self._coordinator_stats["cache_hits"] += 1
                     return cached_context
@@ -151,7 +153,9 @@ class RecallCoordinator:
 
             # Cache the result
             if self.cache:
-                self.cache.put_recall_result(clean_prompt, strategy, max_memories, context)
+                self.cache.put_recall_result(
+                    clean_prompt, strategy, max_memories, context
+                )
 
             # Update statistics
             self._update_coordinator_stats(strategy_used, context.recall_time_ms)
@@ -336,7 +340,9 @@ class RecallCoordinator:
 
         return min(confidence, 1.0)
 
-    def _build_enhanced_prompt(self, original_prompt: str, memories: list[Memory]) -> str:
+    def _build_enhanced_prompt(
+        self, original_prompt: str, memories: list[Memory]
+    ) -> str:
         """Build enhanced prompt with memory context."""
         if not memories:
             return original_prompt
@@ -380,7 +386,9 @@ class RecallCoordinator:
 
         return f"{context}\n\n{original_prompt}"
 
-    def _update_coordinator_stats(self, strategy_used: str, recall_time_ms: float) -> None:
+    def _update_coordinator_stats(
+        self, strategy_used: str, recall_time_ms: float
+    ) -> None:
         """Update coordinator statistics."""
         self._coordinator_stats["total_recalls"] += 1
         self._coordinator_stats["strategy_usage"][strategy_used] += 1
