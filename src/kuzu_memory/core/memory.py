@@ -263,14 +263,14 @@ class KuzuMemory:
 
             if not self.container.has("memory_store"):
                 # Initialize memory store
-                db_adapter = self.container.get_database_adapter()
-                memory_store = MemoryStore(db_adapter, self.config)
+                memory_store_adapter = self.container.get_database_adapter()
+                memory_store = MemoryStore(memory_store_adapter, self.config)
                 self.container.register("memory_store", memory_store)
 
             if not self.container.has("recall_coordinator"):
                 # Initialize recall coordinator
-                db_adapter = self.container.get_database_adapter()
-                recall_coordinator = RecallCoordinator(db_adapter, self.config)  # type: ignore[arg-type]
+                recall_adapter = self.container.get_database_adapter()
+                recall_coordinator = RecallCoordinator(recall_adapter, self.config)  # type: ignore[arg-type]
                 self.container.register("recall_coordinator", recall_coordinator)
 
             # Get references to components

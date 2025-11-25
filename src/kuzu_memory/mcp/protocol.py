@@ -16,7 +16,7 @@ import sys
 import threading
 from enum import IntEnum
 from queue import Empty, Queue
-from typing import Any
+from typing import Any, TextIO
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class JSONRPCMessage:
             # Notifications don't get responses
             return None
 
-        response = {"jsonrpc": "2.0", "id": request_id}
+        response: dict[str, Any] = {"jsonrpc": "2.0", "id": request_id}
 
         if error is not None:
             response["error"] = error.to_dict() if isinstance(error, JSONRPCError) else error
@@ -147,7 +147,7 @@ class JSONRPCMessage:
         Returns:
             JSON-RPC notification dictionary
         """
-        notification = {"jsonrpc": "2.0", "method": method}
+        notification: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
 
         if params is not None:
             notification["params"] = params
@@ -170,6 +170,13 @@ class JSONRPCMessage:
 
 class JSONRPCProtocol:
     """JSON-RPC 2.0 protocol handler for stdio communication."""
+
+    reader: TextIO
+    writer: TextIO
+    running: bool
+    _buffer: str
+    _message_queue: Queue[dict[str, Any] | None]
+    _reader_thread: threading.Thread | None
 
     def __init__(self) -> None:
         """Initialize JSON-RPC protocol handler."""
@@ -236,7 +243,7 @@ class JSONRPCProtocol:
             self._message_queue.put(None)
             self.running = False
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize stdio communication with synchronous reading thread."""
         # Start the synchronous reader thread
         self._reader_thread = threading.Thread(target=self._read_stdin_sync, daemon=True)

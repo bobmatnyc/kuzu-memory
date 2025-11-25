@@ -207,7 +207,9 @@ class MemoryRanker:
         entity_bonus = 0.0
         if memory.entities:
             for entity in memory.entities:
-                if entity.lower() in query_lower:
+                # Handle both string and dict entity types
+                entity_str = entity if isinstance(entity, str) else str(entity.get("name", ""))
+                if entity_str.lower() in query_lower:
                     entity_bonus += 0.05
 
         # TF-IDF-like scoring for important terms

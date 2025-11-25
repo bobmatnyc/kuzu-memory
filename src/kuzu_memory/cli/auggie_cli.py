@@ -35,8 +35,8 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
 
             if args.verbose:
                 print("\n📊 Detailed Information:")
-                memory_context = enhancement.get("memory_context")
-                if memory_context and memory_context.memories:
+                memory_context = enhancement.get("memory_context") if enhancement else None
+                if memory_context and hasattr(memory_context, "memories") and memory_context.memories:
                     print(f"Memories used: {len(memory_context.memories)}")
                     for i, memory in enumerate(memory_context.memories[:3]):
                         print(f"  {i + 1}. {memory.content[:60]}...")

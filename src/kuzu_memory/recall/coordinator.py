@@ -308,7 +308,9 @@ class RecallCoordinator:
         # Boost for entity matches
         if memory.entities:
             for entity in memory.entities:
-                if entity.lower() in prompt_lower:
+                # Handle both string and dict entity types
+                entity_str = entity if isinstance(entity, str) else str(entity.get("name", ""))
+                if entity_str.lower() in prompt_lower:
                     score += 0.1
 
         # Recency boost (more recent memories get slight boost)
