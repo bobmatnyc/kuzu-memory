@@ -33,7 +33,7 @@ class TemporalDecayEngine:
     sophisticated configuration options.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialize temporal decay engine.
 

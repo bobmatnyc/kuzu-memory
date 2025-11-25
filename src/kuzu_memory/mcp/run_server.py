@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class MCPProtocolHandler:
     """Handle MCP protocol communication with JSON-RPC 2.0."""
 
-    def __init__(self, server: MCPServer):
+    def __init__(self, server: MCPServer) -> None:
         """Initialize with MCP server."""
         self.server = server
         self.protocol = JSONRPCProtocol()

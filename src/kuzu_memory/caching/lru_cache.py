@@ -240,7 +240,7 @@ class LRUCache(ICache):
 class _CacheEntry:
     """Internal cache entry with TTL support."""
 
-    def __init__(self, value: Any, expiry: datetime | None = None):
+    def __init__(self, value: Any, expiry: datetime | None = None) -> None:
         self.value = value
         self.expiry = expiry
         self.created_at = datetime.now()

@@ -25,7 +25,7 @@ class AsyncMemoryCLI:
     optimized for AI integration.
     """
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None) -> None:
         """
         Initialize async CLI interface.
 

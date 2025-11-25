@@ -25,7 +25,7 @@ class MemoryRanker:
     temporal relevance, importance, and user interaction patterns.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialize memory ranker.
 

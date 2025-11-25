@@ -24,7 +24,7 @@ class LRUCache:
     of least recently used items when capacity is exceeded.
     """
 
-    def __init__(self, maxsize: int = 1000, ttl_seconds: int = 300):
+    def __init__(self, maxsize: int = 1000, ttl_seconds: int = 300) -> None:
         """
         Initialize LRU cache.
 
@@ -179,7 +179,7 @@ class MemoryCache:
     with intelligent cache key generation and memory-specific optimizations.
     """
 
-    def __init__(self, maxsize: int = 1000, ttl_seconds: int = 300):
+    def __init__(self, maxsize: int = 1000, ttl_seconds: int = 300) -> None:
         """
         Initialize memory cache.
 
@@ -297,7 +297,7 @@ class BloomFilter:
     definitely doesn't exist in the database.
     """
 
-    def __init__(self, capacity: int = 10000, error_rate: float = 0.01):
+    def __init__(self, capacity: int = 10000, error_rate: float = 0.01) -> None:
         """
         Initialize Bloom filter.
 

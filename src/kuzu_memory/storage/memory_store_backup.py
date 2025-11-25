@@ -35,7 +35,7 @@ class MemoryStore:
     pattern extraction, entity detection, deduplication, and storage.
     """
 
-    def __init__(self, db_adapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter, config: KuzuMemoryConfig) -> None:
         """
         Initialize memory store.
 

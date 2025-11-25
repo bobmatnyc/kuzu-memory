@@ -29,7 +29,7 @@ class CognitiveTypesMigration:
         "context": MemoryType.EPISODIC,  # Context is experiential
     }
 
-    def __init__(self, memory_store: MemoryStore | None = None):
+    def __init__(self, memory_store: MemoryStore | None = None) -> None:
         """
         Initialize the migration utility.
 

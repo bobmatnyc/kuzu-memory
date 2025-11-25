@@ -108,7 +108,7 @@ class MemoryQueueManager:
     Uses threading and queue for simple, reliable operation.
     """
 
-    def __init__(self, max_workers: int = 2, max_queue_size: int = 100):
+    def __init__(self, max_workers: int = 2, max_queue_size: int = 100) -> None:
         """
         Initialize the queue manager.
 

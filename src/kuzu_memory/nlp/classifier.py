@@ -89,7 +89,7 @@ class MemoryClassifier:
     4. Machine learning classification with confidence scoring
     """
 
-    def __init__(self, auto_download: bool = False):
+    def __init__(self, auto_download: bool = False) -> None:
         """
         Initialize the memory classifier.
 

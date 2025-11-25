@@ -168,7 +168,7 @@ class ErrorRecoveryManager:
     exponential backoff, and recovery action execution.
     """
 
-    def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
+    def __init__(self, max_retries: int = 3, base_delay: float = 1.0) -> None:
         """
         Initialize error recovery manager.
 

@@ -30,7 +30,7 @@ class BackgroundLearner:
     Integrates with the message queue system for reliable operation.
     """
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None) -> None:
         """
         Initialize the background learner.
 

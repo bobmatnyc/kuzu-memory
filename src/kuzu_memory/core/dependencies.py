@@ -95,7 +95,7 @@ class DependencyContainer:
     testing easier by allowing mock objects to be injected.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty dependency container."""
         self._services: dict[str, Any] = {}
         self._factories: dict[str, Any] = {}

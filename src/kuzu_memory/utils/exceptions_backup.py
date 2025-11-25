@@ -137,7 +137,7 @@ class DatabaseError(KuzuMemoryError):
 class DatabaseLockError(DatabaseError):
     """Database is locked by another process."""
 
-    def __init__(self, db_path: str, timeout: float = 5.0, pid: int | None = None):
+    def __init__(self, db_path: str, timeout: float = 5.0, pid: int | None = None) -> None:
         message = f"Database at '{db_path}' is locked by another process"
         suggestion = f"Wait {timeout}s and try again, or check for other KuzuMemory instances"
 
@@ -218,7 +218,7 @@ class DatabaseVersionError(DatabaseError):
 class DatabaseConnectionError(DatabaseError):
     """Failed to connect to database."""
 
-    def __init__(self, db_path: str, cause: Exception | None = None, retry_count: int = 0):
+    def __init__(self, db_path: str, cause: Exception | None = None, retry_count: int = 0) -> None:
         message = f"Failed to connect to database at '{db_path}'"
         if retry_count > 0:
             message += f" after {retry_count} attempts"
@@ -239,7 +239,7 @@ class DatabaseConnectionError(DatabaseError):
 class DatabaseTimeoutError(DatabaseError):
     """Database operation timed out."""
 
-    def __init__(self, operation: str, timeout_ms: float, query: str | None = None):
+    def __init__(self, operation: str, timeout_ms: float, query: str | None = None) -> None:
         message = f"Database operation '{operation}' timed out after {timeout_ms}ms"
         suggestion = "Consider optimizing the query or increasing timeout"
 
@@ -262,7 +262,7 @@ class DatabaseTimeoutError(DatabaseError):
 class ConfigurationError(KuzuMemoryError):
     """Configuration is invalid or missing."""
 
-    def __init__(self, config_issue: str):
+    def __init__(self, config_issue: str) -> None:
         message = f"Configuration error: {config_issue}"
         suggestion = "Check your configuration file or initialization parameters"
         super().__init__(
@@ -276,7 +276,7 @@ class ConfigurationError(KuzuMemoryError):
 class ExtractionError(KuzuMemoryError):
     """Error during memory extraction from text."""
 
-    def __init__(self, text_length: int, error_details: str):
+    def __init__(self, text_length: int, error_details: str) -> None:
         message = f"Failed to extract memories from text ({text_length} chars): {error_details}"
         suggestion = "Check input text encoding and length limits"
         super().__init__(
@@ -291,7 +291,7 @@ class ExtractionError(KuzuMemoryError):
 class RecallError(KuzuMemoryError):
     """Error during memory recall/retrieval."""
 
-    def __init__(self, query: str, error_details: str):
+    def __init__(self, query: str, error_details: str) -> None:
         message = f"Failed to recall memories for query '{query[:50]}...': {error_details}"
         suggestion = "Try a simpler query or check database connectivity"
         super().__init__(
@@ -306,7 +306,7 @@ class RecallError(KuzuMemoryError):
 class PerformanceError(KuzuMemoryError):
     """Operation exceeded performance requirements."""
 
-    def __init__(self, operation: str, actual_time: float, max_time: float):
+    def __init__(self, operation: str, actual_time: float, max_time: float) -> None:
         message = f"Operation '{operation}' took {actual_time:.1f}ms (max: {max_time:.1f}ms)"
         suggestion = "Consider optimizing database indices or reducing query complexity"
         super().__init__(
@@ -328,7 +328,7 @@ class PerformanceError(KuzuMemoryError):
 class ValidationError(KuzuMemoryError):
     """Input validation failed."""
 
-    def __init__(self, field: str, value: str, requirement: str):
+    def __init__(self, field: str, value: str, requirement: str) -> None:
         message = f"Validation failed for {field}='{value}': {requirement}"
         suggestion = "Check input parameters and their constraints"
         super().__init__(
@@ -377,7 +377,7 @@ class CacheError(KuzuMemoryError):
 class CacheFullError(CacheError):
     """Cache has reached capacity and cannot store more items."""
 
-    def __init__(self, cache_type: str, current_size: int, max_size: int):
+    def __init__(self, cache_type: str, current_size: int, max_size: int) -> None:
         message = f"{cache_type} cache is full ({current_size}/{max_size})"
         suggestion = "Increase cache size or reduce TTL to allow more frequent eviction"
 
@@ -398,7 +398,7 @@ class CacheFullError(CacheError):
 class CacheCorruptionError(CacheError):
     """Cache data is corrupted or invalid."""
 
-    def __init__(self, cache_type: str, corrupted_keys: list[str]):
+    def __init__(self, cache_type: str, corrupted_keys: list[str]) -> None:
         message = f"{cache_type} cache corruption detected"
         if corrupted_keys:
             message += f" in keys: {corrupted_keys[:5]}"
@@ -423,7 +423,7 @@ class CacheCorruptionError(CacheError):
 class CacheTimeoutError(CacheError):
     """Cache operation timed out."""
 
-    def __init__(self, operation: str, timeout_ms: float, cache_type: str):
+    def __init__(self, operation: str, timeout_ms: float, cache_type: str) -> None:
         message = f"Cache {operation} on {cache_type} timed out after {timeout_ms}ms"
         suggestion = "Check cache performance or increase timeout"
 
@@ -449,7 +449,7 @@ class ConnectionPoolError(KuzuMemoryError):
 class PoolExhaustedError(ConnectionPoolError):
     """Connection pool has no available connections."""
 
-    def __init__(self, pool_size: int, active_connections: int, wait_time_ms: float):
+    def __init__(self, pool_size: int, active_connections: int, wait_time_ms: float) -> None:
         message = f"Connection pool exhausted ({active_connections}/{pool_size} active)"
         if wait_time_ms > 0:
             message += f" after waiting {wait_time_ms}ms"
@@ -476,7 +476,7 @@ class PoolExhaustedError(ConnectionPoolError):
 class PoolTimeoutError(ConnectionPoolError):
     """Timed out waiting for connection from pool."""
 
-    def __init__(self, timeout_ms: float, pool_stats: dict[str, Any]):
+    def __init__(self, timeout_ms: float, pool_stats: dict[str, Any]) -> None:
         message = f"Timed out waiting {timeout_ms}ms for connection from pool"
         suggestion = "Increase connection timeout or pool size"
 
@@ -495,7 +495,7 @@ class PoolTimeoutError(ConnectionPoolError):
 class PoolConnectionFailedError(ConnectionPoolError):
     """Failed to create new connection in pool."""
 
-    def __init__(self, db_path: str, cause: Exception | None = None, attempts: int = 1):
+    def __init__(self, db_path: str, cause: Exception | None = None, attempts: int = 1) -> None:
         message = f"Failed to create connection to {db_path}"
         if attempts > 1:
             message += f" after {attempts} attempts"

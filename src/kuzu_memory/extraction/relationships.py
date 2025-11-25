@@ -27,7 +27,7 @@ class Relationship:
     context: str = ""
     created_at: datetime = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.created_at is None:
             self.created_at = datetime.now()
 
@@ -40,7 +40,7 @@ class RelationshipDetector:
     relationships without requiring LLM calls.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize relationship detector."""
         self._define_relationship_patterns()
         self._compile_patterns()

@@ -30,7 +30,7 @@ class RecallStrategy:
     including performance monitoring and result ranking.
     """
 
-    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         """
         Initialize recall strategy.
 
@@ -131,7 +131,7 @@ class KeywordRecallStrategy(RecallStrategy):
     with memory content using database text search.
     """
 
-    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         super().__init__(db_adapter, config)
         self.strategy_name = "keyword"
 
@@ -289,7 +289,7 @@ class EntityRecallStrategy(RecallStrategy):
     with entities mentioned in stored memories.
     """
 
-    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         super().__init__(db_adapter, config)
         self.strategy_name = "entity"
 
@@ -383,7 +383,7 @@ class TemporalRecallStrategy(RecallStrategy):
     and time-based patterns in the prompt.
     """
 
-    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         super().__init__(db_adapter, config)
         self.strategy_name = "temporal"
 

@@ -140,7 +140,7 @@ class AuggieRule:
 class AuggieRuleEngine:
     """Engine for managing and executing Auggie rules."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.rules: dict[str, AuggieRule] = {}
         self.execution_history: list[dict[str, Any]] = []
         self.rule_callbacks: dict[RuleType, list[Callable]] = {}

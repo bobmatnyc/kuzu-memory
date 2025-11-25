@@ -40,7 +40,7 @@ class KuzuConnection(IConnection):
     _db_locks: dict[str, asyncio.Lock] = {}
     _db_ref_counts: dict[str, int] = {}  # Track number of connections using each DB
 
-    def __init__(self, database_path: str, num_threads: int = 4):
+    def __init__(self, database_path: str, num_threads: int = 4) -> None:
         """
         Initialize Kuzu connection.
 

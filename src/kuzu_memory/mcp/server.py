@@ -53,7 +53,7 @@ class KuzuMemoryMCPServer:
     - remember: Store new memories
     """
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None) -> None:
         """
         Initialize the MCP server.
 
@@ -443,7 +443,7 @@ class SimplifiedMCPServer:
     This provides a basic JSON-RPC interface for kuzu-memory operations.
     """
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None) -> None:
         """Initialize simplified server."""
         self.project_root = project_root or Path.cwd()
 

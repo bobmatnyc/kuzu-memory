@@ -34,7 +34,7 @@ class RecallCoordinator:
     result ranking, and performance optimization.
     """
 
-    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         """
         Initialize recall coordinator.
 

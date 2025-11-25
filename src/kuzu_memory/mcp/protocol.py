@@ -42,7 +42,7 @@ class JSONRPCErrorCode(IntEnum):
 class JSONRPCError(Exception):
     """JSON-RPC error with code and message."""
 
-    def __init__(self, code: int, message: str, data: Any | None = None):
+    def __init__(self, code: int, message: str, data: Any | None = None) -> None:
         """Initialize JSON-RPC error."""
         self.code = code
         self.message = message
@@ -169,7 +169,7 @@ class JSONRPCMessage:
 class JSONRPCProtocol:
     """JSON-RPC 2.0 protocol handler for stdio communication."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize JSON-RPC protocol handler."""
         # Ensure text mode for stdin/stdout
         if isinstance(sys.stdin, io.BufferedReader):

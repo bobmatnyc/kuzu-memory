@@ -48,7 +48,7 @@ class PruneResult:
 class PruningStrategy:
     """Base class for pruning strategies."""
 
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, description: str) -> None:
         self.name = name
         self.description = description
 
@@ -76,7 +76,7 @@ class SafePruningStrategy(PruningStrategy):
     - Expected: ~7% reduction, very low risk
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "safe",
             "Prune old, minimal-impact git commits (>90 days, <2 files or <200 bytes)",
@@ -129,7 +129,7 @@ class IntelligentPruningStrategy(PruningStrategy):
     - Expected: ~15-20% reduction, low risk
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "intelligent",
             "Value-based pruning excluding important commits (>90 days, not feat/fix/perf/BREAKING, <3 files)",
@@ -187,7 +187,7 @@ class AggressivePruningStrategy(PruningStrategy):
     - Expected: ~30-50% reduction, moderate risk
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "aggressive",
             "Aggressive pruning for critically large databases (>180d OR >60d+<2files OR <300B)",
@@ -246,7 +246,7 @@ class MemoryPruner:
     and detailed reporting.
     """
 
-    def __init__(self, memory: "KuzuMemory"):
+    def __init__(self, memory: "KuzuMemory") -> None:
         """
         Initialize memory pruner.
 

@@ -26,7 +26,7 @@ class Entity:
     end_pos: int = 0
     normalized_text: str = ""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.normalized_text:
             self.normalized_text = self.text.lower().strip()
 

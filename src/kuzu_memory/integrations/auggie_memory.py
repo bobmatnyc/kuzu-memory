@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class LearningPattern:
     """Represents a learned pattern from conversations."""
 
-    def __init__(self, pattern_id: str, pattern_type: str, pattern_data: dict[str, Any]):
+    def __init__(self, pattern_id: str, pattern_type: str, pattern_data: dict[str, Any]) -> None:
         self.pattern_id = pattern_id
         self.pattern_type = pattern_type
         self.pattern_data = pattern_data
@@ -66,7 +66,7 @@ class LearningPattern:
 class ResponseLearner:
     """Learns from AI responses and user interactions to improve memory integration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.learned_patterns: dict[str, LearningPattern] = {}
         self.feedback_history: list[dict[str, Any]] = []
         self.context_patterns: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -553,7 +553,7 @@ class ResponseLearner:
 class MemorySynchronizer:
     """Handles synchronization between Auggie rules and KuzuMemory."""
 
-    def __init__(self, memory_system):
+    def __init__(self, memory_system) -> None:
         self.memory_system = memory_system
         self.sync_history: list[dict[str, Any]] = []
         self.last_sync = None

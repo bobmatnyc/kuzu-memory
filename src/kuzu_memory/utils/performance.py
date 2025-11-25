@@ -40,7 +40,7 @@ class PerformanceMonitor:
     optimization recommendations.
     """
 
-    def __init__(self, max_history: int = 10000, enable_detailed_metrics: bool = False):
+    def __init__(self, max_history: int = 10000, enable_detailed_metrics: bool = False) -> None:
         """
         Initialize performance monitor.
 

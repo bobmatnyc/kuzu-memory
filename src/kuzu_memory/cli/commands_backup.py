@@ -5,12 +5,15 @@ Provides CLI commands for init, remember, recall, and stats operations
 with user-friendly output and error handling.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -50,7 +53,7 @@ logger = logging.getLogger(__name__)
 console = Console() if RICH_AVAILABLE else None
 
 
-def rich_print(text, style=None, **kwargs):
+def rich_print(text: str, style: str | None = None, **kwargs: Any) -> None:
     """Print with rich formatting if available, fallback to regular print."""
     if RICH_AVAILABLE and console:
         console.print(text, style=style, **kwargs)
@@ -58,7 +61,7 @@ def rich_print(text, style=None, **kwargs):
         print(text)
 
 
-def rich_panel(content, title=None, style="blue"):
+def rich_panel(content: str, title: str | None = None, style: str = "blue") -> None:
     """Create a rich panel if available, fallback to simple formatting."""
     if RICH_AVAILABLE and console:
         console.print(Panel(content, title=title, border_style=style))
@@ -69,7 +72,7 @@ def rich_panel(content, title=None, style="blue"):
         print("=" * (len(title) + 8) if title else "")
 
 
-def rich_table(headers, rows, title=None):
+def rich_table(headers: list[str], rows: list[list[Any]], title: str | None = None) -> None:
     """Create a rich table if available, fallback to simple formatting."""
     if RICH_AVAILABLE and console:
         table = Table(title=title)
@@ -114,7 +117,7 @@ def rich_table(headers, rows, title=None):
     help="Project root directory (auto-detected if not specified)",
 )
 @click.pass_context
-def cli(ctx, debug, config, db_path, project_root):
+def cli(ctx: click.Context, debug: bool, config: str | None, db_path: str | None, project_root: str | None) -> None:
     """
     🧠 KuzuMemory - Project Memory System for AI Applications
 
@@ -195,7 +198,7 @@ def cli(ctx, debug, config, db_path, project_root):
 @cli.command()
 @click.option("--skip-demo", is_flag=True, help="Skip the interactive demo")
 @click.pass_context
-def quickstart(ctx, skip_demo):
+def quickstart(ctx: click.Context, skip_demo: bool) -> None:
     """
     🚀 Interactive 3-minute setup and demo.
 
@@ -335,7 +338,7 @@ def quickstart(ctx, skip_demo):
 
 @cli.command()
 @click.pass_context
-def demo(ctx):
+def demo(ctx: click.Context) -> None:
     """
     🎮 Instant demo - try KuzuMemory in 30 seconds.
 
@@ -448,7 +451,7 @@ def demo(ctx):
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
 @click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.pass_context
-def init(ctx, force, config_path):
+def init(ctx: click.Context, force: bool, config_path: str | None) -> None:
     """
     Initialize project memory system.
 
@@ -550,7 +553,7 @@ def init(ctx, force, config_path):
 @cli.command()
 @click.option("--verbose", is_flag=True, help="Show detailed project information")
 @click.pass_context
-def project(ctx, verbose):
+def project(ctx: click.Context, verbose: bool) -> None:
     """
     Show project memory information.
 
@@ -678,7 +681,7 @@ def project(ctx, verbose):
     help="Output format",
 )
 @click.pass_context
-def enhance(ctx, prompt, max_memories, output_format):
+def enhance(ctx: click.Context, prompt: str, max_memories: int, output_format: str) -> None:
     """
     🚀 Enhance a prompt with relevant project memories.
 
@@ -769,7 +772,7 @@ def enhance(ctx, prompt, max_memories, output_format):
     help="Use synchronous processing (blocking, for testing)",
 )
 @click.pass_context
-def learn(ctx, content, source, metadata, quiet, use_sync):
+def learn(ctx: click.Context, content: str, source: str, metadata: str | None, quiet: bool, use_sync: bool) -> None:
     """
     🧠 Store a memory from AI conversation or interaction.
 
@@ -893,7 +896,7 @@ def learn(ctx, content, source, metadata, quiet, use_sync):
     help="Output format",
 )
 @click.pass_context
-def recent(ctx, recent, output_format):
+def recent(ctx: click.Context, recent: int, output_format: str) -> None:
     """
     📋 Show recent project memories.
 
@@ -975,7 +978,7 @@ def recent(ctx, recent, output_format):
 @click.option("--agent-id", default="cli", help="Agent ID that created this memory")
 @click.option("--metadata", help="Additional metadata as JSON string")
 @click.pass_context
-def remember(ctx, content, source, session_id, agent_id, metadata):
+def remember(ctx: click.Context, content: str, source: str, session_id: str | None, agent_id: str, metadata: str | None) -> None:
     """
     💾 Store project memories from text content.
 
