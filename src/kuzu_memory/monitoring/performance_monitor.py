@@ -416,7 +416,7 @@ class PerformanceMonitor(IPerformanceMonitor):
 
     async def _calculate_system_health(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Calculate overall system health metrics."""
-        health = {"status": "healthy", "issues": []}
+        health: dict[str, Any] = {"status": "healthy", "issues": []}
 
         # Check recall performance
         recall_stats = metrics.get("recall_time_ms")

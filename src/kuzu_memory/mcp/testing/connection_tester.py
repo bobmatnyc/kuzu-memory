@@ -409,6 +409,15 @@ class MCPConnectionTester:
 
         try:
             # Send invalid JSON
+            if not self.process or not self.process.stdin:
+                return ConnectionTestResult(
+                    test_name=test_name,
+                    success=False,
+                    status=ConnectionStatus.DISCONNECTED,
+                    duration_ms=(time.time() - start_time) * 1000,
+                    severity=TestSeverity.ERROR,
+                    message="Process not available",
+                )
             malformed = "{'invalid': 'json'}\n"
             self.process.stdin.write(malformed.encode())
             self.process.stdin.flush()
@@ -579,8 +588,8 @@ class MCPConnectionTester:
         Returns:
             Parsed JSON response or None if all retries exhausted
         """
-        if not self.process:
-            raise RuntimeError("Server not started")
+        if not self.process or not self.process.stdout:
+            raise RuntimeError("Server not started or stdout not available")
 
         for attempt in range(max_retries):
             try:
@@ -669,8 +678,8 @@ class MCPConnectionTester:
         Returns:
             Response message or None on timeout
         """
-        if not self.process:
-            raise RuntimeError("Server not started")
+        if not self.process or not self.process.stdin:
+            raise RuntimeError("Server not started or stdin not available")
 
         # Send request
         request_str = json.dumps(message) + "\n"
