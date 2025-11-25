@@ -11,15 +11,14 @@ import logging
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
-from typing import TypeVar
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta
-from typing import Any
-
-T = TypeVar('T')
+from typing import Any, TypeVar
 
 from ..core.internal_models import PerformanceMetric
 from ..interfaces.performance_monitor import IPerformanceMonitor, MetricType
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +111,9 @@ class PerformanceMonitor(IPerformanceMonitor):
         """Increment a counter metric."""
         await self.record_metric(name, value, MetricType.COUNTER, tags)
 
-    async def set_gauge(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
+    async def set_gauge(
+        self, name: str, value: float, tags: dict[str, str] | None = None
+    ) -> None:
         """Set a gauge metric value."""
         await self.record_metric(name, value, MetricType.GAUGE, tags)
 
@@ -218,7 +219,9 @@ class PerformanceMonitor(IPerformanceMonitor):
 
             return result
 
-    async def get_summary(self, period: timedelta = timedelta(hours=1)) -> dict[str, Any]:
+    async def get_summary(
+        self, period: timedelta = timedelta(hours=1)
+    ) -> dict[str, Any]:
         """Get summary statistics for recent metrics."""
         cutoff_time = datetime.now() - period
         metrics = await self.get_metrics(start_time=cutoff_time)
@@ -260,7 +263,9 @@ class PerformanceMonitor(IPerformanceMonitor):
             summary["metrics"][name] = stats
 
         # Check system health
-        summary["system_health"] = await self._calculate_system_health(summary["metrics"])
+        summary["system_health"] = await self._calculate_system_health(
+            summary["metrics"]
+        )
 
         return summary
 
@@ -287,11 +292,15 @@ class PerformanceMonitor(IPerformanceMonitor):
                         "current": current_value,
                         "threshold": threshold_value,
                         "severity": (
-                            "warning" if current_value > threshold_value * 0.8 else "critical"
+                            "warning"
+                            if current_value > threshold_value * 0.8
+                            else "critical"
                         ),
                     }
                 )
-            elif not threshold_name.endswith("_rate") and current_value > threshold_value:
+            elif (
+                not threshold_name.endswith("_rate") and current_value > threshold_value
+            ):
                 # Time thresholds (lower is better)
                 violations.append(
                     {
@@ -299,7 +308,9 @@ class PerformanceMonitor(IPerformanceMonitor):
                         "current": current_value,
                         "threshold": threshold_value,
                         "severity": (
-                            "warning" if current_value < threshold_value * 1.5 else "critical"
+                            "warning"
+                            if current_value < threshold_value * 1.5
+                            else "critical"
                         ),
                     }
                 )
@@ -308,9 +319,13 @@ class PerformanceMonitor(IPerformanceMonitor):
         for violation in violations:
             metric_name = violation["metric"]
             if "recall_time" in metric_name:
-                recommendations.append("Consider enabling caching or optimizing recall strategies")
+                recommendations.append(
+                    "Consider enabling caching or optimizing recall strategies"
+                )
             elif "db_query" in metric_name:
-                recommendations.append("Consider connection pooling or query optimization")
+                recommendations.append(
+                    "Consider connection pooling or query optimization"
+                )
             elif "cache_hit" in metric_name:
                 recommendations.append("Increase cache size or adjust TTL settings")
 
@@ -428,7 +443,9 @@ class PerformanceMonitor(IPerformanceMonitor):
         error_stats = metrics.get("error_count")
         success_stats = metrics.get("success_count")
         if error_stats and success_stats:
-            error_rate = error_stats.get("total", 0) / max(1, success_stats.get("total", 1))
+            error_rate = error_stats.get("total", 0) / max(
+                1, success_stats.get("total", 1)
+            )
             if error_rate > 0.05:  # >5% error rate
                 health["issues"].append("High error rate detected")
                 health["status"] = "unhealthy"
@@ -466,7 +483,9 @@ class PerformanceMonitor(IPerformanceMonitor):
 
             # Clear expired cache entries
             expired_cache_keys = [
-                key for key, expiry in self._stats_cache_ttl.items() if expiry < datetime.now()
+                key
+                for key, expiry in self._stats_cache_ttl.items()
+                if expiry < datetime.now()
             ]
             for key in expired_cache_keys:
                 self._stats_cache.pop(key, None)

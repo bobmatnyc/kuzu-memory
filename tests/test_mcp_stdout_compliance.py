@@ -111,7 +111,9 @@ cli(['mcp', 'serve'])
         start_time = time.time()
         while time.time() - start_time < timeout:
             # Check if there's data available
-            readable, _, _ = select.select([self.process.stdout, self.process.stderr], [], [], 0.1)
+            readable, _, _ = select.select(
+                [self.process.stdout, self.process.stderr], [], [], 0.1
+            )
 
             for stream in readable:
                 if stream == self.process.stdout:
@@ -179,7 +181,9 @@ def test_startup_message_goes_to_stderr():
         # Check that startup message is in stderr
         startup_found = any("Starting MCP server" in line for line in stderr_lines)
 
-        assert startup_found, f"Startup message should be in stderr. stderr: {stderr_lines}"
+        assert (
+            startup_found
+        ), f"Startup message should be in stderr. stderr: {stderr_lines}"
 
     finally:
         test.cleanup()
@@ -206,7 +210,9 @@ def test_json_rpc_communication_clean():
         assert response.get("jsonrpc") == "2.0", "Invalid JSON-RPC version"
         assert "id" in response, "Missing id in response"
         assert response["id"] == 1, "Mismatched request id"
-        assert "result" in response or "error" in response, "Response must have result or error"
+        assert (
+            "result" in response or "error" in response
+        ), "Response must have result or error"
 
         # Send tools/list request
         request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
@@ -265,7 +271,9 @@ def test_error_messages_go_to_stderr():
         if error_response_line:
             error_response = json.loads(error_response_line.decode())
             assert "error" in error_response, "Expected error response"
-            assert error_response["error"]["code"] == -32700, "Expected parse error code"
+            assert (
+                error_response["error"]["code"] == -32700
+            ), "Expected parse error code"
 
         # Capture any logging output
         stdout_lines, _stderr_lines = test.capture_all_output(timeout=0.5)

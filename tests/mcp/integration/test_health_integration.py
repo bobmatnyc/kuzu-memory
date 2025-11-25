@@ -76,7 +76,9 @@ class TestHealthCheckIntegration:
         # If CLI is available, should be healthy or degraded
         if result.status != HealthStatus.UNHEALTHY:
             assert result.error is None
-            assert "version" in result.metadata or "operational" in result.message.lower()
+            assert (
+                "version" in result.metadata or "operational" in result.message.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_database_component_health(self, health_checker, tmp_path):
@@ -345,7 +347,9 @@ class TestHealthCheckEdgeCases:
         health_checker = MCPHealthChecker(project_root=tmp_path, timeout=2.0)
 
         # Fire off multiple checks rapidly
-        tasks = [health_checker.check_health(detailed=False, retry=False) for _ in range(3)]
+        tasks = [
+            health_checker.check_health(detailed=False, retry=False) for _ in range(3)
+        ]
 
         results = await asyncio.gather(*tasks)
 

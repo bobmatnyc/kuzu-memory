@@ -560,7 +560,13 @@ def examples(ctx: click.Context, topic: str | None) -> None:
     help="Output format",
 )
 @click.pass_context
-def temporal_analysis(ctx: click.Context, memory_id: str | None, memory_type: str | None, limit: int, output_format: str) -> None:
+def temporal_analysis(
+    ctx: click.Context,
+    memory_id: str | None,
+    memory_type: str | None,
+    limit: int,
+    output_format: str,
+) -> None:
     """
     🕒 Analyze temporal decay for memories.
 

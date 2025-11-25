@@ -70,13 +70,18 @@ class AuggieRule:
                 # Handle different condition types
                 if isinstance(condition_value, dict):
                     if "contains" in condition_value:
-                        if condition_value["contains"].lower() not in str(context_value).lower():
+                        if (
+                            condition_value["contains"].lower()
+                            not in str(context_value).lower()
+                        ):
                             return False
                     elif "equals" in condition_value:
                         if context_value != condition_value["equals"]:
                             return False
                     elif "greater_than" in condition_value:
-                        if float(context_value) <= float(condition_value["greater_than"]):
+                        if float(context_value) <= float(
+                            condition_value["greater_than"]
+                        ):
                             return False
                     elif "less_than" in condition_value:
                         if float(context_value) >= float(condition_value["less_than"]):
@@ -261,7 +266,9 @@ class AuggieRuleEngine:
                     )
 
                 if "memory_filters" in modifications:
-                    combined_modifications["memory_filters"].update(modifications["memory_filters"])
+                    combined_modifications["memory_filters"].update(
+                        modifications["memory_filters"]
+                    )
 
                 if "learning_config" in modifications:
                     combined_modifications["learning_triggers"].append(
@@ -326,7 +333,9 @@ class AuggieRuleEngine:
                 "name": rule.name,
                 "execution_count": rule.execution_count,
                 "success_rate": rule.success_rate,
-                "last_executed": (rule.last_executed.isoformat() if rule.last_executed else None),
+                "last_executed": (
+                    rule.last_executed.isoformat() if rule.last_executed else None
+                ),
             }
 
         return stats
@@ -372,7 +381,9 @@ class ResponseLearner:
         try:
             # Extract new memories from response
             if self.kuzu_memory and ai_response:
-                new_memories = self._extract_memories_from_response(ai_response, context)
+                new_memories = self._extract_memories_from_response(
+                    ai_response, context
+                )
                 learning_results["extracted_memories"] = new_memories
 
             # Learn from user feedback/corrections
@@ -410,9 +421,15 @@ class ResponseLearner:
 
         try:
             # Use KuzuMemory to extract memories from the response
-            user_id = context.get("user_id", "response_learner") if context else "response_learner"
+            user_id = (
+                context.get("user_id", "response_learner")
+                if context
+                else "response_learner"
+            )
             session_id = (
-                context.get("session_id", "learning_session") if context else "learning_session"
+                context.get("session_id", "learning_session")
+                if context
+                else "learning_session"
             )
 
             memory_ids = self.kuzu_memory.generate_memories(
@@ -459,10 +476,14 @@ class ResponseLearner:
 
         try:
             user_id = (
-                context.get("user_id", "correction_learner") if context else "correction_learner"
+                context.get("user_id", "correction_learner")
+                if context
+                else "correction_learner"
             )
             session_id = (
-                context.get("session_id", "correction_session") if context else "correction_session"
+                context.get("session_id", "correction_session")
+                if context
+                else "correction_session"
             )
 
             for correction in corrections:
@@ -482,7 +503,9 @@ class ResponseLearner:
         except Exception as e:
             logger.error(f"Error applying corrections: {e}")
 
-    def _analyze_response_quality(self, response: str, feedback: str | None = None) -> float:
+    def _analyze_response_quality(
+        self, response: str, feedback: str | None = None
+    ) -> float:
         """Analyze the quality of AI response."""
         quality_score = 0.8  # Default score
 
@@ -490,9 +513,14 @@ class ResponseLearner:
             # Negative indicators
             if feedback:
                 feedback_lower = feedback.lower()
-                if any(word in feedback_lower for word in ["wrong", "incorrect", "no", "actually"]):
+                if any(
+                    word in feedback_lower
+                    for word in ["wrong", "incorrect", "no", "actually"]
+                ):
                     quality_score -= 0.3
-                if any(word in feedback_lower for word in ["correction", "fix", "mistake"]):
+                if any(
+                    word in feedback_lower for word in ["correction", "fix", "mistake"]
+                ):
                     quality_score -= 0.2
 
             # Positive indicators
@@ -508,7 +536,9 @@ class ResponseLearner:
             logger.error(f"Error analyzing response quality: {e}")
             return 0.5
 
-    def _adjust_rules_for_poor_response(self, prompt: str, context: dict[str, Any] | None = None) -> None:
+    def _adjust_rules_for_poor_response(
+        self, prompt: str, context: dict[str, Any] | None = None
+    ) -> None:
         """Adjust rules based on poor response quality."""
         if not self.rule_engine:
             return
@@ -548,7 +578,8 @@ class ResponseLearner:
         stats = {
             "total_learning_events": len(self.learning_history),
             "memories_extracted": sum(
-                len(event.get("extracted_memories", [])) for event in self.learning_history
+                len(event.get("extracted_memories", []))
+                for event in self.learning_history
             ),
             "corrections_applied": sum(
                 len(event.get("corrections", [])) for event in self.learning_history
@@ -754,7 +785,9 @@ class AuggieIntegration:
         try:
             # Add context from memories
             if memory_context and memory_context.memories:
-                context_section = self._build_context_section(memory_context, rule_modifications)
+                context_section = self._build_context_section(
+                    memory_context, rule_modifications
+                )
                 if context_section:
                     enhanced_prompt = f"{context_section}\n\n{original_prompt}"
 
@@ -925,9 +958,13 @@ class AuggieIntegration:
             for _rule_id, rule_dict in rules_data.items():
                 # Convert strings back to datetime objects
                 if rule_dict["created_at"]:
-                    rule_dict["created_at"] = datetime.fromisoformat(rule_dict["created_at"])
+                    rule_dict["created_at"] = datetime.fromisoformat(
+                        rule_dict["created_at"]
+                    )
                 if rule_dict["last_executed"]:
-                    rule_dict["last_executed"] = datetime.fromisoformat(rule_dict["last_executed"])
+                    rule_dict["last_executed"] = datetime.fromisoformat(
+                        rule_dict["last_executed"]
+                    )
 
                 # Convert strings back to enums
                 rule_dict["rule_type"] = RuleType(rule_dict["rule_type"])

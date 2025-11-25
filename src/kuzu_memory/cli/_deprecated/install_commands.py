@@ -29,10 +29,19 @@ def install_group() -> None:
 @click.argument("ai_system")
 @click.option("--force", is_flag=True, help="Force installation even if files exist")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-@click.option("--language", help="Primary language for examples (python, javascript, shell)")
+@click.option(
+    "--language", help="Primary language for examples (python, javascript, shell)"
+)
 @click.option("--ai-name", help="Custom AI system name for universal installer")
 @click.pass_context
-def install(ctx: click.Context, ai_system: str, force: bool, project: str | None, language: str | None, ai_name: str | None) -> None:
+def install(
+    ctx: click.Context,
+    ai_system: str,
+    force: bool,
+    project: str | None,
+    language: str | None,
+    ai_name: str | None,
+) -> None:
     """
     🚀 Install integration for an AI system.
 
@@ -62,7 +71,9 @@ def install(ctx: click.Context, ai_system: str, force: bool, project: str | None
         else:
             project_root = find_project_root()
             if not project_root:
-                rich_print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                rich_print(
+                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                )
                 sys.exit(1)
 
         # Check if installer exists
@@ -70,7 +81,9 @@ def install(ctx: click.Context, ai_system: str, force: bool, project: str | None
             rich_print(f"[red]❌ Unknown AI system: {ai_system}[/red]")
             rich_print("[blue]\n💡 Available installers:[/blue]")
             for installer_info in list_installers():
-                rich_print(f"  • {installer_info['name']} - {installer_info['description']}")
+                rich_print(
+                    f"  • {installer_info['name']} - {installer_info['description']}"
+                )
             sys.exit(1)
 
         # Get installer
@@ -87,7 +100,9 @@ def install(ctx: click.Context, ai_system: str, force: bool, project: str | None
             install_options["ai_system"] = ai_name
 
         # Show installation info
-        rich_print(f"[blue]🚀 Installing {installer.ai_system_name} integration...[/blue]")
+        rich_print(
+            f"[blue]🚀 Installing {installer.ai_system_name} integration...[/blue]"
+        )
         rich_print(f"[dim]📁 Project: {project_root}[/dim]")
         rich_print(f"[dim]📋 Description: {installer.description}[/dim]")
 
@@ -104,7 +119,9 @@ def install(ctx: click.Context, ai_system: str, force: bool, project: str | None
                 for file_path in existing_files:
                     rich_print(f"[yellow]  • {file_path}[/yellow]")
 
-                if not click.confirm("Continue with installation? (will create backups)"):
+                if not click.confirm(
+                    "Continue with installation? (will create backups)"
+                ):
                     rich_print("[yellow]Installation cancelled.[/yellow]")
                     sys.exit(0)
 
@@ -180,7 +197,9 @@ def uninstall(ctx, ai_system, project, confirm) -> None:
         else:
             project_root = find_project_root()
             if not project_root:
-                rich_print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                rich_print(
+                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                )
                 sys.exit(1)
 
         # Check if installer exists
@@ -197,11 +216,15 @@ def uninstall(ctx, ai_system, project, confirm) -> None:
         # Check installation status
         status = installer.get_status()
         if not status["installed"]:
-            rich_print(f"[blue][i] {installer.ai_system_name} integration is not installed.[/blue]")
+            rich_print(
+                f"[blue][i] {installer.ai_system_name} integration is not installed.[/blue]"
+            )
             sys.exit(0)
 
         # Show uninstallation info
-        rich_print(f"[blue]🗑️  Uninstalling {installer.ai_system_name} integration...[/blue]")
+        rich_print(
+            f"[blue]🗑️  Uninstalling {installer.ai_system_name} integration...[/blue]"
+        )
         rich_print(f"[dim]📁 Project: {project_root}[/dim]")
 
         # Show files that will be removed
@@ -264,7 +287,9 @@ def status(ctx, project) -> None:
         else:
             project_root = find_project_root()
             if not project_root:
-                rich_print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                rich_print(
+                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                )
                 sys.exit(1)
 
         rich_print(f"[blue]📊 Installation Status for {project_root}[/blue]")
@@ -284,7 +309,9 @@ def status(ctx, project) -> None:
                 status = installer.get_status()
 
                 # Format status
-                status_text = "✅ Installed" if status["installed"] else "❌ Not Installed"
+                status_text = (
+                    "✅ Installed" if status["installed"] else "❌ Not Installed"
+                )
                 files_present = str(len(status["files_present"]))
                 files_missing = str(len(status["files_missing"]))
                 backups = "✅ Yes" if status.get("has_backups", False) else "❌ No"
@@ -375,5 +402,7 @@ def _show_next_steps(ai_system: str, project_root: Path) -> None:
    kuzu-memory project
 """
 
-    panel = Panel(next_steps.strip(), title="🚀 Installation Complete!", border_style="green")
+    panel = Panel(
+        next_steps.strip(), title="🚀 Installation Complete!", border_style="green"
+    )
     console.print(panel)

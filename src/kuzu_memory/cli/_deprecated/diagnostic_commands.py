@@ -123,11 +123,15 @@ def run(
                 style="yellow",
             )
 
-            if click.confirm("Would you like to attempt automatic fixes?", default=True):
+            if click.confirm(
+                "Would you like to attempt automatic fixes?", default=True
+            ):
                 rich_print("\n🔧 Attempting automatic fixes...", style="blue")
 
                 # Re-run diagnostics with auto-fix enabled
-                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
+                fix_report = asyncio.run(
+                    diagnostics.run_full_diagnostics(auto_fix=True)
+                )
 
                 # Show fix results
                 rich_print("\n📊 Fix Results:", style="blue")
@@ -262,7 +266,11 @@ def config(ctx: click.Context, verbose: bool, output: str | None, fix: bool) -> 
         # Summary
         rich_panel(
             f"Configuration Check: {passed}/{total} passed",
-            title=("✅ Configuration Valid" if passed == total else "⚠️  Configuration Issues"),
+            title=(
+                "✅ Configuration Valid"
+                if passed == total
+                else "⚠️  Configuration Issues"
+            ),
             style="green" if passed == total else "yellow",
         )
 
@@ -284,7 +292,9 @@ def config(ctx: click.Context, verbose: bool, output: str | None, fix: bool) -> 
     help="Project root directory",
 )
 @click.pass_context
-def connection(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
+def connection(
+    ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
+) -> None:
     """
     Test MCP server connection and protocol.
 
@@ -343,7 +353,9 @@ def connection(ctx: click.Context, verbose: bool, output: str | None, project_ro
         # Summary
         rich_panel(
             f"Connection Test: {passed}/{total} passed",
-            title=("✅ Connection Healthy" if passed == total else "⚠️  Connection Issues"),
+            title=(
+                "✅ Connection Healthy" if passed == total else "⚠️  Connection Issues"
+            ),
             style="green" if passed == total else "yellow",
         )
 
@@ -365,7 +377,9 @@ def connection(ctx: click.Context, verbose: bool, output: str | None, project_ro
     help="Project root directory",
 )
 @click.pass_context
-def tools(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
+def tools(
+    ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
+) -> None:
     """
     Test MCP tool discovery and execution.
 

@@ -44,7 +44,9 @@ class RecallConfig:
 
     max_memories: int = 10
     default_strategy: str = "auto"
-    strategies: list[str] = field(default_factory=lambda: ["keyword", "entity", "temporal"])
+    strategies: list[str] = field(
+        default_factory=lambda: ["keyword", "entity", "temporal"]
+    )
     strategy_weights: dict[str, float] = field(
         default_factory=lambda: {"keyword": 0.4, "entity": 0.4, "temporal": 0.2}
     )
@@ -71,7 +73,9 @@ class ExtractionConfig:
     max_memory_length: int = 1000
     enable_entity_extraction: bool = True
     enable_pattern_compilation: bool = True
-    enable_nlp_classification: bool = False  # NLP adds ~90ms, disabled by default for performance
+    enable_nlp_classification: bool = (
+        False  # NLP adds ~90ms, disabled by default for performance
+    )
     custom_patterns: dict[str, str] = field(default_factory=dict)
     pattern_weights: dict[str, float] = field(
         default_factory=lambda: {
@@ -103,7 +107,9 @@ class RetentionConfig:
 
     enable_auto_cleanup: bool = True
     cleanup_interval_hours: int = 24
-    custom_retention: dict[str, int | None] = field(default_factory=dict)  # memory_type -> days
+    custom_retention: dict[str, int | None] = field(
+        default_factory=dict
+    )  # memory_type -> days
     max_total_memories: int = 100_000
     cleanup_batch_size: int = 1000
 
@@ -140,7 +146,9 @@ class GitSyncConfig:
     # Automatic sync configuration
     auto_sync_enabled: bool = True  # Enable automatic sync
     auto_sync_on_enhance: bool = True  # Sync when enhance is called
-    auto_sync_on_learn: bool = False  # Sync when learn is called (optional, may be slow)
+    auto_sync_on_learn: bool = (
+        False  # Sync when learn is called (optional, may be slow)
+    )
     auto_sync_interval_hours: int = 24  # How often to sync (0 = never, periodic only)
     auto_sync_max_commits: int = 50  # Max commits per auto-sync to prevent blocking
 
@@ -301,7 +309,9 @@ class KuzuMemoryConfig:
                 config_data = yaml.safe_load(f)
 
             if not isinstance(config_data, dict):
-                raise ConfigurationError("Configuration file must contain a YAML dictionary")
+                raise ConfigurationError(
+                    "Configuration file must contain a YAML dictionary"
+                )
 
             return cls.from_dict(config_data)
 
@@ -446,4 +456,6 @@ class KuzuMemoryConfig:
             raise ConfigurationError("performance.max_recall_time_ms must be positive")
 
         if self.performance.max_generation_time_ms <= 0:
-            raise ConfigurationError("performance.max_generation_time_ms must be positive")
+            raise ConfigurationError(
+                "performance.max_generation_time_ms must be positive"
+            )

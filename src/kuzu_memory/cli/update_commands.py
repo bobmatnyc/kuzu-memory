@@ -66,7 +66,9 @@ class VersionChecker:
                 stable_versions = [
                     v
                     for v in releases.keys()
-                    if not any(pre in v for pre in ["a", "b", "rc", "dev", "alpha", "beta"])
+                    if not any(
+                        pre in v for pre in ["a", "b", "rc", "dev", "alpha", "beta"]
+                    )
                 ]
                 if stable_versions:
                     # Sort versions properly using packaging if available
@@ -345,7 +347,9 @@ def _format_json_output(
     help="Only output if update is available",
 )
 @click.pass_context
-def update(ctx: click.Context, check_only: bool, pre: bool, format: str, quiet: bool) -> None:
+def update(
+    ctx: click.Context, check_only: bool, pre: bool, format: str, quiet: bool
+) -> None:
     """
     🔄 Check for and install kuzu-memory updates.
 
@@ -383,9 +387,13 @@ def update(ctx: click.Context, check_only: bool, pre: bool, format: str, quiet: 
         # Handle errors
         if check_result.get("error"):
             if format == "json":
-                _format_json_output(check_result, {"current": checker.current_version}, None)
+                _format_json_output(
+                    check_result, {"current": checker.current_version}, None
+                )
             else:
-                _format_text_output(check_result, {"current": checker.current_version}, None)
+                _format_text_output(
+                    check_result, {"current": checker.current_version}, None
+                )
             sys.exit(1)
 
         # Compare versions

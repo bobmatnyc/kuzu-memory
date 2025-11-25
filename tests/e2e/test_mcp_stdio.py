@@ -114,7 +114,9 @@ class MCPStdioClient:
 
             self.process = None
 
-    def send_request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def send_request(
+        self, method: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Send a JSON-RPC request and wait for response."""
         if not self.process or not self.process.stdin or not self.process.stdout:
             raise RuntimeError("MCP server process not started")
@@ -328,9 +330,9 @@ class TestMCPToolsList:
         }
 
         # At least some expected tools should be present
-        assert len(expected_tools & tool_names) >= 3, (
-            f"Expected some of {expected_tools}, got {tool_names}"
-        )
+        assert (
+            len(expected_tools & tool_names) >= 3
+        ), f"Expected some of {expected_tools}, got {tool_names}"
 
         # Verify tool structure
         for tool in tools:
@@ -518,7 +520,9 @@ class TestMCPToolInvocation:
 class TestMCPErrorHandling:
     """Test MCP error handling."""
 
-    @pytest.mark.skip(reason="MCP SDK handles errors differently - returns error in content")
+    @pytest.mark.skip(
+        reason="MCP SDK handles errors differently - returns error in content"
+    )
     def test_invalid_method(self, mcp_client):
         """Test calling an invalid method."""
         # Initialize
@@ -543,7 +547,9 @@ class TestMCPErrorHandling:
         assert "message" in error
         assert error["code"] == -32601  # Method not found
 
-    @pytest.mark.skip(reason="MCP SDK handles errors differently - returns error in content")
+    @pytest.mark.skip(
+        reason="MCP SDK handles errors differently - returns error in content"
+    )
     def test_invalid_tool(self, mcp_client):
         """Test calling a non-existent tool."""
         # Initialize
@@ -600,7 +606,9 @@ class TestMCPErrorHandling:
         error = response["error"]
         assert error["code"] == -32602  # Invalid params
 
-    @pytest.mark.skip(reason="MCP SDK handles errors differently - returns error in content")
+    @pytest.mark.skip(
+        reason="MCP SDK handles errors differently - returns error in content"
+    )
     def test_invalid_tool_arguments(self, mcp_client):
         """Test calling a tool with invalid arguments."""
         # Initialize
@@ -629,7 +637,9 @@ class TestMCPErrorHandling:
         assert "error" in response
 
 
-@pytest.mark.skip(reason="MCP SDK handles ping differently - not implemented in current server")
+@pytest.mark.skip(
+    reason="MCP SDK handles ping differently - not implemented in current server"
+)
 class TestMCPPing:
     """Test MCP ping/health check."""
 
@@ -679,7 +689,9 @@ class TestMCPPing:
         assert "health" in result
 
 
-@pytest.mark.skip(reason="MCP SDK handles shutdown differently - not a standard JSON-RPC method")
+@pytest.mark.skip(
+    reason="MCP SDK handles shutdown differently - not a standard JSON-RPC method"
+)
 class TestMCPShutdown:
     """Test MCP shutdown sequence."""
 

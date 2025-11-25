@@ -339,7 +339,9 @@ class PatternExtractor:
             compiled_group = []
             for pattern, confidence, name in pattern_group:
                 try:
-                    compiled_regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                    compiled_regex = re.compile(
+                        pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL
+                    )
                     compiled_group.append((compiled_regex, confidence, name))
                 except re.error as e:
                     logger.warning(f"Failed to compile pattern '{name}': {e}")
@@ -348,7 +350,9 @@ class PatternExtractor:
             if compiled_group:
                 self.compiled_patterns.append((compiled_group, memory_type))
 
-        logger.info(f"Compiled {sum(len(group) for group, _ in self.compiled_patterns)} patterns")
+        logger.info(
+            f"Compiled {sum(len(group) for group, _ in self.compiled_patterns)} patterns"
+        )
 
     def extract_memories(self, text: str) -> list[ExtractedMemory]:
         """
@@ -372,7 +376,9 @@ class PatternExtractor:
 
             memories = []
             patterns_to_use = (
-                self.compiled_patterns if self.enable_compilation else self._get_runtime_patterns()
+                self.compiled_patterns
+                if self.enable_compilation
+                else self._get_runtime_patterns()
             )
 
             # Process each pattern group
@@ -395,7 +401,9 @@ class PatternExtractor:
             logger.error(f"Error extracting memories from text: {e}")
             return []
 
-    def _get_runtime_patterns(self) -> list[tuple[list[tuple[re.Pattern[str], float, str]], MemoryType]]:
+    def _get_runtime_patterns(
+        self,
+    ) -> list[tuple[list[tuple[re.Pattern[str], float, str]], MemoryType]]:
         """Get patterns for runtime compilation (when pre-compilation is disabled)."""
         runtime_patterns = []
 
@@ -403,7 +411,9 @@ class PatternExtractor:
             runtime_group = []
             for pattern, confidence, name in pattern_group:
                 try:
-                    compiled_regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                    compiled_regex = re.compile(
+                        pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL
+                    )
                     runtime_group.append((compiled_regex, confidence, name))
                 except re.error:
                     continue
@@ -437,7 +447,9 @@ class PatternExtractor:
                 content = self._clean_extracted_content(content)
 
                 # Enrich content with context keywords for better recall
-                content = self._enrich_content_with_context(content, pattern_name, match.group(0))
+                content = self._enrich_content_with_context(
+                    content, pattern_name, match.group(0)
+                )
 
                 if content and len(content) >= 5:  # Minimum meaningful length
                     extracted_memory = ExtractedMemory(
@@ -522,7 +534,9 @@ class PatternExtractor:
 
         return content
 
-    def _deduplicate_extractions(self, memories: list[ExtractedMemory]) -> list[ExtractedMemory]:
+    def _deduplicate_extractions(
+        self, memories: list[ExtractedMemory]
+    ) -> list[ExtractedMemory]:
         """Remove duplicate extractions based on content similarity."""
         if not memories:
             return []
@@ -573,7 +587,9 @@ class PatternExtractor:
 
         return unique_memories
 
-    def _are_contents_similar(self, content1: str, content2: str, threshold: float = 0.9) -> bool:
+    def _are_contents_similar(
+        self, content1: str, content2: str, threshold: float = 0.9
+    ) -> bool:
         """Check if two contents are very similar."""
         if not content1 or not content2:
             return False
@@ -583,7 +599,9 @@ class PatternExtractor:
             return False
 
         # If one is much shorter than the other, they're probably different
-        len_ratio = min(len(content1), len(content2)) / max(len(content1), len(content2))
+        len_ratio = min(len(content1), len(content2)) / max(
+            len(content1), len(content2)
+        )
         if len_ratio < 0.7:
             return False
 
@@ -600,7 +618,9 @@ class PatternExtractor:
         similarity = intersection / union if union > 0 else 0
         return similarity >= threshold
 
-    def _filter_extractions(self, memories: list[ExtractedMemory]) -> list[ExtractedMemory]:
+    def _filter_extractions(
+        self, memories: list[ExtractedMemory]
+    ) -> list[ExtractedMemory]:
         """Filter extractions based on quality and relevance."""
         filtered = []
 
@@ -712,7 +732,9 @@ class PatternExtractor:
             "compilation_enabled": self.enable_compilation,
             "custom_patterns_count": len(self.custom_patterns),
             "extraction_stats": self._extraction_stats.copy(),
-            "memory_type_distribution": self._extraction_stats["memory_types_extracted"].copy(),
+            "memory_type_distribution": self._extraction_stats[
+                "memory_types_extracted"
+            ].copy(),
             "top_patterns": sorted(
                 self._extraction_stats["patterns_matched"].items(),
                 key=lambda x: x[1],
@@ -732,7 +754,9 @@ class PatternExtractor:
             List of matches with details
         """
         try:
-            compiled_pattern = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+            compiled_pattern = re.compile(
+                pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL
+            )
             matches = []
 
             for match in compiled_pattern.finditer(test_text):

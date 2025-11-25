@@ -30,7 +30,9 @@ class AttachMemoriesRequest(BaseModel):
 
     prompt: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     max_memories: conint(ge=1, le=MAX_MEMORY_LIMIT) = DEFAULT_MEMORY_LIMIT
-    strategy: str = Field(DEFAULT_RECALL_STRATEGY, regex="^(auto|keyword|entity|temporal)$")
+    strategy: str = Field(
+        DEFAULT_RECALL_STRATEGY, regex="^(auto|keyword|entity|temporal)$"
+    )
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
@@ -128,7 +130,9 @@ class BatchMemoryRequest(BaseModel):
     merge_similar: bool = Field(False, description="Whether to merge similar memories")
 
     @validator("memories")
-    def validate_batch_size(cls, v: list[MemoryCreationRequest]) -> list[MemoryCreationRequest]:
+    def validate_batch_size(
+        cls, v: list[MemoryCreationRequest]
+    ) -> list[MemoryCreationRequest]:
         """Ensure batch size is reasonable."""
         if len(v) > 100:
             import logging
