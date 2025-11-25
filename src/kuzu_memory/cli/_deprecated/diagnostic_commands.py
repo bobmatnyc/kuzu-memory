@@ -59,7 +59,7 @@ def diagnose() -> None:
 )
 @click.pass_context
 def run(
-    ctx,
+    ctx: click.Context,
     verbose: bool,
     output: str | None,
     format: str,
@@ -195,7 +195,7 @@ def run(
     help="Attempt to automatically fix configuration issues",
 )
 @click.pass_context
-def config(ctx, verbose: bool, output: str | None, fix: bool) -> None:
+def config(ctx: click.Context, verbose: bool, output: str | None, fix: bool) -> None:
     """
     Check MCP configuration validity.
 
@@ -284,7 +284,7 @@ def config(ctx, verbose: bool, output: str | None, fix: bool) -> None:
     help="Project root directory",
 )
 @click.pass_context
-def connection(ctx, verbose: bool, output: str | None, project_root: str | None) -> None:
+def connection(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
     """
     Test MCP server connection and protocol.
 
@@ -365,7 +365,7 @@ def connection(ctx, verbose: bool, output: str | None, project_root: str | None)
     help="Project root directory",
 )
 @click.pass_context
-def tools(ctx, verbose: bool, output: str | None, project_root: str | None) -> None:
+def tools(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
     """
     Test MCP tool discovery and execution.
 

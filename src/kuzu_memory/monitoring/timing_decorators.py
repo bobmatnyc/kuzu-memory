@@ -198,7 +198,7 @@ class performance_tracker:
         self.start_time = time.perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         if self.start_time is not None:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             self._record_metric(duration_ms, exc_type)
@@ -212,7 +212,7 @@ class performance_tracker:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             await self._record_metric_async(duration_ms, exc_type)
 
-    def _record_metric(self, duration_ms: float, exc_type: type | None) -> None:
+    def _record_metric(self, duration_ms: float, exc_type: type[BaseException] | None) -> None:
         """Record metric synchronously."""
         if not _global_monitor:
             return

@@ -18,7 +18,7 @@ from .cli_utils import RICH_AVAILABLE, console, rich_confirm, rich_panel, rich_p
 
 @click.group(name="claude")
 @click.pass_context
-def claude_group(ctx) -> None:
+def claude_group(ctx: click.Context) -> None:
     """
     🤖 Claude Code integration commands.
 
@@ -32,7 +32,7 @@ def claude_group(ctx) -> None:
 @click.option("--force", is_flag=True, help="Force installation even if already installed")
 @click.option("--no-test", is_flag=True, help="Skip installation testing")
 @click.pass_context
-def install_claude_hooks(ctx, project_root, force, no_test) -> None:
+def install_claude_hooks(ctx: click.Context, project_root: str | None, force: bool, no_test: bool) -> None:
     """
     [DEPRECATED] Install Claude Code hooks for KuzuMemory integration.
 
@@ -165,7 +165,7 @@ def install_claude_hooks(ctx, project_root, force, no_test) -> None:
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.option("--force", is_flag=True, help="Force uninstall without confirmation")
 @click.pass_context
-def uninstall_claude_hooks(ctx, project_root, force) -> None:
+def uninstall_claude_hooks(ctx: click.Context, project_root: str | None, force: bool) -> None:
     """
     [DEPRECATED] Uninstall Claude Code hooks.
 
@@ -236,7 +236,7 @@ def uninstall_claude_hooks(ctx, project_root, force) -> None:
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
 @click.pass_context
-def claude_status(ctx, project_root, output_json) -> None:
+def claude_status(ctx: click.Context, project_root: str | None, output_json: bool) -> None:
     """
     [DEPRECATED] Check Claude Code hooks installation status.
 
@@ -312,7 +312,7 @@ def claude_status(ctx, project_root, output_json) -> None:
 @claude_group.command(name="test")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def test_claude_integration(ctx, project_root) -> None:
+def test_claude_integration(ctx: click.Context, project_root: str | None) -> None:
     """
     Test Claude Code integration.
 
@@ -415,7 +415,7 @@ def test_claude_integration(ctx, project_root) -> None:
 @claude_group.command(name="mcp-server")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def run_mcp_server(ctx, project_root) -> None:
+def run_mcp_server(ctx: click.Context, project_root: str | None) -> None:
     """
     [DEPRECATED] Run the MCP server for Claude Desktop integration.
 
@@ -456,7 +456,7 @@ def run_mcp_server(ctx, project_root) -> None:
 # Add wizard command for interactive setup
 @claude_group.command(name="wizard")
 @click.pass_context
-def claude_wizard(ctx) -> None:
+def claude_wizard(ctx: click.Context) -> None:
     """
     🧙 Interactive setup wizard for Claude integration.
 
