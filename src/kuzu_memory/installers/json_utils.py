@@ -296,7 +296,10 @@ def _needs_command_fix(server_name: str, server_config: dict) -> bool:
     """
     Check if server config needs command fix.
 
-    Detects python command with -m kuzu_memory.mcp.server args pattern.
+    Detects:
+    1. Python command with -m kuzu_memory.mcp.server args pattern
+    2. Full path to kuzu-memory binary (e.g., /path/to/pipx/venvs/kuzu-memory/bin/kuzu-memory)
+
     Only fixes kuzu-memory servers.
 
     Args:
@@ -311,17 +314,24 @@ def _needs_command_fix(server_name: str, server_config: dict) -> bool:
         return False
 
     command = server_config.get("command", "")
-    args = server_config.get("args")
-
-    # Check if command ends with 'python' (any path) and args are python module pattern
-    if not isinstance(command, str) or not command.endswith("python"):
+    if not isinstance(command, str):
         return False
 
-    if not isinstance(args, list) or len(args) < 2:
-        return False
+    # Pattern 1: Check if command ends with 'python' and args are python module pattern
+    if command.endswith("python"):
+        args = server_config.get("args")
+        if isinstance(args, list) and len(args) >= 2:
+            if args[0] == "-m" and args[1] == "kuzu_memory.mcp.server":
+                return True
 
-    # Check for python module invocation pattern
-    return args[0] == "-m" and args[1] == "kuzu_memory.mcp.server"
+    # Pattern 2: Check if command is a full path to kuzu-memory binary
+    # Should be just "kuzu-memory", not a path
+    if "/" in command or "\\" in command:
+        # It's a path - check if it ends with kuzu-memory
+        if command.endswith("kuzu-memory") or "kuzu-memory" in command:
+            return True
+
+    return False
 
 
 def _fix_command(command: str) -> str:
@@ -345,6 +355,7 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
     - Args: ["mcp", "serve"] -> ["mcp"]
     - Args: ["-m", "kuzu_memory.mcp.server"] -> ["mcp"]
     - Command: /path/to/python (with -m args) -> kuzu-memory
+    - Command: /full/path/to/kuzu-memory -> kuzu-memory
 
     Handles both root-level mcpServers and project-specific configurations.
 

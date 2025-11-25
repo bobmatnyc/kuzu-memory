@@ -96,7 +96,9 @@ class CodexInstaller(BaseInstaller):
 
         return errors
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs: Any) -> InstallationResult:
+    def install(
+        self, force: bool = False, dry_run: bool = False, **kwargs: Any
+    ) -> InstallationResult:
         """
         Install MCP configuration for Codex.
 

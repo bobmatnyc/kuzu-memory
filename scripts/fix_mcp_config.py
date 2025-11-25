@@ -150,15 +150,20 @@ class MCPConfigFixer:
         """
         Check if a server configuration needs to be fixed.
 
+        Checks for:
+        1. Outdated args patterns: ["mcp", "serve"]
+        2. Full path commands: /path/to/kuzu-memory
+
         Args:
             server_config: The server configuration dictionary
 
         Returns:
-            True if the configuration has outdated args
+            True if the configuration has outdated args or command
         """
         args = server_config.get("args", [])
+        command = server_config.get("command", "")
 
-        # Check for the problematic pattern: ["mcp", "serve"]
+        # Check for the problematic args pattern: ["mcp", "serve"]
         if isinstance(args, list) and len(args) >= 2:
             # Check for exact match or similar patterns
             if args[:2] == ["mcp", "serve"]:
@@ -167,11 +172,20 @@ class MCPConfigFixer:
             if "mcp" in args and "serve" in args:
                 return True
 
+        # Check for full path command (should be just "kuzu-memory")
+        if isinstance(command, str) and ("/" in command or "\\" in command):
+            if "kuzu-memory" in command:
+                return True
+
         return False
 
     def _fix_server_config(self, server_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Fix a server configuration by updating the args.
+        Fix a server configuration by updating the args and command.
+
+        Fixes:
+        1. Args: Removes "serve" from ["mcp", "serve"]
+        2. Command: Replaces full path with "kuzu-memory"
 
         Args:
             server_config: The server configuration dictionary to fix
@@ -179,31 +193,39 @@ class MCPConfigFixer:
         Returns:
             The fixed configuration dictionary
         """
+        # Fix args
         args = server_config.get("args", [])
 
-        if not isinstance(args, list):
+        if isinstance(args, list):
+            # Remove "serve" from args if it follows "mcp"
+            new_args = []
+            skip_next = False
+
+            for i, arg in enumerate(args):
+                if skip_next:
+                    skip_next = False
+                    continue
+
+                if arg == "mcp":
+                    new_args.append(arg)
+                    # Check if next arg is "serve" and skip it
+                    if i + 1 < len(args) and args[i + 1] == "serve":
+                        skip_next = True
+                        self.fixes_applied += 1
+                else:
+                    new_args.append(arg)
+
+            server_config["args"] = new_args
+        else:
             self._log(f"Warning: args is not a list: {type(args)}", "warning")
-            return server_config
 
-        # Remove "serve" from args if it follows "mcp"
-        new_args = []
-        skip_next = False
+        # Fix command (replace full path with just "kuzu-memory")
+        command = server_config.get("command", "")
+        if isinstance(command, str) and ("/" in command or "\\" in command):
+            if "kuzu-memory" in command:
+                server_config["command"] = "kuzu-memory"
+                self.fixes_applied += 1
 
-        for i, arg in enumerate(args):
-            if skip_next:
-                skip_next = False
-                continue
-
-            if arg == "mcp":
-                new_args.append(arg)
-                # Check if next arg is "serve" and skip it
-                if i + 1 < len(args) and args[i + 1] == "serve":
-                    skip_next = True
-                    self.fixes_applied += 1
-            else:
-                new_args.append(arg)
-
-        server_config["args"] = new_args
         return server_config
 
     def fix(self) -> bool:

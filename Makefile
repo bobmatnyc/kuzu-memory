@@ -1,6 +1,13 @@
 # KuzuMemory - Single Path Workflows
 # ONE way to do ANYTHING - Agentic Coder Optimizer compliance
 
+# Include modular makefiles
+-include .makefiles/common.mk
+-include .makefiles/deps.mk
+-include .makefiles/quality.mk
+-include .makefiles/testing.mk
+-include .makefiles/release.mk
+
 .PHONY: all help install dev init test build deploy clean docs format lint typecheck quality profile memory-test version-patch version-minor version-major changelog release install-home install-home-wrapper install-home-standalone update-home validate-home uninstall-home test-home-installer install-home-dry install-home-wrapper-dry install-home-standalone-dry changelog-fragment changelog-preview changelog-validate changelog-build
 
 # Default target
