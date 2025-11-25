@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def memory():
+def memory() -> None:
     """
     🧠 Memory operations (store, recall, enhance).
 
@@ -52,7 +52,7 @@ def memory():
 @click.option("--agent-id", default="cli", help="Agent ID that created this memory")
 @click.option("--metadata", help="Additional metadata as JSON string")
 @click.pass_context
-def store(ctx, content, source, session_id, agent_id, metadata):
+def store(ctx: click.Context, content: str, source: str, session_id: str | None, agent_id: str, metadata: str | None) -> None:
     """
     💾 Store a memory for future recall (synchronous).
 
@@ -137,7 +137,7 @@ def store(ctx, content, source, session_id, agent_id, metadata):
     help="Timeout for waiting on task completion (seconds)",
 )
 @click.pass_context
-def learn(ctx, content, source, metadata, quiet, no_wait, timeout):
+def learn(ctx: click.Context, content: str, source: str, metadata: str | None, quiet: bool, no_wait: bool, timeout: float) -> None:
     """
     🧠 Learn from content (with smart async processing).
 
@@ -270,15 +270,15 @@ def learn(ctx, content, source, metadata, quiet, no_wait, timeout):
 )
 @click.pass_context
 def recall(
-    ctx,
-    prompt,
-    max_memories,
-    strategy,
-    session_id,
-    agent_id,
-    output_format,
-    explain_ranking,
-):
+    ctx: click.Context,
+    prompt: str,
+    max_memories: int,
+    strategy: str,
+    session_id: str | None,
+    agent_id: str,
+    output_format: str,
+    explain_ranking: bool,
+) -> None:
     """
     🔍 Recall memories related to a topic or question.
 
@@ -447,7 +447,7 @@ def recall(
     help="Output format (context=enhanced prompt, plain=just context, json=raw)",
 )
 @click.pass_context
-def enhance(ctx, prompt, max_memories, output_format):
+def enhance(ctx: click.Context, prompt: str, max_memories: int, output_format: str) -> None:
     """
     🚀 Enhance a prompt with relevant memory context.
 
@@ -554,7 +554,7 @@ def enhance(ctx, prompt, max_memories, output_format):
 )
 @click.option("--force", is_flag=True, help="Skip confirmation prompts")
 @click.pass_context
-def prune(ctx, strategy, execute, backup, force):
+def prune(ctx: click.Context, strategy: str, execute: bool, backup: bool, force: bool) -> None:
     """
     🧹 Prune old or low-value memories to optimize database size.
 
@@ -750,7 +750,7 @@ def prune(ctx, strategy, execute, backup, force):
     help="Output format",
 )
 @click.pass_context
-def recent(ctx, limit, output_format):
+def recent(ctx: click.Context, limit: int, output_format: str) -> None:
     """
     🕒 Show recent memories stored in the project.
 
