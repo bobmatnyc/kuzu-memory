@@ -4,6 +4,8 @@ Status and information CLI commands for KuzuMemory.
 Provides unified status command combining stats and project info.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys

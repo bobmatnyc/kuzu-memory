@@ -5,6 +5,8 @@ Coordinates multiple recall strategies, ranks results, and builds
 the final MemoryContext for the attach_memories() method.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from collections import defaultdict

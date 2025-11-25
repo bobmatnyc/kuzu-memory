@@ -6,9 +6,12 @@ from text without requiring LLM calls. Includes pre-compilation for performance
 and sophisticated pattern matching for various memory types.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from ..core.models import ExtractedMemory, MemoryType
 from ..utils.validation import validate_text_input
@@ -59,7 +62,7 @@ class PatternExtractor:
             self._compile_patterns()
 
         # Statistics
-        self._extraction_stats = {
+        self._extraction_stats: dict[str, Any] = {
             "total_extractions": 0,
             "patterns_matched": {},
             "memory_types_extracted": {},
