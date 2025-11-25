@@ -5,6 +5,8 @@ Provides background reporting of memory operation results.
 Allows monitoring of async learning and storage tasks.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -71,7 +73,7 @@ class MemoryStatusReporter:
 
         # Components - lazy initialized to avoid circular imports
         self._queue_manager: MemoryQueueManager | None = None
-        self._background_learner = None  # Type: Optional[BackgroundLearner]
+        self._background_learner: BackgroundLearner | None = None
 
         # Reporting state
         self.reports: list[StatusReport] = []
@@ -80,7 +82,7 @@ class MemoryStatusReporter:
         self.lock = threading.Lock()
 
         # Callbacks for different report levels
-        self.callbacks: dict[ReportLevel, list[Callable]] = {level: [] for level in ReportLevel}
+        self.callbacks: dict[ReportLevel, list[Callable[..., Any]]] = {level: [] for level in ReportLevel}
 
         # Last seen task states (to detect changes)
         self.last_task_states: dict[str, TaskStatus] = {}
@@ -112,7 +114,7 @@ class MemoryStatusReporter:
             self._background_learner = get_background_learner()
         return self._background_learner
 
-    def start(self):
+    def start(self) -> None:
         """Start the status reporter thread."""
         if self.running:
             return
@@ -125,7 +127,7 @@ class MemoryStatusReporter:
 
         logger.info("Started memory status reporter")
 
-    def stop(self, timeout: float = 5.0):
+    def stop(self, timeout: float = 5.0) -> None:
         """Stop the status reporter thread."""
         if not self.running:
             return
@@ -138,7 +140,7 @@ class MemoryStatusReporter:
 
         logger.info("Stopped memory status reporter")
 
-    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]):
+    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]) -> None:
         """
         Add a callback for status reports at a specific level.
 
@@ -181,7 +183,7 @@ class MemoryStatusReporter:
                 "learning_stats": learning_stats,
             }
 
-    def _reporter_loop(self):
+    def _reporter_loop(self) -> None:
         """Main reporter loop."""
         logger.debug("Started status reporter loop")
 
@@ -205,7 +207,7 @@ class MemoryStatusReporter:
 
         logger.debug("Stopped status reporter loop")
 
-    def _check_task_updates(self):
+    def _check_task_updates(self) -> None:
         """Check for task status updates and generate reports."""
         # Get current tasks from queue manager
 
@@ -231,7 +233,7 @@ class MemoryStatusReporter:
                 details=learning_stats,
             )
 
-    def _generate_periodic_reports(self):
+    def _generate_periodic_reports(self) -> None:
         """Generate periodic status reports."""
         now = datetime.now()
 

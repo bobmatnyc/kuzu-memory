@@ -5,6 +5,8 @@ Collects metrics from various components and provides
 consolidated reporting and analysis.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -155,7 +157,7 @@ class MetricsCollector:
 
     async def _calculate_system_health(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Calculate overall system health from collected metrics."""
-        health = {
+        health: dict[str, Any] = {
             "status": "healthy",
             "score": 100,
             "issues": [],
@@ -225,7 +227,7 @@ class MetricsCollector:
         """Get detailed cache efficiency report."""
         cache_metrics = await self._collect_cache_metrics()
 
-        report = {
+        report: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "efficiency_analysis": {},
             "recommendations": [],
@@ -281,7 +283,7 @@ class MetricsCollector:
         """Get detailed database health report."""
         db_metrics = await self._collect_database_metrics()
 
-        report = {
+        report: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "connection_pool": {},
             "health_status": "unknown",
@@ -326,7 +328,7 @@ class MetricsCollector:
         return report
 
     async def export_metrics_report(
-        self, format: str = "json", include_detailed: bool = True
+        self, format_type: str = "json", include_detailed: bool = True
     ) -> str:
         """Export comprehensive metrics report."""
         # Collect all metrics
@@ -341,4 +343,4 @@ class MetricsCollector:
             }
 
         # Export in requested format
-        return await self.performance_monitor.export_metrics(format, data=all_metrics)
+        return await self.performance_monitor.export_metrics(format_type, data=all_metrics)

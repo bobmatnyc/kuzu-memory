@@ -6,9 +6,12 @@ for technical terms, multi-word entities, business entities, and more.
 No LLM required - uses sophisticated pattern matching only.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any, Pattern
 
 from ..utils.validation import validate_text_input
 
@@ -118,7 +121,7 @@ class EntityExtractor:
         }
 
         # Statistics
-        self._extraction_stats = {
+        self._extraction_stats: dict[str, Any] = {
             "total_entities": 0,
             "entity_types": {},
             "patterns_matched": {},
@@ -403,7 +406,7 @@ class EntityExtractor:
             logger.error(f"Error extracting entities from text: {e}")
             return []
 
-    def _get_runtime_patterns(self) -> list[tuple[list[tuple], str]]:
+    def _get_runtime_patterns(self) -> list[tuple[list[tuple[Pattern[str], float]], str]]:
         """Get patterns for runtime compilation (when pre-compilation is disabled)."""
         runtime_patterns = []
 
@@ -422,7 +425,7 @@ class EntityExtractor:
         return runtime_patterns
 
     def _extract_from_pattern_group(
-        self, text: str, pattern_group: list[tuple], entity_type: str
+        self, text: str, pattern_group: list[tuple[Pattern[str], float]], entity_type: str
     ) -> list[Entity]:
         """Extract entities from a specific pattern group."""
         entities = []
@@ -486,7 +489,7 @@ class EntityExtractor:
             return []
 
         # First remove exact duplicates
-        entity_groups = {}
+        entity_groups: dict[tuple[str, str], list[Entity]] = {}
         for entity in entities:
             key = (entity.normalized_text, entity.entity_type)
             if key not in entity_groups:
@@ -504,7 +507,7 @@ class EntityExtractor:
                 unique_entities.append(best_entity)
 
         # Remove overlapping entities (keep higher confidence ones)
-        final_entities = []
+        final_entities: list[Entity] = []
         for entity in sorted(unique_entities, key=lambda e: e.confidence, reverse=True):
             # Check if this entity overlaps with any already selected entity
             overlaps = False
@@ -612,7 +615,7 @@ class EntityExtractor:
                 self._extraction_stats["entity_types"].get(entity_type, 0) + 1
             )
 
-    def get_entity_statistics(self) -> dict[str, any]:
+    def get_entity_statistics(self) -> dict[str, Any]:
         """Get entity extraction statistics."""
         total_patterns = sum(len(group) for group, _ in self.compiled_patterns)
 
@@ -711,7 +714,7 @@ class EntityExtractor:
 
         return None
 
-    def get_entity_summary(self, entities: list[Entity]) -> dict[str, any]:
+    def get_entity_summary(self, entities: list[Entity]) -> dict[str, Any]:
         """Get a summary of extracted entities."""
         if not entities:
             return {
@@ -722,7 +725,7 @@ class EntityExtractor:
             }
 
         # Count by type
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for entity in entities:
             type_counts[entity.entity_type] = type_counts.get(entity.entity_type, 0) + 1
 
@@ -755,7 +758,7 @@ class EntityExtractor:
 
     def test_entity_pattern(
         self, pattern: str, test_text: str, entity_type: str = "test"
-    ) -> list[dict[str, any]]:
+    ) -> list[dict[str, Any]]:
         """
         Test a specific entity pattern against text (useful for debugging).
 

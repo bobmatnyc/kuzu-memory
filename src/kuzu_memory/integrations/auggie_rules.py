@@ -4,6 +4,8 @@ Auggie Rules Engine for KuzuMemory Integration.
 Handles rule management, execution, and statistics for Auggie integration.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from collections.abc import Callable
@@ -46,12 +48,12 @@ class AuggieRule:
     conditions: dict[str, Any]
     actions: dict[str, Any]
     enabled: bool = True
-    created_at: datetime = None
-    last_executed: datetime = None
+    created_at: datetime | None = None
+    last_executed: datetime | None = None
     execution_count: int = 0
     success_rate: float = 1.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.created_at is None:
             self.created_at = datetime.now()
 
@@ -96,7 +98,7 @@ class AuggieRule:
             self.last_executed = datetime.now()
             self.execution_count += 1
 
-            modifications = {}
+            modifications: dict[str, Any] = {}
 
             for action_type, action_config in self.actions.items():
                 if action_type == "add_context":
@@ -143,7 +145,7 @@ class AuggieRuleEngine:
     def __init__(self) -> None:
         self.rules: dict[str, AuggieRule] = {}
         self.execution_history: list[dict[str, Any]] = []
-        self.rule_callbacks: dict[RuleType, list[Callable]] = {}
+        self.rule_callbacks: dict[RuleType, list[Callable[..., Any]]] = {}
 
         # Initialize default rules
         self._initialize_default_rules()
@@ -153,7 +155,7 @@ class AuggieRuleEngine:
         self.successful_executions = 0
         self.last_cleanup = datetime.now()
 
-    def _initialize_default_rules(self):
+    def _initialize_default_rules(self) -> None:
         """Initialize default Auggie rules."""
         default_rules = [
             AuggieRule(
@@ -211,7 +213,7 @@ class AuggieRuleEngine:
         for rule in default_rules:
             self.rules[rule.id] = rule
 
-    def add_rule(self, rule: AuggieRule):
+    def add_rule(self, rule: AuggieRule) -> None:
         """Add a rule to the engine."""
         self.rules[rule.id] = rule
         logger.info(f"Added rule: {rule.name} ({rule.id})")
@@ -259,8 +261,8 @@ class AuggieRuleEngine:
             applicable_rules.sort(key=lambda r: r.priority.value)
 
             # Execute matching rules
-            all_modifications = {}
-            executed_rules = []
+            all_modifications: dict[str, Any] = {}
+            executed_rules: list[dict[str, Any]] = []
 
             for rule in applicable_rules:
                 if rule.matches_conditions(context):
@@ -310,7 +312,7 @@ class AuggieRuleEngine:
 
     def get_rule_statistics(self) -> dict[str, Any]:
         """Get comprehensive rule statistics."""
-        stats = {
+        stats: dict[str, Any] = {
             "total_rules": len(self.rules),
             "enabled_rules": len([r for r in self.rules.values() if r.enabled]),
             "disabled_rules": len([r for r in self.rules.values() if not r.enabled]),
@@ -324,18 +326,22 @@ class AuggieRuleEngine:
         }
 
         # Rules by type
+        rules_by_type: dict[str, int] = {}
         for rule in self.rules.values():
             rule_type = rule.rule_type.value
-            if rule_type not in stats["rules_by_type"]:
-                stats["rules_by_type"][rule_type] = 0
-            stats["rules_by_type"][rule_type] += 1
+            if rule_type not in rules_by_type:
+                rules_by_type[rule_type] = 0
+            rules_by_type[rule_type] += 1
+        stats["rules_by_type"] = rules_by_type
 
         # Rules by priority
+        rules_by_priority: dict[str, int] = {}
         for rule in self.rules.values():
             priority = rule.priority.name
-            if priority not in stats["rules_by_priority"]:
-                stats["rules_by_priority"][priority] = 0
-            stats["rules_by_priority"][priority] += 1
+            if priority not in rules_by_priority:
+                rules_by_priority[priority] = 0
+            rules_by_priority[priority] += 1
+        stats["rules_by_priority"] = rules_by_priority
 
         # Top executed rules
         sorted_rules = sorted(self.rules.values(), key=lambda r: r.execution_count, reverse=True)
