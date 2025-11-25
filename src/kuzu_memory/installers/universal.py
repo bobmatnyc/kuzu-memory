@@ -5,7 +5,10 @@ Creates generic integration files that work with any AI system.
 Refactored to use modular system utilities and package managers.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 
 from .base import BaseInstaller, InstallationError, InstallationResult
 from .package_managers import ExampleGenerator
@@ -42,7 +45,7 @@ class UniversalInstaller(BaseInstaller):
             "Includes Python, JavaScript, and shell integration examples."
         )
 
-    def install(self, force: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install universal integration files.
 
@@ -101,7 +104,7 @@ class UniversalInstaller(BaseInstaller):
 
     def check_prerequisites(self) -> list[str]:
         """Check installation prerequisites."""
-        errors = []
+        errors: list[Any] = []
 
         # Validate environment
         env_status = EnvironmentValidator.validate_environment(self.project_root)
@@ -125,7 +128,7 @@ class UniversalInstaller(BaseInstaller):
     def uninstall(self) -> InstallationResult:
         """Uninstall universal integration files."""
         try:
-            removed_files = []
+            removed_files: list[Any] = []
 
             # Remove main integration files
             for file_pattern in self.required_files:
@@ -156,26 +159,26 @@ class UniversalInstaller(BaseInstaller):
 
     def _check_existing_files(self) -> list[str]:
         """Check for existing installation files."""
-        existing_files = []
+        existing_files: list[Any] = []
         for file_pattern in self.required_files:
             file_path = self.project_root / file_pattern
             if file_path.exists():
                 existing_files.append(str(file_path))
         return existing_files
 
-    def _install_integration_guide(self, ai_system: str):
+    def _install_integration_guide(self, ai_system: str) -> None:
         """Install the main integration guide."""
         try:
             if ExampleGenerator.create_integration_guide(self.project_root, ai_system):
                 guide_path = self.project_root / "kuzu-memory-integration.md"
-                self.files_created.append(str(guide_path))
+                self.files_created.append(guide_path)
             else:
                 raise InstallationError("Failed to create integration guide")
 
         except Exception as e:
             raise InstallationError(f"Failed to install integration guide: {e}")
 
-    def _install_examples(self):
+    def _install_examples(self) -> None:
         """Install all integration examples."""
         examples_created = 0
 
@@ -183,7 +186,7 @@ class UniversalInstaller(BaseInstaller):
         try:
             if ExampleGenerator.create_python_example(self.project_root):
                 python_path = self.project_root / "examples" / "python_integration.py"
-                self.files_created.append(str(python_path))
+                self.files_created.append(python_path)
                 examples_created += 1
         except Exception as e:
             self.warnings.append(f"Failed to create Python example: {e}")
@@ -192,7 +195,7 @@ class UniversalInstaller(BaseInstaller):
         try:
             if ExampleGenerator.create_javascript_example(self.project_root):
                 js_path = self.project_root / "examples" / "javascript_integration.js"
-                self.files_created.append(str(js_path))
+                self.files_created.append(js_path)
                 examples_created += 1
         except Exception as e:
             self.warnings.append(f"Failed to create JavaScript example: {e}")
@@ -201,7 +204,7 @@ class UniversalInstaller(BaseInstaller):
         try:
             if ExampleGenerator.create_shell_example(self.project_root):
                 shell_path = self.project_root / "examples" / "shell_integration.sh"
-                self.files_created.append(str(shell_path))
+                self.files_created.append(shell_path)
                 examples_created += 1
         except Exception as e:
             self.warnings.append(f"Failed to create shell example: {e}")
@@ -211,9 +214,9 @@ class UniversalInstaller(BaseInstaller):
 
         logger.info(f"Created {examples_created} integration examples")
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         """Get installation status information."""
-        status = {
+        status: dict[str, Any] = {
             "installed": False,
             "files_exist": [],
             "files_missing": [],
@@ -248,7 +251,7 @@ class UniversalInstaller(BaseInstaller):
 
         return status
 
-    def get_integration_info(self) -> dict:
+    def get_integration_info(self) -> dict[str, Any]:
         """Get information about available integrations."""
         return {
             "name": self.ai_system_name,

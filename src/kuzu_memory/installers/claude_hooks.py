@@ -5,6 +5,8 @@ Provides seamless integration with Claude Desktop through MCP (Model Context Pro
 and project-specific hooks for intelligent memory enhancement.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import platform
@@ -50,7 +52,7 @@ class ClaudeHooksInstaller(BaseInstaller):
     4. Environment detection and validation
     """
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         """Initialize Claude hooks installer."""
         super().__init__(project_root)
         self.claude_config_dir = self._get_claude_config_dir()
@@ -66,6 +68,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         global_config_path = Path.home() / ".claude.json"
 
         # Load or create config
+        config: dict[str, Any]
         if global_config_path.exists():
             try:
                 with open(global_config_path) as f:
@@ -124,7 +127,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
     def _clean_legacy_mcp_locations(self) -> list[str]:
         """Remove MCP config from incorrect locations. Returns warnings."""
-        warnings = []
+        warnings=[]
 
         # Clean from top-level ~/.claude.json (wrong location)
         global_config_path = Path.home() / ".claude.json"
@@ -397,7 +400,7 @@ class ClaudeHooksInstaller(BaseInstaller):
 
         return False
 
-    def _validate_hook_events(self, config: dict) -> None:
+    def _validate_hook_events(self, config: dict[str, Any]) -> None:
         """
         Validate hook event names against Claude Code specification.
 
@@ -808,7 +811,7 @@ exec {kuzu_cmd} "$@"
             logger.warning(f"Failed to read ~/.claude.json: {e}")
             return []
 
-        broken_installs = []
+        broken_installs: list[Any] = []
 
         for project_path, project_config in config.get("projects", {}).items():
             if not isinstance(project_config, dict):
@@ -981,7 +984,7 @@ exec {kuzu_cmd} "$@"
             }
         """
         broken = self._detect_broken_mcp_installations()
-        results = {
+        results: dict[str, Any] = {
             "detected": len(broken),
             "migrated": 0,
             "failed": 0,
@@ -995,7 +998,7 @@ exec {kuzu_cmd} "$@"
         logger.info(f"🔧 Detected {len(broken)} broken MCP installation(s)")
         print("\n🔧 Migrating MCP configurations...")
 
-        migrated_projects = []
+        migrated_projects: list[Any] = []
 
         for install in broken:
             project_path = Path(install["project_path"])
@@ -1124,7 +1127,7 @@ exec {kuzu_cmd} "$@"
         force: bool = False,
         dry_run: bool = False,
         verbose: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> InstallationResult:
         """
         Install Claude Code hooks for KuzuMemory.
@@ -1268,7 +1271,7 @@ exec {kuzu_cmd} "$@"
 
             # Create or update settings.local.json with hooks AND MCP server config
             settings_path = claude_dir / "settings.local.json"
-            existing_settings = {}
+            existing_settings: dict[str, Any] = {}
 
             if settings_path.exists():
                 try:
@@ -1468,7 +1471,7 @@ exec {kuzu_cmd} "$@"
         Returns:
             List of warning messages if any tests fail. Empty list if all tests pass.
         """
-        warnings = []
+        warnings=[]
 
         # Test 1: CLI availability
         try:
@@ -1496,7 +1499,7 @@ exec {kuzu_cmd} "$@"
                     # Repair succeeded - show what was fixed
                     for msg in repair_messages:
                         if "✓" in msg or "Updated" in msg or "Migrated" in msg:
-                            self.logger.info(msg)
+                            logger.info(msg)
                 else:
                     # Some issues remain after repair
                     warnings.extend(remaining_warnings)
@@ -1532,7 +1535,7 @@ exec {kuzu_cmd} "$@"
         Returns:
             List of warning messages for any configuration issues
         """
-        warnings = []
+        warnings=[]
         settings_path = self.project_root / ".claude" / "settings.local.json"
 
         if not settings_path.exists():
@@ -1575,7 +1578,7 @@ exec {kuzu_cmd} "$@"
         Returns:
             (success: bool, messages: list[str]) - Whether repair succeeded and log messages
         """
-        messages = []
+        messages: list[Any] = []
         settings_path = self.project_root / ".claude" / "settings.local.json"
 
         if not settings_path.exists():
@@ -1625,9 +1628,9 @@ exec {kuzu_cmd} "$@"
             messages.append(f"Failed to repair config: {e}")
             return False, messages
 
-    def _fix_command_paths(self, config: dict) -> tuple[bool, list[str]]:
+    def _fix_command_paths(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """Fix incorrect or relative command paths."""
-        messages = []
+        messages: list[Any] = []
         modified = False
         correct_path = self._get_kuzu_memory_command_path()
 
@@ -1650,9 +1653,9 @@ exec {kuzu_cmd} "$@"
 
         return modified, messages
 
-    def _migrate_legacy_events(self, config: dict) -> tuple[bool, list[str]]:
+    def _migrate_legacy_events(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """Migrate legacy event names to current format."""
-        messages = []
+        messages: list[Any] = []
         modified = False
 
         # Event name migration map
@@ -1681,9 +1684,9 @@ exec {kuzu_cmd} "$@"
 
         return modified, messages
 
-    def _fix_legacy_command_syntax(self, config: dict) -> tuple[bool, list[str]]:
+    def _fix_legacy_command_syntax(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """Fix legacy command syntax (add 'hooks' subcommand)."""
-        messages = []
+        messages: list[Any] = []
         modified = False
 
         hooks = config.get("hooks", {})
@@ -1728,7 +1731,7 @@ exec {kuzu_cmd} "$@"
         Returns:
             List of warning messages for any hook execution failures
         """
-        warnings = []
+        warnings=[]
 
         # Get kuzu-memory command path
         kuzu_cmd = self._get_kuzu_memory_command_path()
@@ -1756,7 +1759,7 @@ exec {kuzu_cmd} "$@"
 
         return warnings
 
-    def _run_hook_test(self, hook_cmd: str, test_input: dict) -> subprocess.CompletedProcess:
+    def _run_hook_test(self, hook_cmd: str, test_input: dict[str, Any]) -> subprocess.CompletedProcess[str]:
         """
         Run a single hook command test.
 
@@ -1776,7 +1779,7 @@ exec {kuzu_cmd} "$@"
             cwd=str(self.project_root),
         )
 
-    def uninstall(self, **kwargs) -> InstallationResult:
+    def uninstall(self, **kwargs: Any) -> InstallationResult:
         """
         Uninstall Claude Code hooks.
 
@@ -1787,7 +1790,7 @@ exec {kuzu_cmd} "$@"
             InstallationResult with details of the uninstallation
         """
         try:
-            removed_files = []
+            removed_files: list[Any] = []
 
             # Remove CLAUDE.md if it was created by us
             claude_md_path = self.project_root / "CLAUDE.md"

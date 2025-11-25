@@ -5,6 +5,8 @@ Provides installers for integrating KuzuMemory with Claude Desktop via MCP.
 Supports both pipx-based and home directory installations.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -29,16 +31,18 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
     by detecting and using the pipx-installed package.
     """
 
-    def __init__(self, project_root: Path, **kwargs):
+    def __init__(self, project_root: Path, **kwargs: Any) -> None:
         """Initialize the installer."""
         super().__init__(project_root)
 
         # Configuration options
-        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        self.memory_db = kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
-        self.force = kwargs.get("force", False)
-        self.dry_run = kwargs.get("dry_run", False)
-        self.verbose = kwargs.get("verbose", False)
+        backup_dir_arg: Path | str | None = kwargs.get("backup_dir")
+        memory_db_arg: Path | str | None = kwargs.get("memory_db")
+        self.backup_dir = Path(backup_dir_arg) if backup_dir_arg else Path.home() / ".kuzu-memory-backups"
+        self.memory_db = Path(memory_db_arg) if memory_db_arg else Path.home() / ".kuzu-memory" / "memorydb"
+        self.force: bool = kwargs.get("force", False)
+        self.dry_run: bool = kwargs.get("dry_run", False)
+        self.verbose: bool = kwargs.get("verbose", False)
 
         # Platform-specific paths
         self.config_path = self._get_claude_config_path()
@@ -110,19 +114,22 @@ class ClaudeDesktopPipxInstaller(BaseInstaller):
                     app_paths = venv_info["metadata"]["main_package"]["app_paths"]
 
                     if apps and app_paths:
+                        app_path: str
                         if isinstance(app_paths, list) and app_paths:
                             app_path_dict = app_paths[0]
-                            app_path = (
+                            app_path_raw: Any = (
                                 app_path_dict.get("__Path__")
                                 if isinstance(app_path_dict, dict)
                                 else str(app_path_dict)
                             )
+                            app_path = str(app_path_raw) if app_path_raw is not None else ""
                         else:
                             app_path = str(app_paths)
 
-                        logger.info(f"Found pipx installation at {app_path}")
-                        pipx_venv_dir = Path(app_path).parent.parent
-                        return str(app_path), pipx_venv_dir
+                        if app_path:
+                            logger.info(f"Found pipx installation at {app_path}")
+                            pipx_venv_dir = Path(app_path).parent.parent
+                            return str(app_path), pipx_venv_dir
         except (subprocess.SubprocessError, json.JSONDecodeError, KeyError) as e:
             logger.debug(f"Could not detect pipx installation: {e}")
 
@@ -255,11 +262,11 @@ retention:
             },
         }
 
-    def install(self, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """Install Claude Desktop MCP integration."""
         try:
             # Update options from kwargs
-            self.force = kwargs.get("force", self.force)
+            self.force = force or kwargs.get("force", self.force)
             self.dry_run = kwargs.get("dry_run", self.dry_run)
 
             # Find kuzu-memory installation
@@ -282,7 +289,7 @@ retention:
                     self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Load or create configuration
-            config = {}
+            config: dict[str, Any] = {}
             backup_path = None
             if self.config_path.exists():
                 backup_path = self._backup_config(self.config_path)
@@ -372,7 +379,7 @@ retention:
                 message="Claude Desktop MCP integration installed successfully",
                 files_created=created_files,
                 files_modified=modified_files,
-                backup_files=[str(backup_path)] if backup_path else [],
+                backup_files=[backup_path] if backup_path else [],
                 warnings=[
                     "Restart Claude Desktop to load the new configuration",
                     "Available MCP tools: kuzu_enhance, kuzu_learn, kuzu_recall, kuzu_remember, kuzu_stats",
@@ -393,7 +400,7 @@ retention:
                 warnings=[],
             )
 
-    def uninstall(self, **kwargs) -> InstallationResult:
+    def uninstall(self, **kwargs: Any) -> InstallationResult:
         """Remove Claude Desktop MCP integration."""
         try:
             if not self.config_path.exists():
@@ -432,8 +439,8 @@ retention:
                     ai_system=self.ai_system_name,
                     message="Removed KuzuMemory from Claude Desktop configuration",
                     files_created=[],
-                    files_modified=[str(self.config_path)],
-                    backup_files=[str(backup_path)] if backup_path else [],
+                    files_modified=[self.config_path],
+                    backup_files=[backup_path] if backup_path else [],
                     warnings=[],
                 )
             else:
@@ -496,17 +503,19 @@ class SmartClaudeDesktopInstaller(BaseInstaller):
     Supports --mode flag (auto|pipx|home) to override detection.
     """
 
-    def __init__(self, project_root: Path, **kwargs):
+    def __init__(self, project_root: Path, **kwargs: Any) -> None:
         """Initialize the smart installer."""
         super().__init__(project_root)
 
         # Configuration options
-        self.mode = kwargs.get("mode", "auto")
-        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        self.memory_db = kwargs.get("memory_db") or Path.home() / ".kuzu-memory" / "memorydb"
-        self.force = kwargs.get("force", False)
-        self.dry_run = kwargs.get("dry_run", False)
-        self.verbose = kwargs.get("verbose", False)
+        self.mode: str = kwargs.get("mode", "auto")
+        backup_dir_arg: Path | str | None = kwargs.get("backup_dir")
+        memory_db_arg: Path | str | None = kwargs.get("memory_db")
+        self.backup_dir = Path(backup_dir_arg) if backup_dir_arg else Path.home() / ".kuzu-memory-backups"
+        self.memory_db = Path(memory_db_arg) if memory_db_arg else Path.home() / ".kuzu-memory" / "memorydb"
+        self.force: bool = kwargs.get("force", False)
+        self.dry_run: bool = kwargs.get("dry_run", False)
+        self.verbose: bool = kwargs.get("verbose", False)
 
         # Delegate installer
         self._delegate: BaseInstaller | None = None
@@ -579,18 +588,19 @@ class SmartClaudeDesktopInstaller(BaseInstaller):
 
         return self._delegate
 
-    def install(self, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """Install Claude Desktop MCP integration."""
         # Update options from kwargs
-        self.force = kwargs.get("force", self.force)
+        self.force = force or kwargs.get("force", self.force)
         self.dry_run = kwargs.get("dry_run", self.dry_run)
-        self.mode = kwargs.get("mode", self.mode)
+        mode_arg: str | None = kwargs.get("mode")
+        self.mode = mode_arg if mode_arg is not None else self.mode
 
         # Get and invoke delegate
         delegate = self._get_delegate()
         return delegate.install(**kwargs)
 
-    def uninstall(self, **kwargs) -> InstallationResult:
+    def uninstall(self, **kwargs: Any) -> InstallationResult:
         """Remove Claude Desktop MCP integration."""
         delegate = self._get_delegate()
         return delegate.uninstall(**kwargs)
@@ -613,16 +623,17 @@ class ClaudeDesktopHomeInstaller(BaseInstaller):
     without requiring pipx. Supports both wrapper and standalone modes.
     """
 
-    def __init__(self, project_root: Path, **kwargs):
+    def __init__(self, project_root: Path, **kwargs: Any) -> None:
         """Initialize the installer."""
         super().__init__(project_root)
 
         # Configuration options
-        self.mode = kwargs.get("mode", "auto")
-        self.backup_dir = kwargs.get("backup_dir") or Path.home() / ".kuzu-memory-backups"
-        self.force = kwargs.get("force", False)
-        self.dry_run = kwargs.get("dry_run", False)
-        self.verbose = kwargs.get("verbose", False)
+        self.mode: str = kwargs.get("mode", "auto")
+        backup_dir_arg: Path | str | None = kwargs.get("backup_dir")
+        self.backup_dir = Path(backup_dir_arg) if backup_dir_arg else Path.home() / ".kuzu-memory-backups"
+        self.force: bool = kwargs.get("force", False)
+        self.dry_run: bool = kwargs.get("dry_run", False)
+        self.verbose: bool = kwargs.get("verbose", False)
 
         # Installation directories
         self.install_root = Path.home() / ".kuzu-memory"
@@ -711,7 +722,8 @@ class ClaudeDesktopHomeInstaller(BaseInstaller):
     def _detect_installation_mode(self) -> str:
         """Detect the best installation mode."""
         if self.mode != "auto":
-            return self.mode
+            # Return the configured mode directly
+            return str(self.mode)
 
         python_exe, package_path = self._find_system_installation()
 
@@ -789,13 +801,14 @@ if __name__ == '__main__':
         shutil.copytree(src_package, dest_package)
         logger.info(f"Copied package to: {dest_package}")
 
-    def install(self, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """Install KuzuMemory to ~/.kuzu-memory/."""
         try:
             # Update options from kwargs
-            self.force = kwargs.get("force", self.force)
+            self.force = force or kwargs.get("force", self.force)
             self.dry_run = kwargs.get("dry_run", self.dry_run)
-            self.mode = kwargs.get("mode", self.mode)
+            mode_arg: str | None = kwargs.get("mode")
+            self.mode = mode_arg if mode_arg is not None else self.mode
 
             # Detect installation mode
             installation_type = self._detect_installation_mode()
@@ -1018,7 +1031,7 @@ retention:
         with open(self.claude_config_path, "w") as f:
             json.dump(config, f, indent=2)
 
-    def uninstall(self, **kwargs) -> InstallationResult:
+    def uninstall(self, **kwargs: Any) -> InstallationResult:
         """Remove installation."""
         try:
             if not self.install_root.exists():
@@ -1078,7 +1091,7 @@ retention:
 
     def get_status(self) -> dict[str, Any]:
         """Get installation status."""
-        status = {
+        status: dict[str, Any] = {
             "installed": self.install_root.exists(),
             "launcher_exists": (self.bin_dir / "kuzu-memory-mcp-server").exists(),
             "config_exists": self.config_file.exists(),
