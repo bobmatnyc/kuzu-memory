@@ -4,10 +4,14 @@ Project management CLI commands for KuzuMemory.
 Contains commands for init, project, stats, cleanup operations.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -291,7 +295,7 @@ def stats(ctx, detailed, output_format):
         with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
             # Collect all statistics - simplified to avoid query errors
             recent_memories = memory.get_recent_memories(limit=24)
-            stats_data = {
+            stats_data: dict[str, Any] = {
                 "total_memories": memory.get_memory_count(),
                 "memory_types": {},  # Temporarily disabled due to query issues
                 "sources": {},  # Temporarily disabled due to query issues

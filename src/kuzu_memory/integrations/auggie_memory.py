@@ -4,6 +4,8 @@ Auggie Memory and Learning Module for KuzuMemory Integration.
 Handles response learning, pattern recognition, and memory synchronization.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from collections import defaultdict, deque
@@ -25,7 +27,7 @@ class LearningPattern:
         self.confidence = 0.5
         self.usage_count = 0
         self.created_at = datetime.now()
-        self.last_used = None
+        self.last_used: datetime | None = None
         self.success_rate = 1.0
 
     def update_confidence(self, feedback_score: float):
@@ -70,13 +72,13 @@ class ResponseLearner:
         self.learned_patterns: dict[str, LearningPattern] = {}
         self.feedback_history: list[dict[str, Any]] = []
         self.context_patterns: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        self.response_quality_cache = deque(maxlen=100)
+        self.response_quality_cache: deque[dict[str, Any]] = deque(maxlen=100)
 
         # Learning statistics
         self.total_interactions = 0
         self.positive_feedback_count = 0
         self.pattern_discovery_count = 0
-        self.last_learning_event = None
+        self.last_learning_event: datetime | None = None
 
     def process_interaction(
         self,
@@ -90,7 +92,7 @@ class ResponseLearner:
             self.total_interactions += 1
             self.last_learning_event = datetime.now()
 
-            learning_results = {
+            learning_results: dict[str, Any] = {
                 "patterns_discovered": [],
                 "patterns_updated": [],
                 "context_learned": [],
@@ -421,7 +423,7 @@ class ResponseLearner:
         ]
 
         # Domain distribution
-        domain_counts = defaultdict(int)
+        domain_counts: defaultdict[str, int] = defaultdict(int)
         for pattern in self.learned_patterns.values():
             if pattern.pattern_type == "domain_specific":
                 domain = pattern.pattern_data.get("domain", "unknown")
@@ -481,12 +483,15 @@ class ResponseLearner:
                 )
 
             # Recommend learning opportunities
-            if self.positive_feedback_rate < 70:
+            positive_feedback_rate = (
+                self.positive_feedback_count / max(self.total_interactions, 1)
+            ) * 100
+            if positive_feedback_rate < 70:
                 recommendations.append(
                     {
                         "type": "feedback_improvement",
                         "message": "Consider collecting more user feedback to improve learning",
-                        "current_rate": self.positive_feedback_rate,
+                        "current_rate": positive_feedback_rate,
                     }
                 )
 

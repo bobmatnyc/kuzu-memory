@@ -5,6 +5,8 @@ Provides async task queuing for memory operations that don't need to block
 AI responses. Uses threading and queue for simple, reliable operation.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import uuid
@@ -65,24 +67,24 @@ class MemoryTask:
         if not self.content.strip():
             raise ValueError("Task content cannot be empty")
 
-    def start_processing(self):
+    def start_processing(self) -> None:
         """Mark task as started."""
         self.status = TaskStatus.PROCESSING
         self.started_at = datetime.now()
 
-    def complete(self, result: dict[str, Any]):
+    def complete(self, result: dict[str, Any]) -> None:
         """Mark task as completed with result."""
         self.status = TaskStatus.COMPLETED
         self.completed_at = datetime.now()
         self.result = result
 
-    def fail(self, error: str):
+    def fail(self, error: str) -> None:
         """Mark task as failed with error."""
         self.status = TaskStatus.FAILED
         self.completed_at = datetime.now()
         self.error = error
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Cancel the task."""
         self.status = TaskStatus.CANCELLED
         self.completed_at = datetime.now()
@@ -120,7 +122,7 @@ class MemoryQueueManager:
         self.max_queue_size = max_queue_size
 
         # Task queue and tracking
-        self.task_queue = Queue(maxsize=max_queue_size)
+        self.task_queue: Queue[MemoryTask] = Queue(maxsize=max_queue_size)
         self.tasks: dict[str, MemoryTask] = {}
         self.completed_tasks: list[MemoryTask] = []
 
@@ -131,7 +133,7 @@ class MemoryQueueManager:
         self.lock = threading.Lock()
 
         # Task processors
-        self.processors: dict[TaskType, Callable] = {}
+        self.processors: dict[TaskType, Callable[[MemoryTask], dict[str, Any]]] = {}
 
         # Statistics
         self.stats = {
@@ -143,12 +145,12 @@ class MemoryQueueManager:
 
         logger.info(f"Initialized MemoryQueueManager with {max_workers} workers")
 
-    def register_processor(self, task_type: TaskType, processor: Callable):
+    def register_processor(self, task_type: TaskType, processor: Callable[[MemoryTask], dict[str, Any]]) -> None:
         """Register a processor function for a task type."""
         self.processors[task_type] = processor
         logger.debug(f"Registered processor for {task_type.value}")
 
-    def start(self):
+    def start(self) -> None:
         """Start the worker threads."""
         with self.lock:
             if self._started:
@@ -168,7 +170,7 @@ class MemoryQueueManager:
 
             logger.info(f"Started {len(self.workers)} memory worker threads")
 
-    def stop(self, timeout: float = 5.0):
+    def stop(self, timeout: float = 5.0) -> None:
         """Stop the worker threads."""
         if not self.running:
             return
@@ -238,7 +240,7 @@ class MemoryQueueManager:
                 ),
             }
 
-    def cleanup_completed_tasks(self, max_age_seconds: int = 300):
+    def cleanup_completed_tasks(self, max_age_seconds: int = 300) -> None:
         """Clean up old completed tasks."""
         with self.lock:
             current_time = datetime.now()
@@ -258,7 +260,7 @@ class MemoryQueueManager:
             if to_remove:
                 logger.debug(f"Cleaned up {len(to_remove)} old tasks")
 
-    def _worker_loop(self):
+    def _worker_loop(self) -> None:
         """Main worker loop for processing tasks."""
         worker_name = threading.current_thread().name
         logger.info(f"Started worker thread {worker_name}")
@@ -288,7 +290,7 @@ class MemoryQueueManager:
 
         logger.info(f"Stopped worker thread {worker_name}")
 
-    def _process_task(self, task: MemoryTask):
+    def _process_task(self, task: MemoryTask) -> None:
         """Process a single task."""
         try:
             # Mark as processing
@@ -342,7 +344,7 @@ def get_queue_manager() -> MemoryQueueManager:
     return _queue_manager
 
 
-def shutdown_queue_manager():
+def shutdown_queue_manager() -> None:
     """Shutdown the global queue manager."""
     global _queue_manager
     if _queue_manager:
