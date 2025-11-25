@@ -5,6 +5,8 @@ Main integration interface that coordinates rules engine and memory learning.
 Refactored to use modular components for better maintainability.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timedelta
@@ -58,7 +60,7 @@ class AuggieIntegration:
             self.memory_synchronizer = MemorySynchronizer(self.memory_system)
 
         # Integration statistics
-        self.integration_stats = {
+        self.integration_stats: dict[str, Any] = {
             "prompts_enhanced": 0,
             "responses_learned": 0,
             "rules_executed": 0,

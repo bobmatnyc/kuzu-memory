@@ -5,6 +5,8 @@ Provides async learning that doesn't block AI responses.
 Processes learning tasks in background threads with status reporting.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from datetime import datetime
@@ -45,7 +47,7 @@ class BackgroundLearner:
         self.queue_manager.register_processor(TaskType.STORE, self._process_store_task)
 
         # Learning statistics
-        self.stats = {
+        self.stats: dict[str, Any] = {
             "memories_learned": 0,
             "learning_failures": 0,
             "total_learning_time_ms": 0.0,

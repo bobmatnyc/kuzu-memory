@@ -5,6 +5,8 @@ Implements the JSON-RPC 2.0 specification for communication between
 Claude Code and the KuzuMemory MCP server.
 """
 
+from __future__ import annotations
+
 import asyncio
 import io
 import json
