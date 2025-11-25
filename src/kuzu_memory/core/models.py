@@ -6,6 +6,8 @@ including Memory, MemoryContext, and related types with full
 validation and serialization support.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 from datetime import datetime, timedelta
@@ -15,8 +17,9 @@ from uuid import uuid4
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
-    confloat,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -45,7 +48,7 @@ class MemoryType(str, Enum):
     PREFERENCE = "preference"  # User/team preferences
 
     @classmethod
-    def get_default_retention(cls, memory_type: "MemoryType") -> timedelta | None:
+    def get_default_retention(cls, memory_type: MemoryType) -> timedelta | None:
         """Get default retention period for memory type."""
         retention_map = {
             cls.EPISODIC: timedelta(days=30),  # Personal experiences fade
@@ -58,7 +61,7 @@ class MemoryType(str, Enum):
         return retention_map.get(memory_type)
 
     @classmethod
-    def get_default_importance(cls, memory_type: "MemoryType") -> float:
+    def get_default_importance(cls, memory_type: MemoryType) -> float:
         """Get default importance score for memory type."""
         importance_map = {
             cls.EPISODIC: 0.7,  # Medium-high importance
@@ -71,7 +74,7 @@ class MemoryType(str, Enum):
         return importance_map.get(memory_type, 0.5)
 
     @classmethod
-    def from_legacy_type(cls, legacy_type: str) -> "MemoryType":
+    def from_legacy_type(cls, legacy_type: str) -> MemoryType:
         """Convert legacy memory type to cognitive type."""
         migration_map = {
             "identity": cls.SEMANTIC,  # Facts about identity
@@ -93,6 +96,19 @@ class Memory(BaseModel):
     with automatic hash generation for deduplication.
     """
 
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "content": "User prefers Python for backend development",
+                "memory_type": "preference",
+                "importance": 0.9,
+                "entities": ["Python", "backend"],
+                "metadata": {"extracted_by": "pattern_matcher"},
+            }
+        }
+    )
+
     # Core content
     id: str = Field(default_factory=lambda: str(uuid4()), description="Unique memory identifier")
     content: str = Field(..., min_length=1, max_length=100_000, description="Memory content text")
@@ -113,8 +129,8 @@ class Memory(BaseModel):
 
     # Classification
     memory_type: MemoryType = Field(default=MemoryType.EPISODIC, description="Type of memory")
-    importance: confloat(ge=0.0, le=1.0) = Field(default=0.5, description="Importance score (0-1)")
-    confidence: confloat(ge=0.0, le=1.0) = Field(default=1.0, description="Confidence score (0-1)")
+    importance: float = Field(default=0.5, ge=0.0, le=1.0, description="Importance score (0-1)")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score (0-1)")
 
     # Source tracking
     source_type: str = Field(default="conversation", description="Source of the memory")
@@ -128,25 +144,15 @@ class Memory(BaseModel):
         default_factory=list, description="Extracted entities"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
-        json_schema_extra = {
-            "example": {
-                "content": "User prefers Python for backend development",
-                "memory_type": "preference",
-                "importance": 0.9,
-                "entities": ["Python", "backend"],
-                "metadata": {"extracted_by": "pattern_matcher"},
-            }
-        }
+    # Pydantic V2 serializers for custom datetime formatting
+    @field_serializer("created_at", "valid_from", "valid_to", "accessed_at")
+    def serialize_datetime(self, dt: datetime | None, _info: Any) -> str | None:
+        """Serialize datetime to ISO format."""
+        return dt.isoformat() if dt else None
 
     @field_validator("content")
     @classmethod
-    def validate_content(cls, v):
+    def validate_content(cls, v: str) -> str:
         """Validate and sanitize content."""
         if not v or not v.strip():
             raise ValueError("Content cannot be empty")
@@ -156,16 +162,32 @@ class Memory(BaseModel):
 
     @field_validator("entities")
     @classmethod
-    def validate_entities(cls, v):
+    def validate_entities(cls, v: list[str | dict[str, Any]]) -> list[str | dict[str, Any]]:
         """Validate entity list."""
         if not isinstance(v, list):
             raise ValueError("Entities must be a list")
         # Remove duplicates and empty strings
-        return list({entity.strip() for entity in v if entity and entity.strip()})
+        cleaned: set[str | tuple[tuple[str, Any], ...]] = set()
+        result: list[str | dict[str, Any]] = []
+
+        for entity in v:
+            if isinstance(entity, str):
+                entity_str = entity.strip()
+                if entity_str and entity_str not in cleaned:
+                    cleaned.add(entity_str)
+                    result.append(entity_str)
+            elif isinstance(entity, dict) and entity:
+                # For dicts, create a hashable representation for deduplication
+                entity_tuple = tuple(sorted(entity.items()))
+                if entity_tuple not in cleaned:
+                    cleaned.add(entity_tuple)
+                    result.append(entity)
+
+        return result
 
     @model_validator(mode="before")
     @classmethod
-    def set_defaults_and_hash(cls, values):
+    def set_defaults_and_hash(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Set default values and generate content hash."""
         # Set default importance based on memory type
         if "importance" not in values or values["importance"] == 0.5:
@@ -243,7 +265,7 @@ class Memory(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Memory":
+    def from_dict(cls, data: dict[str, Any]) -> Memory:
         """Create Memory from dictionary (e.g., from database)."""
         # Parse datetime fields
         for field in ["created_at", "valid_from", "valid_to", "accessed_at"]:
@@ -270,14 +292,28 @@ class MemoryContext(BaseModel):
     enhanced prompt with memories, and metadata about the recall operation.
     """
 
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "original_prompt": "What's my name?",
+                "enhanced_prompt": "## Relevant Context:\n- User's name is Alice\n\nWhat's my name?",
+                "memories": [],
+                "confidence": 0.95,
+                "strategy_used": "entity",
+                "recall_time_ms": 3.2,
+            }
+        }
+    )
+
     # Core content
     original_prompt: str = Field(..., description="Original user prompt")
     enhanced_prompt: str = Field(..., description="Prompt enhanced with memory context")
     memories: list[Memory] = Field(default_factory=list, description="Retrieved memories")
 
     # Metadata
-    confidence: confloat(ge=0.0, le=1.0) = Field(
-        default=0.0, description="Overall confidence score"
+    confidence: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Overall confidence score"
     )
     token_count: int = Field(
         default=0, ge=0, description="Estimated token count of enhanced prompt"
@@ -293,23 +329,9 @@ class MemoryContext(BaseModel):
     )
     memories_filtered: int = Field(default=0, ge=0, description="Number of memories filtered out")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {
-            "example": {
-                "original_prompt": "What's my name?",
-                "enhanced_prompt": "## Relevant Context:\n- User's name is Alice\n\nWhat's my name?",
-                "memories": [],
-                "confidence": 0.95,
-                "strategy_used": "entity",
-                "recall_time_ms": 3.2,
-            }
-        }
-
     @field_validator("memories")
     @classmethod
-    def validate_memories(cls, v):
+    def validate_memories(cls, v: list[Memory]) -> list[Memory]:
         """Validate memories list."""
         if not isinstance(v, list):
             raise ValueError("Memories must be a list")
@@ -317,7 +339,7 @@ class MemoryContext(BaseModel):
 
     @field_validator("enhanced_prompt")
     @classmethod
-    def validate_enhanced_prompt(cls, v):
+    def validate_enhanced_prompt(cls, v: str) -> str:
         """Validate enhanced prompt."""
         if not v or not v.strip():
             raise ValueError("Enhanced prompt cannot be empty")
@@ -325,7 +347,7 @@ class MemoryContext(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def calculate_derived_fields(cls, values):
+    def calculate_derived_fields(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Calculate derived fields from memories."""
         memories = values.get("memories", [])
 
@@ -389,7 +411,7 @@ class MemoryContext(BaseModel):
             }
 
         # Count by type
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for mem in self.memories:
             type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
 
@@ -398,9 +420,11 @@ class MemoryContext(BaseModel):
         avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
 
         # Collect unique entities
-        all_entities = set()
+        all_entities: set[str] = set()
         for mem in self.memories:
-            all_entities.update(mem.entities)
+            for entity in mem.entities:
+                if isinstance(entity, str):
+                    all_entities.add(entity)
 
         return {
             "count": len(self.memories),
@@ -417,8 +441,11 @@ class ExtractedMemory(BaseModel):
     Used during the extraction process to hold candidate memories.
     """
 
+    # Pydantic V2 configuration
+    model_config = ConfigDict()
+
     content: str = Field(..., description="Extracted memory content")
-    confidence: confloat(ge=0.0, le=1.0) = Field(..., description="Extraction confidence")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Extraction confidence")
     memory_type: MemoryType = Field(..., description="Detected memory type")
     pattern_used: str = Field(..., description="Pattern that matched this memory")
     entities: list[str | dict[str, Any]] = Field(
@@ -428,7 +455,7 @@ class ExtractedMemory(BaseModel):
 
     @field_validator("content")
     @classmethod
-    def validate_content(cls, v):
+    def validate_content(cls, v: str) -> str:
         """Validate content."""
         if not v or not v.strip():
             raise ValueError("Content cannot be empty")
@@ -463,6 +490,7 @@ class ExtractedMemory(BaseModel):
             user_id=user_id,
             session_id=session_id,
             entities=self.entities,
+            valid_to=None,  # Will be set by model_validator based on memory_type
             metadata={
                 **self.metadata,
                 "pattern_used": self.pattern_used,
