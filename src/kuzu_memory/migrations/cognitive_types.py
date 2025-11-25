@@ -5,6 +5,8 @@ This module handles the migration of existing memories from the domain-specific
 type system to the cognitive memory type system.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any
@@ -37,7 +39,7 @@ class CognitiveTypesMigration:
             memory_store: Memory store instance to migrate
         """
         self.memory_store = memory_store
-        self.migration_stats = {
+        self.migration_stats: dict[str, Any] = {
             "total_memories": 0,
             "migrated": 0,
             "skipped": 0,

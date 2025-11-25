@@ -69,7 +69,7 @@ class MemoryEnhancer:
                 logger.warning(f"Failed to initialize NLP classifier: {e}")
 
         # Enhancement statistics
-        self.enhancement_stats = {
+        self.enhancement_stats: dict[str, Any] = {
             "memories_processed": 0,
             "memories_enhanced": 0,
             "entities_extracted": 0,

@@ -6,6 +6,8 @@ confidence scoring using NLTK, following the architecture from the
 TypeScript implementation.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass
