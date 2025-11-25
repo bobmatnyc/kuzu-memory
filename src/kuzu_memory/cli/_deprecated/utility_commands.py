@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
     "--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)"
 )
 @click.pass_context
-def optimize(ctx, enable_cli, disable_cli) -> None:
+def optimize(ctx: click.Context, enable_cli: bool, disable_cli: bool) -> None:
     """
     ⚡ Optimize KuzuMemory performance settings.
 
@@ -182,7 +182,7 @@ def optimize(ctx, enable_cli, disable_cli) -> None:
 @click.command()
 @click.option("--advanced", is_flag=True, help="Show advanced configuration options")
 @click.pass_context
-def setup(ctx, advanced) -> None:
+def setup(ctx: click.Context, advanced: bool) -> None:
     """
     🔧 Interactive setup and configuration guide.
 
@@ -307,7 +307,7 @@ def setup(ctx, advanced) -> None:
 
 @click.command()
 @click.pass_context
-def tips(ctx) -> None:
+def tips(ctx: click.Context) -> None:
     """
     💡 Show helpful tips and best practices for KuzuMemory.
 
@@ -415,7 +415,7 @@ def tips(ctx) -> None:
 @click.command()
 @click.argument("topic", required=False)
 @click.pass_context
-def examples(ctx, topic) -> None:
+def examples(ctx: click.Context, topic: str | None) -> None:
     """
     📚 Show practical examples of KuzuMemory usage.
 
@@ -560,7 +560,7 @@ def examples(ctx, topic) -> None:
     help="Output format",
 )
 @click.pass_context
-def temporal_analysis(ctx, memory_id, memory_type, limit, output_format) -> None:
+def temporal_analysis(ctx: click.Context, memory_id: str | None, memory_type: str | None, limit: int, output_format: str) -> None:
     """
     🕒 Analyze temporal decay for memories.
 

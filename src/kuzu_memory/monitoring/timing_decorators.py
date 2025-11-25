@@ -59,7 +59,7 @@ def time_async(
         metric_name = name or f"{func.__module__}.{func.__name__}"
 
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
 
             try:
@@ -120,7 +120,7 @@ def time_sync(
         metric_name = name or f"{func.__module__}.{func.__name__}"
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> None:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
 
             try:
@@ -194,7 +194,7 @@ class performance_tracker:
         self.log_slow = log_slow
         self.start_time: float | None = None
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> "performance_tracker":
         self.start_time = time.perf_counter()
         return self
 
@@ -203,11 +203,11 @@ class performance_tracker:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             self._record_metric(duration_ms, exc_type)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "performance_tracker":
         self.start_time = time.perf_counter()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         if self.start_time is not None:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             await self._record_metric_async(duration_ms, exc_type)
@@ -241,7 +241,7 @@ class performance_tracker:
                 f"(threshold: {self.threshold_ms}ms)"
             )
 
-    async def _record_metric_async(self, duration_ms: float, exc_type: type | None):
+    async def _record_metric_async(self, duration_ms: float, exc_type: type[BaseException] | None) -> None:
         """Record metric asynchronously."""
         if not _global_monitor:
             return
