@@ -5,9 +5,12 @@ Provides the main CLI group and imports all subcommands from modular files.
 This is the refactored version that keeps the file under 300 lines.
 """
 
+from __future__ import annotations
+
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -101,7 +104,13 @@ def _silent_repair_mcp_configs() -> None:
     help="Project root directory (auto-detected if not specified)",
 )
 @click.pass_context
-def cli(ctx, debug, config, db_path, project_root):
+def cli(
+    ctx: click.Context,
+    debug: bool,
+    config: str | None,
+    db_path: str | None,
+    project_root: str | None,
+) -> None:
     """
     🧠 KuzuMemory - Intelligent AI Memory System
 
@@ -162,11 +171,12 @@ def cli(ctx, debug, config, db_path, project_root):
 
     # Determine project root
     try:
+        resolved_root: Path
         if project_root:
-            project_root = Path(project_root).resolve()
+            resolved_root = Path(project_root).resolve()
         else:
-            project_root = find_project_root()
-        ctx.obj["project_root"] = project_root
+            resolved_root = find_project_root()  # type: ignore[no-untyped-call,assignment]
+        ctx.obj["project_root"] = resolved_root
     except Exception:
         if debug:
             raise
@@ -177,9 +187,9 @@ def cli(ctx, debug, config, db_path, project_root):
     try:
         config_loader = get_config_loader()
         if config:
-            loaded_config = config_loader.load_from_file(config)
+            loaded_config = config_loader.load_from_file(config)  # type: ignore[attr-defined]
         else:
-            loaded_config = config_loader.load_config(ctx.obj["project_root"])
+            loaded_config = config_loader.load_config(ctx.obj["project_root"])  # type: ignore[attr-defined]
         ctx.obj["config"] = loaded_config
     except Exception as e:
         if debug:
@@ -196,9 +206,9 @@ def cli(ctx, debug, config, db_path, project_root):
         # Check if project is initialized
         try:
             if ctx.obj["project_root"]:
-                db_path_check = get_project_db_path(ctx.obj["project_root"])
+                db_path_check = get_project_db_path(ctx.obj["project_root"])  # type: ignore[no-untyped-call]
                 if not db_path_check.exists():
-                    rich_panel(
+                    rich_panel(  # type: ignore[no-untyped-call]
                         "Welcome to KuzuMemory! 🚀\n\n"
                         "It looks like this project isn't initialized yet.\n"
                         "Get started with the smart setup (recommended):\n\n"
@@ -210,7 +220,7 @@ def cli(ctx, debug, config, db_path, project_root):
                         style="blue",
                     )
                 else:
-                    rich_panel(
+                    rich_panel(  # type: ignore[no-untyped-call]
                         "KuzuMemory is ready! 🎉\n\n"
                         "Try these commands:\n"
                         "• kuzu-memory recent        # Show recent memories\n"
@@ -224,13 +234,13 @@ def cli(ctx, debug, config, db_path, project_root):
         except Exception:
             pass  # If anything fails, just show help
 
-        rich_print(ctx.get_help())
+        rich_print(ctx.get_help())  # type: ignore[no-untyped-call]
 
 
 @click.command()
 @click.option("--skip-demo", is_flag=True, help="Skip the interactive demo")
 @click.pass_context
-def quickstart(ctx, skip_demo):
+def quickstart(ctx: click.Context, skip_demo: bool) -> None:
     """
     🎯 Interactive quickstart guide for KuzuMemory.
 
@@ -251,7 +261,7 @@ def quickstart(ctx, skip_demo):
     from .cli_utils import rich_confirm, rich_prompt
 
     try:
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             "Welcome to KuzuMemory! 🧠✨\n\n"
             "This quickstart will walk you through:\n"
             "• Setting up your first project\n"
@@ -264,31 +274,31 @@ def quickstart(ctx, skip_demo):
         )
 
         # Step 1: Project Setup
-        rich_print("\n📁 Step 1: Project Setup")
+        rich_print("\n📁 Step 1: Project Setup")  # type: ignore[no-untyped-call]
         project_root = ctx.obj.get("project_root")
         if not project_root:
-            project_root = Path.cwd()
-            rich_print(f"Using current directory: {project_root}")
+            project_root = Path.cwd()  # type: ignore[no-untyped-call]
+            rich_print(f"Using current directory: {project_root}")  # type: ignore[no-untyped-call]
 
-        db_path = get_project_db_path(project_root)
-        if not db_path.exists():
-            rich_print("Initializing KuzuMemory for this project...")
+        db_path = get_project_db_path(project_root)  # type: ignore[no-untyped-call]
+        if not db_path.exists():  # type: ignore[no-untyped-call]
+            rich_print("Initializing KuzuMemory for this project...")  # type: ignore[no-untyped-call]
             ctx.invoke(init, force=False, config_path=None)
         else:
-            rich_print("✅ Project already initialized!")
+            rich_print("✅ Project already initialized!")  # type: ignore[no-untyped-call]
 
         if skip_demo:
-            rich_print("\n🎉 Setup complete! Try these commands:")
-            rich_print("• kuzu-memory remember 'Your project info'")
-            rich_print("• kuzu-memory enhance 'Your question'")
-            rich_print("• kuzu-memory status")
+            rich_print("\n🎉 Setup complete! Try these commands:")  # type: ignore[no-untyped-call]
+            rich_print("• kuzu-memory remember 'Your project info'")  # type: ignore[no-untyped-call]
+            rich_print("• kuzu-memory enhance 'Your question'")  # type: ignore[no-untyped-call]
+            rich_print("• kuzu-memory status")  # type: ignore[no-untyped-call]
             return
 
         # Interactive demo continues...
-        rich_print("\n🧠 Step 2: Storing Memories")
+        rich_print("\n🧠 Step 2: Storing Memories")  # type: ignore[no-untyped-call]
 
-        if rich_confirm("Would you like to store your first memory?", default=True):
-            sample_memory = rich_prompt(
+        if rich_confirm("Would you like to store your first memory?", default=True):  # type: ignore[no-untyped-call]
+            sample_memory = rich_prompt(  # type: ignore[no-untyped-call]
                 "Enter something about your project",
                 default="This is a Python project using KuzuMemory for AI memory",
             )
@@ -302,17 +312,17 @@ def quickstart(ctx, skip_demo):
             )
 
         # Step 3: Demo enhancement
-        rich_print("\n🚀 Step 3: Prompt Enhancement")
-        if rich_confirm("Try enhancing a prompt?", default=True):
-            sample_prompt = rich_prompt(
+        rich_print("\n🚀 Step 3: Prompt Enhancement")  # type: ignore[no-untyped-call]
+        if rich_confirm("Try enhancing a prompt?", default=True):  # type: ignore[no-untyped-call]
+            sample_prompt = rich_prompt(  # type: ignore[no-untyped-call]
                 "Enter a question about your project",
                 default="How should I structure my code?",
             )
             ctx.invoke(enhance, prompt=sample_prompt, max_memories=3, output_format="context")
 
         # Step 4: Show stats
-        rich_print("\n📊 Step 4: Project Status")
-        ctx.invoke(
+        rich_print("\n📊 Step 4: Project Status")  # type: ignore[no-untyped-call]
+        ctx.invoke(  # type: ignore[no-untyped-call]
             status,
             validate=False,
             show_project=False,
@@ -321,19 +331,19 @@ def quickstart(ctx, skip_demo):
         )
 
         # Step 5: Recent Memories
-        rich_print("\n" + "─" * 50)
-        rich_print("📚 [bold magenta]Step 5: View Recent Memories[/bold magenta]")
+        rich_print("\n" + "─" * 50)  # type: ignore[no-untyped-call]
+        rich_print("📚 [bold magenta]Step 5: View Recent Memories[/bold magenta]")  # type: ignore[no-untyped-call]
 
-        if rich_confirm("Would you like to view your recent memories?", default=True):
+        if rich_confirm("Would you like to view your recent memories?", default=True):  # type: ignore[no-untyped-call]
             ctx.invoke(recent, limit=5, output_format="list")
             time.sleep(1)
 
         # Step 6: Memory Recall
-        rich_print("\n" + "─" * 50)
-        rich_print("🔍 [bold magenta]Step 6: Try Memory Recall[/bold magenta]")
-        rich_print("Recall uses semantic search to find relevant memories based on your query.\n")
-        if rich_confirm("Would you like to try querying your memories?", default=True):
-            query = rich_prompt("Enter a search query", default="Python project structure")
+        rich_print("\n" + "─" * 50)  # type: ignore[no-untyped-call]
+        rich_print("🔍 [bold magenta]Step 6: Try Memory Recall[/bold magenta]")  # type: ignore[no-untyped-call]
+        rich_print("Recall uses semantic search to find relevant memories based on your query.\n")  # type: ignore[no-untyped-call]
+        if rich_confirm("Would you like to try querying your memories?", default=True):  # type: ignore[no-untyped-call]
+            query = rich_prompt("Enter a search query", default="Python project structure")  # type: ignore[no-untyped-call]
             ctx.invoke(
                 recall,
                 prompt=query,
@@ -347,9 +357,9 @@ def quickstart(ctx, skip_demo):
             time.sleep(1)
 
         # Step 7: Memory Types
-        rich_print("\n" + "─" * 50)
-        rich_print("🧠 [bold magenta]Step 7: Understanding Memory Types[/bold magenta]")
-        if rich_confirm("Want to learn about different memory types?", default=True):
+        rich_print("\n" + "─" * 50)  # type: ignore[no-untyped-call]
+        rich_print("🧠 [bold magenta]Step 7: Understanding Memory Types[/bold magenta]")  # type: ignore[no-untyped-call]
+        if rich_confirm("Want to learn about different memory types?", default=True):  # type: ignore[no-untyped-call]
             memory_types_data = [
                 [
                     "SEMANTIC",
@@ -388,23 +398,23 @@ def quickstart(ctx, skip_demo):
                     "CLI feels slow during testing",
                 ],
             ]
-            table = rich_table(
+            table = rich_table(  # type: ignore[no-untyped-call]
                 ["Type", "Description", "Retention", "Example"],
                 memory_types_data,
                 title="🧠 Cognitive Memory Types",
             )
             from rich.console import Console
 
-            console = Console()
-            console.print(table)
-            rich_print(
+            console = Console()  # type: ignore[no-untyped-call]
+            console.print(table)  # type: ignore[no-untyped-call]
+            rich_print(  # type: ignore[no-untyped-call]
                 "\n💡 [italic]KuzuMemory automatically classifies memories based on content![/italic]",
                 style="blue",
             )
             time.sleep(1)
 
         # Completion
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             "Quickstart Complete! 🎉\n\n"
             "You now know how to:\n"
             "• Store memories with 'kuzu-memory memory store'\n"
@@ -425,13 +435,13 @@ def quickstart(ctx, skip_demo):
     except Exception as e:
         if ctx.obj.get("debug"):
             raise
-        rich_print(f"❌ Quickstart failed: {e}", style="red")
+        rich_print(f"❌ Quickstart failed: {e}", style="red")  # type: ignore[no-untyped-call]
         sys.exit(1)
 
 
 @click.command()
 @click.pass_context
-def demo(ctx):
+def demo(ctx: click.Context) -> None:
     """
     🎮 Automated demo of KuzuMemory features.
 
@@ -443,7 +453,7 @@ def demo(ctx):
 
     try:
         # Step 1: Welcome & Introduction
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             "Welcome to KuzuMemory! 🧠✨\n\n"
             "This automated demo will showcase:\n"
             "• Database initialization\n"
@@ -459,21 +469,21 @@ def demo(ctx):
         time.sleep(1.5)
 
         # Step 2: Initialize Database
-        rich_print("\n📁 Step 1: Initializing Memory Database", style="bold cyan")
-        rich_print("Creating project memory structure...")
+        rich_print("\n📁 Step 1: Initializing Memory Database", style="bold cyan")  # type: ignore[no-untyped-call]
+        rich_print("Creating project memory structure...")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
         try:
-            ctx.invoke(init, force=False, config_path=None)
+            ctx.invoke(init, force=False, config_path=None)  # type: ignore[no-untyped-call]
         except SystemExit:
             # Already initialized, that's fine
-            rich_print("✅ Database already initialized!", style="green")
+            rich_print("✅ Database already initialized!", style="green")  # type: ignore[no-untyped-call]
 
         time.sleep(1)
 
         # Step 3: Store Sample Memories
-        rich_print("\n💾 Step 2: Storing Sample Memories (All Types)", style="bold cyan")
-        rich_print("Demonstrating all cognitive memory types...\n")
+        rich_print("\n💾 Step 2: Storing Sample Memories (All Types)", style="bold cyan")  # type: ignore[no-untyped-call]
+        rich_print("Demonstrating all cognitive memory types...\n")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
         # Sample memories covering all types
@@ -504,8 +514,8 @@ def demo(ctx):
             ),
         ]
 
-        for i, (content, source) in enumerate(sample_memories, 1):
-            rich_print(f"{i}. Storing: {content[:80]}...", style="dim")
+        for i, (content, source) in enumerate(sample_memories, 1):  # type: ignore[no-untyped-call]
+            rich_print(f"{i}. Storing: {content[:80]}...", style="dim")  # type: ignore[no-untyped-call]
             ctx.invoke(
                 store,
                 content=content,
@@ -516,13 +526,13 @@ def demo(ctx):
             )
             time.sleep(0.3)
 
-        rich_print(f"\n✅ Stored {len(sample_memories)} diverse memories!", style="green")
+        rich_print(f"\n✅ Stored {len(sample_memories)} diverse memories!", style="green")  # type: ignore[no-untyped-call]
         time.sleep(1)
 
         # Step 4: Demonstrate Memory Recall
-        rich_print("\n🔍 Step 3: Testing Memory Recall", style="bold cyan")
+        rich_print("\n🔍 Step 3: Testing Memory Recall", style="bold cyan")  # type: ignore[no-untyped-call]
         query = "How do I store a memory?"
-        rich_print(f"Querying: '{query}'\n")
+        rich_print(f"Querying: '{query}'\n")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
         ctx.invoke(
@@ -538,12 +548,12 @@ def demo(ctx):
         time.sleep(1.5)
 
         # Step 5: Prompt Enhancement
-        rich_print("\n✨ Step 4: Prompt Enhancement Demo", style="bold cyan")
+        rich_print("\n✨ Step 4: Prompt Enhancement Demo", style="bold cyan")  # type: ignore[no-untyped-call]
         original_prompt = "Write a Python function for memory management"
-        rich_print(f"Original prompt: '{original_prompt}'\n")
+        rich_print(f"Original prompt: '{original_prompt}'\n")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             f"Original: {original_prompt}",
             title="📝 Before Enhancement",
             style="yellow",
@@ -554,8 +564,8 @@ def demo(ctx):
         time.sleep(1.5)
 
         # Step 6: View Statistics
-        rich_print("\n📊 Step 5: System Statistics", style="bold cyan")
-        rich_print("Viewing memory system statistics...\n")
+        rich_print("\n📊 Step 5: System Statistics", style="bold cyan")  # type: ignore[no-untyped-call]
+        rich_print("Viewing memory system statistics...\n")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
         ctx.invoke(
@@ -568,15 +578,15 @@ def demo(ctx):
         time.sleep(1.5)
 
         # Step 7: Recent Memories
-        rich_print("\n📚 Step 6: Recent Memories", style="bold cyan")
-        rich_print("Showing last 5 memories stored...\n")
+        rich_print("\n📚 Step 6: Recent Memories", style="bold cyan")  # type: ignore[no-untyped-call]
+        rich_print("Showing last 5 memories stored...\n")  # type: ignore[no-untyped-call]
         time.sleep(0.5)
 
         ctx.invoke(recent, limit=5, output_format="table")
         time.sleep(1.5)
 
         # Step 8: Next Steps & Resources
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             "Demo Complete! 🎉\n\n"
             "You've seen all major KuzuMemory features in action!\n\n"
             "📚 Next Steps:\n"
@@ -597,7 +607,7 @@ def demo(ctx):
     except Exception as e:
         if ctx.obj.get("debug"):
             raise
-        rich_panel(
+        rich_panel(  # type: ignore[no-untyped-call]
             f"Demo encountered an error:\n{e}\n\n"
             "This might happen if:\n"
             "• Database is not initialized (run: kuzu-memory init)\n"
@@ -653,7 +663,7 @@ cli.add_command(demo)
     help="Output format",
 )
 @click.pass_context
-def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str):
+def stats(ctx: click.Context, validate: bool, show_project: bool, detailed: bool, output_format: str) -> None:
     """
     📊 Display system statistics (deprecated - use 'status' instead).
 
@@ -664,7 +674,7 @@ def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format
     """
     # Show deprecation warning (unless JSON output)
     if output_format != OutputFormat.JSON.value:
-        rich_print(
+        rich_print(  # type: ignore[no-untyped-call]
             "⚠️  Warning: 'stats' is deprecated. Please use 'kuzu-memory status' instead.",
             style="yellow",
         )
@@ -692,7 +702,7 @@ def stats(ctx, validate: bool, show_project: bool, detailed: bool, output_format
     help="Output format",
 )
 @click.pass_context
-def health(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str):
+def health(ctx: click.Context, validate: bool, show_project: bool, detailed: bool, output_format: str) -> None:
     """
     🏥 System health check (alias for 'status').
 
