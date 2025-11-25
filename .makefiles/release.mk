@@ -94,17 +94,17 @@ build-info-json: build-metadata ## Display build metadata from JSON
 
 patch: ## Bump patch version (X.Y.Z+1)
 	@echo "$(YELLOW)🔧 Bumping patch version...$(NC)"
-	@python3 scripts/version.py bump patch
+	@python3 scripts/version.py bump --type patch
 	@echo "$(GREEN)✓ Version bumped$(NC)"
 
 minor: ## Bump minor version (X.Y+1.0)
 	@echo "$(YELLOW)✨ Bumping minor version...$(NC)"
-	@python3 scripts/version.py bump minor
+	@python3 scripts/version.py bump --type minor
 	@echo "$(GREEN)✓ Version bumped$(NC)"
 
 major: ## Bump major version (X+1.0.0)
 	@echo "$(YELLOW)💥 Bumping major version...$(NC)"
-	@python3 scripts/version.py bump major
+	@python3 scripts/version.py bump --type major
 	@echo "$(GREEN)✓ Version bumped$(NC)"
 
 # ============================================================================
