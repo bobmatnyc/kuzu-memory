@@ -4,6 +4,8 @@ Codex installer for KuzuMemory.
 Installs MCP server configuration for Codex (global configuration).
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -77,7 +79,7 @@ class CodexInstaller(BaseInstaller):
         Returns:
             List of error messages, empty if all prerequisites are met
         """
-        errors = []
+        errors: list[Any] = []
 
         # Check if project root exists
         if not self.project_root.exists():

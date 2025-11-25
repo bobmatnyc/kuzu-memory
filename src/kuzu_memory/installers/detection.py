@@ -4,6 +4,8 @@ AI system auto-detection for KuzuMemory MCP installers.
 Detects which AI coding assistants are installed or configured in the project.
 """
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,7 +34,7 @@ class AISystemDetector:
     Supports both project-specific and global configurations.
     """
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None) -> None:
         """
         Initialize detector.
 
@@ -48,7 +50,7 @@ class AISystemDetector:
         Returns:
             List of detected systems
         """
-        detected = []
+        detected: list[Any] = []
 
         # Detect project-specific systems
         detected.extend(self._detect_project_systems())
@@ -63,7 +65,7 @@ class AISystemDetector:
 
     def _detect_project_systems(self) -> list[DetectedSystem]:
         """Detect project-specific AI systems."""
-        systems = []
+        systems: list[Any] = []
 
         # Cursor IDE (.cursor/mcp.json)
         cursor_path = self.project_root / ".cursor" / "mcp.json"
@@ -139,7 +141,7 @@ class AISystemDetector:
 
     def _detect_global_systems(self) -> list[DetectedSystem]:
         """Detect globally-installed AI systems."""
-        systems = []
+        systems: list[Any] = []
         home = Path.home()
 
         # Windsurf (~/.codeium/windsurf/mcp_config.json)

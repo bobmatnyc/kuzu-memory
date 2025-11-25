@@ -4,6 +4,8 @@ JSON utility functions for MCP configuration management.
 Provides JSON merging, validation, and variable expansion for MCP configs.
 """
 
+
+from __future__ import annotations
 import json
 import logging
 import os
@@ -47,7 +49,7 @@ def expand_variables(config: dict[str, Any], variables: dict[str, str]) -> dict[
             return [expand_value(item) for item in value]
         return value
 
-    return expand_value(config)
+    return expand_value(config)  # type: ignore[no-any-return]
 
 
 def merge_json_configs(
@@ -70,9 +72,6 @@ def merge_json_configs(
         >>> merged = merge_json_configs(existing, new)
         >>> # Result: {"mcpServers": {"server1": {...}, "server2": {...}}}
     """
-    if not isinstance(existing, dict) or not isinstance(new, dict):
-        return new if not preserve_existing else existing
-
     result = existing.copy()
 
     for key, new_value in new.items():
@@ -110,7 +109,7 @@ def load_json_config(file_path: Path) -> dict[str, Any]:
             return {}
 
         with open(file_path, encoding="utf-8") as f:
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except json.JSONDecodeError as e:
         raise JSONConfigError(f"Invalid JSON in {file_path}: {e}")
     except Exception as e:
@@ -228,7 +227,7 @@ def create_mcp_server_config(
     return config
 
 
-def _needs_mcp_args_fix(server_name: str, server_config: dict) -> bool:
+def _needs_mcp_args_fix(server_name: str, server_config: dict[str, Any]) -> bool:
     """
     Check if server config needs args fix.
 
@@ -264,7 +263,7 @@ def _needs_mcp_args_fix(server_name: str, server_config: dict) -> bool:
     return False
 
 
-def _fix_mcp_args(args: list) -> list:
+def _fix_mcp_args(args: list[Any]) -> list[Any]:
     """
     Fix MCP args by converting old patterns to ["mcp"].
 
@@ -292,7 +291,7 @@ def _fix_mcp_args(args: list) -> list:
     return args
 
 
-def _needs_command_fix(server_name: str, server_config: dict) -> bool:
+def _needs_command_fix(server_name: str, server_config: dict[str, Any]) -> bool:
     """
     Check if server config needs command fix.
 
@@ -371,10 +370,7 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
         >>> # fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
         >>> # fixes == ["Fixed kuzu-memory: args ['mcp', 'serve'] -> ['mcp']"]
     """
-    if not isinstance(config, dict):
-        return config, []
-
-    fixes = []
+    fixes: list[str] = []
     result = config.copy()
 
     # Fix root-level mcpServers

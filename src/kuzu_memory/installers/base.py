@@ -4,6 +4,8 @@ Base installer for KuzuMemory AI system integrations.
 Provides common functionality for all installer adapters.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import shutil
@@ -33,7 +35,7 @@ class InstallationResult:
     message: str
     warnings: list[str]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Ensure all paths are Path objects."""
         self.files_created = [Path(f) for f in self.files_created]
         self.files_modified = [Path(f) for f in self.files_modified]
@@ -62,7 +64,7 @@ class BaseInstaller(ABC):
     the specific installation logic for their AI system.
     """
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         """
         Initialize installer.
 
@@ -70,11 +72,11 @@ class BaseInstaller(ABC):
             project_root: Root directory of the project
         """
         self.project_root = Path(project_root)
-        self.backup_dir = self.project_root / ".kuzu-memory-backups"
-        self.files_created = []
-        self.files_modified = []
-        self.backup_files = []
-        self.warnings = []
+        self.backup_dir: Path = self.project_root / ".kuzu-memory-backups"
+        self.files_created: list[Path] = []
+        self.files_modified: list[Path] = []
+        self.backup_files: list[Path] = []
+        self.warnings: list[str] = []
 
     @property
     @abstractmethod
@@ -220,7 +222,7 @@ class BaseInstaller(ABC):
             return False
 
     @abstractmethod
-    def install(self, force: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install integration for the AI system.
 
@@ -310,7 +312,7 @@ class BaseInstaller(ABC):
         Returns:
             Dict with installation status information
         """
-        status = {
+        status: dict[str, Any] = {
             "ai_system": self.ai_system_name,
             "installed": True,
             "files_present": [],

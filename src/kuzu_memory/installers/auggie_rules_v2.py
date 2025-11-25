@@ -12,6 +12,8 @@ Enhanced rules incorporating insights from Claude Code hooks v1.4.0:
 - Failure recovery patterns
 """
 
+from __future__ import annotations
+
 
 def get_agents_md_v2() -> str:
     """Get AGENTS.md content for v2.0.0."""

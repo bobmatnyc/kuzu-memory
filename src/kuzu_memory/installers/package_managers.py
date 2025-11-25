@@ -4,6 +4,8 @@ Package manager implementations for KuzuMemory installation.
 Contains integration examples and templates for different programming languages.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
@@ -41,7 +43,7 @@ class KuzuMemoryIntegration:
     This approach ensures compatibility and avoids import conflicts.
     """
 
-    def __init__(self, project_path: Optional[str] = None, timeout: int = 5):
+    def __init__(self, project_path: Optional[str] = None, timeout: int = 5) -> None:
         """
         Initialize KuzuMemory integration.
 
@@ -94,7 +96,7 @@ class KuzuMemoryIntegration:
             return prompt
 
     def store_learning(self, content: str, source: str = 'ai-conversation',
-                      quiet: bool = True, metadata: Optional[Dict[str, Any]] = None) -> bool:
+                      quiet: bool = True, metadata: Optional[dict[str, Any]] = None) -> bool:
         """
         Store learning content asynchronously (non-blocking).
 
@@ -128,7 +130,7 @@ class KuzuMemoryIntegration:
             print(f"Warning: Learning failed: {e}", file=sys.stderr)
             return False
 
-    def get_project_stats(self) -> Dict[str, Any]:
+    def get_project_stats(self) -> dict[str, Any]:
         """
         Get project memory statistics.
 
@@ -190,7 +192,7 @@ def your_ai_system(prompt: str) -> str:
     return f"AI response to: {prompt}"
 
 
-def main():
+def main() -> None:
     """Example usage of KuzuMemory integration."""
     print("KuzuMemory Python Integration Example")
 

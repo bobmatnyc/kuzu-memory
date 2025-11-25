@@ -7,6 +7,8 @@ This is a compatibility wrapper that uses the v2 installer internally.
 For direct v2 access, use AuggieInstallerV2.
 """
 
+from __future__ import annotations
+
 import logging
 
 from .auggie_v2 import AuggieInstallerV2
