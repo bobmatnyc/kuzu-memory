@@ -21,9 +21,7 @@ from .enums import OutputFormat
 
 
 @click.group(invoke_without_command=True)
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save report to file")
 @click.option(
@@ -36,17 +34,13 @@ from .enums import OutputFormat
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def doctor(
     ctx: click.Context,
@@ -122,20 +116,14 @@ def doctor(
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def diagnose(
     ctx: click.Context,
@@ -198,15 +186,11 @@ def diagnose(
                 style="yellow",
             )
 
-            if click.confirm(
-                "Would you like to attempt automatic fixes?", default=True
-            ):
+            if click.confirm("Would you like to attempt automatic fixes?", default=True):
                 rich_print("\n🔧 Attempting automatic fixes...", style="blue")
 
                 # Re-run diagnostics with auto-fix enabled
-                fix_report = asyncio.run(
-                    diagnostics.run_full_diagnostics(auto_fix=True)
-                )
+                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
 
                 # Show fix results
                 rich_print("\n📊 Fix Results:", style="blue")
@@ -234,9 +218,7 @@ def diagnose(
 
         # Exit with appropriate code
         if report.has_critical_errors:
-            rich_print(
-                "\n❌ Critical errors detected. See report for details.", style="red"
-            )
+            rich_print("\n❌ Critical errors detected. See report for details.", style="red")
             sys.exit(1)
         elif report.actionable_failures > 0:
             rich_print(
@@ -261,13 +243,9 @@ def diagnose(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def mcp(
-    ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
-) -> None:
+def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
     """
     PROJECT MCP-specific diagnostics.
 
@@ -338,9 +316,7 @@ def mcp(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def connection(
     ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
@@ -393,9 +369,7 @@ def connection(
         # Summary
         rich_panel(
             f"Connection Test: {passed}/{total} passed",
-            title=(
-                "✅ Connection Healthy" if passed == total else "⚠️  Connection Issues"
-            ),
+            title=("✅ Connection Healthy" if passed == total else "⚠️  Connection Issues"),
             style="green" if passed == total else "yellow",
         )
 
@@ -411,18 +385,14 @@ def connection(
 @doctor.command()
 @click.option("--detailed", is_flag=True, help="Show detailed component status")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
-@click.option(
-    "--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)"
-)
+@click.option("--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)")
 @click.option(
     "--interval",
     type=int,
     default=5,
     help="Check interval in seconds for continuous mode",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def health(
     ctx: click.Context,
@@ -458,7 +428,7 @@ def health(
             return result
 
         # Define display function
-        def display_health(result):
+        def display_health(result) -> None:
             if json_output:
                 # JSON output
                 print(json.dumps(result.to_dict(), indent=2))
@@ -519,9 +489,7 @@ def health(
                     console.print(f"  P50 Latency: {perf.latency_p50_ms:.2f}ms")
                     console.print(f"  P95 Latency: {perf.latency_p95_ms:.2f}ms")
                     console.print(f"  P99 Latency: {perf.latency_p99_ms:.2f}ms")
-                    console.print(
-                        f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s"
-                    )
+                    console.print(f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s")
                     console.print(f"  Error Rate: {perf.error_rate * 100:.2f}%")
 
                 # Resource metrics (if detailed)
@@ -536,9 +504,7 @@ def health(
                 # Summary
                 summary = result.health.to_dict()["summary"]
                 console.print("\n[bold]Component Summary[/bold]")
-                console.print(
-                    f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}"
-                )
+                console.print(f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}")
                 if summary["degraded"] > 0:
                     console.print(f"  [yellow]Degraded:[/yellow] {summary['degraded']}")
                 if summary["unhealthy"] > 0:

@@ -58,7 +58,7 @@ class MemoryStatusReporter:
         report_interval_seconds: float = 5.0,
         max_reports: int = 100,
         min_report_level: ReportLevel = ReportLevel.INFO,
-    ):
+    ) -> None:
         """
         Initialize the status reporter.
 
@@ -142,9 +142,7 @@ class MemoryStatusReporter:
 
         logger.info("Stopped memory status reporter")
 
-    def add_callback(
-        self, level: ReportLevel, callback: Callable[[StatusReport], None]
-    ) -> None:
+    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]) -> None:
         """
         Add a callback for status reports at a specific level.
 
@@ -268,7 +266,7 @@ class MemoryStatusReporter:
 
             self.stats["last_report_time"] = now
 
-    def _cleanup_old_reports(self):
+    def _cleanup_old_reports(self) -> None:
         """Clean up old reports to prevent memory growth."""
         with self.lock:
             if len(self.reports) > self.max_reports:
@@ -282,7 +280,7 @@ class MemoryStatusReporter:
         task_id: str | None = None,
         task_type: str | None = None,
         details: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Add a status report."""
         # Check if level meets minimum threshold
         level_values = {
@@ -341,7 +339,7 @@ def get_status_reporter() -> MemoryStatusReporter:
     return _status_reporter
 
 
-def add_status_callback(level: ReportLevel, callback: Callable[[StatusReport], None]):
+def add_status_callback(level: ReportLevel, callback: Callable[[StatusReport], None]) -> None:
     """Add a callback for status reports."""
     reporter = get_status_reporter()
     reporter.add_callback(level, callback)
@@ -353,7 +351,7 @@ def get_recent_status(count: int = 10) -> list[StatusReport]:
     return reporter.get_recent_reports(count)
 
 
-def shutdown_status_reporter():
+def shutdown_status_reporter() -> None:
     """Shutdown the global status reporter."""
     global _status_reporter
     if _status_reporter:

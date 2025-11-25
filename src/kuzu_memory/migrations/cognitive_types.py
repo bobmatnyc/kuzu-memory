@@ -123,16 +123,12 @@ class CognitiveTypesMigration:
                 if not memory.metadata:
                     memory.metadata = {}
                 memory.metadata["migrated_from"] = (
-                    original_type.value
-                    if hasattr(original_type, "value")
-                    else str(original_type)
+                    original_type.value if hasattr(original_type, "value") else str(original_type)
                 )
                 memory.metadata["migrated_to"] = new_type.value
                 memory.metadata["migration_date"] = datetime.now().isoformat()
 
-                logger.debug(
-                    f"Migrated memory {memory.id} from {original_type} to {new_type}"
-                )
+                logger.debug(f"Migrated memory {memory.id} from {original_type} to {new_type}")
                 return memory
 
             # No migration needed
@@ -219,9 +215,7 @@ class CognitiveTypesMigration:
                     )
 
             if invalid_memories:
-                logger.warning(
-                    f"Found {len(invalid_memories)} memories with invalid types"
-                )
+                logger.warning(f"Found {len(invalid_memories)} memories with invalid types")
                 for mem in invalid_memories[:5]:  # Show first 5
                     logger.warning(f"  - Memory {mem['id']}: type={mem['type']}")
                 return False
@@ -302,7 +296,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
     """Run the migration."""
     try:
         # Load configuration

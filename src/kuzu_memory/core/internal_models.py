@@ -52,7 +52,7 @@ class InternalMemory:
     metadata: dict[str, Any] = field(default_factory=dict)
     entities: list[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize computed fields after object creation."""
         # Generate content hash if not provided
         if not self.content_hash and self.content:
@@ -157,16 +157,14 @@ class InternalMemoryContext:
     total_memories_found: int = 0
     memories_filtered: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate derived fields."""
         # Calculate token count (rough estimate: 1 token ≈ 4 characters)
         self.token_count = len(self.enhanced_prompt) // 4
 
         # Calculate average confidence from memories
         if self.memories:
-            avg_confidence = sum(mem.confidence for mem in self.memories) / len(
-                self.memories
-            )
+            avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
             self.confidence = min(avg_confidence, self.confidence or 1.0)
 
     def to_system_message(self, format_style: str = "markdown") -> str:
@@ -212,17 +210,11 @@ class InternalMemoryContext:
         # Count by type
         type_counts = {}
         for mem in self.memories:
-            type_counts[mem.memory_type.value] = (
-                type_counts.get(mem.memory_type.value, 0) + 1
-            )
+            type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
 
         # Calculate averages
-        avg_importance = sum(mem.importance for mem in self.memories) / len(
-            self.memories
-        )
-        avg_confidence = sum(mem.confidence for mem in self.memories) / len(
-            self.memories
-        )
+        avg_importance = sum(mem.importance for mem in self.memories) / len(self.memories)
+        avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
 
         # Collect unique entities
         all_entities = set()
@@ -365,7 +357,7 @@ def pydantic_to_internal_memory(pydantic_memory) -> InternalMemory:
     )
 
 
-def internal_to_pydantic_memory(internal_memory: InternalMemory):
+def internal_to_pydantic_memory(internal_memory: InternalMemory) -> None:
     """Convert InternalMemory to Pydantic Memory."""
     from .models import Memory
 

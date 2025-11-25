@@ -62,7 +62,7 @@ class MemoryTask:
     # Priority (lower number = higher priority)
     priority: int = 5
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate task after creation."""
         if not self.content.strip():
             raise ValueError("Task content cannot be empty")
@@ -234,16 +234,11 @@ class MemoryQueueManager:
                 **self.stats,
                 "queue_size": self.task_queue.qsize(),
                 "active_tasks": len(
-                    [
-                        t
-                        for t in self.tasks.values()
-                        if t.status == TaskStatus.PROCESSING
-                    ]
+                    [t for t in self.tasks.values() if t.status == TaskStatus.PROCESSING]
                 ),
                 "total_tasks": len(self.tasks),
                 "avg_processing_time_ms": (
-                    self.stats["total_processing_time_ms"]
-                    / max(1, self.stats["tasks_completed"])
+                    self.stats["total_processing_time_ms"] / max(1, self.stats["tasks_completed"])
                 ),
             }
 
@@ -255,11 +250,9 @@ class MemoryQueueManager:
 
             for task_id, task in self.tasks.items():
                 if (
-                    task.status
-                    in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+                    task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
                     and task.completed_at
-                    and (current_time - task.completed_at).total_seconds()
-                    > max_age_seconds
+                    and (current_time - task.completed_at).total_seconds() > max_age_seconds
                 ):
                     to_remove.append(task_id)
 

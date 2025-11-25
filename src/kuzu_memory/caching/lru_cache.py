@@ -57,7 +57,7 @@ class LRUCache(ICache):
         self._expired_cleanups = 0
 
         # Background cleanup
-        self._cleanup_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task[None] | None = None
         self._last_cleanup = time.time()
 
     async def get(self, key: str) -> Any | None:
@@ -135,9 +135,7 @@ class LRUCache(ICache):
                 result[key] = value
         return result
 
-    async def set_multi(
-        self, items: dict[str, Any], ttl: timedelta | None = None
-    ) -> None:
+    async def set_multi(self, items: dict[str, Any], ttl: timedelta | None = None) -> None:
         """Store multiple values in cache."""
         for key, value in items.items():
             await self.set(key, value, ttl)

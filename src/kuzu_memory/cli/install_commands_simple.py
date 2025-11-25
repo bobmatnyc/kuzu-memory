@@ -16,7 +16,7 @@ from .enums import AISystem
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-def install(ctx):
+def install(ctx) -> None:
     """
     🚀 Manage AI system integrations.
 
@@ -40,21 +40,17 @@ def install(ctx):
 @install.command()
 @click.argument(
     "platform",
-    type=click.Choice(
-        ["claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "auggie"]
-    ),
+    type=click.Choice(["claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "auggie"]),
 )
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be done without making changes"
-)
+@click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
 def add(
     platform: str,
     project,
     dry_run: bool,
     verbose: bool,
-):
+) -> None:
     """
     Install KuzuMemory integration for an AI platform.
 
@@ -185,12 +181,8 @@ def add(
                 print("2. KuzuMemory MCP server will be active")
                 print("3. Check the configuration file for details")
             elif platform == "auggie":
-                print(
-                    "1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain"
-                )
-                print(
-                    "2. Store info: kuzu-memory memory store 'This project uses FastAPI'"
-                )
+                print("1. Test: kuzu-memory memory enhance 'How do I deploy this?' --format plain")
+                print("2. Store info: kuzu-memory memory store 'This project uses FastAPI'")
                 print("3. Start using Auggie with enhanced context!")
 
         else:
@@ -209,7 +201,7 @@ def add(
 @click.argument("ai_system", type=click.Choice([s.value for s in AISystem]))
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
-def remove(ai_system: str, project, confirm: bool):
+def remove(ai_system: str, project, confirm: bool) -> None:
     """
     Remove an AI system integration.
 
@@ -270,7 +262,7 @@ def remove(ai_system: str, project, confirm: bool):
 
 @install.command()
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-def status(project):
+def status(project) -> None:
     """
     Show installation status for all AI systems.
 
@@ -302,9 +294,7 @@ def status(project):
             installer = get_installer(installer_info["name"], project_root)
             if installer:
                 status = installer.get_status()
-                status_text = (
-                    "✅ Installed" if status["installed"] else "❌ Not Installed"
-                )
+                status_text = "✅ Installed" if status["installed"] else "❌ Not Installed"
                 print(f"  {installer.ai_system_name}: {status_text}")
 
     except Exception as e:
@@ -313,7 +303,7 @@ def status(project):
 
 
 @install.command(name="list")
-def list_cmd():
+def list_cmd() -> None:
     """
     List all available installers.
 

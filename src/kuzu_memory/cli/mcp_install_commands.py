@@ -15,7 +15,7 @@ from ..utils.project_setup import find_project_root
 
 
 @click.group(name="mcp")
-def mcp_install_group():
+def mcp_install_group() -> None:
     """
     🔌 Manage MCP server integrations.
 
@@ -51,7 +51,7 @@ def mcp_install_group():
 @click.option("--verbose", is_flag=True, help="Show detailed information")
 @click.option("--available", is_flag=True, help="Show only available systems")
 @click.option("--installed", is_flag=True, help="Show only installed systems")
-def mcp_status(project, verbose: bool, available: bool, installed: bool):
+def mcp_status(project, verbose: bool, available: bool, installed: bool) -> None:
     """
     Show MCP installation status for all systems.
 
@@ -123,9 +123,7 @@ def mcp_status(project, verbose: bool, available: bool, installed: bool):
 @mcp_install_group.command(name="install")
 @click.argument(
     "system",
-    type=click.Choice(
-        ["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]
-    ),
+    type=click.Choice(["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]),
 )
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
@@ -135,7 +133,7 @@ def install_mcp(
     dry_run: bool,
     project,
     verbose: bool,
-):
+) -> None:
     """
     Install MCP server for specified system.
 
@@ -277,7 +275,7 @@ def install_mcp(
 @click.option("--verbose", is_flag=True, help="Show detailed information")
 @click.option("--available", is_flag=True, help="Show only available systems")
 @click.option("--installed", is_flag=True, help="Show only installed systems")
-def detect_alias(project, verbose: bool, available: bool, installed: bool):
+def detect_alias(project, verbose: bool, available: bool, installed: bool) -> None:
     """[DEPRECATED] Use 'mcp status' instead."""
     print("⚠️  Warning: 'mcp detect' is deprecated. Please use 'mcp status' instead.\n")
     import click
@@ -294,7 +292,7 @@ def detect_alias(project, verbose: bool, available: bool, installed: bool):
 
 @mcp_install_group.command(name="list")
 @click.option("--verbose", is_flag=True, help="Show detailed information")
-def list_mcp_installers(verbose: bool):
+def list_mcp_installers(verbose: bool) -> None:
     """
     List available MCP installers.
 
@@ -338,7 +336,7 @@ def list_mcp_installers(verbose: bool):
     print(f"Total implemented: {len(implemented)}")
 
 
-def _display_system(system: DetectedSystem, verbose: bool = False):
+def _display_system(system: DetectedSystem, verbose: bool = False) -> None:
     """Display information about a detected system."""
     # Status icon
     if system.exists:

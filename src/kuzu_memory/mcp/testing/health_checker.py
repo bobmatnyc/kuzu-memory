@@ -195,7 +195,7 @@ class MCPHealthChecker:
         timeout: float = 5.0,
         retry_count: int = 3,
         retry_backoff: float = 1.5,
-    ):
+    ) -> None:
         """
         Initialize health checker.
 
@@ -211,9 +211,7 @@ class MCPHealthChecker:
         self.retry_backoff = retry_backoff
         self.health_history: list[HealthCheckResult] = []
 
-    async def check_health(
-        self, detailed: bool = True, retry: bool = True
-    ) -> HealthCheckResult:
+    async def check_health(self, detailed: bool = True, retry: bool = True) -> HealthCheckResult:
         """
         Perform comprehensive health check.
 
@@ -253,9 +251,7 @@ class MCPHealthChecker:
         resources = await self._collect_resource_metrics()
 
         # Determine overall health status
-        overall_status = self._determine_overall_status(
-            components, performance, resources
-        )
+        overall_status = self._determine_overall_status(components, performance, resources)
 
         # Create system health
         system_health = SystemHealth(
@@ -439,9 +435,7 @@ class MCPHealthChecker:
     async def _check_protocol_health(self, retry: bool = True) -> ComponentHealth:
         """Check MCP protocol health."""
         start_time = time.time()
-        tester = MCPConnectionTester(
-            project_root=self.project_root, timeout=self.timeout
-        )
+        tester = MCPConnectionTester(project_root=self.project_root, timeout=self.timeout)
 
         for attempt in range(self.retry_count if retry else 1):
             try:
@@ -517,9 +511,7 @@ class MCPHealthChecker:
     async def _check_tools_health(self, retry: bool = True) -> ComponentHealth:
         """Check tools execution health."""
         start_time = time.time()
-        tester = MCPConnectionTester(
-            project_root=self.project_root, timeout=self.timeout
-        )
+        tester = MCPConnectionTester(project_root=self.project_root, timeout=self.timeout)
 
         for attempt in range(self.retry_count if retry else 1):
             try:
@@ -613,9 +605,7 @@ class MCPHealthChecker:
                 metrics.average_latency_ms = sum(latencies) / len(latencies)
                 metrics.total_requests = total_requests
                 metrics.failed_requests = failed_requests
-                metrics.error_rate = (
-                    failed_requests / total_requests if total_requests > 0 else 0.0
-                )
+                metrics.error_rate = failed_requests / total_requests if total_requests > 0 else 0.0
 
         return metrics
 
@@ -720,12 +710,8 @@ class MCPHealthChecker:
 
         recent = self.health_history[-window:]
 
-        healthy_count = sum(
-            1 for check in recent if check.health.status == HealthStatus.HEALTHY
-        )
-        degraded_count = sum(
-            1 for check in recent if check.health.status == HealthStatus.DEGRADED
-        )
+        healthy_count = sum(1 for check in recent if check.health.status == HealthStatus.HEALTHY)
+        degraded_count = sum(1 for check in recent if check.health.status == HealthStatus.DEGRADED)
         unhealthy_count = sum(
             1 for check in recent if check.health.status == HealthStatus.UNHEALTHY
         )

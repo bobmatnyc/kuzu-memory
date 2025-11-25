@@ -1029,9 +1029,7 @@ class ExampleGenerator:
         return True
 
     @staticmethod
-    def create_integration_guide(
-        project_root: Path, ai_system: str = "Your AI System"
-    ) -> bool:
+    def create_integration_guide(project_root: Path, ai_system: str = "Your AI System") -> bool:
         """Create main integration guide."""
         guide_content = IntegrationTemplates.get_integration_guide(ai_system)
         guide_path = project_root / "kuzu-memory-integration.md"

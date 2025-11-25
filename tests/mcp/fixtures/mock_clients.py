@@ -116,11 +116,7 @@ class MCPClientSimulator:
             True if connection successful
         """
         try:
-            cmd = (
-                self.server_path.split()
-                if " " in self.server_path
-                else [self.server_path]
-            )
+            cmd = self.server_path.split() if " " in self.server_path else [self.server_path]
 
             self.process = subprocess.Popen(
                 cmd,
@@ -256,9 +252,7 @@ class MCPClientSimulator:
             if self.current_session:
                 self.current_session.requests.append(client_request)
 
-    async def send_notification(
-        self, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, method: str, params: dict[str, Any] | None = None) -> None:
         """
         Send JSON-RPC notification (no response expected).
 
@@ -277,9 +271,7 @@ class MCPClientSimulator:
         self.process.stdin.write(notification_str)
         self.process.stdin.flush()
 
-    async def initialize(
-        self, protocol_version: str = "2025-06-18"
-    ) -> dict[str, Any] | None:
+    async def initialize(self, protocol_version: str = "2025-06-18") -> dict[str, Any] | None:
         """
         Send initialize request to establish protocol.
 
@@ -289,13 +281,9 @@ class MCPClientSimulator:
         Returns:
             Server initialization response
         """
-        return await self.send_request(
-            "initialize", {"protocolVersion": protocol_version}
-        )
+        return await self.send_request("initialize", {"protocolVersion": protocol_version})
 
-    async def call_tool(
-        self, tool_name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
         """
         Call a server tool.
 
@@ -306,9 +294,7 @@ class MCPClientSimulator:
         Returns:
             Tool execution response
         """
-        return await self.send_request(
-            "tools/call", {"name": tool_name, "arguments": arguments}
-        )
+        return await self.send_request("tools/call", {"name": tool_name, "arguments": arguments})
 
     async def list_tools(self) -> dict[str, Any] | None:
         """
@@ -319,9 +305,7 @@ class MCPClientSimulator:
         """
         return await self.send_request("tools/list", {})
 
-    async def send_batch(
-        self, requests: list[dict[str, Any]]
-    ) -> list[dict[str, Any]] | None:
+    async def send_batch(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
         """
         Send batch request to server.
 
@@ -454,9 +438,7 @@ class MCPClientSimulator:
 
         return responses
 
-    async def stress_test(
-        self, num_requests: int, request_delay_ms: float = 0
-    ) -> ClientSession:
+    async def stress_test(self, num_requests: int, request_delay_ms: float = 0) -> ClientSession:
         """
         Perform stress test with multiple rapid requests.
 
@@ -493,20 +475,12 @@ class MCPClientSimulator:
             "average_duration_ms": self.current_session.average_duration_ms,
             "duration_range_ms": {
                 "min": (
-                    min(
-                        r.duration_ms
-                        for r in self.current_session.requests
-                        if r.duration_ms > 0
-                    )
+                    min(r.duration_ms for r in self.current_session.requests if r.duration_ms > 0)
                     if self.current_session.requests
                     else 0.0
                 ),
                 "max": (
-                    max(
-                        r.duration_ms
-                        for r in self.current_session.requests
-                        if r.duration_ms > 0
-                    )
+                    max(r.duration_ms for r in self.current_session.requests if r.duration_ms > 0)
                     if self.current_session.requests
                     else 0.0
                 ),
@@ -585,15 +559,11 @@ class ConcurrentClientSimulator:
         )
 
         # Aggregate statistics
-        total_requests = sum(
-            s.total_requests for s in sessions if isinstance(s, ClientSession)
-        )
+        total_requests = sum(s.total_requests for s in sessions if isinstance(s, ClientSession))
         total_successful = sum(
             s.successful_requests for s in sessions if isinstance(s, ClientSession)
         )
-        total_failed = sum(
-            s.failed_requests for s in sessions if isinstance(s, ClientSession)
-        )
+        total_failed = sum(s.failed_requests for s in sessions if isinstance(s, ClientSession))
 
         all_durations = [
             r.duration_ms
@@ -608,9 +578,7 @@ class ConcurrentClientSimulator:
             "total_requests": total_requests,
             "successful": total_successful,
             "failed": total_failed,
-            "success_rate": (
-                total_successful / total_requests * 100 if total_requests > 0 else 0
-            ),
+            "success_rate": (total_successful / total_requests * 100 if total_requests > 0 else 0),
             "average_duration_ms": (
                 sum(all_durations) / len(all_durations) if all_durations else 0
             ),

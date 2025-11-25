@@ -643,15 +643,11 @@ def calculate_content_importance(content: str) -> dict[str, bool]:
 
     # Check if it's a command/instruction
     factors["is_command"] = bool(
-        re.search(
-            r"^(do |make |create |update |delete |run |execute )", content.lower()
-        )
+        re.search(r"^(do |make |create |update |delete |run |execute )", content.lower())
     )
 
     # Check for named entities (simplified)
-    factors["has_entities"] = bool(
-        re.search(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", content)
-    )
+    factors["has_entities"] = bool(re.search(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", content))
 
     # Check if it's long content
     factors["is_long"] = len(content.split()) > 50

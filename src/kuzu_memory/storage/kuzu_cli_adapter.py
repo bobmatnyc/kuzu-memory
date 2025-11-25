@@ -77,9 +77,7 @@ class KuzuCLIAdapter:
                 continue
 
         # If not found, assume it's in PATH
-        logger.warning(
-            "Kuzu CLI not found in common locations, assuming 'kuzu' is in PATH"
-        )
+        logger.warning("Kuzu CLI not found in common locations, assuming 'kuzu' is in PATH")
         return "kuzu"
 
     def execute_query(
@@ -115,9 +113,7 @@ class KuzuCLIAdapter:
                 query = self._substitute_parameters(query, parameters)
 
             # Create temporary file for query
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".cypher", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".cypher", delete=False) as f:
                 f.write(query)
                 query_file = f.name
 
@@ -154,9 +150,7 @@ class KuzuCLIAdapter:
                     self.config.performance.enable_performance_monitoring
                     and execution_time_ms > timeout_ms
                 ):
-                    raise PerformanceError(
-                        "execute_query", execution_time_ms, timeout_ms
-                    )
+                    raise PerformanceError("execute_query", execution_time_ms, timeout_ms)
 
                 return results
 
@@ -249,7 +243,7 @@ class KuzuCLIAdapter:
 
     def execute_transaction(
         self,
-        queries: list[tuple],  # List of (query, parameters) tuples
+        queries: list[tuple[str, dict[str, Any]]],  # List of (query, parameters) tuples
         timeout_ms: float | None = None,
     ) -> list[list[dict[str, Any]]]:
         """
@@ -338,12 +332,12 @@ class KuzuCLIAdapter:
             logger.error(f"Failed to get database statistics: {e}")
             return {"error": str(e)}
 
-    def close(self):
+    def close(self) -> None:
         """Close the adapter (no-op for CLI adapter)."""
         logger.info("Closed Kuzu CLI adapter")
 
-    def __enter__(self):
+    def __enter__(self) -> "KuzuCLIAdapter":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()

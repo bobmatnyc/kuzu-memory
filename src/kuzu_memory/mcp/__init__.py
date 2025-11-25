@@ -18,7 +18,7 @@ from .server import MCP_AVAILABLE, KuzuMemoryMCPServer, SimplifiedMCPServer, mai
 MCPServer = KuzuMemoryMCPServer
 
 
-def create_mcp_server(project_root=None):
+def create_mcp_server(project_root=None) -> None:
     """Create and return an MCP server instance (backwards compatibility)."""
     return KuzuMemoryMCPServer(project_root=project_root)
 

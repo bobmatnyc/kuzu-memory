@@ -13,7 +13,7 @@ import click
 
 
 @click.command(name="mcp")
-def mcp_server():
+def mcp_server() -> None:
     """
     Start the MCP server (stdio mode).
 
