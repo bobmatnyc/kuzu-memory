@@ -1,5 +1,7 @@
 """Storage components for KuzuMemory."""
 
+from __future__ import annotations
+
 from .cache import BloomFilter, LRUCache, MemoryCache
 from .kuzu_adapter import KuzuAdapter, KuzuConnectionPool
 from .memory_store import MemoryStore

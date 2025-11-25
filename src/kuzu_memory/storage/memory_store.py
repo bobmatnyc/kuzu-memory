@@ -4,6 +4,8 @@ Memory storage and management for KuzuMemory.
 Refactored core store interface that coordinates query building and memory enhancement.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta
 from typing import Any
@@ -26,7 +28,7 @@ class MemoryStore:
     the core implementation for memory operations.
     """
 
-    def __init__(self, db_adapter, config: KuzuMemoryConfig):
+    def __init__(self, db_adapter: Any, config: KuzuMemoryConfig) -> None:
         """
         Initialize memory store.
 
@@ -491,7 +493,7 @@ class MemoryStore:
             logger.error(f"Error getting storage statistics: {e}")
             return {"storage": self._storage_stats.copy(), "error": str(e)}
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the memory cache if enabled."""
         if self.cache:
             self.cache.clear_all()

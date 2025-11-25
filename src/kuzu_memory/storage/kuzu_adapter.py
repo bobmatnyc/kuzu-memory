@@ -7,6 +7,8 @@ with connection pooling, error handling, and performance monitoring.
 Supports both Python API and CLI adapters for optimal performance.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -18,7 +20,7 @@ from queue import Empty, Queue
 from typing import Any
 
 try:
-    import kuzu
+    import kuzu  # type: ignore[import-untyped]
 except ImportError:
     kuzu = None
 
@@ -40,7 +42,7 @@ from .schema import (
 logger = logging.getLogger(__name__)
 
 
-def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig):
+def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig) -> KuzuAdapter:
     """
     Factory function to create the appropriate Kuzu adapter.
 
@@ -55,7 +57,7 @@ def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig):
         logger.info("Using Kuzu CLI adapter for optimal performance")
         from .kuzu_cli_adapter import KuzuCLIAdapter
 
-        return KuzuCLIAdapter(db_path, config)
+        return KuzuCLIAdapter(db_path, config)  # type: ignore[return-value]
     else:
         logger.info("Using Kuzu Python API adapter")
         return KuzuAdapter(db_path, config)
@@ -69,7 +71,7 @@ class KuzuConnectionPool:
     and handle concurrent access safely.
     """
 
-    def __init__(self, db_path: Path, pool_size: int = 5):
+    def __init__(self, db_path: Path, pool_size: int = 5) -> None:
         if kuzu is None:
             raise DatabaseError(
                 "Kuzu is not installed. Please install with: pip install kuzu>=0.4.0"
@@ -77,12 +79,12 @@ class KuzuConnectionPool:
 
         self.db_path = db_path
         self.pool_size = pool_size
-        self._pool: Queue = Queue(maxsize=pool_size)
+        self._pool: Queue[Any] = Queue(maxsize=pool_size)  # kuzu.Connection has no type stubs
         self._lock = threading.Lock()
         self._initialized = False
-        self._database = None  # Shared database instance
+        self._database: Any = None  # kuzu.Database has no type stubs
 
-    def _create_connection(self) -> kuzu.Connection:
+    def _create_connection(self) -> Any:  # kuzu.Connection has no type stubs
         """Create a new Kuzu connection using the shared database instance."""
         try:
             # Ensure parent directory exists
@@ -119,7 +121,7 @@ class KuzuConnectionPool:
                 raise DatabaseError(f"Failed to initialize connection pool: {e}")
 
     @contextmanager
-    def get_connection(self, timeout: float = 5.0) -> Iterator[kuzu.Connection]:
+    def get_connection(self, timeout: float = 5.0) -> Iterator[Any]:  # kuzu.Connection has no type stubs
         """
         Get a connection from the pool.
 
@@ -142,7 +144,7 @@ class KuzuConnectionPool:
             yield connection
 
         except Empty:
-            raise DatabaseLockError(str(self.db_path), timeout)
+            raise DatabaseLockError(f"Failed to get connection from pool within {timeout}s for {self.db_path}")
 
         finally:
             # Return connection to pool
@@ -186,7 +188,7 @@ class KuzuAdapter:
     performance monitoring, and schema management.
     """
 
-    def __init__(self, db_path: Path, config: KuzuMemoryConfig):
+    def __init__(self, db_path: Path, config: KuzuMemoryConfig) -> None:
         self.db_path = db_path
         self.config = config
         self._pool = KuzuConnectionPool(db_path, pool_size=config.storage.connection_pool_size)
@@ -237,7 +239,7 @@ class KuzuAdapter:
         try:
             result = self.execute_query(get_query("get_schema_version"))
             if result and len(result) > 0:
-                return result[0]["sv.version"]
+                return str(result[0]["sv.version"])  # type: ignore[no-any-return]
             return None
 
         except Exception:
@@ -349,7 +351,7 @@ class KuzuAdapter:
                 execution_time_ms = (time.time() - start_time) * 1000
                 if self.config.performance.enable_performance_monitoring:
                     if execution_time_ms > timeout_ms:
-                        raise PerformanceError("query_execution", execution_time_ms, timeout_ms)
+                        raise PerformanceError(f"Query execution exceeded timeout: {execution_time_ms:.1f}ms > {timeout_ms}ms")
 
                     if (
                         self.config.performance.log_slow_operations
@@ -374,7 +376,7 @@ class KuzuAdapter:
 
     def execute_transaction(
         self,
-        queries: list[tuple],  # List of (query, parameters) tuples
+        queries: list[tuple[str, dict[str, Any] | None]],  # List of (query, parameters) tuples
         timeout_ms: float | None = None,
     ) -> list[list[dict[str, Any]]]:
         """

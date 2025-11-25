@@ -5,6 +5,8 @@ Uses Kuzu's native CLI interface for optimal performance and compatibility.
 This approach leverages Kuzu's native query processing instead of the Python API.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import subprocess
@@ -36,7 +38,7 @@ class KuzuCLIAdapter:
     - Direct access to Kuzu's query optimization
     """
 
-    def __init__(self, db_path: Path, config: KuzuMemoryConfig):
+    def __init__(self, db_path: Path, config: KuzuMemoryConfig) -> None:
         """
         Initialize the CLI adapter.
 

@@ -5,6 +5,8 @@ Defines the Kuzu graph database schema including node tables, relationship table
 and indices for optimal performance. Includes version management for migrations.
 """
 
+from __future__ import annotations
+
 # Database schema version for migration support
 SCHEMA_VERSION = "1.0"
 

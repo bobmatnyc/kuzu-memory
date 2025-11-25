@@ -4,6 +4,8 @@ Memory enhancement and processing for KuzuMemory.
 Handles entity extraction, memory enhancement, and processing logic.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 class MemoryEnhancer:
     """Handles memory extraction, enhancement, and processing."""
 
-    def __init__(self, config: KuzuMemoryConfig):
+    def __init__(self, config: KuzuMemoryConfig) -> None:
         """
         Initialize memory enhancer.
 

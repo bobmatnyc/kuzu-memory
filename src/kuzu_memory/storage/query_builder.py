@@ -4,6 +4,8 @@ Database query construction and optimization for KuzuMemory.
 Handles complex query building, filtering, and database interaction logic.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timedelta
@@ -30,7 +32,9 @@ logger = logging.getLogger(__name__)
 class DatabaseAdapter(Protocol):
     """Protocol for database adapter interface."""
 
-    def execute_query(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def execute_query(
+        self, query: str, parameters: dict[str, Any] | None = None, timeout_ms: float | None = None
+    ) -> list[dict[str, Any]]:
         """Execute a database query with parameters."""
         ...
 
@@ -105,7 +109,7 @@ class QueryBuilder:
                 first_words = content_words[
                     :DEFAULT_SEARCH_WORD_COUNT
                 ]  # Use first N words for initial filtering
-                params["search_words"] = first_words
+                params["search_words"] = first_words  # type: ignore[assignment]  # list assigned to dict[str, Any]
 
                 # Use a more efficient query structure with list_contains
                 # This avoids dynamic query building in loops
@@ -328,7 +332,7 @@ class QueryBuilder:
             logger.error(f"Error storing memory entities: {e}")
             raise DatabaseError(f"Failed to store memory entities: {e}")
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """
         Get recent memories with optional filtering.
 
@@ -355,11 +359,11 @@ class QueryBuilder:
                         params[filter_key] = filter_value.value
                     else:
                         conditions.append(f"m.{filter_key} = ${filter_key}")
-                        params[filter_key] = filter_value
+                        params[filter_key] = filter_value  # type: ignore[assignment]
 
             # Add expiration filter
             conditions.append("(m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))")
-            params["now"] = datetime.now().isoformat()
+            params["now"] = datetime.now().isoformat()  # type: ignore[assignment]
 
             # Construct query
             where_clause = " AND ".join(conditions) if conditions else "1=1"
@@ -539,10 +543,11 @@ class QueryBuilder:
             # Execute each statistics query
             for stat_name, query_info in stats_queries.items():
                 try:
-                    query = query_info["query"]
+                    query: str = str(query_info["query"])  # type: ignore[assignment]
                     # Only include parameters that this query needs
+                    params_list: list[str] = query_info["params"]  # type: ignore[assignment]
                     query_params = {
-                        k: v for k, v in all_params.items() if k in query_info["params"]
+                        k: v for k, v in all_params.items() if k in params_list
                     }
 
                     results = self.db_adapter.execute_query(query, query_params)
@@ -623,7 +628,7 @@ class QueryBuilder:
             logger.error(f"Error converting database result to Memory: {e}")
             return None
 
-    def _update_query_stats(self, execution_time: float, result_count: int):
+    def _update_query_stats(self, execution_time: float, result_count: int) -> None:
         """
         Update query performance statistics.
 

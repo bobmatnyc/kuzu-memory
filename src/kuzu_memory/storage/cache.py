@@ -5,6 +5,8 @@ Provides fast in-memory caching of frequently accessed memories
 and query results to improve performance.
 """
 
+from __future__ import annotations
+
 import hashlib
 import threading
 import time
@@ -32,7 +34,7 @@ class LRUCache:
         """
         self.maxsize = maxsize
         self.ttl_seconds = ttl_seconds
-        self._cache: OrderedDict = OrderedDict()
+        self._cache: OrderedDict[str, Any] = OrderedDict()
         self._timestamps: dict[str, float] = {}
         self._lock = threading.RLock()
 
