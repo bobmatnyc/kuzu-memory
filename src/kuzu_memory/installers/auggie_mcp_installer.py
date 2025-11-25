@@ -4,7 +4,10 @@ Auggie MCP installer for KuzuMemory.
 Installs MCP server configuration for Auggie (global configuration).
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 from pathlib import Path
 
 from .base import BaseInstaller, InstallationResult
@@ -74,7 +77,7 @@ class AuggieMCPInstaller(BaseInstaller):
         Returns:
             List of error messages, empty if all prerequisites are met
         """
-        errors = []
+        errors: list[Any] = []
 
         # Check if project root exists
         if not self.project_root.exists():
@@ -93,7 +96,7 @@ class AuggieMCPInstaller(BaseInstaller):
 
         return errors
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, dry_run: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install MCP configuration for Auggie.
 

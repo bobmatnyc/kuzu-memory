@@ -4,6 +4,8 @@ System utilities and detection for KuzuMemory installers.
 Provides system detection, file operations, and platform-specific utilities.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import platform
@@ -191,7 +193,7 @@ class ProcessRunner:
         timeout: int = 30,
         capture_output: bool = True,
         check: bool = True,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run a system command with proper error handling."""
         try:
             logger.debug(f"Running command: {' '.join(command)}")
@@ -223,7 +225,7 @@ class ProcessRunner:
     @staticmethod
     def run_python_command(
         module_args: list[str], cwd: Path | None = None, timeout: int = 30
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run a Python module command."""
         python_exe = SystemDetector.get_python_executable()
         command = [str(python_exe), *module_args]
@@ -266,7 +268,7 @@ class ProjectDetector:
     @staticmethod
     def detect_project_type(project_root: Path) -> list[str]:
         """Detect the type of project based on files present."""
-        project_types = []
+        project_types: list[Any] = []
 
         # Python projects
         if any(
@@ -313,7 +315,7 @@ class ProjectDetector:
             "docker_config": ["Dockerfile", "docker-compose.yml"],
         }
 
-        found_configs = {}
+        found_configs: dict[str, Any] = {}
         for config_type, patterns in config_patterns.items():
             for pattern in patterns:
                 config_path = project_root / pattern

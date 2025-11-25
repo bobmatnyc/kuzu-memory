@@ -4,7 +4,10 @@ Installer Registry for KuzuMemory
 Manages available installers and provides lookup functionality.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 from pathlib import Path
 
 from .auggie import AuggieInstaller
@@ -27,12 +30,12 @@ class InstallerRegistry:
     Provides lookup and discovery functionality for installers.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the installer registry."""
         self._installers: dict[str, type[BaseInstaller]] = {}
         self._register_builtin_installers()
 
-    def _register_builtin_installers(self):
+    def _register_builtin_installers(self) -> None:
         """Register built-in installers."""
         # AI System Installers (ONE PATH per system)
         # NOTE: claude-desktop REMOVED - focus on coding tools only (Claude Code, VS Code, Cursor, etc.)
@@ -57,7 +60,7 @@ class InstallerRegistry:
         # self.register("claude-desktop-home", ClaudeDesktopHomeInstaller)  # REMOVED
         self.register("generic", UniversalInstaller)  # DEPRECATED: Use universal
 
-    def register(self, name: str, installer_class: type[BaseInstaller]):
+    def register(self, name: str, installer_class: type[BaseInstaller]) -> None:
         """
         Register an installer.
 
@@ -94,7 +97,7 @@ class InstallerRegistry:
         Returns:
             List of installer information dictionaries
         """
-        installers = []
+        installers: list[Any] = []
         seen_classes = set()
 
         for name, installer_class in self._installers.items():
@@ -190,7 +193,7 @@ def has_installer(name: str) -> bool:
     return _registry.has_installer(name)
 
 
-def register_installer(name: str, installer_class: type[BaseInstaller]):
+def register_installer(name: str, installer_class: type[BaseInstaller]) -> None:
     """
     Register a custom installer.
 

@@ -5,12 +5,14 @@ Handles version detection, upgrade notifications, and automatic migration
 of Auggie integration rules.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 class AuggieVersion:
     """Version information for Auggie integration."""
 
-    def __init__(self, major: int, minor: int, patch: int):
+    def __init__(self, major: int, minor: int, patch: int) -> None:
         self.major = major
         self.minor = minor
         self.patch = patch
@@ -95,7 +97,7 @@ VERSION_HISTORY = {
 class AuggieVersionDetector:
     """Detects installed version of Auggie integration."""
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
         self.version_file = project_root / ".augment" / ".kuzu-version"
 
@@ -211,7 +213,7 @@ class AuggieVersionDetector:
 class AuggieRuleMigrator:
     """Handles migration of Auggie rules between versions."""
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
         self.detector = AuggieVersionDetector(project_root)
         self.backup_dir = project_root / ".augment" / "backups"

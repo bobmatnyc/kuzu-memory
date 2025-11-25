@@ -4,6 +4,8 @@ TOML utility functions for MCP configuration management.
 Provides TOML loading, saving, merging, and validation for MCP configs.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -12,7 +14,7 @@ from typing import Any
 try:
     import tomllib
 except ImportError:
-    import tomli as tomllib  # Fallback for Python <3.11
+    import tomli as tomllib  # type: ignore[no-redef]
 
 # TOML writing requires third-party library
 try:
@@ -50,7 +52,6 @@ def load_toml_config(file_path: Path) -> dict[str, Any]:
         with open(file_path, "rb") as f:
             config = tomllib.load(f)
             logger.info(f"Loaded TOML configuration from {file_path}")
-            return config
     except tomllib.TOMLDecodeError as e:
         raise TOMLConfigError(f"Invalid TOML in {file_path}: {e}")
     except Exception as e:

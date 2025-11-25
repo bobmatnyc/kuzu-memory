@@ -4,7 +4,10 @@ Universal Installer for KuzuMemory
 Creates generic integration files that work with any AI system.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 
 from .base import BaseInstaller, InstallationError, InstallationResult
 
@@ -39,7 +42,7 @@ class UniversalInstaller(BaseInstaller):
             "Includes Python, JavaScript, and shell integration examples."
         )
 
-    def install(self, force: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install universal integration files.
 
@@ -64,7 +67,7 @@ class UniversalInstaller(BaseInstaller):
 
             # Check if already installed and not forcing
             if not force:
-                existing_files = []
+                existing_files: list[Any] = []
                 for file_pattern in self.required_files:
                     file_path = self.project_root / file_pattern
                     if file_path.exists():
@@ -112,7 +115,7 @@ class UniversalInstaller(BaseInstaller):
                 warnings=self.warnings,
             )
 
-    def _install_integration_guide(self, ai_system: str):
+    def _install_integration_guide(self, ai_system: str) -> None:
         """Install the main integration guide."""
         guide_content = f"""# KuzuMemory Integration Guide
 
@@ -296,7 +299,7 @@ Remember: The goal is seamless, invisible integration that makes AI responses mo
         if not self.write_file(guide_path, guide_content):
             raise InstallationError("Failed to create integration guide")
 
-    def _install_python_example(self):
+    def _install_python_example(self) -> None:
         """Install Python integration example."""
         python_content = '''#!/usr/bin/env python3
 """
@@ -309,6 +312,7 @@ import subprocess
 import json
 import time
 import logging
+from typing import Any
 from typing import Optional, Dict, Any
 
 # Set up logging
@@ -323,7 +327,7 @@ class KuzuMemoryIntegration:
     Provides methods for enhancing prompts and storing learning.
     """
 
-    def __init__(self, project_path: Optional[str] = None, timeout: int = 5):
+    def __init__(self, project_path: Optional[str] = None, timeout: int = 5) -> None:
         """
         Initialize integration.
 
@@ -382,7 +386,7 @@ class KuzuMemoryIntegration:
             return prompt
 
     def store_learning(self, content: str, source: str = 'ai-conversation',
-                      metadata: Optional[Dict[str, Any]] = None) -> bool:
+                      metadata: Optional[dict[str, Any]] = None) -> bool:
         """
         Store learning asynchronously.
 
@@ -422,7 +426,7 @@ class KuzuMemoryIntegration:
             logger.warning(f"Learning submission failed: {e}")
             return False
 
-    def get_project_stats(self) -> Dict[str, Any]:
+    def get_project_stats(self) -> dict[str, Any]:
         """
         Get project memory statistics.
 
@@ -482,7 +486,7 @@ def your_ai_system(prompt: str) -> str:
     return f"AI Response to: {prompt}"
 
 
-def main():
+def main() -> None:
     """Example usage of KuzuMemory integration."""
     # Initialize memory integration
     memory = KuzuMemoryIntegration()
@@ -516,7 +520,7 @@ if __name__ == "__main__":
         if not self.write_file(python_path, python_content):
             raise InstallationError("Failed to create Python example")
 
-    def _install_javascript_example(self):
+    def _install_javascript_example(self) -> None:
         """Install JavaScript integration example."""
         js_content = """#!/usr/bin/env node
 /**
@@ -724,7 +728,7 @@ module.exports = { KuzuMemoryIntegration };
         if not self.write_file(js_path, js_content):
             raise InstallationError("Failed to create JavaScript example")
 
-    def _install_shell_example(self):
+    def _install_shell_example(self) -> None:
         """Install shell integration example."""
         shell_content = """#!/bin/bash
 # KuzuMemory Shell Integration Example

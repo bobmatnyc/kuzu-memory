@@ -5,8 +5,11 @@ Enhanced installer with version detection and auto-migration support.
 Incorporates insights from Claude Code hooks v1.4.0.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from typing import Any
 
 from .auggie_rules_v2 import (
     get_agents_md_v2,
@@ -66,10 +69,11 @@ class AuggieInstallerV2(BaseInstaller):
 
     def install(
         self,
+        force: bool = False,
         auto_migrate: bool = True,
         dry_run: bool = False,
         verbose: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> InstallationResult:
         """
         Install or upgrade Auggie integration.
@@ -130,7 +134,7 @@ class AuggieInstallerV2(BaseInstaller):
 
             # Fresh install - check if files exist without version
             if not installed_version:
-                existing_files = []
+                existing_files: list[Any] = []
                 for file_pattern in self.required_files:
                     file_path = self.project_root / file_pattern
                     if file_path.exists():
@@ -179,7 +183,7 @@ class AuggieInstallerV2(BaseInstaller):
             )
 
     def _upgrade_installation(
-        self, from_version, detector: AuggieVersionDetector, dry_run: bool = False
+        self, from_version: dict[str, Any], detector: AuggieVersionDetector, dry_run: bool = False
     ) -> InstallationResult:
         """
         Upgrade from existing version to current version.
@@ -239,20 +243,20 @@ class AuggieInstallerV2(BaseInstaller):
                 warnings=self.warnings,
             )
 
-    def _install_agents_md(self):
+    def _install_agents_md(self) -> None:
         """Install the main AGENTS.md file with v2.0.0 content."""
         agents_path = self.project_root / "AGENTS.md"
         if not self.write_file(agents_path, get_agents_md_v2()):
             raise InstallationError("Failed to create AGENTS.md")
 
-    def _install_integration_rules(self):
+    def _install_integration_rules(self) -> None:
         """Install detailed integration rules with v2.0.0 content."""
         rules_dir = self.project_root / ".augment" / "rules"
         rules_path = rules_dir / "kuzu-memory-integration.md"
         if not self.write_file(rules_path, get_integration_rules_v2()):
             raise InstallationError("Failed to create integration rules")
 
-    def _install_quick_reference(self):
+    def _install_quick_reference(self) -> None:
         """Install quick reference guide with v2.0.0 content."""
         rules_dir = self.project_root / ".augment" / "rules"
         reference_path = rules_dir / "memory-quick-reference.md"

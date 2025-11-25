@@ -4,7 +4,10 @@ Windsurf IDE MCP installer for KuzuMemory.
 Installs MCP server configuration for Windsurf IDE (global installation).
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 from pathlib import Path
 
 from .base import BaseInstaller, InstallationResult
@@ -68,7 +71,7 @@ class WindsurfInstaller(BaseInstaller):
             }
         }
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, dry_run: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install MCP configuration for Windsurf IDE.
 

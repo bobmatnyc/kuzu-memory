@@ -4,7 +4,10 @@ VS Code MCP installer for KuzuMemory.
 Installs MCP server configuration for VS Code with Claude extension.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 from pathlib import Path
 
 from .base import BaseInstaller, InstallationResult
@@ -90,7 +93,7 @@ class VSCodeInstaller(BaseInstaller):
 
         return config
 
-    def install(self, force: bool = False, dry_run: bool = False, **kwargs) -> InstallationResult:
+    def install(self, force: bool = False, dry_run: bool = False, **kwargs: Any) -> InstallationResult:
         """
         Install MCP configuration for VS Code.
 
