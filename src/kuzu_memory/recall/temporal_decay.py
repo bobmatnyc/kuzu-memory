@@ -5,6 +5,8 @@ Provides sophisticated temporal decay algorithms that gradually reduce memory
 relevance over time while preserving important information.
 """
 
+from __future__ import annotations
+
 import logging
 import math
 from datetime import datetime

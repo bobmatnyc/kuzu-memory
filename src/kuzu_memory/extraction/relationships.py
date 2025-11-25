@@ -5,10 +5,13 @@ Detects relationships between memories and entities using pattern matching
 and proximity analysis without requiring LLM calls.
 """
 
+from __future__ import annotations
+
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from ..core.models import Memory, MemoryType
 from .entities import Entity
@@ -25,11 +28,7 @@ class Relationship:
     relationship_type: str
     confidence: float
     context: str = ""
-    created_at: datetime = None
-
-    def __post_init__(self) -> None:
-        if self.created_at is None:
-            self.created_at = datetime.now()
+    created_at: datetime = field(default_factory=datetime.now)
 
 
 class RelationshipDetector:
@@ -46,7 +45,7 @@ class RelationshipDetector:
         self._compile_patterns()
 
         # Statistics
-        self._detection_stats = {
+        self._detection_stats: dict[str, Any] = {
             "total_relationships": 0,
             "relationship_types": {},
             "patterns_matched": {},

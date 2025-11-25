@@ -5,6 +5,8 @@ Provides functionality to import git commit history as EPISODIC memories,
 with intelligent filtering and incremental updates.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import logging
 from datetime import datetime
