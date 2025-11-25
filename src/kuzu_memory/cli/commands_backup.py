@@ -1117,7 +1117,7 @@ def remember(
 @cli.command()
 @click.argument("topic", required=False)
 @click.pass_context
-def examples(ctx, topic) -> None:
+def examples(ctx: click.Context, topic: str | None) -> None:
     """
     📚 Show examples and tutorials for KuzuMemory commands.
 
@@ -1302,7 +1302,7 @@ def examples(ctx, topic) -> None:
 @cli.command()
 @click.option("--advanced", is_flag=True, help="Show advanced configuration options")
 @click.pass_context
-def setup(ctx, advanced) -> None:
+def setup(ctx: click.Context, advanced: bool) -> None:
     """
     ⚙️ Interactive setup wizard for KuzuMemory.
 
@@ -1443,7 +1443,7 @@ def setup(ctx, advanced) -> None:
 
 @cli.command()
 @click.pass_context
-def tips(ctx) -> None:
+def tips(ctx: click.Context) -> None:
     """
     💡 Show helpful tips and best practices.
 
@@ -1519,7 +1519,7 @@ def tips(ctx) -> None:
 @click.option("--enable-cli", is_flag=True, help="Enable Kuzu CLI adapter for better performance")
 @click.option("--disable-cli", is_flag=True, help="Disable Kuzu CLI adapter (use Python API)")
 @click.pass_context
-def optimize(ctx, enable_cli, disable_cli) -> None:
+def optimize(ctx: click.Context, enable_cli: bool, disable_cli: bool) -> None:
     """
     🚀 Optimize KuzuMemory performance settings.
 
@@ -1695,14 +1695,14 @@ def optimize(ctx, enable_cli, disable_cli) -> None:
 )
 @click.pass_context
 def recall(
-    ctx,
-    prompt,
-    max_memories,
-    strategy,
-    session_id,
-    agent_id,
-    output_format,
-    explain_ranking,
+    ctx: click.Context,
+    prompt: str,
+    max_memories: int,
+    strategy: str,
+    session_id: str | None,
+    agent_id: str,
+    output_format: str,
+    explain_ranking: bool,
 ) -> None:
     """
     🔍 Recall project memories relevant to the provided prompt.
@@ -1811,7 +1811,7 @@ def recall(
     help="Output format",
 )
 @click.pass_context
-def stats(ctx, detailed, output_format) -> None:
+def stats(ctx: click.Context, detailed: bool, output_format: str) -> None:
     """Show database and performance statistics."""
     try:
         # Load configuration and initialize KuzuMemory
@@ -1895,7 +1895,7 @@ def stats(ctx, detailed, output_format) -> None:
 @cli.command()
 @click.option("--force", is_flag=True, help="Force cleanup without confirmation")
 @click.pass_context
-def cleanup(ctx, force) -> None:
+def cleanup(ctx: click.Context, force: bool) -> None:
     """Clean up expired memories."""
     try:
         # Load configuration and initialize KuzuMemory
@@ -1923,7 +1923,7 @@ def cleanup(ctx, force) -> None:
 @cli.command()
 @click.argument("config_path", type=click.Path())
 @click.pass_context
-def create_config(ctx, config_path) -> None:
+def create_config(ctx: click.Context, config_path: str) -> None:
     """Create an example configuration file."""
     try:
         config_loader = get_config_loader()
@@ -1940,7 +1940,7 @@ def create_config(ctx, config_path) -> None:
 
 @cli.group()
 @click.pass_context
-def auggie(ctx) -> None:
+def auggie(ctx: click.Context) -> None:
     """
     Auggie integration commands for intelligent memory-driven AI interactions.
 
@@ -1955,7 +1955,7 @@ def auggie(ctx) -> None:
 @click.option("--user-id", default="cli-user", help="User ID for context")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed information")
 @click.pass_context
-def auggie_enhance(ctx, prompt, user_id, verbose) -> None:
+def auggie_enhance(ctx: click.Context, prompt: str, user_id: str, verbose: bool) -> None:
     """Enhance a prompt using Auggie rules and memories."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2001,7 +2001,7 @@ def auggie_enhance(ctx, prompt, user_id, verbose) -> None:
 @click.option("--user-id", default="cli-user", help="User ID for context")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed learning data")
 @click.pass_context
-def auggie_learn(ctx, prompt, response, feedback, user_id, verbose) -> None:
+def auggie_learn(ctx: click.Context, prompt: str, response: str, feedback: str | None, user_id: str, verbose: bool) -> None:
     """Learn from an AI response and optional user feedback."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2041,7 +2041,7 @@ def auggie_learn(ctx, prompt, response, feedback, user_id, verbose) -> None:
 @auggie.command()
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed rule information")
 @click.pass_context
-def rules(ctx, verbose) -> None:
+def rules(ctx: click.Context, verbose: bool) -> None:
     """List all Auggie rules."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2090,7 +2090,7 @@ def rules(ctx, verbose) -> None:
 @auggie.command("stats")
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed statistics")
 @click.pass_context
-def auggie_stats(ctx, verbose) -> None:
+def auggie_stats(ctx: click.Context, verbose: bool) -> None:
     """Show Auggie integration statistics."""
     try:
         db_path = ctx.obj.get("db_path", "kuzu_memories.db")
@@ -2171,7 +2171,7 @@ cli.add_command(list_installers, name="list-installers")
     help="Output format",
 )
 @click.pass_context
-def temporal_analysis(ctx, memory_id, memory_type, limit, output_format) -> None:
+def temporal_analysis(ctx: click.Context, memory_id: str | None, memory_type: str | None, limit: int, output_format: str) -> None:
     """
     🕒 Analyze temporal decay for memories.
 
