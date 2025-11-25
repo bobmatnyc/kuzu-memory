@@ -4,7 +4,10 @@ Help and documentation CLI commands for KuzuMemory.
 Provides examples, tips, and interactive help for users.
 """
 
+from __future__ import annotations
+
 import sys
+from typing import Any
 
 import click
 
@@ -13,7 +16,7 @@ from .cli_utils import rich_confirm, rich_panel, rich_print, rich_prompt
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-def help_group(ctx):
+def help_group(ctx: click.Context) -> None:
     """
     ❓ Help system for KuzuMemory.
 
@@ -45,7 +48,7 @@ def help_group(ctx):
 @help_group.command()
 @click.argument("topic", required=False)
 @click.pass_context
-def examples(ctx, topic):
+def examples(ctx: click.Context, topic: str | None) -> None:
     """
     Show practical examples of KuzuMemory usage.
 
@@ -60,7 +63,7 @@ def examples(ctx, topic):
       kuzu-memory help examples advanced     # Advanced usage examples
     """
     try:
-        all_examples = {
+        all_examples: dict[str, dict[str, Any]] = {
             "basic": {
                 "title": "📝 Basic Usage Examples",
                 "examples": [
@@ -180,7 +183,7 @@ def examples(ctx, topic):
 
 @help_group.command()
 @click.pass_context
-def tips(ctx):
+def tips(ctx: click.Context) -> None:
     """
     Show helpful tips and best practices for KuzuMemory.
 

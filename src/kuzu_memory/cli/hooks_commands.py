@@ -4,6 +4,8 @@ Hooks installation CLI commands for KuzuMemory.
 Provides unified hooks installation commands for Claude Code and Auggie.
 """
 
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -19,7 +21,7 @@ console = Console()
 
 
 @click.group(name="hooks")
-def hooks_group():
+def hooks_group() -> None:
     """
     🪝 Hook system entry points for Claude Code integration.
 
@@ -47,7 +49,7 @@ def hooks_group():
 @hooks_group.command(name="status")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option("--verbose", is_flag=True, help="Show detailed information")
-def hooks_status(project, verbose: bool):
+def hooks_status(project: str | None, verbose: bool) -> None:
     """
     Show hooks installation status for all systems.
 
@@ -67,7 +69,8 @@ def hooks_status(project, verbose: bool):
             project_root = Path(project)
         else:
             try:
-                project_root = find_project_root()
+                found_root = find_project_root()
+                project_root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 project_root = Path.cwd()
 
@@ -122,7 +125,7 @@ def hooks_status(project, verbose: bool):
 @click.option("--dry-run", is_flag=True, help="Preview changes without applying")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-def install_hooks(system: str, dry_run: bool, verbose: bool, project):
+def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None) -> None:
     """
     Install hooks for specified system.
 
@@ -163,7 +166,13 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
             project_root = Path(project)
         else:
             try:
-                project_root = find_project_root()
+                found_root = find_project_root()
+                if found_root is None:
+                    console.print(
+                        "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                    )
+                    sys.exit(1)
+                project_root = found_root
             except Exception:
                 console.print(
                     "[red]❌ Could not find project root. Use --project to specify.[/red]"
@@ -253,7 +262,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project):
 
 
 @hooks_group.command(name="list")
-def list_hooks():
+def list_hooks() -> None:
     """
     List available hook systems.
 
@@ -291,7 +300,7 @@ def list_hooks():
 
 
 @hooks_group.command(name="enhance")
-def hooks_enhance():
+def hooks_enhance() -> None:
     """
     Enhance prompts with kuzu-memory context (for Claude Code hooks).
 
@@ -346,6 +355,10 @@ def hooks_enhance():
         # Find project root and initialize memory
         try:
             project_root = find_project_root()
+            if project_root is None:
+                logger.info("Project root not found, skipping enhancement")
+                sys.exit(0)
+
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():
@@ -387,7 +400,7 @@ def hooks_enhance():
 
 
 @hooks_group.command(name="session-start")
-def hooks_session_start():
+def hooks_session_start() -> None:
     """
     Record session start event (for Claude Code hooks).
 
@@ -430,6 +443,10 @@ def hooks_session_start():
         # Find project root and initialize memory
         try:
             project_root = find_project_root()
+            if project_root is None:
+                logger.info("Project root not found, skipping session start")
+                sys.exit(0)
+
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():
@@ -467,7 +484,7 @@ def hooks_session_start():
 
 
 @hooks_group.command(name="learn")
-def hooks_learn():
+def hooks_learn() -> None:
     """
     Learn from conversations (for Claude Code hooks).
 
@@ -646,6 +663,10 @@ def hooks_learn():
         # Store the memory
         try:
             project_root = find_project_root()
+            if project_root is None:
+                logger.info("Project root not found, skipping learning")
+                sys.exit(0)
+
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():

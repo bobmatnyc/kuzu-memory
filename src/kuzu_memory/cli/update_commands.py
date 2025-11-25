@@ -4,6 +4,8 @@ Update checker and upgrade commands for KuzuMemory CLI.
 Provides functionality to check for and install updates from PyPI.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import subprocess
@@ -26,7 +28,7 @@ class VersionChecker:
     PYPI_API_URL = "https://pypi.org/pypi/kuzu-memory/json"
     TIMEOUT = 10  # seconds
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.current_version = __version__
 
     def get_latest_version(self, include_pre: bool = False) -> dict[str, Any]:
@@ -343,7 +345,7 @@ def _format_json_output(
     help="Only output if update is available",
 )
 @click.pass_context
-def update(ctx, check_only: bool, pre: bool, format: str, quiet: bool):
+def update(ctx: click.Context, check_only: bool, pre: bool, format: str, quiet: bool) -> None:
     """
     🔄 Check for and install kuzu-memory updates.
 
