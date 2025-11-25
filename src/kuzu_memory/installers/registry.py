@@ -40,10 +40,11 @@ class InstallerRegistry:
     def _register_builtin_installers(self):
         """Register built-in installers."""
         # AI System Installers (ONE PATH per system)
+        # NOTE: claude-desktop REMOVED - focus on coding tools only (Claude Code, VS Code, Cursor, etc.)
         self.register("auggie", AuggieInstaller)
         self.register("auggie-mcp", AuggieMCPInstaller)  # Auggie MCP server integration
         self.register("claude-code", ClaudeHooksInstaller)  # Claude Code with hooks/MCP
-        self.register("claude-desktop", SmartClaudeDesktopInstaller)  # Smart auto-detection
+        # self.register("claude-desktop", SmartClaudeDesktopInstaller)  # REMOVED - coding tools only
         self.register("codex", CodexInstaller)  # Codex MCP server integration
         self.register("universal", UniversalInstaller)
 
@@ -56,12 +57,9 @@ class InstallerRegistry:
         # These are kept for backward compatibility only
         self.register("claude", ClaudeHooksInstaller)  # DEPRECATED: Use claude-code
         self.register("claude-mcp", ClaudeHooksInstaller)  # DEPRECATED: Use claude-code
-        self.register(
-            "claude-desktop-pipx", ClaudeDesktopPipxInstaller
-        )  # DEPRECATED: Use claude-desktop
-        self.register(
-            "claude-desktop-home", ClaudeDesktopHomeInstaller
-        )  # DEPRECATED: Use claude-desktop --mode=home
+        # Claude Desktop installers REMOVED - coding tools focus
+        # self.register("claude-desktop-pipx", ClaudeDesktopPipxInstaller)  # REMOVED
+        # self.register("claude-desktop-home", ClaudeDesktopHomeInstaller)  # REMOVED
         self.register("generic", UniversalInstaller)  # DEPRECATED: Use universal
 
     def register(self, name: str, installer_class: type[BaseInstaller]):

@@ -20,9 +20,9 @@ from ..utils.project_setup import find_project_root
 from .cli_utils import rich_panel, rich_print
 
 # Available integrations (simplified names)
+# NOTE: claude-desktop removed - focus on coding tools only (Claude Code, VS Code, Cursor, etc.)
 AVAILABLE_INTEGRATIONS = [
     "claude-code",
-    "claude-desktop",
     "codex",
     "cursor",
     "vscode",
@@ -172,24 +172,25 @@ def install_command(
     verbose: bool,
 ) -> None:
     """
-    Install kuzu-memory integration.
+    Install kuzu-memory integration for coding tools.
 
     If no integration is specified, auto-detects installed systems and offers to repair/reinstall.
 
     Installs the right components for each platform automatically:
       • claude-code: MCP server + hooks (complete integration)
-      • claude-desktop: MCP server only
       • cursor: MCP server only
       • vscode: MCP server only
       • windsurf: MCP server only
+      • codex: MCP server only
       • auggie: Rules integration
       • auggie-mcp: MCP server integration (global)
+
+    NOTE: claude-desktop is no longer supported. Use claude-code instead for Claude AI coding.
 
     \b
     Examples:
         kuzu-memory install                    # Auto-detect and repair
-        kuzu-memory install claude-code
-        kuzu-memory install claude-desktop
+        kuzu-memory install claude-code        # Recommended for Claude AI
         kuzu-memory install cursor --dry-run
         kuzu-memory install vscode --verbose
         kuzu-memory install auggie-mcp
@@ -287,10 +288,6 @@ def install_command(
                 rich_print("1. Reload Claude Code window or restart")
                 rich_print("2. MCP tools + hooks active for enhanced context")
                 rich_print("3. Check .claude/settings.local.json for configuration")
-            elif integration == "claude-desktop":
-                rich_print("1. Restart Claude Desktop application")
-                rich_print("2. Open a new conversation")
-                rich_print("3. KuzuMemory MCP tools will be available")
             elif integration in ["cursor", "vscode", "windsurf"]:
                 rich_print(f"1. Reload or restart {installer.ai_system_name}")
                 rich_print("2. KuzuMemory MCP server will be active")
