@@ -4,6 +4,10 @@ Common CLI utilities and formatting functions for KuzuMemory CLI.
 Provides Rich-based formatting functions and fallbacks for terminal output.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 # Rich imports for beautiful CLI output
 try:
     from rich.console import Console
@@ -17,19 +21,31 @@ except ImportError:
     RICH_AVAILABLE = False
 
 # Initialize rich console
-console = Console() if RICH_AVAILABLE else None
+console: Console | None = Console() if RICH_AVAILABLE else None
 
 
-def rich_print(text, style=None, **kwargs):
-    """Print with rich formatting if available, fallback to regular print."""
+def rich_print(text: str, style: str | None = None, **kwargs: Any) -> None:
+    """Print with rich formatting if available, fallback to regular print.
+
+    Args:
+        text: Text to print
+        style: Rich style string (e.g., "bold red")
+        **kwargs: Additional arguments passed to Console.print()
+    """
     if RICH_AVAILABLE and console:
         console.print(text, style=style, **kwargs)
     else:
         print(text)
 
 
-def rich_panel(content, title=None, style="blue"):
-    """Create a rich panel if available, fallback to simple formatting."""
+def rich_panel(content: str, title: str | None = None, style: str = "blue") -> None:
+    """Create a rich panel if available, fallback to simple formatting.
+
+    Args:
+        content: Panel content text
+        title: Optional panel title
+        style: Border style/color (e.g., "blue", "green")
+    """
     if RICH_AVAILABLE and console:
         console.print(Panel(content, title=title, border_style=style))
     else:
@@ -39,15 +55,34 @@ def rich_panel(content, title=None, style="blue"):
         print("=" * (len(title) + 8) if title else "")
 
 
-def rich_table(headers, rows, title=None):
-    """Create a rich table if available, fallback to simple formatting."""
+def rich_table(
+    headers: list[str],
+    rows: list[list[Any]],
+    title: str | None = None,
+    print_table: bool = True,
+) -> Table | None:
+    """Create a rich table if available, fallback to simple formatting.
+
+    Args:
+        headers: Column headers
+        rows: Table rows (list of lists)
+        title: Optional table title
+        print_table: If True, print the table immediately; if False, return Table object
+
+    Returns:
+        Rich Table object if RICH_AVAILABLE and print_table=False, otherwise None
+    """
     if RICH_AVAILABLE and console:
         table = Table(title=title)
         for header in headers:
             table.add_column(header, style="cyan")
         for row in rows:
             table.add_row(*[str(cell) for cell in row])
-        console.print(table)
+        if print_table:
+            console.print(table)
+            return None
+        else:
+            return table
     else:
         if title:
             print(f"\n{title}")
@@ -67,10 +102,18 @@ def rich_table(headers, rows, title=None):
         for row in rows:
             row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
             print(row_str)
+        return None
 
 
-def rich_progress_bar(description="Processing..."):
-    """Create a rich progress spinner if available."""
+def rich_progress_bar(description: str = "Processing...") -> Progress | None:
+    """Create a rich progress spinner if available.
+
+    Args:
+        description: Progress description text
+
+    Returns:
+        Rich Progress object if available, None otherwise
+    """
     if RICH_AVAILABLE:
         return Progress(
             SpinnerColumn(),
@@ -81,8 +124,16 @@ def rich_progress_bar(description="Processing..."):
         return None
 
 
-def rich_confirm(message, default=True):
-    """Create a rich confirmation prompt if available, fallback to input."""
+def rich_confirm(message: str, default: bool = True) -> bool:
+    """Create a rich confirmation prompt if available, fallback to input.
+
+    Args:
+        message: Confirmation message
+        default: Default value if user presses Enter
+
+    Returns:
+        User's boolean response
+    """
     if RICH_AVAILABLE and console:
         return Confirm.ask(message, default=default, console=console)
     else:
@@ -93,18 +144,38 @@ def rich_confirm(message, default=True):
         return response in ["y", "yes"]
 
 
-def rich_prompt(message, default=None):
-    """Create a rich prompt if available, fallback to input."""
+def rich_prompt(message: str, default: str | None = None) -> str:
+    """Create a rich prompt if available, fallback to input.
+
+    Args:
+        message: Prompt message
+        default: Default value if user presses Enter
+
+    Returns:
+        User's string response
+    """
     if RICH_AVAILABLE and console:
-        return Prompt.ask(message, default=default, console=console)
+        if default is not None:
+            return Prompt.ask(message, default=default, console=console)
+        else:
+            result = Prompt.ask(message, console=console)
+            return result if result else ""
     else:
         default_str = f" [{default}]" if default else ""
         response = input(f"{message}{default_str}: ").strip()
-        return response if response else default
+        return response if response else (default or "")
 
 
-def format_exception(e, debug=False):
-    """Format exceptions for CLI output."""
+def format_exception(e: Exception, debug: bool = False) -> str:
+    """Format exceptions for CLI output.
+
+    Args:
+        e: Exception to format
+        debug: If True, include full traceback
+
+    Returns:
+        Formatted exception string
+    """
     if debug:
         import traceback
 
@@ -138,7 +209,7 @@ def format_performance_stats(
     total_memories: int,
     returned_count: int,
     db_size_bytes: int | None = None,
-) -> str:
+) -> tuple[str, str, str | None]:
     """
     Format query performance statistics for display.
 
@@ -149,7 +220,7 @@ def format_performance_stats(
         db_size_bytes: Optional database size in bytes
 
     Returns:
-        Formatted statistics string with appropriate styling
+        Tuple of (stats_line, time_style, optional_tip)
     """
     # Determine performance indicator
     if query_time_ms > 5000:
