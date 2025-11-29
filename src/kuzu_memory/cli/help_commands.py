@@ -237,9 +237,7 @@ def tips(ctx: click.Context) -> None:
         )
 
         # Interactive help
-        if rich_confirm(
-            "\nWould you like specific help with any topic?", default=False
-        ):
+        if rich_confirm("\nWould you like specific help with any topic?", default=False):
             topic = rich_prompt(
                 "Enter topic (getting-started, performance, ai-integration, install)",
                 default="",

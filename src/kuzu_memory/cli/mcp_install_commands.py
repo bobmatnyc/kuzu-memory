@@ -123,9 +123,7 @@ def mcp_status(project, verbose: bool, available: bool, installed: bool) -> None
 @mcp_install_group.command(name="install")
 @click.argument(
     "system",
-    type=click.Choice(
-        ["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]
-    ),
+    type=click.Choice(["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]),
 )
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")

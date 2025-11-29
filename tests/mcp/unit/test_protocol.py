@@ -164,9 +164,7 @@ class TestJSONRPCMessage:
 
     def test_parse_invalid_params_type(self) -> None:
         """Test invalid params type raises error."""
-        raw = json.dumps(
-            {"jsonrpc": "2.0", "method": "test", "params": "string", "id": 1}
-        )
+        raw = json.dumps({"jsonrpc": "2.0", "method": "test", "params": "string", "id": 1})
 
         with pytest.raises(JSONRPCError) as exc_info:
             JSONRPCMessage.parse_request(raw)
@@ -175,9 +173,7 @@ class TestJSONRPCMessage:
 
     def test_parse_params_as_list(self) -> None:
         """Test params can be a list."""
-        raw = json.dumps(
-            {"jsonrpc": "2.0", "method": "test", "params": [1, 2, 3], "id": 1}
-        )
+        raw = json.dumps({"jsonrpc": "2.0", "method": "test", "params": [1, 2, 3], "id": 1})
 
         message = JSONRPCMessage.parse_request(raw)
         assert message["params"] == [1, 2, 3]
@@ -225,9 +221,7 @@ class TestJSONRPCMessage:
 
     def test_create_notification_with_params(self) -> None:
         """Test notification with parameters."""
-        notification = JSONRPCMessage.create_notification(
-            "test_method", {"arg": "value"}
-        )
+        notification = JSONRPCMessage.create_notification("test_method", {"arg": "value"})
 
         assert notification["params"] == {"arg": "value"}
 
@@ -277,9 +271,7 @@ class TestBatchRequestHandler:
         ]
 
         async def mock_handler(msg):
-            return JSONRPCMessage.create_response(
-                msg["id"], result={"method": msg["method"]}
-            )
+            return JSONRPCMessage.create_response(msg["id"], result={"method": msg["method"]})
 
         responses = await BatchRequestHandler.process_batch(messages, mock_handler)
 
@@ -362,9 +354,7 @@ class TestProtocolCompliance:
 
     def test_optional_fields_allowed(self) -> None:
         """Test optional fields are allowed."""
-        with_params = json.dumps(
-            {"jsonrpc": "2.0", "method": "test", "params": {}, "id": 1}
-        )
+        with_params = json.dumps({"jsonrpc": "2.0", "method": "test", "params": {}, "id": 1})
         message = JSONRPCMessage.parse_request(with_params)
         assert "params" in message
 

@@ -46,16 +46,10 @@ class TemporalDecayEngine:
 
         # Default decay configuration
         self.decay_config = {
-            "base_weight": self.config.get(
-                "recency_weight", 0.20
-            ),  # Increased from 0.10
-            "decay_function": DecayFunction(
-                self.config.get("decay_function", "exponential")
-            ),
+            "base_weight": self.config.get("recency_weight", 0.20),  # Increased from 0.10
+            "decay_function": DecayFunction(self.config.get("decay_function", "exponential")),
             "enable_adaptive_decay": self.config.get("enable_adaptive_decay", True),
-            "boost_recent_threshold_hours": self.config.get(
-                "boost_recent_threshold_hours", 24
-            ),
+            "boost_recent_threshold_hours": self.config.get("boost_recent_threshold_hours", 24),
             "boost_recent_multiplier": self.config.get("boost_recent_multiplier", 1.5),
             "minimum_decay_score": self.config.get("minimum_decay_score", 0.01),
             "maximum_decay_score": self.config.get("maximum_decay_score", 1.0),
@@ -152,18 +146,13 @@ class TemporalDecayEngine:
 
         # Calculate age (handle None created_at gracefully)
         if memory.created_at is None:
-            logger.warning(
-                f"Memory {memory.id} has None created_at, using current time"
-            )
+            logger.warning(f"Memory {memory.id} has None created_at, using current time")
             memory.created_at = current_time
 
         # Activity-aware age calculation
         # For memories created BEFORE last activity: use relative time
         # For memories created AFTER last activity: use absolute time (normal)
-        if (
-            project_last_activity is not None
-            and memory.created_at < project_last_activity
-        ):
+        if project_last_activity is not None and memory.created_at < project_last_activity:
             # Memory from before project gap - calculate age relative to last activity
             age = project_last_activity - memory.created_at
             age_days = age.total_seconds() / (24 * 3600)
@@ -188,23 +177,15 @@ class TemporalDecayEngine:
             and age_hours < self.decay_config["boost_recent_threshold_hours"]
         ):
             boost_multiplier = params.get("boost_multiplier", 1.0)
-            recent_boost = (
-                self.decay_config["boost_recent_multiplier"] * boost_multiplier
-            )
+            recent_boost = self.decay_config["boost_recent_multiplier"] * boost_multiplier
 
             # Gradual boost that decreases as memory gets older within the threshold
-            boost_factor = 1 - (
-                age_hours / self.decay_config["boost_recent_threshold_hours"]
-            )
+            boost_factor = 1 - (age_hours / self.decay_config["boost_recent_threshold_hours"])
             decay_score *= 1 + (recent_boost - 1) * boost_factor
 
         # Apply bounds
-        min_score = params.get(
-            "minimum_score", self.decay_config["minimum_decay_score"]
-        )
-        max_score = params.get(
-            "maximum_score", self.decay_config["maximum_decay_score"]
-        )
+        min_score = params.get("minimum_score", self.decay_config["minimum_decay_score"])
+        max_score = params.get("maximum_score", self.decay_config["maximum_decay_score"])
 
         return max(min_score, min(max_score, decay_score))
 
@@ -296,8 +277,7 @@ class TemporalDecayEngine:
 
         # Determine which mode was/will be used
         activity_aware_mode = (
-            project_last_activity is not None
-            and memory.created_at < project_last_activity
+            project_last_activity is not None and memory.created_at < project_last_activity
         )
 
         if activity_aware_mode:
@@ -311,9 +291,7 @@ class TemporalDecayEngine:
             age_hours = absolute_age_hours
 
         base_score = self._calculate_decay_score(age_days, params)
-        final_score = self.calculate_temporal_score(
-            memory, current_time, project_last_activity
-        )
+        final_score = self.calculate_temporal_score(memory, current_time, project_last_activity)
 
         # Check if recent boost was applied
         recent_boost_applied = (
@@ -327,9 +305,7 @@ class TemporalDecayEngine:
             "activity_aware_mode": activity_aware_mode,
             "age_days": round(age_days, 2),
             "age_hours": round(age_hours, 2),
-            "decay_function": params.get(
-                "decay_function", DecayFunction.EXPONENTIAL
-            ).value,
+            "decay_function": params.get("decay_function", DecayFunction.EXPONENTIAL).value,
             "half_life_days": params.get("half_life_days", 30),
             "base_decay_score": round(base_score, 4),
             "final_temporal_score": round(final_score, 4),
@@ -390,9 +366,7 @@ class TemporalDecayEngine:
         Returns:
             Effective temporal weight for ranking
         """
-        temporal_score = self.calculate_temporal_score(
-            memory, current_time, project_last_activity
-        )
+        temporal_score = self.calculate_temporal_score(memory, current_time, project_last_activity)
         base_weight = self.decay_config["base_weight"]
 
         return base_weight * temporal_score

@@ -27,9 +27,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--validate", is_flag=True, help="Run health validation checks")
-@click.option(
-    "--project", "show_project", is_flag=True, help="Show detailed project information"
-)
+@click.option("--project", "show_project", is_flag=True, help="Show detailed project information")
 @click.option("--detailed", is_flag=True, help="Show detailed statistics")
 @click.option(
     "--format",
@@ -39,9 +37,7 @@ logger = logging.getLogger(__name__)
     help="Output format",
 )
 @click.pass_context
-def status(
-    ctx, validate: bool, show_project: bool, detailed: bool, output_format: str
-) -> None:
+def status(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str) -> None:
     """
     📊 Display system status and statistics.
 
@@ -148,24 +144,16 @@ def status(
                 try:
                     # Test basic operations
                     memory.get_recent_memories(limit=1)
-                    health_checks.append(
-                        {"check": "database_connection", "status": "pass"}
-                    )
+                    health_checks.append({"check": "database_connection", "status": "pass"})
 
                     # Test write capability
-                    test_id = memory.store_memory(
-                        "_health_check_test", source="health_check"
-                    )
+                    test_id = memory.store_memory("_health_check_test", source="health_check")
                     if test_id:
-                        health_checks.append(
-                            {"check": "write_capability", "status": "pass"}
-                        )
+                        health_checks.append({"check": "write_capability", "status": "pass"})
                         # Clean up test memory
                         memory.delete_memory(test_id)
                     else:
-                        health_checks.append(
-                            {"check": "write_capability", "status": "fail"}
-                        )
+                        health_checks.append({"check": "write_capability", "status": "fail"})
 
                 except Exception as e:
                     health_checks.append(
@@ -201,13 +189,9 @@ def status(
                     rich_print("\n📁 Project Information:")
                     rich_print(f"   Root: {stats_data['project_root']}")
                     rich_print(f"   Database: {stats_data['database_path']}")
-                    rich_print(
-                        f"   Memories Dir: {stats_data.get('memories_directory', 'N/A')}"
-                    )
+                    rich_print(f"   Memories Dir: {stats_data.get('memories_directory', 'N/A')}")
                     rich_print("\n⚙️  Configuration:")
-                    rich_print(
-                        f"   Source: {stats_data.get('config_source', 'default')}"
-                    )
+                    rich_print(f"   Source: {stats_data.get('config_source', 'default')}")
                     if stats_data.get("config_path"):
                         rich_print(f"   Path: {stats_data['config_path']}")
 
@@ -244,9 +228,7 @@ def status(
                 if validate:
                     health_status = stats_data.get("health_status", "unknown")
                     health_icon = "✅" if health_status == "healthy" else "⚠️"
-                    rich_print(
-                        f"\n🏥 Health Status: {health_icon} {health_status.title()}"
-                    )
+                    rich_print(f"\n🏥 Health Status: {health_icon} {health_status.title()}")
 
                     if stats_data.get("health_checks"):
                         rich_print("\n🔍 Health Checks:")
@@ -254,9 +236,7 @@ def status(
                             status_icon = "✅" if check["status"] == "pass" else "❌"
                             rich_print(f"   {status_icon} {check['check']}")
                             if check.get("error"):
-                                rich_print(
-                                    f"      Error: {check['error']}", style="dim"
-                                )
+                                rich_print(f"      Error: {check['error']}", style="dim")
 
     except Exception as e:
         if ctx.obj.get("debug"):

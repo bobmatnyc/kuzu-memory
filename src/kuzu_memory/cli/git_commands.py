@@ -126,9 +126,7 @@ def sync(
 
                     if result.get("commits"):
                         for commit in result["commits"]:
-                            rich_print(
-                                f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}..."
-                            )
+                            rich_print(f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}...")
                 else:
                     status_msg = (
                         f"[green]Sync Complete[/green]\n\n"
