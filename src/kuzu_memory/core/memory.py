@@ -16,11 +16,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, ParamSpec, TypeVar, cast
 
-from .dependencies import (
-    DatabaseAdapterProtocol,
-    MemoryStoreProtocol,
-    RecallCoordinatorProtocol,
-)
 from ..recall.coordinator import RecallCoordinator
 from ..storage.kuzu_adapter import create_kuzu_adapter
 from ..storage.memory_store import MemoryStore
@@ -43,7 +38,10 @@ from .constants import (
     MEMORY_BY_ID_CACHE_TTL,
 )
 from .dependencies import (
+    DatabaseAdapterProtocol,
     DependencyContainer,
+    MemoryStoreProtocol,
+    RecallCoordinatorProtocol,
     get_container,
 )
 from .models import Memory, MemoryContext

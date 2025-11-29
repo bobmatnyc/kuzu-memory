@@ -1009,7 +1009,7 @@ class TestClaudeHooksInstaller:
                     "type": "stdio",
                     "command": "/path/to/mcp-ticketer",
                     "args": ["mcp", "/path/to/project"],
-                    "env": {"GITHUB_TOKEN": "token123"}
+                    "env": {"GITHUB_TOKEN": "token123"},
                 }
             }
         }
@@ -1071,18 +1071,14 @@ class TestClaudeHooksInstaller:
                     "type": "stdio",
                     "command": "/venv/bin/mcp-ticketer",
                     "args": ["mcp", "/project"],
-                    "env": {"MCP_TICKETER_ADAPTER": "github", "GITHUB_TOKEN": "token"}
+                    "env": {"MCP_TICKETER_ADAPTER": "github", "GITHUB_TOKEN": "token"},
                 },
-                "mcp-browser": {
-                    "type": "stdio",
-                    "command": "mcp-browser",
-                    "args": []
-                },
+                "mcp-browser": {"type": "stdio", "command": "mcp-browser", "args": []},
                 "mcp-vector-search": {
                     "type": "stdio",
                     "command": "mcp-vector-search",
-                    "args": ["search"]
-                }
+                    "args": ["search"],
+                },
             }
         }
         with open(mcp_local_path, "w") as f:
