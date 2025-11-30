@@ -18,9 +18,10 @@ Related Epic: 1M-415 (Refactor Commands to SOA/DI Architecture)
 Related Phase: 5.1 (Low-Risk Read Command Migrations)
 """
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from kuzu_memory.protocols.services import IMemoryService
 
@@ -50,7 +51,7 @@ class ServiceManager:
     def memory_service(
         db_path: Optional[Path] = None,
         enable_git_sync: bool = False,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[dict[str, Any]] = None,
     ) -> Iterator[IMemoryService]:
         """Context manager for MemoryService.
 

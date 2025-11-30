@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Import ConfigService directly for type checking (not just protocol)
 # This is needed because we call .initialize() which is BaseService method
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.integrations.git_sync import GitSyncManager
@@ -184,7 +184,7 @@ class GitSyncService(BaseService):
         self._check_initialized()
         return self.git_sync.is_available()
 
-    def get_sync_status(self) -> Dict[str, Any]:
+    def get_sync_status(self) -> dict[str, Any]:
         """
         Get current synchronization status.
 

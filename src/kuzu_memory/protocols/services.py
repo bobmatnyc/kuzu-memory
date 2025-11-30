@@ -23,8 +23,9 @@ Related Epic: 1M-415 (Refactor Commands to SOA/DI Architecture)
 Related Task: 1M-416 (Design Service Interfaces)
 """
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ContextManager, Dict, List, Optional, Protocol
+from typing import Any, ContextManager, Optional, Protocol
 
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
 
@@ -51,8 +52,8 @@ class IMemoryService(Protocol):
         self,
         content: str,
         memory_type: MemoryType,
-        entities: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        entities: Optional[list[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Memory:
         """
         Add a new memory to the database.
@@ -91,7 +92,7 @@ class IMemoryService(Protocol):
         memory_type: Optional[MemoryType] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Memory]:
+    ) -> list[Memory]:
         """
         List memories with optional filtering and pagination.
 
@@ -125,7 +126,7 @@ class IMemoryService(Protocol):
         self,
         memory_id: str,
         content: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Optional[Memory]:
         """
         Update an existing memory.
@@ -149,7 +150,7 @@ class IMemoryService(Protocol):
         source: str,
         session_id: Optional[str] = None,
         agent_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> str:
         """
         Store a new memory with automatic classification.
@@ -194,7 +195,7 @@ class IMemoryService(Protocol):
         limit: int = 20,
         memory_type: Optional[MemoryType] = None,
         **filters: Any,
-    ) -> List[Memory]:
+    ) -> list[Memory]:
         """
         Get recent memories ordered by timestamp.
 
@@ -309,7 +310,7 @@ class IConfigService(Protocol):
         """
         ...
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """
         Load configuration from disk.
 
@@ -320,7 +321,7 @@ class IConfigService(Protocol):
         """
         ...
 
-    def save_config(self, config: Dict[str, Any]) -> None:
+    def save_config(self, config: dict[str, Any]) -> None:
         """
         Save configuration to disk.
 
@@ -369,7 +370,7 @@ class IInstallerService(Protocol):
         >>> health = installer.check_health("claude-desktop")
     """
 
-    def discover_installers(self) -> List[str]:
+    def discover_installers(self) -> list[str]:
         """
         Discover available installers.
 
@@ -427,7 +428,7 @@ class IInstallerService(Protocol):
         """
         ...
 
-    def check_health(self, integration: str) -> Dict[str, Any]:
+    def check_health(self, integration: str) -> dict[str, Any]:
         """
         Check health of an installation.
 
@@ -437,8 +438,8 @@ class IInstallerService(Protocol):
         Returns:
             Health status dictionary with keys:
             - healthy: bool
-            - issues: List[str] of problems found
-            - suggestions: List[str] of remediation steps
+            - issues: list[str] of problems found
+            - suggestions: list[str] of remediation steps
 
         Example:
             >>> health = installer.check_health("claude-desktop")
@@ -476,7 +477,7 @@ class ISetupService(Protocol):
         force: bool = False,
         git_sync: bool = False,
         claude_desktop: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Initialize project with KuzuMemory.
 
@@ -489,8 +490,8 @@ class ISetupService(Protocol):
             Setup result dictionary with keys:
             - success: bool
             - summary: str description
-            - steps_completed: List[str]
-            - warnings: List[str]
+            - steps_completed: list[str]
+            - warnings: list[str]
 
         Workflow:
         1. Detect project environment
@@ -501,7 +502,7 @@ class ISetupService(Protocol):
         """
         ...
 
-    def setup_integrations(self, integrations: List[str]) -> Dict[str, bool]:
+    def setup_integrations(self, integrations: list[str]) -> dict[str, bool]:
         """
         Set up specified integrations.
 
@@ -519,15 +520,15 @@ class ISetupService(Protocol):
         """
         ...
 
-    def verify_setup(self) -> Dict[str, Any]:
+    def verify_setup(self) -> dict[str, Any]:
         """
         Verify current setup is valid and complete.
 
         Returns:
             Verification result dictionary with keys:
             - valid: bool - True if setup is complete and valid
-            - issues: List[str] - Problems found
-            - suggestions: List[str] - Remediation steps
+            - issues: list[str] - Problems found
+            - suggestions: list[str] - Remediation steps
 
         Example:
             >>> result = setup.verify_setup()
@@ -641,32 +642,32 @@ class IDiagnosticService(Protocol):
         >>> print(report)
     """
 
-    async def run_full_diagnostics(self) -> Dict[str, Any]:
+    async def run_full_diagnostics(self) -> dict[str, Any]:
         """
         Run comprehensive diagnostics on entire system.
 
         Returns:
             Complete diagnostic results with keys:
             - all_healthy: bool
-            - configuration: Dict[str, Any] config check results
-            - database: Dict[str, Any] database health results
-            - mcp_server: Dict[str, Any] MCP server status
-            - git_integration: Dict[str, Any] git sync status
-            - system_info: Dict[str, Any] system information
+            - configuration: dict[str, Any] config check results
+            - database: dict[str, Any] database health results
+            - mcp_server: dict[str, Any] MCP server status
+            - git_integration: dict[str, Any] git sync status
+            - system_info: dict[str, Any] system information
             - timestamp: str ISO timestamp
 
         This is the primary diagnostic method that orchestrates all checks.
         """
         ...
 
-    async def check_configuration(self) -> Dict[str, Any]:
+    async def check_configuration(self) -> dict[str, Any]:
         """
         Check configuration validity and completeness.
 
         Returns:
             Configuration check results with keys:
             - valid: bool
-            - issues: List[str] problems found
+            - issues: list[str] problems found
             - config_path: str path to config file
             - project_root: str project root directory
 
@@ -678,7 +679,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def check_database_health(self) -> Dict[str, Any]:
+    async def check_database_health(self) -> dict[str, Any]:
         """
         Check database connectivity and health.
 
@@ -688,7 +689,7 @@ class IDiagnosticService(Protocol):
             - memory_count: int total memories
             - db_size_bytes: int database size
             - schema_version: str current schema version
-            - issues: List[str] problems found
+            - issues: list[str] problems found
 
         Checks:
         - Database file exists and is accessible
@@ -698,7 +699,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def check_mcp_server_health(self) -> Dict[str, Any]:
+    async def check_mcp_server_health(self) -> dict[str, Any]:
         """
         Check MCP server configuration and health.
 
@@ -707,7 +708,7 @@ class IDiagnosticService(Protocol):
             - configured: bool
             - config_valid: bool
             - server_path: str path to MCP server config
-            - issues: List[str] problems found
+            - issues: list[str] problems found
 
         Checks:
         - MCP config file exists (claude_desktop_config.json)
@@ -717,7 +718,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def check_git_integration(self) -> Dict[str, Any]:
+    async def check_git_integration(self) -> dict[str, Any]:
         """
         Check git synchronization integration.
 
@@ -726,7 +727,7 @@ class IDiagnosticService(Protocol):
             - available: bool git is available
             - hooks_installed: bool git hooks are installed
             - last_sync: Optional[str] last sync timestamp
-            - issues: List[str] problems found
+            - issues: list[str] problems found
 
         Checks:
         - Git repository is detected
@@ -736,7 +737,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def get_system_info(self) -> Dict[str, Any]:
+    async def get_system_info(self) -> dict[str, Any]:
         """
         Get system information and environment details.
 
@@ -752,16 +753,16 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def verify_dependencies(self) -> Dict[str, Any]:
+    async def verify_dependencies(self) -> dict[str, Any]:
         """
         Verify all required dependencies are installed.
 
         Returns:
             Dependency verification results with keys:
             - all_satisfied: bool
-            - missing: List[str] missing dependencies
-            - outdated: List[str] outdated dependencies
-            - suggestions: List[str] remediation steps
+            - missing: list[str] missing dependencies
+            - outdated: list[str] outdated dependencies
+            - suggestions: list[str] remediation steps
 
         Checks:
         - Required Python packages installed
@@ -770,7 +771,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    def format_diagnostic_report(self, results: Dict[str, Any]) -> str:
+    def format_diagnostic_report(self, results: dict[str, Any]) -> str:
         """
         Format diagnostic results as human-readable report.
 
@@ -877,7 +878,7 @@ class IGitSyncService(Protocol):
         """
         ...
 
-    def get_sync_status(self) -> Dict[str, Any]:
+    def get_sync_status(self) -> dict[str, Any]:
         """
         Get current synchronization status.
 

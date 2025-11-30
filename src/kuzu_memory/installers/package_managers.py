@@ -32,7 +32,7 @@ import subprocess
 import json
 import sys
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Any, Optional
 
 
 class KuzuMemoryIntegration:

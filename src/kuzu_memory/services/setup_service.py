@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from kuzu_memory.services.base import BaseService
 from kuzu_memory.utils import project_setup
@@ -137,7 +137,7 @@ class SetupService(BaseService):
         force: bool = False,
         git_sync: bool = False,
         claude_desktop: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Initialize project with KuzuMemory.
 
@@ -150,8 +150,8 @@ class SetupService(BaseService):
             Setup result dictionary with keys:
             - success: bool
             - summary: str description
-            - steps_completed: List[str]
-            - warnings: List[str]
+            - steps_completed: list[str]
+            - warnings: list[str]
             - project_root: str project root path
             - memories_dir: str memories directory path
             - db_path: str database path
@@ -223,7 +223,7 @@ class SetupService(BaseService):
                 "db_path": "",
             }
 
-    def setup_integrations(self, integrations: List[str]) -> Dict[str, bool]:
+    def setup_integrations(self, integrations: list[str]) -> dict[str, bool]:
         """
         Set up specified integrations.
 
@@ -249,15 +249,15 @@ class SetupService(BaseService):
 
         return {integration: False for integration in integrations}
 
-    def verify_setup(self) -> Dict[str, Any]:
+    def verify_setup(self) -> dict[str, Any]:
         """
         Verify current setup is valid and complete.
 
         Returns:
             Verification result dictionary with keys:
             - valid: bool - True if setup is complete and valid
-            - issues: List[str] - Problems found
-            - suggestions: List[str] - Remediation steps
+            - issues: list[str] - Problems found
+            - suggestions: list[str] - Remediation steps
             - project_root: str - Project root path
             - memories_dir_exists: bool - Whether memories directory exists
             - db_exists: bool - Whether database exists

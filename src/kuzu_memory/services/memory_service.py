@@ -22,7 +22,7 @@ Related Task: 1M-420 (Implement MemoryService with Protocol interface)
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
@@ -68,7 +68,7 @@ class MemoryService(BaseService):
         self,
         db_path: Path,
         enable_git_sync: bool = True,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[dict[str, Any]] = None,
     ):
         """
         Initialize MemoryService.
@@ -165,7 +165,7 @@ class MemoryService(BaseService):
         source: str,
         session_id: Optional[str] = None,
         agent_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> str:
         """
         Store a new memory with automatic classification.
@@ -250,7 +250,7 @@ class MemoryService(BaseService):
         limit: int = 20,
         memory_type: Optional[MemoryType] = None,
         **filters: Any,
-    ) -> List[Memory]:
+    ) -> list[Memory]:
         """
         Get recent memories ordered by timestamp.
 
@@ -334,8 +334,8 @@ class MemoryService(BaseService):
         self,
         content: str,
         memory_type: MemoryType,
-        entities: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        entities: Optional[list[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Memory:
         """
         Add a new memory to the database.
@@ -367,7 +367,7 @@ class MemoryService(BaseService):
         memory = Memory(
             content=content,
             memory_type=memory_type,
-            entities=cast(List[Any], entities or []),
+            entities=cast(list[Any], entities or []),
             metadata=metadata or {},
             valid_to=None,
             user_id=None,
@@ -403,7 +403,7 @@ class MemoryService(BaseService):
         memory_type: Optional[MemoryType] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Memory]:
+    ) -> list[Memory]:
         """
         List memories with optional filtering and pagination.
 
@@ -471,7 +471,7 @@ class MemoryService(BaseService):
         self,
         memory_id: str,
         content: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Optional[Memory]:
         """
         Update an existing memory.

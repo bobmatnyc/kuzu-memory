@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from kuzu_memory.mcp.testing.diagnostics import MCPDiagnostics
 from kuzu_memory.mcp.testing.health_checker import MCPHealthChecker
@@ -129,7 +129,7 @@ class DiagnosticService(BaseService):
     # ASYNC DIAGNOSTIC METHODS (7 methods)
     # ========================================================================
 
-    async def run_full_diagnostics(self) -> Dict[str, Any]:
+    async def run_full_diagnostics(self) -> dict[str, Any]:
         """
         Run comprehensive diagnostics on entire system.
 
@@ -140,12 +140,12 @@ class DiagnosticService(BaseService):
         Returns:
             Complete diagnostic results with keys:
             - all_healthy: bool - True if all checks passed
-            - configuration: Dict[str, Any] - Config check results
-            - database: Dict[str, Any] - Database health results
-            - mcp_server: Dict[str, Any] - MCP server status
-            - git_integration: Dict[str, Any] - Git sync status
-            - system_info: Dict[str, Any] - System information
-            - dependencies: Dict[str, Any] - Dependency verification
+            - configuration: dict[str, Any] - Config check results
+            - database: dict[str, Any] - Database health results
+            - mcp_server: dict[str, Any] - MCP server status
+            - git_integration: dict[str, Any] - Git sync status
+            - system_info: dict[str, Any] - System information
+            - dependencies: dict[str, Any] - Dependency verification
             - timestamp: str - ISO timestamp of diagnostic run
 
         Raises:
@@ -201,7 +201,7 @@ class DiagnosticService(BaseService):
             "success_rate": report.success_rate,
         }
 
-    async def check_configuration(self) -> Dict[str, Any]:
+    async def check_configuration(self) -> dict[str, Any]:
         """
         Check configuration validity and completeness.
 
@@ -251,7 +251,7 @@ class DiagnosticService(BaseService):
             "project_root": str(project_root),
         }
 
-    async def check_database_health(self) -> Dict[str, Any]:
+    async def check_database_health(self) -> dict[str, Any]:
         """
         Check database connectivity and health.
 
@@ -321,7 +321,7 @@ class DiagnosticService(BaseService):
             "issues": issues,
         }
 
-    async def check_mcp_server_health(self) -> Dict[str, Any]:
+    async def check_mcp_server_health(self) -> dict[str, Any]:
         """
         Check MCP server configuration and health.
 
@@ -379,7 +379,7 @@ class DiagnosticService(BaseService):
             "issues": issues,
         }
 
-    async def check_git_integration(self) -> Dict[str, Any]:
+    async def check_git_integration(self) -> dict[str, Any]:
         """
         Check git synchronization integration.
 
@@ -440,7 +440,7 @@ class DiagnosticService(BaseService):
             "issues": issues,
         }
 
-    async def get_system_info(self) -> Dict[str, Any]:
+    async def get_system_info(self) -> dict[str, Any]:
         """
         Get system information and environment details.
 
@@ -499,7 +499,7 @@ class DiagnosticService(BaseService):
             "install_path": install_path,
         }
 
-    async def verify_dependencies(self) -> Dict[str, Any]:
+    async def verify_dependencies(self) -> dict[str, Any]:
         """
         Verify all required dependencies are installed.
 
@@ -568,7 +568,7 @@ class DiagnosticService(BaseService):
     # SYNC FORMATTING METHOD (1 method)
     # ========================================================================
 
-    def format_diagnostic_report(self, results: Dict[str, Any]) -> str:
+    def format_diagnostic_report(self, results: dict[str, Any]) -> str:
         """
         Format diagnostic results as human-readable report.
 
