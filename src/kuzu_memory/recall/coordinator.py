@@ -228,7 +228,10 @@ class RecallCoordinator:
         """Execute a single recall strategy."""
 
         if strategy_name not in self.strategies:
-            raise RecallError(prompt, f"Unknown strategy: {strategy_name}")
+            raise RecallError(
+                f"Unknown recall strategy: {strategy_name}",
+                context={"prompt": prompt, "strategy": strategy_name, "available_strategies": list(self.strategies.keys())}
+            )
 
         return self.strategies[strategy_name].recall(
             prompt, max_memories, user_id, session_id, agent_id

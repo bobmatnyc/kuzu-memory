@@ -374,9 +374,12 @@ class KuzuAdapter:
             # Check for specific Kuzu errors
             error_msg = str(e).lower()
             if "locked" in error_msg or "busy" in error_msg:
-                raise DatabaseLockError(str(self.db_path))
+                raise DatabaseLockError(f"Database locked: {self.db_path}")
             elif "corrupt" in error_msg or "malformed" in error_msg:
-                raise CorruptedDatabaseError(str(self.db_path), str(e))
+                raise CorruptedDatabaseError(
+                    f"Database corrupted at {self.db_path}: {e}",
+                    context={"db_path": str(self.db_path), "error": str(e)}
+                )
             else:
                 raise DatabaseError(f"Query execution failed: {e}")
 

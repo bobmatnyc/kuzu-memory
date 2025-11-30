@@ -169,7 +169,7 @@ class KuzuConnection(IConnection):
         async with self._lock:
             await self._ensure_connected()
 
-            last_error = None
+            last_error: Exception | None = None
             for attempt in range(max_retries):
                 try:
                     self._last_used = datetime.now()
@@ -227,7 +227,9 @@ class KuzuConnection(IConnection):
                         raise
 
             # Should never reach here, but raise last error if we do
-            raise last_error
+            if last_error is not None:
+                raise last_error
+            raise RuntimeError("Query execution loop completed without success or error")
 
     async def execute_many(self, queries: list[tuple[str, dict[str, Any] | None]]) -> list[Any]:
         """

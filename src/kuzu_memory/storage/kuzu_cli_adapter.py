@@ -22,6 +22,7 @@ from ..utils.exceptions import (
     DatabaseError,
     DatabaseLockError,
     PerformanceError,
+    PerformanceThresholdError,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,7 +151,7 @@ class KuzuCLIAdapter:
                     self.config.performance.enable_performance_monitoring
                     and execution_time_ms > timeout_ms
                 ):
-                    raise PerformanceError("execute_query", execution_time_ms, timeout_ms)
+                    raise PerformanceThresholdError("execute_query", execution_time_ms / 1000, timeout_ms / 1000)
 
                 return results
 
@@ -160,7 +161,7 @@ class KuzuCLIAdapter:
 
         except subprocess.TimeoutExpired:
             execution_time_ms = (time.time() - start_time) * 1000
-            raise PerformanceError("execute_query", execution_time_ms, timeout_ms)
+            raise PerformanceThresholdError("execute_query", execution_time_ms / 1000, timeout_ms / 1000)
         except Exception as e:
             if isinstance(e, DatabaseError | PerformanceError):
                 raise
@@ -168,9 +169,12 @@ class KuzuCLIAdapter:
             # Check for specific error types
             error_msg = str(e).lower()
             if "locked" in error_msg or "busy" in error_msg:
-                raise DatabaseLockError(str(self.db_path))
+                raise DatabaseLockError(f"Database locked: {self.db_path}")
             elif "corrupt" in error_msg or "malformed" in error_msg:
-                raise CorruptedDatabaseError(str(self.db_path), str(e))
+                raise CorruptedDatabaseError(
+                    f"Database corrupted at {self.db_path}: {e}",
+                    context={"db_path": str(self.db_path), "error": str(e)}
+                )
             else:
                 raise DatabaseError(f"Query execution failed: {e}")
 

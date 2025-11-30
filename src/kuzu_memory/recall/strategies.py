@@ -97,7 +97,11 @@ class RecallStrategy:
             return memories
 
         except Exception as e:
-            raise RecallError(prompt, str(e))
+            raise RecallError(
+                f"Recall failed for prompt: {prompt}",
+                context={"prompt": prompt, "error": str(e)},
+                cause=e
+            )
 
     def _execute_recall(
         self,

@@ -20,6 +20,7 @@ from ..utils.exceptions import (
     DatabaseError,
     ExtractionError,
     PerformanceError,
+    PerformanceThresholdError,
 )
 from ..utils.validation import validate_text_input
 from .cache import MemoryCache
@@ -165,7 +166,7 @@ class MemoryStore:
             max_time = self.config.performance.max_generation_time_ms
 
             if self.config.performance.enable_performance_monitoring and execution_time > max_time:
-                raise PerformanceError("generate_memories", execution_time, max_time)
+                raise PerformanceThresholdError("generate_memories", execution_time / 1000, max_time / 1000)
 
             # Update statistics
             self._storage_stats["memories_stored"] += len(stored_memory_ids)
@@ -178,7 +179,11 @@ class MemoryStore:
             self._storage_stats["extraction_errors"] += 1
             if isinstance(e, ExtractionError | DatabaseError | PerformanceError):
                 raise
-            raise ExtractionError(len(content), str(e))
+            raise ExtractionError(
+                f"Failed to extract memories from content (length: {len(content)}): {e}",
+                context={"content_length": len(content), "error": str(e)},
+                cause=e
+            )
 
     def _extract_memories_from_content(self, content: str) -> list[ExtractedMemory]:
         """Extract memories using pattern matching."""
