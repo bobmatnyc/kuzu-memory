@@ -26,8 +26,9 @@ Related Task: 1M-417 (Enhance DI Container)
 """
 
 import inspect
+from collections.abc import Callable
 from threading import RLock
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 T = TypeVar("T")
 
@@ -57,13 +58,13 @@ class DependencyContainer:
     - Thread-safe operations use locks, minimal contention
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty dependency container."""
-        self._services: Dict[str, Any] = {}
-        self._factories: Dict[str, Callable] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
+        self._factories: dict[str, Callable[[], Any]] = {}
+        self._singletons: dict[str, Any] = {}
         self._lock = RLock()  # Reentrant lock allows same thread to acquire multiple times
-        self._resolving: set = set()  # Track services currently being resolved (prevent circular deps)
+        self._resolving: set[str] = set()  # Track services currently being resolved (prevent circular deps)
 
     def register_service(
         self, interface: Type[T], implementation: Type[T], singleton: bool = False
@@ -238,7 +239,7 @@ class DependencyContainer:
 
         return cls(**params)
 
-    def has(self, interface: Type) -> bool:
+    def has(self, interface: Type[Any]) -> bool:
         """
         Check if a service is registered.
 

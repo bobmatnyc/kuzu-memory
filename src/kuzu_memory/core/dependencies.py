@@ -5,7 +5,7 @@ Provides clean separation of concerns and improved testability.
 """
 
 from abc import abstractmethod
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from .models import Memory, MemoryType
 
@@ -25,7 +25,7 @@ class MemoryStoreProtocol(Protocol):
         ...
 
     @abstractmethod
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """Get recent memories with optional filtering."""
         ...
 
@@ -146,19 +146,19 @@ class DependencyContainer:
 
     def get_memory_store(self) -> MemoryStoreProtocol:
         """Get the memory store service."""
-        return self.get("memory_store")
+        return cast(MemoryStoreProtocol, self.get("memory_store"))
 
     def get_recall_coordinator(self) -> RecallCoordinatorProtocol:
         """Get the recall coordinator service."""
-        return self.get("recall_coordinator")
+        return cast(RecallCoordinatorProtocol, self.get("recall_coordinator"))
 
     def get_nlp_classifier(self) -> NLPClassifierProtocol | None:
         """Get the NLP classifier service if available."""
-        return self.get("nlp_classifier") if self.has("nlp_classifier") else None
+        return cast(NLPClassifierProtocol, self.get("nlp_classifier")) if self.has("nlp_classifier") else None
 
     def get_database_adapter(self) -> DatabaseAdapterProtocol:
         """Get the database adapter service."""
-        return self.get("database_adapter")
+        return cast(DatabaseAdapterProtocol, self.get("database_adapter"))
 
 
 # Global container instance

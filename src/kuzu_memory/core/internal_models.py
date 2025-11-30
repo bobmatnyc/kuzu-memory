@@ -208,7 +208,7 @@ class InternalMemoryContext:
             }
 
         # Count by type
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for mem in self.memories:
             type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
 
@@ -334,7 +334,7 @@ class PerformanceMetric:
 
 
 # Conversion functions between Pydantic and internal models
-def pydantic_to_internal_memory(pydantic_memory) -> InternalMemory:
+def pydantic_to_internal_memory(pydantic_memory: Any) -> InternalMemory:
     """Convert a Pydantic Memory to InternalMemory."""
     return InternalMemory(
         id=pydantic_memory.id,
@@ -357,7 +357,7 @@ def pydantic_to_internal_memory(pydantic_memory) -> InternalMemory:
     )
 
 
-def internal_to_pydantic_memory(internal_memory: InternalMemory) -> None:
+def internal_to_pydantic_memory(internal_memory: InternalMemory) -> Any:
     """Convert InternalMemory to Pydantic Memory."""
     from .models import Memory
 

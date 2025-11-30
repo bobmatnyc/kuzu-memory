@@ -27,7 +27,7 @@ Related Task: 1M-418 (Create Base Service Infrastructure)
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Self
 
 
 class BaseService(ABC):
@@ -63,7 +63,7 @@ class BaseService(ABC):
     - Subclasses should add locking if needed for concurrent access
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize base service.
 
@@ -179,7 +179,7 @@ class BaseService(ABC):
         """
         pass
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """
         Enter context manager.
 
@@ -195,7 +195,12 @@ class BaseService(ABC):
         self.initialize()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
+    ) -> None:
         """
         Exit context manager and cleanup resources.
 
