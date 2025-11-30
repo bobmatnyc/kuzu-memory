@@ -175,8 +175,8 @@ class DependencyContainer:
                             self._resolving.discard(name)
                     else:
                         # Already initialized by another thread
-                        return self._singletons[name]  # type: ignore[no-any-return]
-            return singleton  # type: ignore[no-any-return]
+                        return self._singletons[name]  # type: ignore[no-any-return]  # Dynamic type from DI registry
+            return singleton  # type: ignore[no-any-return]  # Dynamic type from DI registry
 
         # Check factories
         if name in self._factories:
@@ -189,7 +189,7 @@ class DependencyContainer:
                 finally:
                     self._resolving.discard(name)
             else:
-                return factory()  # type: ignore[no-any-return]
+                return factory()  # type: ignore[no-any-return]  # Factory function return type is dynamic
 
         raise ValueError(f"Service not registered: {name}")
 

@@ -49,7 +49,7 @@ def expand_variables(config: dict[str, Any], variables: dict[str, str]) -> dict[
             return [expand_value(item) for item in value]
         return value
 
-    return expand_value(config)  # type: ignore[no-any-return]
+    return expand_value(config)  # type: ignore[no-any-return]  # Recursive dict/list structure returns Any
 
 
 def merge_json_configs(
@@ -109,7 +109,7 @@ def load_json_config(file_path: Path) -> dict[str, Any]:
             return {}
 
         with open(file_path, encoding="utf-8") as f:
-            return json.load(f)  # type: ignore[no-any-return]
+            return json.load(f)  # type: ignore[no-any-return]  # JSON returns Any for dynamic structure
     except json.JSONDecodeError as e:
         raise JSONConfigError(f"Invalid JSON in {file_path}: {e}")
     except Exception as e:

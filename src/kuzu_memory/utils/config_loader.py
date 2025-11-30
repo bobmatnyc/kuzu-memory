@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from ..core.config import KuzuMemoryConfig
 from .exceptions import ConfigurationError
@@ -270,7 +270,7 @@ class ConfigLoader:
             value = os.getenv(env_var)
             if value is not None:
                 try:
-                    parsed_value: Any = parser(value)  # type: ignore[operator]
+                    parsed_value: Any = parser(value)  # type: ignore[operator]  # Parser is Callable[[str], Any]
                     self._set_nested_config(env_config, config_path, parsed_value)
                     found_env_vars = True
                 except (ValueError, TypeError) as e:

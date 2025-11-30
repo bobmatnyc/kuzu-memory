@@ -63,7 +63,7 @@ class GitSyncManager:
 
             # Check if path is a git repository
             try:
-                self._repo = git.Repo(  # type: ignore[assignment]
+                self._repo = git.Repo(  # type: ignore[assignment]  # GitPython stubs incomplete for Repo type
                     self.repo_path, search_parent_directories=True
                 )
                 return True
@@ -325,7 +325,7 @@ class GitSyncManager:
         if self._repo:
             if hasattr(self._repo, "active_branch"):
                 try:
-                    branch_name = self._repo.active_branch.name  # type: ignore[attr-defined]
+                    branch_name = self._repo.active_branch.name
                 except Exception:
                     pass
 
@@ -398,11 +398,11 @@ class GitSyncManager:
                 branches = [
                     b
                     for b in self._repo.branches
-                    if str(b.name) == branch_name  # type: ignore[union-attr]
+                    if str(b.name) == branch_name
                 ]
             else:
                 branches = self._filter_branches(
-                    list(self._repo.branches)  # type: ignore[union-attr]
+                    list(self._repo.branches)
                 )
 
             logger.info(f"Scanning {len(branches)} branches for commits")
@@ -414,7 +414,7 @@ class GitSyncManager:
                 try:
                     # Get commits from this branch (iter_commits returns newest first)
                     # Reverse to process oldest first for stable chronological ordering
-                    commits = list(reversed(list(self._repo.iter_commits(branch))))  # type: ignore[union-attr]
+                    commits = list(reversed(list(self._repo.iter_commits(branch))))
 
                     for commit in commits:
                         # Skip if already processed

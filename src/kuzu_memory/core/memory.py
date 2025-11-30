@@ -445,7 +445,7 @@ class KuzuMemory:
             # Trigger auto-sync after attach (if enabled)
             self._auto_git_sync("enhance")
 
-            return context  # type: ignore[no-any-return]
+            return context  # type: ignore[no-any-return]  # Dict return type inferred as Any from embeddings
 
         except Exception as e:
             if isinstance(e, (ValidationError, PerformanceError)):
@@ -588,7 +588,7 @@ class KuzuMemory:
             # Trigger auto-sync after generate (if enabled)
             self._auto_git_sync("learn")
 
-            return memory_ids  # type: ignore[no-any-return]
+            return memory_ids  # type: ignore[no-any-return]  # List return type inferred as Any from store
 
         except Exception as e:
             if isinstance(e, (ValidationError, PerformanceError)):
@@ -607,7 +607,7 @@ class KuzuMemory:
             Memory object or None if not found
         """
         try:
-            return self.memory_store.get_memory_by_id(memory_id)  # type: ignore[no-any-return]
+            return self.memory_store.get_memory_by_id(memory_id)
         except Exception as e:
             logger.error(f"Failed to get memory {memory_id}: {e}")
             return None
@@ -620,7 +620,7 @@ class KuzuMemory:
             Number of memories cleaned up
         """
         try:
-            return self.memory_store.cleanup_expired_memories()  # type: ignore[no-any-return]
+            return self.memory_store.cleanup_expired_memories()
         except Exception as e:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
@@ -637,7 +637,7 @@ class KuzuMemory:
             List of recent memories
         """
         try:
-            return self.memory_store.get_recent_memories(limit=limit, **filters)  # type: ignore[no-any-return]
+            return self.memory_store.get_recent_memories(limit=limit, **filters)
         except Exception as e:
             logger.error(f"Failed to get recent memories: {e}")
             return []
@@ -650,7 +650,7 @@ class KuzuMemory:
             Total number of active memories
         """
         try:
-            return self.memory_store.get_memory_count()  # type: ignore[no-any-return]
+            return self.memory_store.get_memory_count()
         except Exception as e:
             logger.error(f"Failed to get memory count: {e}")
             return 0
@@ -678,7 +678,7 @@ class KuzuMemory:
             Dictionary with memory type counts
         """
         try:
-            return self.memory_store.get_memory_type_stats()  # type: ignore[no-any-return]
+            return self.memory_store.get_memory_type_stats()  # type: ignore[no-any-return,attr-defined]
         except Exception as e:
             logger.error(f"Failed to get memory type stats: {e}")
             return {}
@@ -691,7 +691,7 @@ class KuzuMemory:
             Dictionary with source counts
         """
         try:
-            return self.memory_store.get_source_stats()  # type: ignore[no-any-return]
+            return self.memory_store.get_source_stats()  # type: ignore[no-any-return,attr-defined]
         except Exception as e:
             logger.error(f"Failed to get source stats: {e}")
             return {}
@@ -779,7 +779,7 @@ class KuzuMemory:
             self._performance_stats["total_memories_generated"] += len(stored_ids)
 
             logger.info(f"Batch stored {len(stored_ids)} memories")
-            return stored_ids  # type: ignore[no-any-return]
+            return stored_ids  # type: ignore[no-any-return]  # List[str] inferred as Any from storage layer
 
         except ValidationError:
             raise
@@ -834,7 +834,7 @@ class KuzuMemory:
             self._performance_stats["total_memories_recalled"] += len(memories)
 
             logger.debug(f"Batch retrieved {len(memories)} memories from {len(memory_ids)} IDs")
-            return memories  # type: ignore[no-any-return]
+            return memories  # type: ignore[no-any-return]  # List[Memory] inferred as Any from storage layer
 
         except ValidationError:
             raise
@@ -854,7 +854,7 @@ class KuzuMemory:
             List of memories created by the user
         """
         try:
-            return self.memory_store.get_memories_by_user(user_id, limit)  # type: ignore[no-any-return]
+            return self.memory_store.get_memories_by_user(user_id, limit)  # type: ignore[no-any-return,attr-defined]
         except Exception as e:
             logger.error(f"Failed to get memories by user {user_id}: {e}")
             return []
@@ -867,7 +867,7 @@ class KuzuMemory:
             List of unique user IDs
         """
         try:
-            return self.memory_store.get_users()  # type: ignore[no-any-return]
+            return self.memory_store.get_users()  # type: ignore[no-any-return,attr-defined]
         except Exception as e:
             logger.error(f"Failed to get users: {e}")
             return []

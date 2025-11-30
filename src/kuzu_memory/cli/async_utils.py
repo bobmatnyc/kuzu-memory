@@ -67,7 +67,7 @@ def run_async(coro: Awaitable[T]) -> T:
         # No running loop - this is expected for sync CLI commands
         # Use asyncio.run() which creates and closes loop automatically
         # Type ignore needed because asyncio.run expects Coroutine but we use Awaitable for flexibility
-        return asyncio.run(coro)  # type: ignore[arg-type]
+        return asyncio.run(coro)  # type: ignore[arg-type]  # Awaitable[T] is compatible with Coroutine at runtime
 
 
 __all__ = ["run_async"]

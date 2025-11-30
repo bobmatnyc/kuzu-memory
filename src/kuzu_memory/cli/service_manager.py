@@ -140,7 +140,7 @@ class ServiceManager:
         else:
             # Cast to concrete type for GitSyncService constructor
             # This is safe as we control the creation of config services
-            concrete_config = config_service  # type: ignore[assignment]
+            concrete_config = config_service  # type: ignore[assignment]  # Protocol to concrete cast - safe in context
 
         # Create and initialize git sync service
         service = GitSyncService(concrete_config)
@@ -210,7 +210,7 @@ class ServiceManager:
         else:
             # Cast to concrete type for DiagnosticService constructor
             # This is safe as we control the creation of config services
-            concrete_config = config_service  # type: ignore[assignment]
+            concrete_config = config_service  # type: ignore[assignment]  # Protocol to concrete cast - safe in context
 
         # Create and initialize diagnostic service
         # DiagnosticService expects concrete MemoryService type
@@ -220,7 +220,7 @@ class ServiceManager:
         concrete_memory: Optional[ConcreteMemoryService] = None
         if memory_service is not None:
             # Safe cast from protocol to concrete type
-            concrete_memory = memory_service  # type: ignore[assignment]
+            concrete_memory = memory_service  # type: ignore[assignment]  # Protocol to concrete cast - safe in context
 
         service = DiagnosticService(concrete_config, concrete_memory)
         service.initialize()

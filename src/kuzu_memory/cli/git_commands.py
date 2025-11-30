@@ -106,7 +106,7 @@ def sync(
 
                 # We need the GitSyncManager for the sync() method
                 # GitSyncService exposes it via git_sync property (not in protocol but in implementation)
-                sync_manager = git_sync.git_sync  # type: ignore[attr-defined]
+                sync_manager = git_sync.git_sync  # type: ignore[attr-defined]  # Runtime attribute from implementation
 
                 # Need to inject memory store - create temporary memory instance
                 with KuzuMemory(db_path=db_path, config=config) as memory:

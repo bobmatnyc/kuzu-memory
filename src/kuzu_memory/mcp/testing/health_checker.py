@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import psutil  # type: ignore[import-untyped]
+    import psutil
 except ImportError:
-    psutil = None  # Optional dependency  # type: ignore[assignment]
+    psutil = None  # Optional dependency  # type: ignore[assignment]  # Intentional None assignment for optional dependency
 
 from .connection_tester import MCPConnectionTester
 

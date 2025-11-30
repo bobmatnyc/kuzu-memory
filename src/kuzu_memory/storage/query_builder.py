@@ -112,7 +112,7 @@ class QueryBuilder:
                 first_words = content_words[
                     :DEFAULT_SEARCH_WORD_COUNT
                 ]  # Use first N words for initial filtering
-                params["search_words"] = first_words  # type: ignore[assignment]  # list assigned to dict[str, Any]
+                params["search_words"] = first_words  # type: ignore[assignment]  # Kuzu accepts list[str] in params dict
 
                 # Use a more efficient query structure with list_contains
                 # This avoids dynamic query building in loops
@@ -366,7 +366,7 @@ class QueryBuilder:
 
             # Add expiration filter
             conditions.append("(m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))")
-            params["now"] = datetime.now().isoformat()  # type: ignore[assignment]
+            params["now"] = datetime.now().isoformat()  # type: ignore[assignment]  # Kuzu accepts ISO string for timestamps
 
             # Construct query
             where_clause = " AND ".join(conditions) if conditions else "1=1"

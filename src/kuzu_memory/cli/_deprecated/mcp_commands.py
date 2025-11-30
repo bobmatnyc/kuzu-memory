@@ -76,7 +76,7 @@ def serve(ctx: click.Context, port: int | None, stdio: bool, project_root: str |
         from kuzu_memory.mcp.run_server import main
 
         # Run the async main function
-        asyncio.run(main())  # type: ignore[no-untyped-call]
+        asyncio.run(main())  # type: ignore[no-untyped-call]  # MCP server main lacks type annotations
 
     except KeyboardInterrupt:
         print("\n🛑 MCP server stopped", file=sys.stderr)
@@ -123,7 +123,7 @@ def test(ctx: click.Context) -> None:
         rich_print("🧪 Testing MCP server...", style="blue")
 
         # Create server instance
-        server = create_mcp_server()  # type: ignore[no-untyped-call]
+        server = create_mcp_server()  # type: ignore[no-untyped-call,func-returns-value]
 
         # Test basic operations
         tests = [
@@ -184,7 +184,7 @@ def info(ctx: click.Context) -> None:
     Show MCP server information and configuration.
     """
     try:
-        server = create_mcp_server()  # type: ignore[no-untyped-call]
+        server = create_mcp_server()  # type: ignore[no-untyped-call,func-returns-value]
         tools = server.get_tools()
 
         rich_panel(

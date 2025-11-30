@@ -14,7 +14,7 @@ from typing import Any
 try:
     import tomllib
 except ImportError:
-    import tomli as tomllib  # type: ignore[no-redef]
+    import tomli as tomllib  # type: ignore[no-redef]  # Fallback to tomli for Python <3.11
 
 # TOML writing requires third-party library
 try:

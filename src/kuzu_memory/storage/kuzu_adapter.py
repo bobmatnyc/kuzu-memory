@@ -57,7 +57,7 @@ def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig) -> KuzuAdapter:
         logger.info("Using Kuzu CLI adapter for optimal performance")
         from .kuzu_cli_adapter import KuzuCLIAdapter
 
-        return KuzuCLIAdapter(db_path, config)  # type: ignore[return-value]
+        return KuzuCLIAdapter(db_path, config)  # type: ignore[return-value]  # Both adapters implement IMemoryStore
     else:
         logger.info("Using Kuzu Python API adapter")
         return KuzuAdapter(db_path, config)

@@ -186,7 +186,7 @@ def cli(
     try:
         config_loader = get_config_loader()
         if config:
-            loaded_config = config_loader.load_from_file(config)  # type: ignore[attr-defined]
+            loaded_config = config_loader.load_from_file(config)  # type: ignore[attr-defined]  # Runtime method exists
         else:
             loaded_config = config_loader.load_config(ctx.obj["project_root"])
         ctx.obj["config"] = loaded_config
