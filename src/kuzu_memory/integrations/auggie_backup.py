@@ -125,7 +125,7 @@ class AuggieRule:
 class AuggieRuleEngine:
     """Rule engine for memory-driven AI interactions."""
 
-    def __init__(self, kuzu_memory=None) -> None:
+    def __init__(self, kuzu_memory: Any = None) -> None:
         """Initialize the rule engine."""
         self.kuzu_memory = kuzu_memory
         self.rules: dict[str, AuggieRule] = {}
@@ -336,7 +336,7 @@ class AuggieRuleEngine:
 class ResponseLearner:
     """Learns from AI responses and user feedback to improve memory system."""
 
-    def __init__(self, kuzu_memory=None, rule_engine: AuggieRuleEngine = None) -> None:
+    def __init__(self, kuzu_memory: Any = None, rule_engine: AuggieRuleEngine | None = None) -> None:
         """Initialize the response learner."""
         self.kuzu_memory = kuzu_memory
         self.rule_engine = rule_engine
@@ -573,7 +573,7 @@ class ResponseLearner:
 class AuggieIntegration:
     """Main integration class for KuzuMemory and Auggie rules system."""
 
-    def __init__(self, kuzu_memory=None, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, kuzu_memory: Any = None, config: dict[str, Any] | None = None) -> None:
         """Initialize the Auggie integration."""
         self.kuzu_memory = kuzu_memory
         self.config = config or {}

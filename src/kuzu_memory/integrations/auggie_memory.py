@@ -558,7 +558,7 @@ class ResponseLearner:
 class MemorySynchronizer:
     """Handles synchronization between Auggie rules and KuzuMemory."""
 
-    def __init__(self, memory_system) -> None:
+    def __init__(self, memory_system: Any) -> None:
         self.memory_system = memory_system
         self.sync_history: list[dict[str, Any]] = []
         self.last_sync = None

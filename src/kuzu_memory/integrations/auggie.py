@@ -30,10 +30,10 @@ class AuggieIntegration:
 
     def __init__(
         self,
-        kuzu_memory=None,
+        kuzu_memory: Any = None,
         project_root: Path | None = None,
-        memory_system=None,
-        config=None,
+        memory_system: Any = None,
+        config: Any = None,
     ) -> None:
         """Initialize Auggie integration with project context."""
         self.project_root = project_root or Path.cwd()

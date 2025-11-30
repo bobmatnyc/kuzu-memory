@@ -221,7 +221,7 @@ class MemoryStore:
             logger.error(f"Error cleaning up expired memories: {e}")
             raise DatabaseError(f"Failed to cleanup expired memories: {e}")
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """
         Get recent memories using query builder.
 

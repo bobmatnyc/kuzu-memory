@@ -224,7 +224,7 @@ class LRUCache(ICache):
             await self.cleanup_expired()
             self._last_cleanup = current_time
 
-    def create_cache_key(self, *args, **kwargs) -> str:
+    def create_cache_key(self, *args: Any, **kwargs: Any) -> str:
         """Create a consistent cache key from arguments."""
         # Convert args and kwargs to a consistent string representation
         key_data = {

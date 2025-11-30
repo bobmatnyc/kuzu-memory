@@ -333,7 +333,7 @@ class TemporalDecayEngine:
 
         return explanation
 
-    def configure_memory_type_decay(self, memory_type: MemoryType, **kwargs) -> None:
+    def configure_memory_type_decay(self, memory_type: MemoryType, **kwargs: Any) -> None:
         """
         Configure decay parameters for a specific memory type.
 

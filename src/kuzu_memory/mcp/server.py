@@ -375,7 +375,7 @@ class KuzuMemoryMCPServer:
         except json.JSONDecodeError:
             return result
 
-    async def run(self):
+    async def run(self) -> None:
         """Run the MCP server."""
         # Use stdin/stdout for MCP communication
         init_options = InitializationOptions(
@@ -405,7 +405,7 @@ class KuzuMemoryMCPServer:
                 raise
 
 
-async def main():
+async def main() -> None:
     """Main entry point for MCP server."""
     logging.basicConfig(
         level=logging.INFO,
@@ -493,7 +493,7 @@ class SimplifiedMCPServer:
         except Exception as e:
             return {"error": str(e)}
 
-    async def run_stdio(self):
+    async def run_stdio(self) -> None:
         """Run server using stdio for communication."""
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)

@@ -517,7 +517,7 @@ class KuzuAdapter:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """
         Get recent memories, optionally filtered.
 

@@ -16,6 +16,7 @@ import sys
 import threading
 from enum import IntEnum
 from queue import Empty, Queue
+from collections.abc import Callable
 from typing import Any, TextIO
 
 logger = logging.getLogger(__name__)
@@ -376,7 +377,7 @@ class BatchRequestHandler:
 
     @staticmethod
     async def process_batch(
-        messages: list[dict[str, Any]], handler_func
+        messages: list[dict[str, Any]], handler_func: Callable[[dict[str, Any]], Any]
     ) -> list[dict[str, Any]] | None:
         """
         Process a batch of JSON-RPC requests.

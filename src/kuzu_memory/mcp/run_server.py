@@ -449,7 +449,7 @@ class MCPProtocolHandler:
 
         return tool_definitions
 
-    async def run(self):
+    async def run(self) -> None:
         """Run the MCP protocol handler with JSON-RPC 2.0."""
         # Initialize protocol
         await self.protocol.initialize()
@@ -496,7 +496,7 @@ class MCPProtocolHandler:
         self.protocol.close()
 
 
-async def main():
+async def main() -> None:
     """Main entry point for MCP server."""
     # Get project root from environment or current directory
     import os

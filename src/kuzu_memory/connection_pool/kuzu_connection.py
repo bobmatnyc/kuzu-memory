@@ -346,7 +346,7 @@ class KuzuConnection(IConnection):
         except Exception:
             return False
 
-    def _process_result(self, result) -> Any:
+    def _process_result(self, result: Any) -> Any:
         """
         Process Kuzu query result into standard format (list of dicts).
 

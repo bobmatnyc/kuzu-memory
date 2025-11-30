@@ -36,7 +36,7 @@ class MemoryStore:
     pattern extraction, entity detection, deduplication, and storage.
     """
 
-    def __init__(self, db_adapter, config: KuzuMemoryConfig) -> None:
+    def __init__(self, db_adapter: Any, config: KuzuMemoryConfig) -> None:
         """
         Initialize memory store.
 
@@ -599,7 +599,7 @@ class MemoryStore:
             logger.error(f"Failed to cleanup expired memories: {e}")
             return 0
 
-    def get_recent_memories(self, limit: int = 10, **filters) -> list[Memory]:
+    def get_recent_memories(self, limit: int = 10, **filters: Any) -> list[Memory]:
         """
         Get recent memories, optionally filtered.
 

@@ -257,7 +257,7 @@ class IMemoryService(Protocol):
         """
         ...
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """
         Exit context manager and cleanup resources.
 
@@ -381,7 +381,7 @@ class IInstallerService(Protocol):
         """
         ...
 
-    def install(self, integration: str, **kwargs) -> bool:
+    def install(self, integration: str, **kwargs: Any) -> bool:
         """
         Install an integration.
 

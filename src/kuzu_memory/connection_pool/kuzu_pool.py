@@ -11,6 +11,7 @@ import time
 from collections import deque
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from collections.abc import AsyncIterator
 from typing import Any
 
 from ..interfaces.connection_pool import IConnectionPool
@@ -143,7 +144,7 @@ class KuzuConnectionPool(IConnectionPool):
             logger.error(f"Failed to destroy connection: {e}")
 
     @asynccontextmanager
-    async def get_connection(self):
+    async def get_connection(self) -> AsyncIterator[KuzuConnection]:
         """
         Get a connection from the pool.
 

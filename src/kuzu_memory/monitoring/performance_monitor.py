@@ -10,7 +10,7 @@ import functools
 import logging
 import time
 from collections import defaultdict, deque
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta
 from typing import Any, TypeVar
@@ -130,7 +130,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                 )
 
     @asynccontextmanager
-    async def time_async_operation(self, name: str, tags: dict[str, str] | None = None):
+    async def time_async_operation(self, name: str, tags: dict[str, str] | None = None) -> AsyncIterator[None]:
         """Time an async operation using context manager."""
         start_time = time.perf_counter()
         try:
@@ -140,7 +140,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             await self.record_timing(name, duration_ms, tags)
 
     @contextmanager
-    def time_operation(self, name: str, tags: dict[str, str] | None = None) -> None:
+    def time_operation(self, name: str, tags: dict[str, str] | None = None) -> Iterator[None]:
         """Time a synchronous operation using context manager."""
         start_time = time.perf_counter()
         try:
@@ -166,7 +166,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             if asyncio.iscoroutinefunction(func):
 
                 @functools.wraps(func)
-                async def async_wrapper(*args, **kwargs):
+                async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                     async with self.time_async_operation(metric_name, tags):
                         return await func(*args, **kwargs)
 
@@ -174,7 +174,7 @@ class PerformanceMonitor(IPerformanceMonitor):
             else:
 
                 @functools.wraps(func)
-                def sync_wrapper(*args, **kwargs) -> None:
+                def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                     with self.time_operation(metric_name, tags):
                         return func(*args, **kwargs)
 

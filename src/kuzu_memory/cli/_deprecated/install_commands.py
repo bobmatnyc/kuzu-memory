@@ -168,7 +168,7 @@ def install(
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
 @click.pass_context
-def uninstall(ctx, ai_system, project, confirm) -> None:
+def uninstall(ctx: click.Context, ai_system: str, project: str | None, confirm: bool) -> None:
     """
     🗑️  Uninstall AI system integration.
 
@@ -252,7 +252,7 @@ def uninstall(ctx, ai_system, project, confirm) -> None:
 @install_group.command()
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.pass_context
-def status(ctx, project) -> None:
+def status(ctx: click.Context, project: str | None) -> None:
     """
     📊 Show installation status for all AI systems.
 
