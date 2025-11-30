@@ -166,7 +166,9 @@ class MemoryStore:
             max_time = self.config.performance.max_generation_time_ms
 
             if self.config.performance.enable_performance_monitoring and execution_time > max_time:
-                raise PerformanceThresholdError("generate_memories", execution_time / 1000, max_time / 1000)
+                raise PerformanceThresholdError(
+                    "generate_memories", execution_time / 1000, max_time / 1000
+                )
 
             # Update statistics
             self._storage_stats["memories_stored"] += len(stored_memory_ids)
@@ -182,7 +184,7 @@ class MemoryStore:
             raise ExtractionError(
                 f"Failed to extract memories from content (length: {len(content)}): {e}",
                 context={"content_length": len(content), "error": str(e)},
-                cause=e
+                cause=e,
             )
 
     def _extract_memories_from_content(self, content: str) -> list[ExtractedMemory]:

@@ -11,11 +11,10 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import click
 
-from ..core.memory import KuzuMemory
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import (
     find_project_root,
@@ -48,7 +47,7 @@ def status(
     show_project: bool,
     detailed: bool,
     output_format: str,
-    db_path: Optional[str],
+    db_path: str | None,
 ) -> None:
     """
     📊 Display system status and statistics.
@@ -76,7 +75,7 @@ def status(
     try:
         # Resolve project root and database path
         project_root = ctx.obj.get("project_root") or find_project_root()
-        db_path_obj: Optional[Path] = None
+        db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
         else:
@@ -265,15 +264,11 @@ def status(
                     if oldest_memory:
                         assert isinstance(oldest_memory, datetime)
                         rich_print("\n📅 Memory Timeline:")
-                        rich_print(
-                            f"   Oldest: {oldest_memory.strftime('%Y-%m-%d %H:%M')}"
-                        )
+                        rich_print(f"   Oldest: {oldest_memory.strftime('%Y-%m-%d %H:%M')}")
                         newest_memory = stats_data.get("newest_memory")
                         if newest_memory:
                             assert isinstance(newest_memory, datetime)
-                            rich_print(
-                                f"   Newest: {newest_memory.strftime('%Y-%m-%d %H:%M')}"
-                            )
+                            rich_print(f"   Newest: {newest_memory.strftime('%Y-%m-%d %H:%M')}")
 
                     daily_activity = stats_data.get("daily_activity")
                     if daily_activity:

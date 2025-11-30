@@ -150,7 +150,6 @@ def test_initialization_creates_diagnostics_and_health_checker(mock_config_servi
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics") as mock_diag_class,
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
-
         service = DiagnosticService(config_service=mock_config_service)
         service.initialize()
 
@@ -173,7 +172,6 @@ def test_cleanup_nullifies_tools(service, mock_config_service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
         assert service._diagnostics is not None
         assert service._health_checker is not None
@@ -190,7 +188,6 @@ def test_context_manager_lifecycle(mock_config_service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service = DiagnosticService(config_service=mock_config_service)
 
         assert not service.is_initialized
@@ -209,7 +206,6 @@ def test_initialization_with_memory_service(mock_config_service, mock_memory_ser
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service = DiagnosticService(
             config_service=mock_config_service,
             memory_service=mock_memory_service,
@@ -229,7 +225,6 @@ def test_initialization_without_memory_service(mock_config_service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service = DiagnosticService(config_service=mock_config_service)
         service.initialize()
 
@@ -248,14 +243,14 @@ async def test_run_full_diagnostics_aggregates_results(
     """Test run_full_diagnostics aggregates results from all checks."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch(
             "kuzu_memory.services.diagnostic_service.MCPHealthChecker",
             return_value=mock_health_checker,
         ),
     ):
-
         service.initialize()
 
         result = await service.run_full_diagnostics()
@@ -277,11 +272,11 @@ async def test_check_configuration_delegates(service, mock_diagnostics):
     """Test check_configuration delegates to MCPDiagnostics."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         result = await service.check_configuration()
@@ -307,7 +302,6 @@ async def test_check_database_health_delegates(
             return_value=mock_health_checker,
         ),
     ):
-
         service_with_memory.initialize()
 
         result = await service_with_memory.check_database_health()
@@ -340,7 +334,6 @@ async def test_check_mcp_server_health_delegates(service, mock_health_checker):
             return_value=mock_health_checker,
         ),
     ):
-
         service.initialize()
 
         result = await service.check_mcp_server_health()
@@ -362,7 +355,6 @@ async def test_check_git_integration_delegates(service):
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
         patch("subprocess.run") as mock_run,
     ):
-
         # Mock git being available
         mock_run.return_value = MagicMock(returncode=0)
 
@@ -389,7 +381,6 @@ async def test_get_system_info_delegates(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         result = await service.get_system_info()
@@ -408,7 +399,6 @@ async def test_verify_dependencies_delegates(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         result = await service.verify_dependencies()
@@ -431,7 +421,6 @@ def test_format_diagnostic_report_with_success_results(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         results = {
@@ -501,7 +490,6 @@ def test_format_diagnostic_report_with_failures(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         results = {
@@ -569,7 +557,6 @@ def test_format_diagnostic_report_with_mixed_results(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service.initialize()
 
         results = {
@@ -652,7 +639,6 @@ def test_initializes_config_service(mock_config_service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service = DiagnosticService(config_service=mock_config_service)
         service.initialize()
 
@@ -665,7 +651,6 @@ def test_initializes_memory_service_if_provided(mock_config_service, mock_memory
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         service = DiagnosticService(
             config_service=mock_config_service,
             memory_service=mock_memory_service,
@@ -681,7 +666,6 @@ def test_works_without_memory_service(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
-
         # Create health checker with database component
         db_component = ComponentHealth(
             name="database",
@@ -740,7 +724,6 @@ async def test_database_health_without_memory_service(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
-
         db_component = ComponentHealth(
             name="database",
             status=HealthStatus.HEALTHY,
@@ -774,11 +757,11 @@ async def test_diagnostics_failures_handled_gracefully(service, mock_diagnostics
     """Test diagnostic failures are handled gracefully."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
     ):
-
         # Mock check_configuration to return failure
         mock_diagnostics.check_configuration = AsyncMock(
             return_value=[
@@ -808,7 +791,6 @@ async def test_connection_errors(service):
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
-
         # Mock health check to raise exception
         mock_health = Mock()
         mock_health.check_health = AsyncMock(side_effect=ConnectionError("Server unavailable"))
@@ -828,7 +810,6 @@ async def test_permission_errors(service):
         patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker"),
         patch("subprocess.run") as mock_run,
     ):
-
         # Mock git check to raise PermissionError
         mock_run.side_effect = PermissionError("Access denied")
 
@@ -849,14 +830,14 @@ async def test_full_diagnostic_workflow(service, mock_diagnostics, mock_health_c
     """Test complete diagnostic workflow."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch(
             "kuzu_memory.services.diagnostic_service.MCPHealthChecker",
             return_value=mock_health_checker,
         ),
     ):
-
         service.initialize()
 
         # Run full diagnostics
@@ -883,7 +864,6 @@ async def test_health_check_workflow(service, mock_health_checker):
             return_value=mock_health_checker,
         ),
     ):
-
         service.initialize()
 
         # Check database health
@@ -901,14 +881,14 @@ async def test_with_all_dependencies(
     """Test with all dependencies provided."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch(
             "kuzu_memory.services.diagnostic_service.MCPHealthChecker",
             return_value=mock_health_checker,
         ),
     ):
-
         service_with_memory.initialize()
 
         # Run diagnostics with memory service
@@ -923,14 +903,14 @@ async def test_with_minimal_dependencies(service, mock_diagnostics, mock_health_
     """Test with minimal dependencies (no memory service)."""
     with (
         patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics", return_value=mock_diagnostics
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics",
+            return_value=mock_diagnostics,
         ),
         patch(
             "kuzu_memory.services.diagnostic_service.MCPHealthChecker",
             return_value=mock_health_checker,
         ),
     ):
-
         service.initialize()
 
         # Should work with just config service

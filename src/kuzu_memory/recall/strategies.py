@@ -100,7 +100,7 @@ class RecallStrategy:
             raise RecallError(
                 f"Recall failed for prompt: {prompt}",
                 context={"prompt": prompt, "error": str(e)},
-                cause=e
+                cause=e,
             )
 
     def _execute_recall(

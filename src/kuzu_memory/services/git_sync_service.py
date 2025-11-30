@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Import ConfigService directly for type checking (not just protocol)
 # This is needed because we call .initialize() which is BaseService method
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.integrations.git_sync import GitSyncManager
@@ -49,7 +49,7 @@ class GitSyncService(BaseService):
     Related Task: Phase 4 Service Implementation #1
     """
 
-    def __init__(self, config_service: "ConfigService"):
+    def __init__(self, config_service: ConfigService):
         """
         Initialize with config service dependency.
 
@@ -58,7 +58,7 @@ class GitSyncService(BaseService):
         """
         super().__init__()
         self._config_service = config_service
-        self._git_sync: Optional[GitSyncManager] = None
+        self._git_sync: GitSyncManager | None = None
 
     def _do_initialize(self) -> None:
         """
@@ -103,13 +103,13 @@ class GitSyncService(BaseService):
         """
         if not self._git_sync:
             raise RuntimeError(
-                "GitSyncService not initialized. " "Call initialize() or use as context manager."
+                "GitSyncService not initialized. Call initialize() or use as context manager."
             )
         return self._git_sync
 
     # IGitSyncService protocol implementation
 
-    def initialize_sync(self, project_root: Optional[Path] = None) -> bool:
+    def initialize_sync(self, project_root: Path | None = None) -> bool:
         """
         Initialize git synchronization for a project.
 
@@ -137,7 +137,7 @@ class GitSyncService(BaseService):
 
     def sync(
         self,
-        since: Optional[str] = None,
+        since: str | None = None,
         max_commits: int = 100,
     ) -> int:
         """
@@ -327,7 +327,7 @@ kuzu-memory git sync --incremental --quiet 2>/dev/null || true
 
     # Helper methods
 
-    def _find_git_directory(self, start_path: Path) -> Optional[Path]:
+    def _find_git_directory(self, start_path: Path) -> Path | None:
         """
         Find .git directory starting from given path.
 

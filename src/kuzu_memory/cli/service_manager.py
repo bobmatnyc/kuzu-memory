@@ -49,9 +49,9 @@ class ServiceManager:
     @staticmethod
     @contextmanager
     def memory_service(
-        db_path: Optional[Path] = None,
+        db_path: Path | None = None,
         enable_git_sync: bool = False,
-        config: Optional[dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ) -> Iterator[IMemoryService]:
         """Context manager for MemoryService.
 
@@ -156,7 +156,7 @@ class ServiceManager:
     @contextmanager
     def diagnostic_service(
         config_service: Optional["IConfigService"] = None,
-        memory_service: Optional[IMemoryService] = None,
+        memory_service: IMemoryService | None = None,
     ) -> Iterator["IDiagnosticService"]:
         """Context manager for DiagnosticService.
 
@@ -217,7 +217,7 @@ class ServiceManager:
         # We cast the protocol interface to concrete type - safe as ServiceManager creates concrete types
         from kuzu_memory.services.memory_service import MemoryService as ConcreteMemoryService
 
-        concrete_memory: Optional[ConcreteMemoryService] = None
+        concrete_memory: ConcreteMemoryService | None = None
         if memory_service is not None:
             # Safe cast from protocol to concrete type
             concrete_memory = memory_service  # type: ignore[assignment]  # Protocol to concrete cast - safe in context

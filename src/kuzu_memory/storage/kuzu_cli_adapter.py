@@ -151,7 +151,9 @@ class KuzuCLIAdapter:
                     self.config.performance.enable_performance_monitoring
                     and execution_time_ms > timeout_ms
                 ):
-                    raise PerformanceThresholdError("execute_query", execution_time_ms / 1000, timeout_ms / 1000)
+                    raise PerformanceThresholdError(
+                        "execute_query", execution_time_ms / 1000, timeout_ms / 1000
+                    )
 
                 return results
 
@@ -161,7 +163,9 @@ class KuzuCLIAdapter:
 
         except subprocess.TimeoutExpired:
             execution_time_ms = (time.time() - start_time) * 1000
-            raise PerformanceThresholdError("execute_query", execution_time_ms / 1000, timeout_ms / 1000)
+            raise PerformanceThresholdError(
+                "execute_query", execution_time_ms / 1000, timeout_ms / 1000
+            )
         except Exception as e:
             if isinstance(e, DatabaseError | PerformanceError):
                 raise
@@ -173,7 +177,7 @@ class KuzuCLIAdapter:
             elif "corrupt" in error_msg or "malformed" in error_msg:
                 raise CorruptedDatabaseError(
                     f"Database corrupted at {self.db_path}: {e}",
-                    context={"db_path": str(self.db_path), "error": str(e)}
+                    context={"db_path": str(self.db_path), "error": str(e)},
                 )
             else:
                 raise DatabaseError(f"Query execution failed: {e}")

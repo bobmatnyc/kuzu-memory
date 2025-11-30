@@ -28,7 +28,7 @@ Related Task: 1M-417 (Enhance DI Container)
 import inspect
 from collections.abc import Callable
 from threading import RLock
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -64,10 +64,12 @@ class DependencyContainer:
         self._factories: dict[str, Callable[[], Any]] = {}
         self._singletons: dict[str, Any] = {}
         self._lock = RLock()  # Reentrant lock allows same thread to acquire multiple times
-        self._resolving: set[str] = set()  # Track services currently being resolved (prevent circular deps)
+        self._resolving: set[str] = (
+            set()
+        )  # Track services currently being resolved (prevent circular deps)
 
     def register_service(
-        self, interface: Type[T], implementation: Type[T], singleton: bool = False
+        self, interface: type[T], implementation: type[T], singleton: bool = False
     ) -> None:
         """
         Register a service implementation.
@@ -94,7 +96,7 @@ class DependencyContainer:
         else:
             self._factories[name] = implementation
 
-    def register_singleton(self, interface: Type[T], instance: T) -> None:
+    def register_singleton(self, interface: type[T], instance: T) -> None:
         """
         Register a singleton service instance.
 
@@ -112,7 +114,7 @@ class DependencyContainer:
         with self._lock:
             self._singletons[name] = instance
 
-    def register_factory(self, interface: Type[T], factory: Callable[[], T]) -> None:
+    def register_factory(self, interface: type[T], factory: Callable[[], T]) -> None:
         """
         Register a factory function for service creation.
 
@@ -129,7 +131,7 @@ class DependencyContainer:
         name = interface.__name__
         self._factories[name] = factory
 
-    def resolve(self, interface: Type[T]) -> T:
+    def resolve(self, interface: type[T]) -> T:
         """
         Resolve a service instance with automatic dependency injection.
 
@@ -193,7 +195,7 @@ class DependencyContainer:
 
         raise ValueError(f"Service not registered: {name}")
 
-    def _create_instance(self, cls: Type[T]) -> T:
+    def _create_instance(self, cls: type[T]) -> T:
         """
         Create instance with automatic dependency injection.
 
@@ -239,7 +241,7 @@ class DependencyContainer:
 
         return cls(**params)
 
-    def has(self, interface: Type[Any]) -> bool:
+    def has(self, interface: type[Any]) -> bool:
         """
         Check if a service is registered.
 

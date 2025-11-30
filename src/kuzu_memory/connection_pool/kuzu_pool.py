@@ -9,9 +9,9 @@ import asyncio
 import logging
 import time
 from collections import deque
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from collections.abc import AsyncIterator
 from typing import Any
 
 from ..interfaces.connection_pool import IConnectionPool

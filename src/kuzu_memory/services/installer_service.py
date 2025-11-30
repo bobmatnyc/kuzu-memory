@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from kuzu_memory.installers.base import BaseInstaller
-from kuzu_memory.installers.json_utils import fix_broken_mcp_args, load_json_config, save_json_config
+from kuzu_memory.installers.json_utils import (
+    fix_broken_mcp_args,
+    load_json_config,
+    save_json_config,
+)
 from kuzu_memory.installers.registry import InstallerRegistry
 from kuzu_memory.protocols.services import IConfigService
 from kuzu_memory.services.base import BaseService
@@ -53,7 +56,7 @@ class InstallerService(BaseService):
         """
         super().__init__()
         self._config_service = config_service
-        self._registry: Optional[InstallerRegistry] = None
+        self._registry: InstallerRegistry | None = None
 
     def _do_initialize(self) -> None:
         """Initialize installer registry."""
@@ -327,7 +330,7 @@ class InstallerService(BaseService):
         """
         return self.registry.list_installers()
 
-    def get_installer_instance(self, integration: str) -> Optional[BaseInstaller]:
+    def get_installer_instance(self, integration: str) -> BaseInstaller | None:
         """
         Get installer instance for an integration.
 

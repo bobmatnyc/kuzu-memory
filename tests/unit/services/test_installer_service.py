@@ -145,7 +145,9 @@ class TestInstallerServiceDiscovery:
 class TestInstallerServiceInstall:
     """Test installation operations."""
 
-    def test_install_success(self, installer_service, mock_registry, mock_installer, mock_config_service):
+    def test_install_success(
+        self, installer_service, mock_registry, mock_installer, mock_config_service
+    ):
         """Test successful installation."""
         # Mock successful installation result
         success_result = InstallationResult(
@@ -164,7 +166,9 @@ class TestInstallerServiceInstall:
 
         assert result is True
         mock_config_service.get_project_root.assert_called()
-        mock_registry.get_installer.assert_called_once_with("test-integration", Path("/test/project"))
+        mock_registry.get_installer.assert_called_once_with(
+            "test-integration", Path("/test/project")
+        )
         mock_installer.install.assert_called_once_with(force=True, dry_run=False, verbose=True)
 
     def test_install_failure(self, installer_service, mock_registry, mock_installer):
@@ -248,7 +252,9 @@ class TestInstallerServiceInstall:
 class TestInstallerServiceUninstall:
     """Test uninstallation operations."""
 
-    def test_uninstall_success(self, installer_service, mock_registry, mock_installer, mock_config_service):
+    def test_uninstall_success(
+        self, installer_service, mock_registry, mock_installer, mock_config_service
+    ):
         """Test successful uninstallation."""
         success_result = InstallationResult(
             success=True,
@@ -266,7 +272,9 @@ class TestInstallerServiceUninstall:
 
         assert result is True
         mock_config_service.get_project_root.assert_called()
-        mock_registry.get_installer.assert_called_once_with("test-integration", Path("/test/project"))
+        mock_registry.get_installer.assert_called_once_with(
+            "test-integration", Path("/test/project")
+        )
         mock_installer.uninstall.assert_called_once()
 
     def test_uninstall_failure(self, installer_service, mock_registry, mock_installer):
@@ -328,7 +336,9 @@ class TestInstallerServiceUninstall:
 class TestInstallerServiceHealthCheck:
     """Test health checking operations."""
 
-    def test_check_health_healthy_installation(self, installer_service, mock_registry, mock_installer):
+    def test_check_health_healthy_installation(
+        self, installer_service, mock_registry, mock_installer
+    ):
         """Test health check for healthy installation."""
         detected = InstalledSystem(
             name="test-integration",
@@ -421,7 +431,9 @@ class TestInstallerServiceMCPRepair:
     @patch("kuzu_memory.services.installer_service.load_json_config")
     @patch("kuzu_memory.services.installer_service.save_json_config")
     @patch("kuzu_memory.services.installer_service.fix_broken_mcp_args")
-    def test_repair_mcp_config_with_fixes(self, mock_fix_args, mock_save, mock_load, installer_service):
+    def test_repair_mcp_config_with_fixes(
+        self, mock_fix_args, mock_save, mock_load, installer_service
+    ):
         """Test MCP config repair when fixes are needed."""
         original_config = {"mcpServers": {"server1": {"args": ["broken"]}}}
         fixed_config = {"mcpServers": {"server1": {"args": ["fixed"]}}}
@@ -474,14 +486,18 @@ class TestInstallerServiceMCPRepair:
 class TestInstallerServiceUtilityMethods:
     """Test additional utility methods."""
 
-    def test_get_installer_instance_returns_installer(self, installer_service, mock_registry, mock_installer, mock_config_service):
+    def test_get_installer_instance_returns_installer(
+        self, installer_service, mock_registry, mock_installer, mock_config_service
+    ):
         """Test get_installer_instance returns installer instance."""
         with patch.object(installer_service, "_registry", mock_registry):
             installer = installer_service.get_installer_instance("test-integration")
 
         assert installer == mock_installer
         mock_config_service.get_project_root.assert_called()
-        mock_registry.get_installer.assert_called_once_with("test-integration", Path("/test/project"))
+        mock_registry.get_installer.assert_called_once_with(
+            "test-integration", Path("/test/project")
+        )
 
     def test_get_installer_instance_unknown_integration(self, installer_service, mock_registry):
         """Test get_installer_instance returns None for unknown integration."""

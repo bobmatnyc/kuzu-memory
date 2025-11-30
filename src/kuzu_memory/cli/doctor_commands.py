@@ -31,7 +31,7 @@ from rich.table import Table
 from ..mcp.testing.diagnostics import MCPDiagnostics
 from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
 from .async_utils import run_async
-from .cli_utils import rich_panel, rich_print
+from .cli_utils import rich_print
 from .enums import OutputFormat
 from .service_manager import ServiceManager
 
@@ -305,7 +305,10 @@ def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str
                 else:
                     rich_print("❌ MCP server not configured", style="red")
 
-                rich_print(f"   Server path: {mcp_health.get('server_path', 'N/A')}", style="dim")
+                rich_print(
+                    f"   Server path: {mcp_health.get('server_path', 'N/A')}",
+                    style="dim",
+                )
 
                 if issues:
                     rich_print("\n⚠️  Issues detected:", style="yellow")

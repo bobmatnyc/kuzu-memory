@@ -23,9 +23,8 @@ Related Epic: 1M-415 (Refactor Commands to SOA/DI Architecture)
 Related Task: 1M-416 (Design Service Interfaces)
 """
 
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ContextManager, Optional, Protocol
+from typing import Any, Protocol
 
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
 
@@ -52,8 +51,8 @@ class IMemoryService(Protocol):
         self,
         content: str,
         memory_type: MemoryType,
-        entities: Optional[list[str]] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        entities: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Memory:
         """
         Add a new memory to the database.
@@ -73,7 +72,7 @@ class IMemoryService(Protocol):
         """
         ...
 
-    def get_memory(self, memory_id: str) -> Optional[Memory]:
+    def get_memory(self, memory_id: str) -> Memory | None:
         """
         Retrieve a memory by ID.
 
@@ -89,7 +88,7 @@ class IMemoryService(Protocol):
 
     def list_memories(
         self,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Memory]:
@@ -125,9 +124,9 @@ class IMemoryService(Protocol):
     def update_memory(
         self,
         memory_id: str,
-        content: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
-    ) -> Optional[Memory]:
+        content: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Memory | None:
         """
         Update an existing memory.
 
@@ -148,9 +147,9 @@ class IMemoryService(Protocol):
         self,
         content: str,
         source: str,
-        session_id: Optional[str] = None,
-        agent_id: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        session_id: str | None = None,
+        agent_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Store a new memory with automatic classification.
@@ -193,7 +192,7 @@ class IMemoryService(Protocol):
     def get_recent_memories(
         self,
         limit: int = 20,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         **filters: Any,
     ) -> list[Memory]:
         """
@@ -212,7 +211,7 @@ class IMemoryService(Protocol):
     # NEW METHOD 4: get_memory_count() - Used by recall, prune, recent
     def get_memory_count(
         self,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         **filters: Any,
     ) -> int:
         """
@@ -257,7 +256,12 @@ class IMemoryService(Protocol):
         """
         ...
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """
         Exit context manager and cleanup resources.
 
@@ -537,7 +541,7 @@ class ISetupService(Protocol):
         """
         ...
 
-    def find_project_root(self, start_path: Optional[Path] = None) -> Optional[Path]:
+    def find_project_root(self, start_path: Path | None = None) -> Path | None:
         """
         Find the project root directory.
 
@@ -555,7 +559,7 @@ class ISetupService(Protocol):
         """
         ...
 
-    def get_project_db_path(self, project_root: Optional[Path] = None) -> Path:
+    def get_project_db_path(self, project_root: Path | None = None) -> Path:
         """
         Get the database path for a project.
 
@@ -820,7 +824,7 @@ class IGitSyncService(Protocol):
         >>>     print(f"Last sync: {status['last_sync']}")
     """
 
-    def initialize_sync(self, project_root: Optional[Path] = None) -> bool:
+    def initialize_sync(self, project_root: Path | None = None) -> bool:
         """
         Initialize git synchronization for a project.
 
@@ -840,7 +844,7 @@ class IGitSyncService(Protocol):
 
     def sync(
         self,
-        since: Optional[str] = None,
+        since: str | None = None,
         max_commits: int = 100,
     ) -> int:
         """

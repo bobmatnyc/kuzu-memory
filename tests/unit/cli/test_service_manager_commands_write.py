@@ -152,9 +152,8 @@ class TestInitCommand:
             patch("kuzu_memory.cli.init_commands.find_project_root") as mock_find,
             patch("kuzu_memory.cli.init_commands.get_project_db_path") as mock_db_path,
             patch("kuzu_memory.cli.init_commands.get_project_memories_dir") as mock_mem_dir,
-            patch("kuzu_memory.cli.init_commands.KuzuMemory") as MockMemory,
+            patch("kuzu_memory.cli.init_commands.KuzuMemory"),
         ):
-
             # Setup mocks
             MockConfig.return_value = mock_config_service
             MockSetup.return_value = mock_setup_service
@@ -186,7 +185,6 @@ class TestInitCommand:
             patch("kuzu_memory.cli.init_commands.get_project_db_path") as mock_db_path,
             patch("kuzu_memory.cli.init_commands.get_project_memories_dir") as mock_mem_dir,
         ):
-
             mock_find.return_value = Path("/tmp/test-project")
 
             # Mock DB already exists
@@ -212,7 +210,6 @@ class TestPruneCommand:
             patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx,
             patch("kuzu_memory.cli.memory_commands.MemoryPruner") as MockPruner,
         ):
-
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             # Mock pruner stats
@@ -245,7 +242,6 @@ class TestPruneCommand:
             patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx,
             patch("kuzu_memory.cli.memory_commands.MemoryPruner") as MockPruner,
         ):
-
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             # Mock stats
@@ -283,7 +279,6 @@ class TestGitSyncCommand:
             patch("kuzu_memory.cli.git_commands.get_config_loader") as mock_loader,
             patch("kuzu_memory.cli.git_commands.KuzuMemory") as MockMemory,
         ):
-
             MockConfig.return_value = mock_config_service
             mock_git_ctx.return_value.__enter__.return_value = mock_git_sync_service
             mock_db.return_value = Path("/tmp/test.db")
@@ -319,7 +314,6 @@ class TestGitSyncCommand:
             patch("kuzu_memory.cli.git_commands.get_project_db_path"),
             patch("kuzu_memory.cli.git_commands.get_config_loader"),
         ):
-
             MockConfig.return_value = mock_config_service
             mock_git_ctx.return_value.__enter__.return_value = mock_git_sync
 

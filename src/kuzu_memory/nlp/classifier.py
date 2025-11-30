@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from nltk.stem import PorterStemmer
@@ -97,8 +97,8 @@ class MemoryClassifier:
 
     # Type annotations for instance variables
     initialized: bool
-    classifier: Optional[Pipeline]
-    stemmer: Optional[PorterStemmer]
+    classifier: Pipeline | None
+    stemmer: PorterStemmer | None
     sentiment_analyzer: Any  # SentimentIntensityAnalyzer if available
     stop_words: set[str]
 

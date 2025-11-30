@@ -213,7 +213,11 @@ class DependencyContainer:
 
     def get_nlp_classifier(self) -> NLPClassifierProtocol | None:
         """Get the NLP classifier service if available."""
-        return cast(NLPClassifierProtocol, self.get("nlp_classifier")) if self.has("nlp_classifier") else None
+        return (
+            cast(NLPClassifierProtocol, self.get("nlp_classifier"))
+            if self.has("nlp_classifier")
+            else None
+        )
 
     def get_database_adapter(self) -> DatabaseAdapterProtocol:
         """Get the database adapter service."""

@@ -13,7 +13,6 @@ import click
 
 from ..integrations.auggie import AuggieIntegration
 from ..utils.project_setup import (
-    create_project_memories_structure,
     find_project_root,
     get_project_context_summary,
     get_project_db_path,
@@ -30,7 +29,12 @@ logger = logging.getLogger(__name__)
 @click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.option("--project-root", type=click.Path(), help="Project root path (optional)")
 @click.pass_context
-def init(ctx: click.Context, force: bool, config_path: Path | str | None, project_root: str | None) -> None:
+def init(
+    ctx: click.Context,
+    force: bool,
+    config_path: Path | str | None,
+    project_root: str | None,
+) -> None:
     """
     🚀 Initialize KuzuMemory for this project.
 
@@ -83,7 +87,10 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None, projec
             result = setup_service.initialize_project(force=force)
 
             if not result["success"]:
-                rich_print(f"❌ Project initialization failed: {result['summary']}", style="red")
+                rich_print(
+                    f"❌ Project initialization failed: {result['summary']}",
+                    style="red",
+                )
                 if result.get("warnings"):
                     for warning in result["warnings"]:
                         rich_print(f"   ⚠️  {warning}", style="yellow")
@@ -115,7 +122,10 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None, projec
                 config_path_obj = Path(config_path)
                 example_config = {
                     "storage": {"db_path": str(db_path), "backup_enabled": True},
-                    "memory": {"max_memories_per_query": 10, "similarity_threshold": 0.7},
+                    "memory": {
+                        "max_memories_per_query": 10,
+                        "similarity_threshold": 0.7,
+                    },
                     "temporal_decay": {"enabled": True, "recent_boost_hours": 24},
                 }
 
@@ -133,7 +143,10 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None, projec
                             auggie.setup_project_integration()
                             rich_print("✅ Auggie integration configured")
                         except Exception as e:
-                            rich_print(f"⚠️  Auggie integration setup failed: {e}", style="yellow")
+                            rich_print(
+                                f"⚠️  Auggie integration setup failed: {e}",
+                                style="yellow",
+                            )
             except ImportError:
                 pass
 

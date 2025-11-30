@@ -416,7 +416,10 @@ class PatternExtractor:
         return runtime_patterns
 
     def _extract_from_pattern_group(
-        self, text: str, pattern_group: list[tuple[re.Pattern[str], float, str]], memory_type: MemoryType
+        self,
+        text: str,
+        pattern_group: list[tuple[re.Pattern[str], float, str]],
+        memory_type: MemoryType,
     ) -> list[ExtractedMemory]:
         """Extract memories from a specific pattern group.
 

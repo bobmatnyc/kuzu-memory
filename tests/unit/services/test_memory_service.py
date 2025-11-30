@@ -16,7 +16,7 @@ Related Task: 1M-420 (Implement MemoryService with Protocol interface)
 """
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -210,9 +210,7 @@ class TestMemoryServiceDelegation:
         mock_context = MemoryContext(original_prompt="test", enhanced_prompt="test", memories=[])
         mock_kuzu_memory.attach_memories.return_value = mock_context
 
-        result = memory_service.attach_memories(
-            "test prompt", user_id="user-1", session_id="session-1"
-        )
+        memory_service.attach_memories("test prompt", user_id="user-1", session_id="session-1")
 
         mock_kuzu_memory.attach_memories.assert_called_once_with(
             prompt="test prompt",

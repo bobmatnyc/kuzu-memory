@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from kuzu_memory.services.base import BaseService
 from kuzu_memory.utils.project_setup import (
@@ -49,7 +48,7 @@ class ConfigService(BaseService):
     Related Task: 1M-421 (Implement ConfigService)
     """
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         """
         Initialize ConfigService.
 
@@ -58,8 +57,8 @@ class ConfigService(BaseService):
         """
         super().__init__()
         self._explicit_root = project_root
-        self._project_root: Optional[Path] = None
-        self._config_cache: Optional[dict[str, Any]] = None
+        self._project_root: Path | None = None
+        self._config_cache: dict[str, Any] | None = None
 
     def _do_initialize(self) -> None:
         """Initialize project root and config."""
@@ -126,7 +125,7 @@ class ConfigService(BaseService):
             return self._config_cache
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 self._config_cache = json.load(f)
             self.logger.info(f"Loaded config from {config_path}")
             return self._config_cache

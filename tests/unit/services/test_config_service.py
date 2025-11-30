@@ -108,7 +108,9 @@ class TestConfigServiceLifecycle:
 class TestConfigServiceProjectRoot:
     """Test project root detection and access."""
 
-    def test_get_project_root_returns_explicit_root(self, config_service_with_explicit_root, mock_project_root):
+    def test_get_project_root_returns_explicit_root(
+        self, config_service_with_explicit_root, mock_project_root
+    ):
         """Test get_project_root returns explicitly set root."""
         assert config_service_with_explicit_root.get_project_root() == mock_project_root
 
@@ -125,7 +127,9 @@ class TestConfigServiceProjectRoot:
         service.cleanup()
 
     @patch("kuzu_memory.services.config_service.get_project_db_path")
-    def test_get_db_path_delegates_to_utility(self, mock_get_db_path, config_service_with_explicit_root, mock_project_root):
+    def test_get_db_path_delegates_to_utility(
+        self, mock_get_db_path, config_service_with_explicit_root, mock_project_root
+    ):
         """Test get_db_path delegates to utility function."""
         expected_path = mock_project_root / "kuzu-memories" / "memories.db"
         mock_get_db_path.return_value = expected_path
@@ -136,7 +140,12 @@ class TestConfigServiceProjectRoot:
         assert result == expected_path
 
     @patch("kuzu_memory.services.config_service.get_project_memories_dir")
-    def test_get_memories_dir_delegates_to_utility(self, mock_get_memories_dir, config_service_with_explicit_root, mock_project_root):
+    def test_get_memories_dir_delegates_to_utility(
+        self,
+        mock_get_memories_dir,
+        config_service_with_explicit_root,
+        mock_project_root,
+    ):
         """Test get_memories_dir delegates to utility function."""
         expected_path = mock_project_root / "kuzu-memories"
         mock_get_memories_dir.return_value = expected_path
@@ -150,17 +159,21 @@ class TestConfigServiceProjectRoot:
 class TestConfigServiceConfiguration:
     """Test configuration loading and saving."""
 
-    def test_load_config_when_file_not_exists(self, config_service_with_explicit_root, mock_project_root):
+    def test_load_config_when_file_not_exists(
+        self, config_service_with_explicit_root, mock_project_root
+    ):
         """Test load_config returns empty dict when config file doesn't exist."""
         # Mock the config file as non-existent
-        config_path = mock_project_root / ".kuzu-memory" / "config.json"
+        # config_path = mock_project_root / ".kuzu-memory" / "config.json"
 
         with patch.object(Path, "exists", return_value=False):
             config = config_service_with_explicit_root.load_config()
 
         assert config == {}
 
-    def test_load_config_reads_from_file(self, config_service_with_explicit_root, mock_project_root):
+    def test_load_config_reads_from_file(
+        self, config_service_with_explicit_root, mock_project_root
+    ):
         """Test load_config reads configuration from file."""
         expected_config = {"key1": "value1", "nested": {"key2": "value2"}}
         mock_file_content = json.dumps(expected_config)
@@ -218,7 +231,9 @@ class TestConfigServiceConfiguration:
         written_config = json.loads(written_data)
         assert written_config == config_to_save
 
-    def test_save_config_creates_directory(self, config_service_with_explicit_root, mock_project_root):
+    def test_save_config_creates_directory(
+        self, config_service_with_explicit_root, mock_project_root
+    ):
         """Test save_config creates .kuzu-memory directory if needed."""
         config_to_save = {"key": "value"}
 
@@ -250,7 +265,7 @@ class TestConfigServiceConfiguration:
         """Test save_config raises exception on write error."""
         config_to_save = {"key": "value"}
 
-        with patch("builtins.open", side_effect=IOError("Write failed")):
+        with patch("builtins.open", side_effect=OSError("Write failed")):
             with patch.object(Path, "mkdir"):
                 with pytest.raises(IOError):
                     config_service_with_explicit_root.save_config(config_to_save)
@@ -277,16 +292,22 @@ class TestConfigServiceGetValue:
 
         assert value == "nested_value"
 
-    def test_get_config_value_returns_default_when_key_missing(self, config_service_with_explicit_root):
+    def test_get_config_value_returns_default_when_key_missing(
+        self, config_service_with_explicit_root
+    ):
         """Test get_config_value returns default when key doesn't exist."""
         config = {"existing": "value"}
 
         with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
-            value = config_service_with_explicit_root.get_config_value("missing_key", default="default_value")
+            value = config_service_with_explicit_root.get_config_value(
+                "missing_key", default="default_value"
+            )
 
         assert value == "default_value"
 
-    def test_get_config_value_returns_none_default_by_default(self, config_service_with_explicit_root):
+    def test_get_config_value_returns_none_default_by_default(
+        self, config_service_with_explicit_root
+    ):
         """Test get_config_value returns None by default when key missing."""
         config = {"existing": "value"}
 
@@ -295,13 +316,17 @@ class TestConfigServiceGetValue:
 
         assert value is None
 
-    def test_get_config_value_nested_key_partial_path_returns_default(self, config_service_with_explicit_root):
+    def test_get_config_value_nested_key_partial_path_returns_default(
+        self, config_service_with_explicit_root
+    ):
         """Test get_config_value returns default when partial nested path exists."""
         config = {"level1": {"level2": "value"}}
 
         with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
             # level2 exists but is not a dict, so level3 can't be accessed
-            value = config_service_with_explicit_root.get_config_value("level1.level2.level3", default="fallback")
+            value = config_service_with_explicit_root.get_config_value(
+                "level1.level2.level3", default="fallback"
+            )
 
         assert value == "fallback"
 
@@ -319,7 +344,11 @@ class TestConfigServiceGetValue:
             assert config_service_with_explicit_root.get_config_value("string") == "text"
             assert config_service_with_explicit_root.get_config_value("number") == 42
             assert config_service_with_explicit_root.get_config_value("boolean") is True
-            assert config_service_with_explicit_root.get_config_value("list") == [1, 2, 3]
+            assert config_service_with_explicit_root.get_config_value("list") == [
+                1,
+                2,
+                3,
+            ]
             assert config_service_with_explicit_root.get_config_value("dict") == {"nested": "value"}
 
 
@@ -327,14 +356,21 @@ class TestConfigServiceUtilityMethods:
     """Test additional utility methods beyond protocol."""
 
     @patch("kuzu_memory.services.config_service.create_project_memories_structure")
-    def test_ensure_project_structure_delegates(self, mock_create_structure, config_service_with_explicit_root, mock_project_root):
+    def test_ensure_project_structure_delegates(
+        self,
+        mock_create_structure,
+        config_service_with_explicit_root,
+        mock_project_root,
+    ):
         """Test ensure_project_structure delegates to utility function."""
         config_service_with_explicit_root.ensure_project_structure()
 
         mock_create_structure.assert_called_once_with(mock_project_root)
 
     @patch("kuzu_memory.services.config_service.get_project_context_summary")
-    def test_get_project_context_delegates(self, mock_get_context, config_service_with_explicit_root, mock_project_root):
+    def test_get_project_context_delegates(
+        self, mock_get_context, config_service_with_explicit_root, mock_project_root
+    ):
         """Test get_project_context delegates to utility function."""
         expected_context = {
             "project_name": "test_project",

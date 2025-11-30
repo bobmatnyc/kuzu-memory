@@ -14,9 +14,9 @@ import logging
 import select
 import sys
 import threading
+from collections.abc import Callable
 from enum import IntEnum
 from queue import Empty, Queue
-from collections.abc import Callable
 from typing import Any, TextIO
 
 logger = logging.getLogger(__name__)

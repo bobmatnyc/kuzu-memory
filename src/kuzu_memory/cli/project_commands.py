@@ -414,9 +414,7 @@ def cleanup(ctx: click.Context, force: bool) -> None:
         with KuzuMemory(db_path=db_path) as memory:
             # Note: These cleanup methods are not yet implemented in KuzuMemory
             # This is placeholder code for future functionality
-            rich_print(
-                "⚠️  Cleanup functionality not yet fully implemented", style="yellow"
-            )
+            rich_print("⚠️  Cleanup functionality not yet fully implemented", style="yellow")
             rich_print("Future features will include:")
             rich_print("  - Expired memory cleanup based on retention policies")
             rich_print("  - Duplicate detection and removal")

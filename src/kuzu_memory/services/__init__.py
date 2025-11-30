@@ -15,10 +15,10 @@ from kuzu_memory.services.setup_service import SetupService
 
 __all__ = [
     "BaseService",
-    "MemoryService",
     "ConfigService",
-    "InstallerService",
-    "GitSyncService",
-    "SetupService",
     "DiagnosticService",
+    "GitSyncService",
+    "InstallerService",
+    "MemoryService",
+    "SetupService",
 ]

@@ -9,7 +9,6 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -304,11 +303,11 @@ def recall(
     prompt: str,
     max_memories: int,
     strategy: str,
-    session_id: Optional[str],
+    session_id: str | None,
     agent_id: str,
     output_format: str,
     explain_ranking: bool,
-    db_path: Optional[str],
+    db_path: str | None,
 ) -> None:
     """
     🔍 Recall memories related to a topic or question.
@@ -339,7 +338,7 @@ def recall(
 
     try:
         # Resolve database path
-        db_path_obj: Optional[Path] = None
+        db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
         elif ctx.obj.get("project_root"):
@@ -485,7 +484,11 @@ def recall(
 @click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
 def enhance(
-    ctx: click.Context, prompt: str, max_memories: int, output_format: str, db_path: Optional[str]
+    ctx: click.Context,
+    prompt: str,
+    max_memories: int,
+    output_format: str,
+    db_path: str | None,
 ) -> None:
     """
     🚀 Enhance a prompt with relevant memory context.
@@ -506,7 +509,7 @@ def enhance(
     """
     try:
         # Resolve database path
-        db_path_obj: Optional[Path] = None
+        db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
         elif ctx.obj.get("project_root"):
@@ -809,7 +812,7 @@ def prune(
 )
 @click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
-def recent(ctx: click.Context, limit: int, output_format: str, db_path: Optional[str]) -> None:
+def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | None) -> None:
     """
     🕒 Show recent memories stored in the project.
 
@@ -836,7 +839,7 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: Optional
 
     try:
         # Resolve database path
-        db_path_obj: Optional[Path] = None
+        db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
         elif ctx.obj.get("project_root"):

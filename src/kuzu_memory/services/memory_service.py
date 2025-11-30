@@ -22,7 +22,7 @@ Related Task: 1M-420 (Implement MemoryService with Protocol interface)
 """
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
@@ -68,7 +68,7 @@ class MemoryService(BaseService):
         self,
         db_path: Path,
         enable_git_sync: bool = True,
-        config: Optional[dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
         """
         Initialize MemoryService.
@@ -89,7 +89,7 @@ class MemoryService(BaseService):
         self._db_path = db_path
         self._enable_git_sync = enable_git_sync
         self._config = config or {}
-        self._kuzu_memory: Optional[KuzuMemory] = None
+        self._kuzu_memory: KuzuMemory | None = None
 
     def _do_initialize(self) -> None:
         """
@@ -153,7 +153,7 @@ class MemoryService(BaseService):
         """
         if not self._kuzu_memory:
             raise RuntimeError(
-                "MemoryService not initialized. " "Use context manager or call initialize()."
+                "MemoryService not initialized. Use context manager or call initialize()."
             )
         return self._kuzu_memory
 
@@ -163,9 +163,9 @@ class MemoryService(BaseService):
         self,
         content: str,
         source: str,
-        session_id: Optional[str] = None,
-        agent_id: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        session_id: str | None = None,
+        agent_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Store a new memory with automatic classification.
@@ -248,7 +248,7 @@ class MemoryService(BaseService):
     def get_recent_memories(
         self,
         limit: int = 20,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         **filters: Any,
     ) -> list[Memory]:
         """
@@ -281,7 +281,7 @@ class MemoryService(BaseService):
 
     def get_memory_count(
         self,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         **filters: Any,
     ) -> int:
         """
@@ -334,8 +334,8 @@ class MemoryService(BaseService):
         self,
         content: str,
         memory_type: MemoryType,
-        entities: Optional[list[str]] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        entities: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Memory:
         """
         Add a new memory to the database.
@@ -377,7 +377,7 @@ class MemoryService(BaseService):
         self.kuzu_memory.memory_store.store_memory(memory)
         return memory
 
-    def get_memory(self, memory_id: str) -> Optional[Memory]:
+    def get_memory(self, memory_id: str) -> Memory | None:
         """
         Retrieve a memory by ID.
 
@@ -400,7 +400,7 @@ class MemoryService(BaseService):
 
     def list_memories(
         self,
-        memory_type: Optional[MemoryType] = None,
+        memory_type: MemoryType | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Memory]:
@@ -470,9 +470,9 @@ class MemoryService(BaseService):
     def update_memory(
         self,
         memory_id: str,
-        content: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
-    ) -> Optional[Memory]:
+        content: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Memory | None:
         """
         Update an existing memory.
 

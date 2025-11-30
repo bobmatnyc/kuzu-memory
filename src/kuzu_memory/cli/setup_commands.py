@@ -53,7 +53,13 @@ from .install_unified import _detect_installed_systems
     help="Preview changes without modifying files",
 )
 @click.pass_context
-def setup(ctx: click.Context, skip_install: bool, integration: str | None, force: bool, dry_run: bool) -> None:
+def setup(
+    ctx: click.Context,
+    skip_install: bool,
+    integration: str | None,
+    force: bool,
+    dry_run: bool,
+) -> None:
     """
     🚀 Smart setup - Initialize and configure KuzuMemory (RECOMMENDED).
 
@@ -173,7 +179,9 @@ def setup(ctx: click.Context, skip_install: bool, integration: str | None, force
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️" if system.health_status == "needs_repair" else "❌"
+                        else "⚠️"
+                        if system.health_status == "needs_repair"
+                        else "❌"
                     )
                     rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 

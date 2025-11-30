@@ -18,7 +18,8 @@ Related Phase: 5.3 (High-Risk Async Command Migrations)
 """
 
 import asyncio
-from typing import Any, Awaitable, TypeVar, cast
+from collections.abc import Awaitable
+from typing import TypeVar
 
 T = TypeVar("T")
 
@@ -60,7 +61,7 @@ def run_async(coro: Awaitable[T]) -> T:
     """
     try:
         # Try to get running event loop (Python 3.10+)
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
         # If we get here, we're already in async context - should not happen in CLI
         raise RuntimeError("run_async should not be called from async context")
     except RuntimeError:

@@ -15,10 +15,10 @@ from kuzu_memory.protocols.services import (
 )
 
 __all__ = [
-    "IMemoryService",
     "IConfigService",
-    "IInstallerService",
-    "ISetupService",
     "IDiagnosticService",
     "IGitSyncService",
+    "IInstallerService",
+    "IMemoryService",
+    "ISetupService",
 ]

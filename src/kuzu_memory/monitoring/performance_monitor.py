@@ -130,7 +130,9 @@ class PerformanceMonitor(IPerformanceMonitor):
                 )
 
     @asynccontextmanager
-    async def time_async_operation(self, name: str, tags: dict[str, str] | None = None) -> AsyncIterator[None]:
+    async def time_async_operation(
+        self, name: str, tags: dict[str, str] | None = None
+    ) -> AsyncIterator[None]:
         """Time an async operation using context manager."""
         start_time = time.perf_counter()
         try:

@@ -336,7 +336,9 @@ class AuggieRuleEngine:
 class ResponseLearner:
     """Learns from AI responses and user feedback to improve memory system."""
 
-    def __init__(self, kuzu_memory: Any = None, rule_engine: AuggieRuleEngine | None = None) -> None:
+    def __init__(
+        self, kuzu_memory: Any = None, rule_engine: AuggieRuleEngine | None = None
+    ) -> None:
         """Initialize the response learner."""
         self.kuzu_memory = kuzu_memory
         self.rule_engine = rule_engine

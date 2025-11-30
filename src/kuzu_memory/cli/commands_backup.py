@@ -38,6 +38,7 @@ from ..utils.project_setup import (
     get_project_context_summary,
     get_project_db_path,
 )
+
 # Note: These imports don't exist in install_commands_simple - commenting out for type safety
 # from .install_commands_simple import install_group, list_installers, status, uninstall
 from .install_commands_simple import status  # Only import what exists

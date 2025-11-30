@@ -27,7 +27,7 @@ Related Task: 1M-418 (Create Base Service Infrastructure)
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Self
+from typing import Any, Self
 
 
 class BaseService(ABC):
@@ -197,9 +197,9 @@ class BaseService(ABC):
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[Any],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any | None,
     ) -> None:
         """
         Exit context manager and cleanup resources.

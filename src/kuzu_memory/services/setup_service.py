@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from kuzu_memory.services.base import BaseService
 from kuzu_memory.utils import project_setup
@@ -43,7 +43,7 @@ class SetupService(BaseService):
     Related Task: Phase 4 Service Implementation #2
     """
 
-    def __init__(self, config_service: "ConfigService"):
+    def __init__(self, config_service: ConfigService):
         """
         Initialize with config service dependency.
 
@@ -52,7 +52,7 @@ class SetupService(BaseService):
         """
         super().__init__()
         self._config_service = config_service
-        self._project_root: Optional[Path] = None
+        self._project_root: Path | None = None
 
     def _do_initialize(self) -> None:
         """
@@ -87,13 +87,13 @@ class SetupService(BaseService):
         """
         if not self._project_root:
             raise RuntimeError(
-                "SetupService not initialized. " "Call initialize() or use as context manager."
+                "SetupService not initialized. Call initialize() or use as context manager."
             )
         return self._project_root
 
     # ISetupService protocol implementation - Path Utilities
 
-    def find_project_root(self, start_path: Optional[Path] = None) -> Optional[Path]:
+    def find_project_root(self, start_path: Path | None = None) -> Path | None:
         """
         Find the project root directory.
 
@@ -113,7 +113,7 @@ class SetupService(BaseService):
         """
         return project_setup.find_project_root(start_path)
 
-    def get_project_db_path(self, project_root: Optional[Path] = None) -> Path:
+    def get_project_db_path(self, project_root: Path | None = None) -> Path:
         """
         Get the database path for a project.
 
@@ -247,7 +247,7 @@ class SetupService(BaseService):
         # Placeholder implementation - future integration with InstallerService
         self.logger.warning("Integration setup not yet implemented")
 
-        return {integration: False for integration in integrations}
+        return dict.fromkeys(integrations, False)
 
     def verify_setup(self) -> dict[str, Any]:
         """

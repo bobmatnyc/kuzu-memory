@@ -17,7 +17,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
-from types import ModuleType
 from typing import Any
 
 try:
@@ -379,7 +378,7 @@ class KuzuAdapter:
             elif "corrupt" in error_msg or "malformed" in error_msg:
                 raise CorruptedDatabaseError(
                     f"Database corrupted at {self.db_path}: {e}",
-                    context={"db_path": str(self.db_path), "error": str(e)}
+                    context={"db_path": str(self.db_path), "error": str(e)},
                 )
             else:
                 raise DatabaseError(f"Query execution failed: {e}")

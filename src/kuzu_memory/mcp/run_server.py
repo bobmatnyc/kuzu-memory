@@ -125,7 +125,9 @@ class MCPProtocolHandler:
                         from .testing.health_checker import MCPHealthChecker
 
                         health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
-                        health_result = await health_checker.check_health(detailed=False, retry=False)
+                        health_result = await health_checker.check_health(
+                            detailed=False, retry=False
+                        )
 
                         return JSONRPCMessage.create_response(
                             request_id,

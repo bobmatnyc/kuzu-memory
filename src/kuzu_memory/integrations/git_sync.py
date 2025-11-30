@@ -402,15 +402,9 @@ class GitSyncManager:
 
             # Get branches to scan
             if branch_name:
-                branches = [
-                    b
-                    for b in self._repo.branches
-                    if str(b.name) == branch_name
-                ]
+                branches = [b for b in self._repo.branches if str(b.name) == branch_name]
             else:
-                branches = self._filter_branches(
-                    list(self._repo.branches)
-                )
+                branches = self._filter_branches(list(self._repo.branches))
 
             logger.info(f"Scanning {len(branches)} branches for commits")
 

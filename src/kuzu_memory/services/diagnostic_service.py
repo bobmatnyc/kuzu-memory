@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from kuzu_memory.mcp.testing.diagnostics import MCPDiagnostics
 from kuzu_memory.mcp.testing.health_checker import MCPHealthChecker
@@ -50,8 +50,8 @@ class DiagnosticService(BaseService):
 
     def __init__(
         self,
-        config_service: "ConfigService",
-        memory_service: Optional["MemoryService"] = None,
+        config_service: ConfigService,
+        memory_service: MemoryService | None = None,
     ):
         """
         Initialize with service dependencies.
@@ -63,8 +63,8 @@ class DiagnosticService(BaseService):
         super().__init__()
         self._config_service = config_service
         self._memory_service = memory_service
-        self._diagnostics: Optional[MCPDiagnostics] = None
-        self._health_checker: Optional[MCPHealthChecker] = None
+        self._diagnostics: MCPDiagnostics | None = None
+        self._health_checker: MCPHealthChecker | None = None
 
     def _do_initialize(self) -> None:
         """
@@ -545,11 +545,12 @@ class DiagnosticService(BaseService):
                 missing.append(dep)
 
         # Check optional dependencies
-        optional_deps = {
-            "psutil": "Enhanced health monitoring",
-            "pytest": "Running tests",
-            "mypy": "Type checking",
-        }
+        # optional_deps used for potential future enhancement tracking
+        # optional_deps = {
+        #     "psutil": "Enhanced health monitoring",
+        #     "pytest": "Running tests",
+        #     "mypy": "Type checking",
+        # }
 
         suggestions = []
         if missing:
