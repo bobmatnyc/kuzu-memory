@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from ..core.config import KuzuMemoryConfig
 from ..core.models import Memory
@@ -112,7 +112,7 @@ class MemoryStore:
             )
 
             # Prepare base memory data
-            base_memory_data = {
+            base_memory_data: dict[str, Any] = {
                 "source": source,
                 "user_id": user_id,
                 "session_id": session_id,
@@ -145,7 +145,7 @@ class MemoryStore:
                             agent_id=base_memory_data["agent_id"],
                             confidence=extracted_memory.confidence,
                             metadata={
-                                **base_memory_data["metadata"],
+                                **cast(dict[str, Any], base_memory_data["metadata"]),
                                 "pattern_used": extracted_memory.pattern_used,
                                 "extraction_metadata": extracted_memory.metadata,
                             },

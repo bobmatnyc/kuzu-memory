@@ -17,12 +17,13 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
+from types import ModuleType
 from typing import Any
 
 try:
     import kuzu
 except ImportError:
-    kuzu = None
+    kuzu = None  # type: ignore[assignment]
 
 from ..core.config import KuzuMemoryConfig
 from ..core.models import Memory

@@ -793,6 +793,7 @@ class MCPDiagnostics:
 
                         # Create minimal valid parameters based on tool
                         # Note: Tool names do NOT have kuzu_ prefix
+                        test_params: dict[str, Any]
                         if tool_name == "enhance":
                             test_params = {"prompt": "test"}
                         elif tool_name == "learn":

@@ -227,7 +227,7 @@ class AuggieInstallerV2(BaseInstaller):
                 ai_system=self.ai_system_name,
                 files_created=self.files_created,
                 files_modified=self.files_modified,
-                backup_files=[str(backup_path)] if backup_path else [],
+                backup_files=[backup_path] if backup_path else [],
                 message=f"Successfully upgraded from v{from_version} to v{CURRENT_VERSION}\n\n"
                 f"Backup created at: {backup_path}\n\n"
                 f"What's New:\n  • {changes_summary}",

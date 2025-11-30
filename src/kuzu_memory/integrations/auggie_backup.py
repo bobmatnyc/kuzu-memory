@@ -49,8 +49,8 @@ class AuggieRule:
     conditions: dict[str, Any]
     actions: dict[str, Any]
     enabled: bool = True
-    created_at: datetime = None
-    last_executed: datetime = None
+    created_at: datetime | None = None
+    last_executed: datetime | None = None
     execution_count: int = 0
     success_rate: float = 1.0
 

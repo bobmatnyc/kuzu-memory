@@ -144,7 +144,7 @@ class AsyncMemoryCLI:
             return result
 
         except Exception as e:
-            result = {
+            result: dict[str, Any] = {
                 "task_id": None,
                 "status": "failed",
                 "error": str(e),
@@ -198,7 +198,7 @@ class AsyncMemoryCLI:
             return result
 
         except Exception as e:
-            result = {
+            result: dict[str, Any] = {
                 "task_id": None,
                 "status": "failed",
                 "error": str(e),
@@ -229,7 +229,7 @@ class AsyncMemoryCLI:
                 "message": "Task not found",
             }
 
-        result = {
+        result: dict[str, Any] = {
             "task_id": task_id,
             "status": task.status.value,
             "task_type": task.task_type.value,

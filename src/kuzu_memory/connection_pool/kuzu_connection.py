@@ -19,7 +19,7 @@ try:
     KUZU_AVAILABLE = True
 except ImportError:
     KUZU_AVAILABLE = False
-    kuzu = None
+    kuzu = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

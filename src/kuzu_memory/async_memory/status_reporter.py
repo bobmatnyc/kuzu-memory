@@ -90,7 +90,7 @@ class MemoryStatusReporter:
         self.last_task_states: dict[str, TaskStatus] = {}
 
         # Statistics
-        self.stats = {
+        self.stats: dict[str, int | datetime | None] = {
             "reports_generated": 0,
             "tasks_monitored": 0,
             "last_report_time": None,

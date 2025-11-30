@@ -125,14 +125,14 @@ class MCPProtocolHandler:
                         from .testing.health_checker import MCPHealthChecker
 
                         health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
-                        result = await health_checker.check_health(detailed=False, retry=False)
+                        health_result = await health_checker.check_health(detailed=False, retry=False)
 
                         return JSONRPCMessage.create_response(
                             request_id,
                             {
                                 "pong": True,
-                                "health": result.health.to_dict(),
-                                "duration_ms": result.duration_ms,
+                                "health": health_result.health.to_dict(),
+                                "duration_ms": health_result.duration_ms,
                             },
                         )
                     except Exception as e:
@@ -501,9 +501,9 @@ async def main() -> None:
     # Get project root from environment or current directory
     import os
 
-    project_root = os.environ.get("KUZU_MEMORY_PROJECT")
-    if project_root:
-        project_root = Path(project_root)
+    project_root_str = os.environ.get("KUZU_MEMORY_PROJECT")
+    if project_root_str:
+        project_root = Path(project_root_str)
     else:
         project_root = Path.cwd()
 

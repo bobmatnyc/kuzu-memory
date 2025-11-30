@@ -447,7 +447,7 @@ class ResponseLearner:
 
     def get_recommendations(self) -> list[dict[str, Any]]:
         """Get recommendations based on learned patterns."""
-        recommendations = []
+        recommendations: list[dict[str, Any]] = []
 
         try:
             # Recommend high-confidence patterns
@@ -561,7 +561,7 @@ class MemorySynchronizer:
     def __init__(self, memory_system: Any) -> None:
         self.memory_system = memory_system
         self.sync_history: list[dict[str, Any]] = []
-        self.last_sync = None
+        self.last_sync: datetime | None = None
 
     def sync_learned_patterns_to_memory(self, response_learner: ResponseLearner) -> None:
         """Synchronize learned patterns to memory system."""

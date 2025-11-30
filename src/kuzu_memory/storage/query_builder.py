@@ -352,7 +352,7 @@ class QueryBuilder:
 
             # Build query conditions
             conditions = []
-            params = {"limit": limit}
+            params: dict[str, Any] = {"limit": limit}
 
             # Apply filters
             for filter_key, filter_value in filters.items():
@@ -548,7 +548,7 @@ class QueryBuilder:
                 try:
                     query: str = str(query_info["query"])
                     # Only include parameters that this query needs
-                    params_list: list[str] = query_info["params"]
+                    params_list = list(query_info["params"])
                     query_params = {k: v for k, v in all_params.items() if k in params_list}
 
                     results = self.db_adapter.execute_query(query, query_params)

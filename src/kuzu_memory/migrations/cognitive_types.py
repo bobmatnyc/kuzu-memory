@@ -114,7 +114,7 @@ class CognitiveTypesMigration:
 
                 # Update retention based on new type
                 retention = MemoryType.get_default_retention(new_type)
-                if retention:
+                if retention and memory.valid_from:
                     memory.valid_to = memory.valid_from + retention
                 else:
                     memory.valid_to = None
