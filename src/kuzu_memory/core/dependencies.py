@@ -39,6 +39,42 @@ class MemoryStoreProtocol(Protocol):
         """Get total count of active memories."""
         ...
 
+    @abstractmethod
+    def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
+        """Store a memory in the database (internal method)."""
+        ...
+
+    @abstractmethod
+    def generate_memories(
+        self,
+        content: str,
+        metadata: dict[str, Any] | None = None,
+        source: str = "conversation",
+        user_id: str | None = None,
+        session_id: str | None = None,
+        agent_id: str = "default",
+    ) -> list[str]:
+        """Extract and store memories from content."""
+        ...
+
+    @abstractmethod
+    def batch_store_memories(self, memories: list[Memory]) -> list[str]:
+        """Store multiple memories in a batch operation."""
+        ...
+
+    @abstractmethod
+    def batch_get_memories_by_ids(self, memory_ids: list[str]) -> list[Memory]:
+        """Retrieve multiple memories by their IDs in a batch operation."""
+        ...
+
+    @abstractmethod
+    def get_storage_statistics(self) -> dict[str, Any]:
+        """Get storage statistics."""
+        ...
+
+    # Expose db_adapter property for pruning operations
+    db_adapter: Any
+
 
 @runtime_checkable
 class RecallCoordinatorProtocol(Protocol):
@@ -49,6 +85,24 @@ class RecallCoordinatorProtocol(Protocol):
         self, query: str, limit: int = 10, filters: dict[str, Any] | None = None
     ) -> list[Memory]:
         """Recall memories matching a query."""
+        ...
+
+    @abstractmethod
+    def attach_memories(
+        self,
+        prompt: str,
+        max_memories: int = 10,
+        strategy: str = "auto",
+        user_id: str | None = None,
+        session_id: str | None = None,
+        agent_id: str = "default",
+    ) -> Any:  # Returns MemoryContext
+        """Attach relevant memories to a prompt."""
+        ...
+
+    @abstractmethod
+    def get_recall_statistics(self) -> dict[str, Any]:
+        """Get recall statistics."""
         ...
 
 
@@ -84,6 +138,11 @@ class DatabaseAdapterProtocol(Protocol):
     @abstractmethod
     def disconnect(self) -> None:
         """Disconnect from database."""
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        """Close the database connection and cleanup resources."""
         ...
 
 
