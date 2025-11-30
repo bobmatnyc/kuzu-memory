@@ -47,6 +47,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.5.3] - 2025-11-30
+
+### Changed
+- **Type Safety Enhancement**: Comprehensive type annotation improvements (Epic 1M-415)
+  - Fixed 264 MyPy strict mode errors (35.2% reduction from 750 → 486 errors)
+  - Migrated to Pydantic v2 syntax for modern Python support
+  - Added complete type annotations to core/ and services/ modules
+  - Parameterized all generic types for strict MyPy compliance
+  - Modernized to Python 3.11+ typing syntax (PEP 585)
+  - Services module now 100% MyPy clean (0 errors)
+  - Improved type guards and protocol implementations
+  - Removed unreachable code paths
+  - Cleaned up legacy type:ignore comments with documentation
+
+### Fixed
+- Attribute access errors with proper type narrowing (1M-474)
+- Exception constructor signature mismatches (1M-469)
+- Type assignment mismatches across codebase (1M-477)
+- Missing function return type annotations (1M-475)
+- Incomplete protocol implementations (1M-476)
+
 ## [1.5.2] - 2025-11-29
 
 ### Changed
@@ -941,7 +962,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.4.51...v1.5.0
