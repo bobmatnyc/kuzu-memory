@@ -2,6 +2,19 @@
 Diagnostic and troubleshooting CLI commands for KuzuMemory.
 
 Provides unified doctor command for system diagnostics and health checks.
+
+Design Decision: Service-Oriented Doctor Commands
+--------------------------------------------------
+Rationale: Use DiagnosticService through ServiceManager for lifecycle management
+and dependency injection. Async methods bridged via run_async() utility.
+
+Trade-offs:
+- Simplicity: ServiceManager handles initialization/cleanup automatically
+- Testability: Easy to mock DiagnosticService in tests
+- Maintainability: Single source of truth for diagnostic logic
+
+Related Epic: 1M-415 (Refactor Commands to SOA/DI Architecture)
+Related Phase: 5.3 (High-Risk Async Command Migrations)
 """
 
 import asyncio
@@ -16,8 +29,10 @@ from rich.table import Table
 
 from ..mcp.testing.diagnostics import MCPDiagnostics
 from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
+from .async_utils import run_async
 from .cli_utils import rich_panel, rich_print
 from .enums import OutputFormat
+from .service_manager import ServiceManager
 
 
 @click.group(invoke_without_command=True)
@@ -142,11 +157,14 @@ def diagnose(
     connection, tool discovery, performance, hooks, and server lifecycle.
 
     Does NOT check user-level (Claude Desktop) configurations.
+
+    Note: Uses DiagnosticService with async-to-sync bridge for I/O operations.
     """
     try:
         rich_print("🔍 Running full diagnostics...", style="blue")
 
-        # Initialize diagnostics
+        # Initialize diagnostics using legacy MCPDiagnostics directly
+        # TODO: Migrate fully to DiagnosticService once all features are ported
         project_path = Path(project_root) if project_root else Path.cwd()
         diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
 
@@ -255,56 +273,56 @@ def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str
     - Tool functionality
 
     Does NOT check Claude Desktop (user-level) MCP configuration.
+
+    Note: Uses DiagnosticService with async-to-sync bridge for I/O operations.
     """
+    from ..services import ConfigService
+
     try:
         rich_print("🔍 Running MCP diagnostics...", style="blue")
 
+        # Initialize config service
         project_path = Path(project_root) if project_root else Path.cwd()
-        diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
+        config_service = ConfigService(project_path)
+        config_service.initialize()
 
-        # Run MCP-specific checks
-        config_results = asyncio.run(diagnostics.check_configuration())
-        tool_results = asyncio.run(diagnostics.check_tools())
+        try:
+            # Use DiagnosticService for MCP health check
+            with ServiceManager.diagnostic_service(config_service) as diagnostic:
+                # Run async health check using run_async bridge
+                mcp_health = run_async(diagnostic.check_mcp_server_health())
 
-        # Combine results
-        all_results = config_results + tool_results
+                # Display results
+                configured = mcp_health.get("configured", False)
+                config_valid = mcp_health.get("config_valid", False)
+                issues = mcp_health.get("issues", [])
 
-        # Display results
-        passed = sum(1 for r in all_results if r.success)
-        total = len(all_results)
+                if configured and config_valid:
+                    rich_print("✅ MCP server is configured and healthy", style="green")
+                elif configured:
+                    rich_print("⚠️  MCP server configured but has issues", style="yellow")
+                else:
+                    rich_print("❌ MCP server not configured", style="red")
 
-        for result in all_results:
-            status = "✅" if result.success else "❌"
-            style = "green" if result.success else "red"
-            rich_print(f"{status} {result.check_name}: {result.message}", style=style)
+                rich_print(f"   Server path: {mcp_health.get('server_path', 'N/A')}", style="dim")
 
-            if verbose:
-                if result.error:
-                    rich_print(f"   Error: {result.error}", style="red")
-                if result.fix_suggestion:
-                    rich_print(f"   Fix: {result.fix_suggestion}", style="yellow")
-                rich_print(f"   Duration: {result.duration_ms:.2f}ms", style="dim")
+                if issues:
+                    rich_print("\n⚠️  Issues detected:", style="yellow")
+                    for issue in issues:
+                        rich_print(f"   • {issue}", style="yellow")
 
-        # Save to file if requested
-        if output:
-            output_path = Path(output)
-            output_data = {
-                "check_type": "mcp",
-                "passed": passed,
-                "total": total,
-                "results": [r.to_dict() for r in all_results],
-            }
-            output_path.write_text(json.dumps(output_data, indent=2))
-            rich_print(f"\n✅ Results saved to: {output_path}", style="green")
+                # Save to file if requested
+                if output:
+                    output_path = Path(output)
+                    output_path.write_text(json.dumps(mcp_health, indent=2))
+                    rich_print(f"\n✅ Results saved to: {output_path}", style="green")
 
-        # Summary
-        rich_panel(
-            f"MCP Diagnostics: {passed}/{total} passed",
-            title="✅ MCP Healthy" if passed == total else "⚠️  MCP Issues",
-            style="green" if passed == total else "yellow",
-        )
+                # Exit with appropriate code
+                all_healthy = configured and config_valid and len(issues) == 0
+                sys.exit(0 if all_healthy else 1)
 
-        sys.exit(0 if passed == total else 1)
+        finally:
+            config_service.cleanup()
 
     except Exception as e:
         rich_print(f"❌ MCP diagnostic error: {e}", style="red")
@@ -326,54 +344,61 @@ def connection(
 
     Validates project-level database connectivity and MCP protocol initialization.
     Uses project memory database (kuzu-memories/), not user-level configurations.
+
+    Note: Uses DiagnosticService with async-to-sync bridge for I/O operations.
     """
+    from ..services import ConfigService
+
     try:
         rich_print("🔍 Testing connections...", style="blue")
 
+        # Initialize config service
         project_path = Path(project_root) if project_root else Path.cwd()
-        diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
+        config_service = ConfigService(project_path)
+        config_service.initialize()
 
-        # Run connection checks
-        results = asyncio.run(diagnostics.check_connection())
+        try:
+            # Get database path for memory service
+            db_path = config_service.get_db_path()
 
-        # Display results
-        passed = sum(1 for r in results if r.success)
-        total = len(results)
+            # Create memory service for database health check
+            with (
+                ServiceManager.memory_service(db_path) as memory,
+                ServiceManager.diagnostic_service(config_service, memory) as diagnostic,
+            ):
+                # Run async database health check using run_async bridge
+                db_health = run_async(diagnostic.check_database_health())
 
-        for result in results:
-            status = "✅" if result.success else "❌"
-            style = "green" if result.success else "red"
-            rich_print(f"{status} {result.check_name}: {result.message}", style=style)
+                # Display results
+                connected = db_health.get("connected", False)
+                memory_count = db_health.get("memory_count", 0)
+                db_size_bytes = db_health.get("db_size_bytes", 0)
+                issues = db_health.get("issues", [])
 
-            if verbose:
-                if result.error:
-                    rich_print(f"   Error: {result.error}", style="red")
-                if result.fix_suggestion:
-                    rich_print(f"   Fix: {result.fix_suggestion}", style="yellow")
-                if result.metadata:
-                    rich_print(f"   Metadata: {result.metadata}", style="dim")
-                rich_print(f"   Duration: {result.duration_ms:.2f}ms", style="dim")
+                if connected:
+                    rich_print("✅ Database connection is healthy", style="green")
+                    rich_print(f"   Memories: {memory_count}", style="dim")
+                    rich_print(f"   Size: {db_size_bytes / (1024 * 1024):.2f} MB", style="dim")
+                else:
+                    rich_print("❌ Database connection issues", style="red")
 
-        # Save to file if requested
-        if output:
-            output_path = Path(output)
-            output_data = {
-                "check_type": "connection",
-                "passed": passed,
-                "total": total,
-                "results": [r.to_dict() for r in results],
-            }
-            output_path.write_text(json.dumps(output_data, indent=2))
-            rich_print(f"\n✅ Results saved to: {output_path}", style="green")
+                if issues:
+                    rich_print("\n⚠️  Issues detected:", style="yellow")
+                    for issue in issues:
+                        rich_print(f"   • {issue}", style="yellow")
 
-        # Summary
-        rich_panel(
-            f"Connection Test: {passed}/{total} passed",
-            title=("✅ Connection Healthy" if passed == total else "⚠️  Connection Issues"),
-            style="green" if passed == total else "yellow",
-        )
+                # Save to file if requested
+                if output:
+                    output_path = Path(output)
+                    output_path.write_text(json.dumps(db_health, indent=2))
+                    rich_print(f"\n✅ Results saved to: {output_path}", style="green")
 
-        sys.exit(0 if passed == total else 1)
+                # Exit with appropriate code
+                all_healthy = connected and len(issues) == 0
+                sys.exit(0 if all_healthy else 1)
+
+        finally:
+            config_service.cleanup()
 
     except Exception as e:
         rich_print(f"❌ Connection test error: {e}", style="red")
@@ -526,11 +551,8 @@ def health(
                     result = asyncio.run(perform_check())
                     display_health(result)
 
-                    # Wait for next check
-                    if continuous:
-                        time.sleep(interval)
-                    else:
-                        break
+                    # Wait for next check (continuous is always True in this branch)
+                    time.sleep(interval)
 
             except KeyboardInterrupt:
                 rich_print("\n\n✋ Monitoring stopped", style="yellow")

@@ -8,6 +8,8 @@ import json
 import logging
 import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -15,6 +17,7 @@ from ..core.memory import KuzuMemory
 from ..utils.project_setup import get_project_db_path
 from .cli_utils import rich_panel, rich_print, rich_table
 from .enums import OutputFormat, RecallStrategy
+from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,7 @@ def memory() -> None:
 @click.option("--session-id", help="Session ID to group related memories")
 @click.option("--agent-id", default="cli", help="Agent ID that created this memory")
 @click.option("--metadata", help="Additional metadata as JSON string")
+@click.option("--db-path", type=click.Path(), help="Database path (optional)")
 @click.pass_context
 def store(
     ctx: click.Context,
@@ -59,6 +63,7 @@ def store(
     session_id: str | None,
     agent_id: str,
     metadata: str | None,
+    db_path: str | None,
 ) -> None:
     """
     💾 Store a memory for future recall (synchronous).
@@ -79,9 +84,17 @@ def store(
 
       # Memory with metadata
       kuzu-memory memory store "Performance improved 40%" --metadata '{"metric": "response_time"}'
+
+      # Custom database path
+      kuzu-memory memory store "Custom location" --db-path /path/to/db
     """
+    from pathlib import Path
+
+    from kuzu_memory.cli.service_manager import ServiceManager
+
     try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
+        # Convert db_path to Path object if provided
+        db_path_obj = Path(db_path) if db_path else None
 
         # Parse metadata if provided
         parsed_metadata = {}
@@ -100,7 +113,8 @@ def store(
             }
         )
 
-        with KuzuMemory(db_path=db_path) as memory:
+        # Use ServiceManager for memory service lifecycle
+        with ServiceManager.memory_service(db_path_obj) as memory:
             memory_id = memory.remember(
                 content=content,
                 source=source,
@@ -283,16 +297,18 @@ def learn(
     is_flag=True,
     help="Show detailed ranking explanation including temporal decay",
 )
+@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
 def recall(
     ctx: click.Context,
     prompt: str,
     max_memories: int,
     strategy: str,
-    session_id: str | None,
+    session_id: Optional[str],
     agent_id: str,
     output_format: str,
     explain_ranking: bool,
+    db_path: Optional[str],
 ) -> None:
     """
     🔍 Recall memories related to a topic or question.
@@ -322,10 +338,15 @@ def recall(
     from .cli_utils import format_performance_stats
 
     try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
+        # Resolve database path
+        db_path_obj: Optional[Path] = None
+        if db_path:
+            db_path_obj = Path(db_path)
+        elif ctx.obj.get("project_root"):
+            db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recall operation (performance optimization)
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
             # Build filters
             filters = {}
             if session_id:
@@ -461,8 +482,11 @@ def recall(
     type=click.Choice(["context", OutputFormat.PLAIN.value, OutputFormat.JSON.value]),
     help="Output format (context=enhanced prompt, plain=just context, json=raw)",
 )
+@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
-def enhance(ctx: click.Context, prompt: str, max_memories: int, output_format: str) -> None:
+def enhance(
+    ctx: click.Context, prompt: str, max_memories: int, output_format: str, db_path: Optional[str]
+) -> None:
     """
     🚀 Enhance a prompt with relevant memory context.
 
@@ -481,10 +505,15 @@ def enhance(ctx: click.Context, prompt: str, max_memories: int, output_format: s
       kuzu-memory memory enhance "Database questions" --format json
     """
     try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
+        # Resolve database path
+        db_path_obj: Optional[Path] = None
+        if db_path:
+            db_path_obj = Path(db_path)
+        elif ctx.obj.get("project_root"):
+            db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only enhance operation (performance optimization)
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
             # Get relevant memories using the attach_memories API
             memory_context = memory.attach_memories(prompt, max_memories=max_memories)
             memories = memory_context.memories
@@ -568,8 +597,16 @@ def enhance(ctx: click.Context, prompt: str, max_memories: int, output_format: s
     help="Create backup before pruning (default: yes)",
 )
 @click.option("--force", is_flag=True, help="Skip confirmation prompts")
+@click.option("--db-path", type=click.Path(), help="Database path (optional)")
 @click.pass_context
-def prune(ctx: click.Context, strategy: str, execute: bool, backup: bool, force: bool) -> None:
+def prune(
+    ctx: click.Context,
+    strategy: str,
+    execute: bool,
+    backup: bool,
+    force: bool,
+    db_path: str | None,
+) -> None:
     """
     🧹 Prune old or low-value memories to optimize database size.
 
@@ -610,14 +647,20 @@ def prune(ctx: click.Context, strategy: str, execute: bool, backup: bool, force:
       kuzu-memory memory prune --strategy aggressive --execute
     """
     import time
+    from pathlib import Path
 
-    from ..core.prune import MemoryPruner
+    from kuzu_memory.cli.service_manager import ServiceManager
+    from kuzu_memory.core.prune import MemoryPruner
 
     try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
+        # Convert db_path to Path object if provided
+        db_path_obj = Path(db_path) if db_path else None
 
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
-            pruner = MemoryPruner(memory)
+        # Use ServiceManager for memory service lifecycle (disable git sync for prune)
+        with ServiceManager.memory_service(db_path_obj, enable_git_sync=False) as memory:
+            # MemoryPruner needs access to underlying kuzu_memory
+            # Use the kuzu_memory property exposed by MemoryService
+            pruner = MemoryPruner(memory.kuzu_memory)
 
             # Get current database stats
             total_memories = memory.get_memory_count()
@@ -764,8 +807,9 @@ def prune(ctx: click.Context, strategy: str, execute: bool, backup: bool, force:
     type=click.Choice([OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]),
     help="Output format",
 )
+@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
-def recent(ctx: click.Context, limit: int, output_format: str) -> None:
+def recent(ctx: click.Context, limit: int, output_format: str, db_path: Optional[str]) -> None:
     """
     🕒 Show recent memories stored in the project.
 
@@ -791,10 +835,15 @@ def recent(ctx: click.Context, limit: int, output_format: str) -> None:
     from .cli_utils import format_performance_stats
 
     try:
-        db_path = get_project_db_path(ctx.obj.get("project_root"))
+        # Resolve database path
+        db_path_obj: Optional[Path] = None
+        if db_path:
+            db_path_obj = Path(db_path)
+        elif ctx.obj.get("project_root"):
+            db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recent operation (performance optimization)
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
             # Track query performance
             start_time = time.time()
             memories = memory.get_recent_memories(limit=limit)

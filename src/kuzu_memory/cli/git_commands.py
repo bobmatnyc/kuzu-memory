@@ -45,6 +45,11 @@ def git() -> None:
     is_flag=True,
     help="Minimal output (for git hooks)",
 )
+@click.option(
+    "--project-root",
+    type=click.Path(),
+    help="Project root path (optional)",
+)
 @click.pass_context
 def sync(
     ctx: click.Context,
@@ -52,6 +57,7 @@ def sync(
     incremental: bool,
     dry_run: bool,
     quiet: bool,
+    project_root: str | None,
 ) -> None:
     """
     Synchronize git commit history to memory.
@@ -59,10 +65,15 @@ def sync(
     Smart sync by default: initial sync if never synced, incremental otherwise.
     Use --initial to force full resync, --incremental for updates only.
     """
+    from kuzu_memory.cli.service_manager import ServiceManager
+    from kuzu_memory.services import ConfigService
+
     try:
-        # Get project root and config
-        project_root = ctx.obj.get("project_root", Path.cwd())
-        db_path = get_project_db_path(project_root)
+        # Convert project_root to Path if provided
+        project_root_path = (
+            Path(project_root) if project_root else ctx.obj.get("project_root", Path.cwd())
+        )
+        db_path = get_project_db_path(project_root_path)
         config_loader = get_config_loader()
         config = config_loader.load_config()
 
@@ -79,81 +90,96 @@ def sync(
         elif incremental:
             mode = "incremental"
 
-        # Initialize KuzuMemory and get memory store
-        with KuzuMemory(db_path=db_path, config=config) as memory:
-            sync_manager = GitSyncManager(
-                repo_path=project_root,
-                config=config.git_sync,
-                memory_store=memory.memory_store,
-            )
+        # Create config service for GitSyncService
+        config_service = ConfigService(project_root_path)
+        config_service.initialize()
 
-            if not sync_manager.is_available():
-                if not quiet:
+        try:
+            # Use ServiceManager for GitSyncService lifecycle
+            with ServiceManager.git_sync_service(config_service) as git_sync:
+                if not git_sync.is_available():
+                    if not quiet:
+                        rich_print(
+                            "[yellow]Git sync not available:[/yellow] Not a git repository or git sync disabled",
+                        )
+                    ctx.exit(0)
+
+                # We need the GitSyncManager for the sync() method
+                # GitSyncService exposes it via git_sync property (not in protocol but in implementation)
+                sync_manager = git_sync.git_sync  # type: ignore[attr-defined]
+
+                # Need to inject memory store - create temporary memory instance
+                with KuzuMemory(db_path=db_path, config=config) as memory:
+                    sync_manager.memory_store = memory.memory_store
+
+                    # Perform sync
+                    if not quiet:
+                        if dry_run:
+                            rich_print("[cyan]Dry run:[/cyan] Previewing commits to sync...")
+                        else:
+                            rich_print(f"[cyan]Syncing git commits ({mode} mode)...[/cyan]")
+
+                    result = sync_manager.sync(mode=mode, dry_run=dry_run)
+
+                if not result["success"]:
                     rich_print(
-                        "[yellow]Git sync not available:[/yellow] Not a git repository or git sync disabled",
+                        f"[red]Sync failed:[/red] {result.get('error', 'Unknown error')}",
                     )
-                ctx.exit(0)
+                    ctx.exit(1)
 
-            # Perform sync
-            if not quiet:
-                if dry_run:
-                    rich_print("[cyan]Dry run:[/cyan] Previewing commits to sync...")
+                # Display results
+                if quiet:
+                    # Minimal output for git hooks
+                    if not dry_run:
+                        print(f"Synced {result['commits_synced']} commits")
                 else:
-                    rich_print(f"[cyan]Syncing git commits ({mode} mode)...[/cyan]")
+                    # Detailed output
+                    if dry_run:
+                        rich_panel(
+                            f"[green]Dry Run Results[/green]\n\n"
+                            f"Commits found: {result['commits_found']}\n\n"
+                            f"Preview (first 10):",
+                            title="Git Sync Preview",
+                        )
 
-            result = sync_manager.sync(mode=mode, dry_run=dry_run)
+                        if result.get("commits"):
+                            for commit in result["commits"]:
+                                rich_print(
+                                    f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}..."
+                                )
+                    else:
+                        status_msg = (
+                            f"[green]Sync Complete[/green]\n\n"
+                            f"Mode: {result['mode']}\n"
+                            f"Commits found: {result['commits_found']}\n"
+                            f"Commits synced: {result['commits_synced']}\n"
+                        )
 
-            if not result["success"]:
-                rich_print(
-                    f"[red]Sync failed:[/red] {result.get('error', 'Unknown error')}",
-                )
-                ctx.exit(1)
+                        # Show skipped count if any duplicates were found
+                        if result.get("commits_skipped", 0) > 0:
+                            status_msg += (
+                                f"Commits skipped (duplicates): {result['commits_skipped']}\n"
+                            )
 
-            # Display results
-            if quiet:
-                # Minimal output for git hooks
-                if not dry_run:
-                    print(f"Synced {result['commits_synced']} commits")
-            else:
-                # Detailed output
-                if dry_run:
-                    rich_panel(
-                        f"[green]Dry Run Results[/green]\n\n"
-                        f"Commits found: {result['commits_found']}\n\n"
-                        f"Preview (first 10):",
-                        title="Git Sync Preview",
-                    )
+                        if result.get("last_sync_timestamp"):
+                            status_msg += f"Last sync: {result['last_sync_timestamp']}\n"
+                        if result.get("last_commit_sha"):
+                            status_msg += f"Last commit: {result['last_commit_sha']}\n"
 
-                    if result.get("commits"):
-                        for commit in result["commits"]:
-                            rich_print(f"  [dim]{commit['sha']}[/dim] {commit['message'][:60]}...")
-                else:
-                    status_msg = (
-                        f"[green]Sync Complete[/green]\n\n"
-                        f"Mode: {result['mode']}\n"
-                        f"Commits found: {result['commits_found']}\n"
-                        f"Commits synced: {result['commits_synced']}\n"
-                    )
+                        rich_panel(status_msg, title="Git Sync Status")
 
-                    # Show skipped count if any duplicates were found
-                    if result.get("commits_skipped", 0) > 0:
-                        status_msg += f"Commits skipped (duplicates): {result['commits_skipped']}\n"
+                # Save updated config with sync state
+                if not dry_run and result["commits_synced"] > 0:
+                    config.git_sync = sync_manager.config
+                    # Use primary default config path
+                    config_path = Path.home() / ".kuzu-memory" / "config.yaml"
+                    config_loader.save_config(config, config_path)
+                    if not quiet:
+                        rich_print("[dim]Config updated with sync state[/dim]")
 
-                    if result.get("last_sync_timestamp"):
-                        status_msg += f"Last sync: {result['last_sync_timestamp']}\n"
-                    if result.get("last_commit_sha"):
-                        status_msg += f"Last commit: {result['last_commit_sha']}\n"
-
-                    rich_panel(status_msg, title="Git Sync Status")
-
-            # Save updated config with sync state
-            if not dry_run and result["commits_synced"] > 0:
-                config.git_sync = sync_manager.config
-                # Use primary default config path
-                config_path = Path.home() / ".kuzu-memory" / "config.yaml"
-                config_loader.save_config(config, config_path)
-                if not quiet:
-                    rich_print("[dim]Config updated with sync state[/dim]")
+        finally:
+            # Ensure cleanup of config service
+            config_service.cleanup()
 
     except GitSyncError as e:
         rich_print(f"[red]Git sync error:[/red] {e}")

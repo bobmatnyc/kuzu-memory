@@ -173,9 +173,7 @@ def setup(ctx, skip_install: bool, integration: str | None, force: bool, dry_run
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️"
-                        if system.health_status == "needs_repair"
-                        else "❌"
+                        else "⚠️" if system.health_status == "needs_repair" else "❌"
                     )
                     rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 

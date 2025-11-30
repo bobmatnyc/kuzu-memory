@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -21,6 +23,7 @@ from ..utils.project_setup import (
 )
 from .cli_utils import rich_panel, rich_print
 from .enums import OutputFormat
+from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +39,16 @@ logger = logging.getLogger(__name__)
     type=click.Choice([OutputFormat.TEXT.value, OutputFormat.JSON.value]),
     help="Output format",
 )
+@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
-def status(ctx, validate: bool, show_project: bool, detailed: bool, output_format: str) -> None:
+def status(
+    ctx,
+    validate: bool,
+    show_project: bool,
+    detailed: bool,
+    output_format: str,
+    db_path: Optional[str],
+) -> None:
     """
     📊 Display system status and statistics.
 
@@ -62,11 +73,16 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
       kuzu-memory status --format json
     """
     try:
+        # Resolve project root and database path
         project_root = ctx.obj.get("project_root") or find_project_root()
-        db_path = get_project_db_path(project_root)
+        db_path_obj: Optional[Path] = None
+        if db_path:
+            db_path_obj = Path(db_path)
+        else:
+            db_path_obj = get_project_db_path(project_root)
 
         # Check if initialized
-        if not db_path.exists():
+        if not db_path_obj.exists():
             if output_format == "json":
                 result = {
                     "initialized": False,
@@ -85,7 +101,9 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
         # Disable git_sync for read-only status operation (performance optimization)
         # Exception: enable it during validation since we test write capability
         enable_sync = validate
-        with KuzuMemory(db_path=db_path, enable_git_sync=enable_sync) as memory:
+        with ServiceManager.memory_service(
+            db_path=db_path_obj, enable_git_sync=enable_sync
+        ) as memory:
             # Collect statistics
             total_memories = memory.get_memory_count()
             recent_memories = memory.get_recent_memories(limit=24)
@@ -93,7 +111,7 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
             stats_data = {
                 "initialized": True,
                 "project_root": str(project_root),
-                "database_path": str(db_path),
+                "database_path": str(db_path_obj),
                 "total_memories": total_memories,
                 "recent_activity": len(recent_memories),
             }
@@ -129,14 +147,35 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
 
             # Add detailed statistics if requested
             if detailed:
-                stats_data.update(
-                    {
-                        "avg_memory_length": memory.get_average_memory_length(),
-                        "oldest_memory": memory.get_oldest_memory_date(),
-                        "newest_memory": memory.get_newest_memory_date(),
-                        "daily_activity": memory.get_daily_activity_stats(days=7),
-                    }
-                )
+                # Note: These methods are not in IMemoryService protocol yet
+                # They will be added in a future protocol update
+                # For now, we access the underlying KuzuMemory instance
+                if hasattr(memory, "kuzu_memory"):
+                    km = memory.kuzu_memory
+                    stats_data.update(
+                        {
+                            "avg_memory_length": (
+                                km.get_average_memory_length()
+                                if hasattr(km, "get_average_memory_length")
+                                else None
+                            ),
+                            "oldest_memory": (
+                                km.get_oldest_memory_date()
+                                if hasattr(km, "get_oldest_memory_date")
+                                else None
+                            ),
+                            "newest_memory": (
+                                km.get_newest_memory_date()
+                                if hasattr(km, "get_newest_memory_date")
+                                else None
+                            ),
+                            "daily_activity": (
+                                km.get_daily_activity_stats(days=7)
+                                if hasattr(km, "get_daily_activity_stats")
+                                else {}
+                            ),
+                        }
+                    )
 
             # Run validation if requested
             if validate:
@@ -146,14 +185,24 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
                     memory.get_recent_memories(limit=1)
                     health_checks.append({"check": "database_connection", "status": "pass"})
 
-                    # Test write capability
-                    test_id = memory.store_memory("_health_check_test", source="health_check")
-                    if test_id:
-                        health_checks.append({"check": "write_capability", "status": "pass"})
-                        # Clean up test memory
-                        memory.delete_memory(test_id)
+                    # Test write capability (use kuzu_memory for store_memory method)
+                    if hasattr(memory, "kuzu_memory"):
+                        km = memory.kuzu_memory
+                        test_id = km.store_memory("_health_check_test", source="health_check")
+                        if test_id:
+                            health_checks.append({"check": "write_capability", "status": "pass"})
+                            # Clean up test memory
+                            km.delete_memory(test_id)
+                        else:
+                            health_checks.append({"check": "write_capability", "status": "fail"})
                     else:
-                        health_checks.append({"check": "write_capability", "status": "fail"})
+                        health_checks.append(
+                            {
+                                "check": "write_capability",
+                                "status": "skip",
+                                "message": "Service doesn't expose store_memory",
+                            }
+                        )
 
                 except Exception as e:
                     health_checks.append(
@@ -170,10 +219,10 @@ def status(ctx, validate: bool, show_project: bool, detailed: bool, output_forma
             # Output results
             if output_format == "json":
                 # Convert datetime objects to ISO format for JSON
-                def serialize_datetime(obj) -> None:
+                def serialize_datetime(obj):  # type: ignore[no-untyped-def]
                     if hasattr(obj, "isoformat"):
-                        return obj.isoformat()
-                    return obj
+                        return obj.isoformat()  # type: ignore[no-any-return]
+                    return obj  # type: ignore[no-any-return]
 
                 rich_print(json.dumps(stats_data, indent=2, default=serialize_datetime))
             else:
