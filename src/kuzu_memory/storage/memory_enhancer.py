@@ -621,7 +621,7 @@ class MemoryEnhancer:
             if len(memories) < 2:
                 return []
 
-            relationships = self.relationship_detector.detect_relationships(memories)
+            relationships = self.relationship_detector.detect_memory_relationships(memories)
             self.enhancement_stats["relationships_found"] += len(relationships)
 
             logger.debug(f"Detected {len(relationships)} relationships between memories")

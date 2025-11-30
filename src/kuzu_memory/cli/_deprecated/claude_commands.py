@@ -120,7 +120,11 @@ def install_claude_hooks(
 
         # Perform installation
         rich_print("\n🚀 Installing Claude hooks...")
-        with console.status("[bold green]Installing...") if RICH_AVAILABLE else None:
+        # Use context manager only when Rich is available
+        if RICH_AVAILABLE and console:
+            with console.status("[bold green]Installing..."):
+                result = installer.install()
+        else:
             result = installer.install()
 
         # Display results
@@ -260,12 +264,16 @@ def claude_status(ctx: click.Context, project_root: str | None, output_json: boo
             )
         # Determine project root
         if project_root:
-            project_root = Path(project_root).resolve()
+            project_root_path: Path = Path(project_root).resolve()
         else:
-            project_root = find_project_root()
+            found_root = find_project_root()
+            if not found_root:
+                rich_print("❌ Could not find project root", style="red")
+                sys.exit(1)
+            project_root_path = found_root
 
         # Initialize installer
-        installer = ClaudeHooksInstaller(project_root)
+        installer = ClaudeHooksInstaller(project_root_path)
         status = installer.status()
 
         if output_json:
@@ -300,7 +308,7 @@ def claude_status(ctx: click.Context, project_root: str | None, output_json: boo
 
             rich_panel(
                 "\n".join(status_text),
-                title=f"Claude Integration Status - {project_root.name}",
+                title=f"Claude Integration Status - {project_root_path.name}",
                 style="blue",
             )
 
@@ -525,7 +533,11 @@ def claude_wizard(ctx: click.Context) -> None:
         # Step 5: Install hooks
         rich_print("\n🚀 Step 5: Installing Claude Hooks")
         if rich_confirm("Ready to install Claude hooks?", default=True):
-            with console.status("[bold green]Installing...") if RICH_AVAILABLE else None:
+            # Use context manager only when Rich is available
+            if RICH_AVAILABLE and console:
+                with console.status("[bold green]Installing..."):
+                    result = installer.install()
+            else:
                 result = installer.install()
 
             if result.success:

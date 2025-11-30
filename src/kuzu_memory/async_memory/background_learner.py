@@ -211,12 +211,14 @@ class BackgroundLearner:
             memory_type = MemoryType(memory_type_str)
 
             # Open KuzuMemory connection
-            with KuzuMemory(db_path=self.db_path) as memory:
-                # Store the memory directly
-                memory_id = memory.store_memory(
+            with KuzuMemory(db_path=self.db_path) as memory_system:
+                # Store the memory using remember() method
+                # Note: remember() doesn't accept memory_type directly, it's in metadata
+                task_metadata = task.metadata or {}
+                task_metadata["memory_type"] = memory_type.value
+                memory_id = memory_system.remember(
                     content=task.content,
-                    memory_type=memory_type,
-                    metadata=task.metadata,
+                    metadata=task_metadata,
                     source=task.source,
                 )
 

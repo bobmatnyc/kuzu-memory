@@ -221,7 +221,7 @@ class MemoryClassifier:
                 y_train.append(example["type"])
 
             # Create and train pipeline
-            self.classifier = Pipeline(
+            classifier_pipeline = Pipeline(
                 [
                     (
                         "tfidf",
@@ -231,7 +231,8 @@ class MemoryClassifier:
                 ]
             )
 
-            self.classifier.fit(X_train, y_train)
+            classifier_pipeline.fit(X_train, y_train)
+            self.classifier = classifier_pipeline  # Assign after successful training
             logger.info(f"Classifier trained with {len(X_train)} samples")
 
         except Exception as e:
@@ -618,11 +619,12 @@ class MemoryClassifier:
                 word for word, pos in pos_tags if pos.startswith("NN") or pos.startswith("VB")
             ]
 
-            # Count frequencies
+            # Count frequencies (stem words if stemmer available)
             word_freq = {}
             for word in important_words:
-                self.stemmer.stem(word)
-                word_freq[word] = word_freq.get(word, 0) + 1
+                # Use stemmed version for frequency counting if stemmer available
+                key = self.stemmer.stem(word) if self.stemmer else word
+                word_freq[key] = word_freq.get(key, 0) + 1
 
             # Sort by frequency
             sorted_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)

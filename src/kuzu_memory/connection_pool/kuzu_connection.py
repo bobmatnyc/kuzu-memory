@@ -184,6 +184,9 @@ class KuzuConnection(IConnection):
                             # In practice, you'd need to format the query safely
                             logger.warning("Kuzu doesn't support parameterized queries yet")
 
+                        # Type guard: _ensure_connected() guarantees _conn is not None
+                        if not self._conn:
+                            raise RuntimeError("Connection not established")
                         return self._conn.execute(query)
 
                     result = await loop.run_in_executor(None, _execute_query)

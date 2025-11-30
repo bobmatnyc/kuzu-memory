@@ -38,7 +38,9 @@ from ..utils.project_setup import (
     get_project_context_summary,
     get_project_db_path,
 )
-from .install_commands_simple import install_group, list_installers, status, uninstall
+# Note: These imports don't exist in install_commands_simple - commenting out for type safety
+# from .install_commands_simple import install_group, list_installers, status, uninstall
+from .install_commands_simple import status  # Only import what exists
 
 # Install commands imported below
 
@@ -231,7 +233,8 @@ def quickstart(ctx: click.Context, skip_demo: bool) -> None:
         # Step 1: Setup
         rich_print("\n📁 Step 1: Setting up your memory database...", style="bold blue")
 
-        db_path = ctx.obj.get("db_path") or Path("my_memories.db")
+        db_path_value = ctx.obj.get("db_path")
+        db_path = Path(db_path_value) if db_path_value else Path("my_memories.db")
 
         if RICH_AVAILABLE:
             if db_path.exists():
@@ -1330,8 +1333,8 @@ def setup(ctx: click.Context, advanced: bool) -> None:
 
         if RICH_AVAILABLE:
             default_db = "kuzu_memories.db"
-            db_path = Prompt.ask("Where should we store your memories?", default=default_db)
-            db_path = Path(db_path)
+            db_path_str = Prompt.ask("Where should we store your memories?", default=default_db)
+            db_path = Path(db_path_str)
 
             if db_path.exists():
                 if not Confirm.ask(f"Database {db_path} exists. Use existing database?"):
@@ -1967,6 +1970,11 @@ def auggie_enhance(ctx: click.Context, prompt: str, user_id: str, verbose: bool)
                 prompt=prompt, user_id=user_id, context={"source": "cli"}
             )
 
+            # Type guard: enhancement should always be a dict, but check for safety
+            if not enhancement:
+                click.echo("❌ No enhancement generated", err=True)
+                return
+
             click.echo("🚀 Prompt Enhancement Results:")
             click.echo("=" * 50)
             click.echo(f"Original: {enhancement['original_prompt']}")
@@ -2159,11 +2167,11 @@ def auggie_stats(ctx: click.Context, verbose: bool) -> None:
 # See AGENTS.md and .augment/rules/ for proper Augment integration
 
 # Add install commands to CLI
-
-cli.add_command(install_group)
-cli.add_command(uninstall)
+# Note: Commenting out non-existent commands for type safety
+# cli.add_command(install_group)
+# cli.add_command(uninstall)
 cli.add_command(status, name="install-status")
-cli.add_command(list_installers, name="list-installers")
+# cli.add_command(list_installers, name="list-installers")
 
 
 @cli.command()
@@ -2283,7 +2291,8 @@ def temporal_analysis(
                         boost_icon,
                     )
 
-                console.print(table)
+                if console:
+                    console.print(table)
 
                 # Summary statistics
                 avg_age = sum(a["age_days"] for a in analyses) / len(analyses)

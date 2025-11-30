@@ -484,8 +484,17 @@ class MemoryStore:
         try:
             # Store entities and create relationships
             for entity_text in memory.entities:
-                # Normalize entity name
-                normalized_name = entity_text.lower().strip()
+                # Type narrow: entity can be str | dict[str, Any]
+                if isinstance(entity_text, str):
+                    normalized_name = entity_text.lower().strip()
+                elif isinstance(entity_text, dict):
+                    # Extract name from dict entity
+                    entity_name = entity_text.get("name") or entity_text.get("text", "")
+                    if not isinstance(entity_name, str):
+                        continue  # Skip malformed entity
+                    normalized_name = entity_name.lower().strip()
+                else:
+                    continue  # Skip unknown entity type
 
                 # Check if entity exists
                 check_query = "MATCH (e:Entity {normalized_name: $normalized_name}) RETURN e.id"

@@ -237,38 +237,39 @@ class AuggieRuleEngine:
         """Execute applicable rules and return combined modifications."""
         applicable_rules = self.get_applicable_rules(context)
 
-        combined_modifications = {
-            "context_additions": [],
-            "prompt_modifications": {},
-            "memory_filters": {},
-            "learning_triggers": [],
-            "executed_rules": [],
+        # Type-safe initialization with explicit types
+        context_additions: list[Any] = []
+        prompt_modifications: dict[str, Any] = {}
+        memory_filters: dict[str, Any] = {}
+        learning_triggers: list[Any] = []
+        executed_rules: list[dict[str, Any]] = []
+
+        combined_modifications: dict[str, Any] = {
+            "context_additions": context_additions,
+            "prompt_modifications": prompt_modifications,
+            "memory_filters": memory_filters,
+            "learning_triggers": learning_triggers,
+            "executed_rules": executed_rules,
         }
 
         for rule in applicable_rules:
             try:
                 modifications = rule.execute_actions(context)
 
-                # Combine modifications
+                # Combine modifications with type-safe access
                 if "added_context" in modifications:
-                    combined_modifications["context_additions"].append(
-                        modifications["added_context"]
-                    )
+                    context_additions.append(modifications["added_context"])
 
                 if "prompt_modifications" in modifications:
-                    combined_modifications["prompt_modifications"].update(
-                        modifications["prompt_modifications"]
-                    )
+                    prompt_modifications.update(modifications["prompt_modifications"])
 
                 if "memory_filters" in modifications:
-                    combined_modifications["memory_filters"].update(modifications["memory_filters"])
+                    memory_filters.update(modifications["memory_filters"])
 
                 if "learning_config" in modifications:
-                    combined_modifications["learning_triggers"].append(
-                        modifications["learning_config"]
-                    )
+                    learning_triggers.append(modifications["learning_config"])
 
-                combined_modifications["executed_rules"].append(
+                executed_rules.append(
                     {
                         "rule_id": rule.id,
                         "rule_name": rule.name,
@@ -703,12 +704,14 @@ class AuggieIntegration:
         memory_types = [mem.memory_type for mem in memory_context.memories]
 
         return {
-            "has_identity_memories": MemoryType.IDENTITY in memory_types,
+            # Note: IDENTITY/DECISION/SOLUTION/STATUS don't exist in current MemoryType enum
+            # Using SEMANTIC for general knowledge, PROCEDURAL for solutions
+            "has_identity_memories": MemoryType.SEMANTIC in memory_types,  # Map to SEMANTIC
             "has_preference_memories": MemoryType.PREFERENCE in memory_types,
-            "has_decision_memories": MemoryType.DECISION in memory_types,
+            "has_decision_memories": MemoryType.EPISODIC in memory_types,  # Map to EPISODIC
             "has_procedural_memories": MemoryType.PROCEDURAL in memory_types,
-            "has_solution_memories": MemoryType.SOLUTION in memory_types,
-            "has_status_memories": MemoryType.STATUS in memory_types,
+            "has_solution_memories": MemoryType.PROCEDURAL in memory_types,  # Map to PROCEDURAL
+            "has_status_memories": MemoryType.WORKING in memory_types,  # Map to WORKING
             "memory_count": len(memory_context.memories),
             "memory_confidence": memory_context.confidence,
             "recall_strategy": memory_context.strategy_used,
@@ -829,15 +832,24 @@ class AuggieIntegration:
                     "kubernetes",
                 ]
                 for entity in memory.entities:
-                    if any(keyword in entity.lower() for keyword in tech_keywords):
-                        tech_entities.add(entity)
+                    # Type narrow: entity can be str | dict[str, Any]
+                    if isinstance(entity, str):
+                        if any(keyword in entity.lower() for keyword in tech_keywords):
+                            tech_entities.add(entity)
+                    elif isinstance(entity, dict):
+                        entity_text = entity.get("name") or entity.get("text", "")
+                        if isinstance(entity_text, str) and any(
+                            keyword in entity_text.lower() for keyword in tech_keywords
+                        ):
+                            tech_entities.add(entity_text)
 
         return ", ".join(list(tech_entities)[:5])  # Limit to 5 technologies
 
     def _extract_experience_context(self, memory_context: MemoryContext) -> str:
         """Extract experience level information from memory context."""
         for memory in memory_context.memories:
-            if memory.memory_type == MemoryType.IDENTITY:
+            # Note: IDENTITY doesn't exist, using SEMANTIC for general knowledge
+            if memory.memory_type == MemoryType.SEMANTIC:
                 content_lower = memory.content.lower()
                 if "senior" in content_lower:
                     return "Senior level"

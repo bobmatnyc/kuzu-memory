@@ -316,6 +316,8 @@ class MCPConnectionTester:
                     metadata={"response": response["result"]},
                 )
             else:
+                # Type guard: response could be None in else branch
+                error_msg = response.get("error", "Unknown error") if response else "No response"
                 return ConnectionTestResult(
                     test_name=test_name,
                     success=False,
@@ -323,7 +325,7 @@ class MCPConnectionTester:
                     duration_ms=duration,
                     severity=TestSeverity.ERROR,
                     message="Protocol initialization failed",
-                    error=response.get("error", "Unknown error"),
+                    error=error_msg,
                 )
 
         except Exception as e:
@@ -540,14 +542,23 @@ class MCPConnectionTester:
             response = await self._send_request(test_msg)
             duration = (time.time() - start_time) * 1000
 
-            # Validate response structure
-            compliance_checks = {
-                "has_jsonrpc": "jsonrpc" in response,
-                "jsonrpc_version": response.get("jsonrpc") == "2.0",
-                "has_id": "id" in response,
-                "id_matches": response.get("id") == test_msg["id"],
-                "has_result_or_error": "result" in response or "error" in response,
-            }
+            # Validate response structure (handle None response)
+            if not response:
+                compliance_checks = {
+                    "has_jsonrpc": False,
+                    "jsonrpc_version": False,
+                    "has_id": False,
+                    "id_matches": False,
+                    "has_result_or_error": False,
+                }
+            else:
+                compliance_checks = {
+                    "has_jsonrpc": "jsonrpc" in response,
+                    "jsonrpc_version": response.get("jsonrpc") == "2.0",
+                    "has_id": "id" in response,
+                    "id_matches": response.get("id") == test_msg["id"],
+                    "has_result_or_error": "result" in response or "error" in response,
+                }
 
             all_passed = all(compliance_checks.values())
 
