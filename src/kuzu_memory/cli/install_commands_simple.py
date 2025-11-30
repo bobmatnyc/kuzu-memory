@@ -16,7 +16,7 @@ from .enums import AISystem
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-def install(ctx) -> None:
+def install(ctx: click.Context) -> None:
     """
     🚀 Manage AI system integrations.
 
@@ -47,7 +47,7 @@ def install(ctx) -> None:
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
 def add(
     platform: str,
-    project,
+    project: Path | str | None,
     dry_run: bool,
     verbose: bool,
 ) -> None:
@@ -83,13 +83,15 @@ def add(
     """
     try:
         # Get project root
+        project_root: Path
         if project:
             project_root = Path(project)
         else:
-            project_root = find_project_root()
-            if not project_root:
+            found_root = find_project_root()
+            if not found_root:
                 print("❌ Could not find project root. Use --project to specify.")
                 sys.exit(1)
+            project_root = found_root
 
         # Show what will be installed
         print(f"\n{'=' * 70}")
@@ -201,7 +203,7 @@ def add(
 @click.argument("ai_system", type=click.Choice([s.value for s in AISystem]))
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
-def remove(ai_system: str, project, confirm: bool) -> None:
+def remove(ai_system: str, project: Path | str | None, confirm: bool) -> None:
     """
     Remove an AI system integration.
 
@@ -217,13 +219,15 @@ def remove(ai_system: str, project, confirm: bool) -> None:
     """
     try:
         # Get project root
+        project_root: Path
         if project:
             project_root = Path(project)
         else:
-            project_root = find_project_root()
-            if not project_root:
+            found_root = find_project_root()
+            if not found_root:
                 print("❌ Could not find project root. Use --project to specify.")
                 sys.exit(1)
+            project_root = found_root
 
         # Get installer
         installer = get_installer(ai_system, project_root)
@@ -262,7 +266,7 @@ def remove(ai_system: str, project, confirm: bool) -> None:
 
 @install.command()
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-def status(project) -> None:
+def status(project: Path | str | None) -> None:
     """
     Show installation status for all AI systems.
 
@@ -278,13 +282,15 @@ def status(project) -> None:
     """
     try:
         # Get project root
+        project_root: Path
         if project:
             project_root = Path(project)
         else:
-            project_root = find_project_root()
-            if not project_root:
+            found_root = find_project_root()
+            if not found_root:
                 print("❌ Could not find project root. Use --project to specify.")
                 sys.exit(1)
+            project_root = found_root
 
         print(f"📊 Installation Status for {project_root}")
         print()

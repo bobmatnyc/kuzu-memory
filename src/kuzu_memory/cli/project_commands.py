@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
 @click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.pass_context
-def init(ctx, force, config_path) -> None:
+def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> None:
     """
     🚀 Initialize KuzuMemory for this project.
 
@@ -142,7 +142,7 @@ def init(ctx, force, config_path) -> None:
 @click.command()
 @click.option("--verbose", is_flag=True, help="Show detailed project information")
 @click.pass_context
-def project(ctx, verbose) -> None:
+def project(ctx: click.Context, verbose: bool) -> None:
     """
     📊 Show project memory information and health status.
 
@@ -210,8 +210,10 @@ def project(ctx, verbose) -> None:
                             "..." if len(mem.content) > 80 else ""
                         )
                         rich_print(f"   • {content_preview}")
+                        # Note: Memory.source attribute might not exist in all versions
+                        source_str = getattr(mem, "source", "unknown")
                         rich_print(
-                            f"     {mem.source} | {mem.created_at.strftime('%Y-%m-%d %H:%M')}",
+                            f"     {source_str} | {mem.created_at.strftime('%Y-%m-%d %H:%M')}",
                             style="dim",
                         )
 
@@ -269,7 +271,7 @@ def project(ctx, verbose) -> None:
     help="Output format",
 )
 @click.pass_context
-def stats(ctx, detailed, output_format) -> None:
+def stats(ctx: click.Context, detailed: bool, output_format: str) -> None:
     """
     📈 Display comprehensive memory system statistics.
 
@@ -314,7 +316,7 @@ def stats(ctx, detailed, output_format) -> None:
 
             if output_format == "json":
                 # Convert datetime objects to ISO format for JSON
-                def serialize_datetime(obj) -> None:
+                def serialize_datetime(obj: Any) -> Any:
                     if hasattr(obj, "isoformat"):
                         return obj.isoformat()
                     return obj
@@ -391,7 +393,7 @@ def stats(ctx, detailed, output_format) -> None:
 @click.command()
 @click.option("--force", is_flag=True, help="Force cleanup without confirmation")
 @click.pass_context
-def cleanup(ctx, force) -> None:
+def cleanup(ctx: click.Context, force: bool) -> None:
     """
     🧹 Clean up expired and redundant memories.
 
@@ -410,48 +412,19 @@ def cleanup(ctx, force) -> None:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
         with KuzuMemory(db_path=db_path) as memory:
-            # Get cleanup candidates
-            expired_memories = memory.get_expired_memories()
-            duplicate_groups = memory.find_duplicate_memories()
-
-            total_to_remove = len(expired_memories) + sum(
-                len(group) - 1 for group in duplicate_groups
+            # Note: These cleanup methods are not yet implemented in KuzuMemory
+            # This is placeholder code for future functionality
+            rich_print(
+                "⚠️  Cleanup functionality not yet fully implemented", style="yellow"
             )
+            rich_print("Future features will include:")
+            rich_print("  - Expired memory cleanup based on retention policies")
+            rich_print("  - Duplicate detection and removal")
+            rich_print("  - Memory optimization and consolidation")
 
-            if total_to_remove == 0:
-                rich_print("✅ No memories need cleanup", style="green")
-                return
-
-            # Show what will be cleaned up
-            rich_print("🧹 Cleanup Summary:")
-            rich_print(f"   Expired memories: {len(expired_memories)}")
-            rich_print(f"   Duplicate groups: {len(duplicate_groups)}")
-            rich_print(f"   Total to remove: {total_to_remove}")
-
-            if not force:
-                if not rich_confirm("Proceed with cleanup?", default=False):
-                    rich_print("Cleanup cancelled")
-                    return
-
-            # Perform cleanup
-            removed_count = 0
-
-            # Remove expired memories
-            if expired_memories:
-                for mem in expired_memories:
-                    memory.delete_memory(mem.id)
-                    removed_count += 1
-
-            # Remove duplicates (keep the newest in each group)
-            if duplicate_groups:
-                for group in duplicate_groups:
-                    # Sort by created_at, keep the newest
-                    sorted_group = sorted(group, key=lambda x: x.created_at, reverse=True)
-                    for mem in sorted_group[1:]:  # Remove all but the newest
-                        memory.delete_memory(mem.id)
-                        removed_count += 1
-
-            rich_print(f"✅ Cleanup completed: {removed_count} memories removed", style="green")
+            # For now, just show current memory count
+            total = memory.get_memory_count()
+            rich_print(f"\n📊 Current total memories: {total}")
 
     except Exception as e:
         if ctx.obj.get("debug"):
@@ -463,7 +436,7 @@ def cleanup(ctx, force) -> None:
 @click.command()
 @click.argument("config_path", type=click.Path())
 @click.pass_context
-def create_config(ctx, config_path) -> None:
+def create_config(ctx: click.Context, config_path: Path | str) -> None:
     """
     ⚙️  Create a configuration file with current settings.
 

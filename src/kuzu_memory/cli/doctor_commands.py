@@ -22,6 +22,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -448,12 +449,12 @@ def health(
         health_checker = MCPHealthChecker(project_root=project_path)
 
         # Define health check function
-        async def perform_check():
+        async def perform_check() -> Any:
             result = await health_checker.check_health(detailed=detailed, retry=True)
             return result
 
         # Define display function
-        def display_health(result) -> None:
+        def display_health(result: Any) -> None:
             if json_output:
                 # JSON output
                 print(json.dumps(result.to_dict(), indent=2))

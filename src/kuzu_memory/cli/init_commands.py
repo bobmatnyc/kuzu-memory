@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 @click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.option("--project-root", type=click.Path(), help="Project root path (optional)")
 @click.pass_context
-def init(ctx, force: bool, config_path, project_root: str | None) -> None:
+def init(ctx: click.Context, force: bool, config_path: Path | str | None, project_root: str | None) -> None:
     """
     🚀 Initialize KuzuMemory for this project.
 

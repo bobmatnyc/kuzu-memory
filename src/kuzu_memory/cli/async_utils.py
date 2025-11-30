@@ -18,7 +18,7 @@ Related Phase: 5.3 (High-Risk Async Command Migrations)
 """
 
 import asyncio
-from typing import Awaitable, TypeVar
+from typing import Any, Awaitable, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -66,7 +66,8 @@ def run_async(coro: Awaitable[T]) -> T:
     except RuntimeError:
         # No running loop - this is expected for sync CLI commands
         # Use asyncio.run() which creates and closes loop automatically
-        return asyncio.run(coro)
+        # Type ignore needed because asyncio.run expects Coroutine but we use Awaitable for flexibility
+        return asyncio.run(coro)  # type: ignore[arg-type]
 
 
 __all__ = ["run_async"]

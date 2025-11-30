@@ -9,8 +9,9 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
 import click
 
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 @click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
 @click.pass_context
 def status(
-    ctx,
+    ctx: click.Context,
     validate: bool,
     show_project: bool,
     detailed: bool,
@@ -219,10 +220,10 @@ def status(
             # Output results
             if output_format == "json":
                 # Convert datetime objects to ISO format for JSON
-                def serialize_datetime(obj):  # type: ignore[no-untyped-def]
+                def serialize_datetime(obj: Any) -> Any:
                     if hasattr(obj, "isoformat"):
-                        return obj.isoformat()  # type: ignore[no-any-return]
-                    return obj  # type: ignore[no-any-return]
+                        return obj.isoformat()
+                    return obj
 
                 rich_print(json.dumps(stats_data, indent=2, default=serialize_datetime))
             else:
@@ -246,6 +247,7 @@ def status(
 
                     if "auggie_integration" in stats_data:
                         auggie_info = stats_data["auggie_integration"]
+                        assert isinstance(auggie_info, dict)
                         rich_print("\n🤖 Auggie Integration:")
                         rich_print(
                             f"   Status: {'✅ Active' if auggie_info['active'] else '⚠️  Available but inactive'}"
@@ -259,29 +261,37 @@ def status(
                             f"\n📏 Average Memory Length: {stats_data['avg_memory_length']:.0f} characters"
                         )
 
-                    if stats_data.get("oldest_memory"):
+                    oldest_memory = stats_data.get("oldest_memory")
+                    if oldest_memory:
+                        assert isinstance(oldest_memory, datetime)
                         rich_print("\n📅 Memory Timeline:")
                         rich_print(
-                            f"   Oldest: {stats_data['oldest_memory'].strftime('%Y-%m-%d %H:%M')}"
+                            f"   Oldest: {oldest_memory.strftime('%Y-%m-%d %H:%M')}"
                         )
-                        if stats_data.get("newest_memory"):
+                        newest_memory = stats_data.get("newest_memory")
+                        if newest_memory:
+                            assert isinstance(newest_memory, datetime)
                             rich_print(
-                                f"   Newest: {stats_data['newest_memory'].strftime('%Y-%m-%d %H:%M')}"
+                                f"   Newest: {newest_memory.strftime('%Y-%m-%d %H:%M')}"
                             )
 
-                    if stats_data.get("daily_activity"):
+                    daily_activity = stats_data.get("daily_activity")
+                    if daily_activity:
+                        assert isinstance(daily_activity, dict)
                         rich_print("\n📊 Daily Activity (Last 7 Days):")
-                        for date, count in stats_data["daily_activity"].items():
+                        for date, count in daily_activity.items():
                             rich_print(f"   {date}: {count} memories")
 
                 if validate:
-                    health_status = stats_data.get("health_status", "unknown")
+                    health_status = cast(str, stats_data.get("health_status", "unknown"))
                     health_icon = "✅" if health_status == "healthy" else "⚠️"
                     rich_print(f"\n🏥 Health Status: {health_icon} {health_status.title()}")
 
-                    if stats_data.get("health_checks"):
+                    health_checks_obj = stats_data.get("health_checks")
+                    if health_checks_obj:
+                        health_checks = cast(list[dict[str, Any]], health_checks_obj)
                         rich_print("\n🔍 Health Checks:")
-                        for check in stats_data["health_checks"]:
+                        for check in health_checks:
                             status_icon = "✅" if check["status"] == "pass" else "❌"
                             rich_print(f"   {status_icon} {check['check']}")
                             if check.get("error"):
