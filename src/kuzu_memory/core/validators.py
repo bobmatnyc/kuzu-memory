@@ -4,9 +4,9 @@ Input validation schemas for KuzuMemory using Pydantic.
 Provides validated models for API inputs and configurations.
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, confloat, conint, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .constants import (
     DEFAULT_AGENT_ID,
@@ -29,13 +29,14 @@ class AttachMemoriesRequest(BaseModel):
     """Validated input for attach_memories method."""
 
     prompt: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
-    max_memories: conint(ge=1, le=MAX_MEMORY_LIMIT) = DEFAULT_MEMORY_LIMIT
-    strategy: str = Field(DEFAULT_RECALL_STRATEGY, regex="^(auto|keyword|entity|temporal)$")
+    max_memories: Annotated[int, Field(ge=1, le=MAX_MEMORY_LIMIT)] = DEFAULT_MEMORY_LIMIT
+    strategy: str = Field(DEFAULT_RECALL_STRATEGY, pattern=r"^(auto|keyword|entity|temporal)$")
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
 
-    @validator("prompt")
+    @field_validator("prompt")
+    @classmethod
     def validate_prompt(cls, v: str) -> str:
         """Ensure prompt is not just whitespace."""
         if not v.strip():
@@ -53,14 +54,16 @@ class GenerateMemoriesRequest(BaseModel):
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
     metadata: dict[str, Any] | None = Field(None)
 
-    @validator("content")
+    @field_validator("content")
+    @classmethod
     def validate_content(cls, v: str) -> str:
         """Ensure content is not just whitespace."""
         if not v.strip():
             raise ValueError("Content cannot be empty or just whitespace")
         return v
 
-    @validator("metadata")
+    @field_validator("metadata")
+    @classmethod
     def validate_metadata(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
         """Ensure metadata is serializable and not too large."""
         if v is not None:
@@ -80,8 +83,8 @@ class MemoryCreationRequest(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     memory_type: MemoryType
-    importance: confloat(ge=MIN_IMPORTANCE, le=MAX_IMPORTANCE) = 0.5
-    confidence: confloat(ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE) = 1.0
+    importance: Annotated[float, Field(ge=MIN_IMPORTANCE, le=MAX_IMPORTANCE)] = 0.5
+    confidence: Annotated[float, Field(ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE)] = 1.0
     source_type: str = Field("manual", max_length=50)
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
@@ -89,7 +92,8 @@ class MemoryCreationRequest(BaseModel):
     metadata: dict[str, Any] | None = None
     entities: list[str] | None = None
 
-    @validator("entities")
+    @field_validator("entities")
+    @classmethod
     def validate_entities(cls, v: list[str] | None) -> list[str] | None:
         """Ensure entities are valid strings."""
         if v is not None:
@@ -105,14 +109,15 @@ class RecallRequest(BaseModel):
     """Validated input for memory recall operations."""
 
     query: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
-    limit: conint(ge=1, le=MAX_MEMORY_LIMIT) = DEFAULT_MEMORY_LIMIT
-    decay_factor: confloat(ge=MIN_DECAY_FACTOR, le=MAX_DECAY_FACTOR) = 0.9
+    limit: Annotated[int, Field(ge=1, le=MAX_MEMORY_LIMIT)] = DEFAULT_MEMORY_LIMIT
+    decay_factor: Annotated[float, Field(ge=MIN_DECAY_FACTOR, le=MAX_DECAY_FACTOR)] = 0.9
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     memory_types: list[MemoryType] | None = None
-    time_range_days: conint(ge=1, le=365) | None = None
+    time_range_days: Annotated[int, Field(ge=1, le=365)] | None = None
 
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v: str) -> str:
         """Ensure query is not just whitespace."""
         if not v.strip():
@@ -123,11 +128,12 @@ class RecallRequest(BaseModel):
 class BatchMemoryRequest(BaseModel):
     """Validated input for batch memory operations."""
 
-    memories: list[MemoryCreationRequest] = Field(..., min_items=1, max_items=1000)
+    memories: Annotated[list[MemoryCreationRequest], Field(min_length=1, max_length=1000)]
     deduplicate: bool = Field(True, description="Whether to check for duplicates")
     merge_similar: bool = Field(False, description="Whether to merge similar memories")
 
-    @validator("memories")
+    @field_validator("memories")
+    @classmethod
     def validate_batch_size(cls, v: list[MemoryCreationRequest]) -> list[MemoryCreationRequest]:
         """Ensure batch size is reasonable."""
         if len(v) > 100:
