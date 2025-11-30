@@ -54,7 +54,7 @@ class WindsurfInstaller(BaseInstaller):
         """Get path to Windsurf MCP configuration file."""
         return Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
 
-    def _create_kuzu_server_config(self) -> dict:
+    def _create_kuzu_server_config(self) -> dict[str, Any]:
         """Create KuzuMemory MCP server configuration."""
         # For global installation, we can't use ${PROJECT_ROOT}
         # User must specify project in command args or use project-specific config

@@ -55,7 +55,7 @@ class AuggieMCPInstaller(BaseInstaller):
         """Get path to Auggie settings configuration file."""
         return Path.home() / ".augment" / "settings.json"
 
-    def _create_kuzu_server_config(self) -> dict:
+    def _create_kuzu_server_config(self) -> dict[str, Any]:
         """Create KuzuMemory MCP server configuration."""
         return {
             "mcpServers": {

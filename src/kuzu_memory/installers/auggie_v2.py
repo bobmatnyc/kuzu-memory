@@ -266,7 +266,7 @@ class AuggieInstallerV2(BaseInstaller):
         if not self.write_file(reference_path, get_quick_reference_v2()):
             raise InstallationError("Failed to create quick reference")
 
-    def check_upgrade_available(self) -> dict:
+    def check_upgrade_available(self) -> dict[str, Any]:
         """
         Check if an upgrade is available.
 

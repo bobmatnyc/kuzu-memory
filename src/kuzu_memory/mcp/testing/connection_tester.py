@@ -132,7 +132,7 @@ class MCPConnectionTester:
         self.server_path = self._resolve_server_path(server_path)
         self.timeout = timeout
         self.project_root = project_root or Path.cwd()
-        self.process: subprocess.Popen | None = None
+        self.process: subprocess.Popen[bytes] | None = None
         self.stdout_reader: asyncio.StreamReader | None = None
         self.stdin_writer: asyncio.StreamWriter | None = None
 

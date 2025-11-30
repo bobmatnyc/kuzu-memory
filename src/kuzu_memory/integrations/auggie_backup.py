@@ -130,7 +130,7 @@ class AuggieRuleEngine:
         self.kuzu_memory = kuzu_memory
         self.rules: dict[str, AuggieRule] = {}
         self.rule_execution_history: list[dict[str, Any]] = []
-        self.learning_callbacks: list[Callable] = []
+        self.learning_callbacks: list[Callable[[dict[str, Any]], None]] = []
 
         # Load default rules
         self._load_default_rules()
@@ -300,7 +300,7 @@ class AuggieRuleEngine:
 
         return combined_modifications
 
-    def add_learning_callback(self, callback: Callable) -> None:
+    def add_learning_callback(self, callback: Callable[[dict[str, Any]], None]) -> None:
         """Add a callback for learning events."""
         self.learning_callbacks.append(callback)
 

@@ -12,7 +12,7 @@ from typing import Any
 
 from ..core.config import KuzuMemoryConfig
 from ..core.models import ExtractedMemory, Memory
-from ..extraction.entities import EntityExtractor
+from ..extraction.entities import Entity, EntityExtractor
 from ..extraction.patterns import PatternExtractor
 from ..extraction.relationships import RelationshipDetector
 from ..utils.deduplication import DeduplicationEngine
@@ -193,7 +193,7 @@ class MemoryStore:
             logger.error(f"Pattern extraction failed: {e}")
             return []
 
-    def _extract_entities_from_content(self, content: str) -> list:
+    def _extract_entities_from_content(self, content: str) -> list[Entity]:
         """Extract entities from content."""
         try:
             if self.config.extraction.enable_entity_extraction:

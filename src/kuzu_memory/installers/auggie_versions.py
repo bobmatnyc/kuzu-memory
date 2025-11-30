@@ -12,6 +12,7 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +190,7 @@ class AuggieVersionDetector:
             return False  # Not installed, not an upgrade
         return installed < CURRENT_VERSION
 
-    def get_upgrade_info(self) -> dict:
+    def get_upgrade_info(self) -> dict[str, Any]:
         """
         Get information about available upgrade.
 
@@ -279,7 +280,7 @@ class AuggieRuleMigrator:
         # Currently support migration from v1.0.0 to v2.0.0
         return from_version == AuggieVersion(1, 0, 0)
 
-    def migrate(self, force: bool = False) -> dict:
+    def migrate(self, force: bool = False) -> dict[str, Any]:
         """
         Migrate rules to current version.
 

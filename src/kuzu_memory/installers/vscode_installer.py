@@ -57,7 +57,7 @@ class VSCodeInstaller(BaseInstaller):
         """Get path to VS Code MCP configuration file."""
         return self.project_root / ".vscode" / "mcp.json"
 
-    def _create_kuzu_server_config(self) -> dict:
+    def _create_kuzu_server_config(self) -> dict[str, Any]:
         """Create KuzuMemory MCP server configuration."""
         return {
             "mcpServers": {
@@ -72,7 +72,7 @@ class VSCodeInstaller(BaseInstaller):
             }
         }
 
-    def _normalize_config_format(self, config: dict[str, Any]) -> dict:
+    def _normalize_config_format(self, config: dict[str, Any]) -> dict[str, Any]:
         """
         Normalize VS Code MCP configuration format.
 

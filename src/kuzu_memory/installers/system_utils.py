@@ -343,7 +343,7 @@ class EnvironmentValidator:
     """Validate installation environment and requirements."""
 
     @staticmethod
-    def check_python_version(min_version: tuple = (3, 8)) -> bool:
+    def check_python_version(min_version: tuple[int, int] = (3, 8)) -> bool:
         """Check if Python version meets requirements."""
         current_version = sys.version_info[:2]
         return current_version >= min_version
