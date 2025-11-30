@@ -219,7 +219,7 @@ class JSONRPCProtocol:
                     if not ready:
                         # Timeout - check if we should continue
                         if not self.running:
-                            break
+                            break  # type: ignore[unreachable]  # self.running can be modified by another thread
                         continue
 
                     # Data is available, read it
@@ -237,7 +237,7 @@ class JSONRPCProtocol:
 
                 # Check if we should stop
                 if not self.running:
-                    break
+                    break  # type: ignore[unreachable]  # self.running can be modified by another thread
 
         except Exception as e:
             logger.error(f"Error in stdin reader thread: {e}")
@@ -265,7 +265,7 @@ class JSONRPCProtocol:
                 line = None
                 try:
                     # Helper function that handles Empty exception
-                    def get_with_timeout() -> None:
+                    def get_with_timeout() -> Any:
                         try:
                             return self._message_queue.get(timeout=0.1)
                         except Empty:
@@ -281,7 +281,7 @@ class JSONRPCProtocol:
                 except Empty:
                     # Check if we should stop
                     if not self.running:
-                        return None
+                        return None  # type: ignore[unreachable]  # self.running can be modified by another thread
                     # No message yet, continue waiting
                     await asyncio.sleep(0.01)
                     continue
@@ -317,9 +317,6 @@ class JSONRPCProtocol:
         Args:
             message: Message to send
         """
-        if message is None:
-            return  # Don't send responses for notifications
-
         try:
             json_str = json.dumps(message, separators=(",", ":"))
             self.writer.write(json_str + "\n")
@@ -393,11 +390,7 @@ class BatchRequestHandler:
 
         for message in messages:
             try:
-                # Parse individual message
-                if isinstance(message, str):
-                    message = JSONRPCMessage.parse_request(message)
-
-                # Process request
+                # Process request (message is already dict[str, Any] from type annotation)
                 response = await handler_func(message)
 
                 # Only include responses for non-notifications

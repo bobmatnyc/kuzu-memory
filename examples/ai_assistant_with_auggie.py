@@ -20,7 +20,14 @@ from kuzu_memory.integrations.auggie import AuggieIntegration, AuggieRule, RuleT
 
 class AugmentedAIAssistant:
     """AI Assistant enhanced with KuzuMemory and Auggie rules."""
-    
+
+    # Type annotations for instance variables
+    user_id: str
+    db_path: Path
+    memory: Any  # KuzuMemory if available
+    auggie: Any  # AuggieIntegration if available
+    conversation_history: list[dict[str, Any]]
+
     def __init__(self, db_path: Path, user_id: str):
         """Initialize the augmented AI assistant."""
         self.user_id = user_id

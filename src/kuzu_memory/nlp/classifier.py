@@ -11,7 +11,11 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nltk.stem import PorterStemmer
+    from sklearn.pipeline import Pipeline
 
 try:
     import nltk
@@ -90,6 +94,13 @@ class MemoryClassifier:
     3. Intent detection for action-oriented memories
     4. Machine learning classification with confidence scoring
     """
+
+    # Type annotations for instance variables
+    initialized: bool
+    classifier: Optional[Pipeline]
+    stemmer: Optional[PorterStemmer]
+    sentiment_analyzer: Any  # SentimentIntensityAnalyzer if available
+    stop_words: set[str]
 
     def __init__(self, auto_download: bool = False) -> None:
         """

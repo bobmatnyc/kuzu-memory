@@ -67,6 +67,11 @@ class Colors:
 class ClaudeDesktopInstaller:
     """Installer for KuzuMemory MCP integration with Claude Desktop."""
 
+    # Type annotations for instance variables
+    config_path: Path
+    kuzu_command: Optional[str]
+    pipx_venv_path: Optional[Path]
+
     def __init__(
         self,
         backup_dir: Optional[Path] = None,

@@ -36,6 +36,13 @@ class GitSyncManager:
     - Commit deduplication
     """
 
+    # Type annotations for instance variables
+    repo_path: Path
+    config: GitSyncConfig
+    memory_store: Any
+    _repo: Any  # git.Repo if available
+    _git_available: bool
+
     def __init__(
         self,
         repo_path: str | Path,

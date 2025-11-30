@@ -479,7 +479,7 @@ class MCPProtocolHandler:
 
                     # Check if we should stop after processing
                     if not self.running:
-                        break
+                        break  # type: ignore[unreachable]  # self.running can be modified by signal handlers
 
             except asyncio.CancelledError:
                 break
