@@ -57,12 +57,14 @@ dev = [
     "pytest-timeout>=2.2.0",   # Test timeout management
     "pytest-mock>=3.10",
     "black>=23.0",
+    "build>=0.10",   # PEP 517 package building
     "isort>=5.12",
     "ruff>=0.1.0",
     "mypy>=1.0",
     "pre-commit>=3.0",
     "pytest-xdist>=3.0",  # Parallel test execution
     "towncrier>=23.11.0",  # Changelog fragment management
+    "twine>=4.0",    # PyPI package publishing
 ]
 test = [
     "pytest>=7.0",
