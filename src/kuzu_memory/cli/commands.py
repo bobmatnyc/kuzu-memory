@@ -282,7 +282,7 @@ def quickstart(ctx: click.Context, skip_demo: bool) -> None:
         db_path = get_project_db_path(project_root)
         if not db_path.exists():
             rich_print("Initializing KuzuMemory for this project...")
-            ctx.invoke(init, force=False, config_path=None)
+            ctx.invoke(init, force=False)
         else:
             rich_print("✅ Project already initialized!")
 
@@ -475,7 +475,7 @@ def demo(ctx: click.Context) -> None:
         time.sleep(0.5)
 
         try:
-            ctx.invoke(init, force=False, config_path=None)
+            ctx.invoke(init, force=False)
         except SystemExit:
             # Already initialized, that's fine
             rich_print("✅ Database already initialized!", style="green")

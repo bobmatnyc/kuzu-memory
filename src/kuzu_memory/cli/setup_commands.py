@@ -163,7 +163,7 @@ def setup(
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
                 try:
-                    ctx.invoke(init, force=force, config_path=None)
+                    ctx.invoke(init, force=force)
                 except SystemExit:
                     # init command may exit with code 1 if already exists
                     if not force:
