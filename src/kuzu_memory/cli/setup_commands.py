@@ -52,6 +52,11 @@ from .install_unified import _detect_installed_systems
     is_flag=True,
     help="Preview changes without modifying files",
 )
+@click.option(
+    "--with-git-hooks",
+    is_flag=True,
+    help="Install git post-commit hooks for auto-sync (requires git repo)",
+)
 @click.pass_context
 def setup(
     ctx: click.Context,
@@ -59,6 +64,7 @@ def setup(
     integration: str | None,
     force: bool,
     dry_run: bool,
+    with_git_hooks: bool,
 ) -> None:
     """
     🚀 Smart setup - Initialize and configure KuzuMemory (RECOMMENDED).
@@ -72,35 +78,40 @@ def setup(
       2. Initializes memory database (if needed)
       3. Auto-detects installed AI tools
       4. Installs/updates integrations intelligently
-      5. Verifies everything is working
+      5. Installs git hooks (if --with-git-hooks)
+      6. Verifies everything is working
 
     \b
     🚀 EXAMPLES:
       # Smart setup (recommended - auto-detects everything)
       kuzu-memory setup
 
+      # Setup with git hooks for auto-sync
+      kuzu-memory setup --with-git-hooks
+
+      # Setup for specific integration with git hooks
+      kuzu-memory setup --integration claude-code --with-git-hooks
+
       # Initialize only (skip AI tool installation)
       kuzu-memory setup --skip-install
 
-      # Setup for specific integration
-      kuzu-memory setup --integration claude-code
-
-      # Force reinstall everything
-      kuzu-memory setup --force
+      # Force reinstall everything including git hooks
+      kuzu-memory setup --force --with-git-hooks
 
       # Preview what would happen
-      kuzu-memory setup --dry-run
+      kuzu-memory setup --dry-run --with-git-hooks
 
     \b
     💡 TIP:
       For most users, just run 'kuzu-memory setup' with no arguments.
-      It will figure out what you need and do it automatically!
+      Add --with-git-hooks to enable automatic commit syncing.
 
     \b
     ⚙️  ADVANCED USAGE:
       If you need granular control, you can still use:
-      • kuzu-memory init              # Just initialize
-      • kuzu-memory install <tool>    # Just install integration
+      • kuzu-memory init                # Just initialize
+      • kuzu-memory install <tool>      # Just install integration
+      • kuzu-memory git install-hooks   # Just install git hooks
     """
     try:
         # ═══════════════════════════════════════════════════════════
@@ -256,6 +267,32 @@ def setup(
                         )
 
         # ═══════════════════════════════════════════════════════════
+        # PHASE 2.5: GIT HOOKS INSTALLATION
+        # ═══════════════════════════════════════════════════════════
+
+        git_hooks_installed = False
+        git_repo_detected = _detect_git_repository(project_root)
+
+        if with_git_hooks:
+            if not git_repo_detected:
+                rich_print(
+                    "\n⚠️  Git hooks requested but no git repository detected",
+                    style="yellow",
+                )
+                rich_print("   Skipping git hooks installation", style="dim")
+            else:
+                if dry_run:
+                    rich_print(
+                        "\n[DRY RUN] Would install git hooks for auto-sync",
+                        style="yellow",
+                    )
+                else:
+                    rich_print("\n🪝 Installing git hooks...", style="cyan")
+                    git_hooks_installed = _install_git_hooks(
+                        ctx, project_root, force=force
+                    )
+
+        # ═══════════════════════════════════════════════════════════
         # PHASE 3: VERIFICATION & COMPLETION
         # ═══════════════════════════════════════════════════════════
 
@@ -274,6 +311,12 @@ def setup(
             if skip_install:
                 next_steps.append("• Install AI tool: kuzu-memory install <integration>")
 
+            # Add git hooks status to next steps
+            if with_git_hooks and git_hooks_installed:
+                next_steps.append("✅ Git hooks installed - commits will auto-sync to memory")
+            elif not with_git_hooks and git_repo_detected:
+                next_steps.append("💡 Enable auto-sync: kuzu-memory git install-hooks")
+
             next_steps.extend(
                 [
                     "• Store your first memory: kuzu-memory memory store 'Important info'",
@@ -282,11 +325,20 @@ def setup(
                 ]
             )
 
+            # Determine git hooks status message
+            if git_hooks_installed:
+                git_hooks_status = "✅ Installed"
+            elif with_git_hooks and not git_repo_detected:
+                git_hooks_status = "⚠️ Not installed (no git repo)"
+            else:
+                git_hooks_status = "❌ Not installed"
+
             rich_panel(
                 "Setup Complete! 🎉\n\n"
                 f"📁 Project: {project_root}\n"
                 f"🗄️  Database: {db_path}\n"
-                f"📂 Memories: {memories_dir}\n\n"
+                f"📂 Memories: {memories_dir}\n"
+                f"🪝 Git Hooks: {git_hooks_status}\n\n"
                 "Next steps:\n" + "\n".join(next_steps),
                 title="✅ KuzuMemory Ready",
                 style="green",
@@ -334,6 +386,93 @@ def _install_integration(
         rich_print(f"⚠️  Installation warning: {e}", style="yellow")
         rich_print("   You can manually install later with:", style="dim")
         rich_print(f"   kuzu-memory install {integration_name}", style="dim")
+
+
+def _detect_git_repository(project_root: Path) -> bool:
+    """
+    Check if project_root is in a git repository.
+
+    Searches up to 5 parent directories for .git directory.
+
+    Args:
+        project_root: Project root directory to start search
+
+    Returns:
+        True if git repository detected, False otherwise
+    """
+    current = project_root
+    for _ in range(5):
+        if (current / ".git").exists():
+            return True
+        if current == current.parent:
+            break
+        current = current.parent
+    return False
+
+
+def _find_git_directory(project_root: Path) -> Path | None:
+    """
+    Find .git directory by searching up directory tree.
+
+    Searches up to 5 parent directories for .git directory.
+
+    Args:
+        project_root: Project root directory to start search
+
+    Returns:
+        Path to .git directory if found, None otherwise
+    """
+    current = project_root
+    for _ in range(5):
+        git_dir = current / ".git"
+        if git_dir.exists():
+            return git_dir
+        if current == current.parent:
+            break
+        current = current.parent
+    return None
+
+
+def _install_git_hooks(
+    ctx: click.Context, project_root: Path, force: bool = False
+) -> bool:
+    """
+    Install git post-commit hooks for automatic sync.
+
+    Delegates to the existing git install-hooks command.
+
+    Args:
+        ctx: Click context
+        project_root: Project root directory
+        force: Force overwrite existing hooks
+
+    Returns:
+        True if hooks installed successfully, False otherwise
+    """
+    try:
+        # Delegate to git install-hooks command
+        from .git_commands import install_hooks as git_install_hooks_cmd
+
+        ctx.invoke(git_install_hooks_cmd, force=force)
+        rich_print("✅ Git hooks installed successfully", style="green")
+        return True
+
+    except SystemExit as e:
+        if e.code != 0:
+            rich_print("⚠️  Git hooks installation failed", style="yellow")
+            rich_print(
+                "   You can install manually: kuzu-memory git install-hooks",
+                style="dim",
+            )
+        return False
+
+    except Exception as e:
+        rich_print(f"⚠️  Git hooks warning: {e}", style="yellow")
+        rich_print(
+            "   You can install manually: kuzu-memory git install-hooks",
+            style="dim",
+        )
+        return False
 
 
 __all__ = ["setup"]
