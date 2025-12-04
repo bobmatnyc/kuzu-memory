@@ -47,6 +47,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.5.4] - 2025-12-04
+
+### Fixed
+- **Git Sync State Update Bug**: Fixed critical issue where git sync state was not updating when all commits were duplicates
+  - State update now occurs even when all commits are duplicates (425b23b)
+  - Prevents infinite re-checking of the same commits
+  - Ensures `last_commit_sha` tracks last processed commit correctly
+  - Fixes stuck state at `null` after initial sync completion
+
 ## [1.5.3] - 2025-11-30
 
 ### Changed
@@ -962,7 +971,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.0...v1.5.1
