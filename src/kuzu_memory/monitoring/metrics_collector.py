@@ -101,9 +101,7 @@ class MetricsCollector:
 
         # Calculate combined cache statistics
         if cache_metrics:
-            cache_metrics["combined"] = await self._calculate_combined_cache_stats(
-                cache_metrics
-            )
+            cache_metrics["combined"] = await self._calculate_combined_cache_stats(cache_metrics)
 
         return cache_metrics
 
@@ -130,9 +128,7 @@ class MetricsCollector:
             "total_misses": 0,
             "combined_hit_rate": 0.0,
             "cache_types": (
-                len(cache_metrics) - 1
-                if "combined" in cache_metrics
-                else len(cache_metrics)
+                len(cache_metrics) - 1 if "combined" in cache_metrics else len(cache_metrics)
             ),
         }
 
@@ -172,25 +168,17 @@ class MetricsCollector:
         performance = metrics.get("performance", {})
         if "violations" in performance:
             violations = performance["violations"]
-            critical_violations = [
-                v for v in violations if v.get("severity") == "critical"
-            ]
-            warning_violations = [
-                v for v in violations if v.get("severity") == "warning"
-            ]
+            critical_violations = [v for v in violations if v.get("severity") == "critical"]
+            warning_violations = [v for v in violations if v.get("severity") == "warning"]
 
             if critical_violations:
                 health["status"] = "unhealthy"
                 health["score"] -= len(critical_violations) * 30
-                health["issues"].extend(
-                    [f"Critical: {v['metric']}" for v in critical_violations]
-                )
+                health["issues"].extend([f"Critical: {v['metric']}" for v in critical_violations])
 
             if warning_violations:
                 health["score"] -= len(warning_violations) * 10
-                health["issues"].extend(
-                    [f"Warning: {v['metric']}" for v in warning_violations]
-                )
+                health["issues"].extend([f"Warning: {v['metric']}" for v in warning_violations])
 
         # Check cache health
         cache = metrics.get("cache", {})
@@ -201,9 +189,7 @@ class MetricsCollector:
             health["status"] = "degraded"
             health["score"] -= 20
             health["issues"].append("Low cache hit rate")
-            health["recommendations"].append(
-                "Consider increasing cache size or adjusting TTL"
-            )
+            health["recommendations"].append("Consider increasing cache size or adjusting TTL")
 
         # Check database health
         database = metrics.get("database", {})
@@ -257,7 +243,9 @@ class MetricsCollector:
                 "efficiency": (
                     "high"
                     if memory_hit_rate > 0.8
-                    else "medium" if memory_hit_rate > 0.5 else "low"
+                    else "medium"
+                    if memory_hit_rate > 0.5
+                    else "low"
                 ),
                 "total_size": memory_cache.get("memory_cache", {}).get("size", 0),
             }
@@ -277,7 +265,9 @@ class MetricsCollector:
                 "efficiency": (
                     "high"
                     if embeddings_hit_rate > 0.8
-                    else "medium" if embeddings_hit_rate > 0.5 else "low"
+                    else "medium"
+                    if embeddings_hit_rate > 0.5
+                    else "low"
                 ),
                 "estimated_memory_mb": embeddings_cache.get("estimated_memory_mb", 0),
             }
@@ -353,6 +343,4 @@ class MetricsCollector:
             }
 
         # Export in requested format
-        return await self.performance_monitor.export_metrics(
-            format_type, data=all_metrics
-        )
+        return await self.performance_monitor.export_metrics(format_type, data=all_metrics)

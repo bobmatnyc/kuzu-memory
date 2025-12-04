@@ -88,9 +88,7 @@ class BaseService(ABC):
             >>> service.initialize()  # Second call is no-op
         """
         if self._initialized:
-            self.logger.debug(
-                f"{self.__class__.__name__} already initialized, skipping"
-            )
+            self.logger.debug(f"{self.__class__.__name__} already initialized, skipping")
             return
 
         try:
@@ -141,9 +139,7 @@ class BaseService(ABC):
             >>> service.cleanup()  # No-op
         """
         if not self._initialized:
-            self.logger.debug(
-                f"{self.__class__.__name__} not initialized, skipping cleanup"
-            )
+            self.logger.debug(f"{self.__class__.__name__} not initialized, skipping cleanup")
             return
 
         try:

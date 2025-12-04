@@ -67,9 +67,7 @@ class SetupService(BaseService):
 
         self._project_root = self._config_service.get_project_root()
 
-        self.logger.info(
-            f"SetupService initialized with project_root={self._project_root}"
-        )
+        self.logger.info(f"SetupService initialized with project_root={self._project_root}")
 
     def _do_cleanup(self) -> None:
         """Clean up setup resources."""
@@ -171,9 +169,7 @@ class SetupService(BaseService):
             root = self.project_root
 
             # Create project memories structure
-            result = project_setup.create_project_memories_structure(
-                project_root=root, force=force
-            )
+            result = project_setup.create_project_memories_structure(project_root=root, force=force)
 
             # Build response
             success = result.get("created", False) or result.get("existed", False)
@@ -183,15 +179,10 @@ class SetupService(BaseService):
             if result.get("created"):
                 steps_completed.append("Created project memories structure")
                 steps_completed.extend(
-                    [
-                        f"Created: {Path(f).name}"
-                        for f in result.get("files_created", [])
-                    ]
+                    [f"Created: {Path(f).name}" for f in result.get("files_created", [])]
                 )
             elif result.get("existed"):
-                warnings.append(
-                    "Project already initialized (use force=True to reinitialize)"
-                )
+                warnings.append("Project already initialized (use force=True to reinitialize)")
             else:
                 warnings.append("Project structure creation skipped")
 
@@ -299,9 +290,7 @@ class SetupService(BaseService):
             # Check if it's a git repository
             if not project_setup.is_git_repository(root):
                 issues.append("Not a git repository")
-                suggestions.append(
-                    "Initialize git repository for version control: 'git init'"
-                )
+                suggestions.append("Initialize git repository for version control: 'git init'")
 
             valid = len(issues) == 0
 
@@ -352,16 +341,12 @@ class SetupService(BaseService):
                 project_root=project_root, force=False
             )
 
-            success: bool = bool(
-                result.get("created", False) or result.get("existed", False)
-            )
+            success: bool = bool(result.get("created", False) or result.get("existed", False))
 
             if success:
                 self.logger.info(f"Project structure ensured at {project_root}")
             else:
-                self.logger.warning(
-                    f"Could not ensure project structure at {project_root}"
-                )
+                self.logger.warning(f"Could not ensure project structure at {project_root}")
 
             return success
 
@@ -413,9 +398,7 @@ class SetupService(BaseService):
 
             # Check directory exists
             if not memories_dir.exists():
-                self.logger.warning(
-                    f"Memories directory does not exist: {memories_dir}"
-                )
+                self.logger.warning(f"Memories directory does not exist: {memories_dir}")
                 return False
 
             # Check database exists

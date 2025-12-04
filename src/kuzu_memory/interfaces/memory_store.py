@@ -116,9 +116,7 @@ class IMemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def get_recent_memories(
-        self, limit: int = 10, hours_back: int = 24
-    ) -> list[Memory]:
+    async def get_recent_memories(self, limit: int = 10, hours_back: int = 24) -> list[Memory]:
         """
         Get recently created or accessed memories.
 

@@ -48,9 +48,7 @@ class TestGitUserProvider:
         with patch.object(
             GitUserProvider,
             "_run_git_command",
-            side_effect=lambda args, cwd=None: (
-                None if "user.email" in args else "John Doe"
-            ),
+            side_effect=lambda args, cwd=None: (None if "user.email" in args else "John Doe"),
         ):
             user_info = GitUserProvider.get_git_user_info()
 
@@ -63,9 +61,7 @@ class TestGitUserProvider:
         """Test fallback to system username when git is not configured."""
         with (
             patch.object(GitUserProvider, "_run_git_command", return_value=None),
-            patch(
-                "kuzu_memory.utils.git_user.getpass.getuser", return_value="testuser"
-            ),
+            patch("kuzu_memory.utils.git_user.getpass.getuser", return_value="testuser"),
         ):
             user_info = GitUserProvider.get_git_user_info()
 
@@ -99,9 +95,7 @@ class TestGitUserProvider:
                 return "cached@example.com"
             return "Cached User"
 
-        with patch.object(
-            GitUserProvider, "_run_git_command", side_effect=mock_run_git_command
-        ):
+        with patch.object(GitUserProvider, "_run_git_command", side_effect=mock_run_git_command):
             # First call
             user_info1 = GitUserProvider.get_git_user_info()
             first_call_count = call_count
@@ -112,9 +106,7 @@ class TestGitUserProvider:
 
             assert user_info1.user_id == user_info2.user_id
             assert first_call_count == 2  # email + name
-            assert (
-                second_call_count == 2
-            )  # No new calls, cache used (call_count unchanged)
+            assert second_call_count == 2  # No new calls, cache used (call_count unchanged)
 
     def test_clear_cache(self):
         """Test cache clearing functionality."""
@@ -370,16 +362,12 @@ class TestGitSyncUserTagging:
         mock_commit.committer.email = "jane@example.com"
         mock_commit.committed_datetime = MagicMock()
         mock_commit.committed_datetime.replace = MagicMock(
-            return_value=MagicMock(
-                isoformat=MagicMock(return_value="2025-01-01T00:00:00")
-            )
+            return_value=MagicMock(isoformat=MagicMock(return_value="2025-01-01T00:00:00"))
         )
         mock_commit.tree.traverse = MagicMock(return_value=[])
 
         config = GitSyncConfig()
-        git_sync = GitSyncManager(
-            repo_path=Path.cwd(), config=config, memory_store=None
-        )
+        git_sync = GitSyncManager(repo_path=Path.cwd(), config=config, memory_store=None)
 
         # Mock _get_changed_files to avoid actual git operations
         git_sync._get_changed_files = MagicMock(return_value=["file1.py", "file2.py"])

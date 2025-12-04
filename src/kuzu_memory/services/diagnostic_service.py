@@ -87,9 +87,7 @@ class DiagnosticService(BaseService):
         if self._memory_service and not self._memory_service.is_initialized:
             self._memory_service.initialize()
 
-        self.logger.info(
-            f"DiagnosticService initialized with project_root={project_root}"
-        )
+        self.logger.info(f"DiagnosticService initialized with project_root={project_root}")
 
     def _do_cleanup(self) -> None:
         """Clean up diagnostic resources."""
@@ -285,9 +283,7 @@ class DiagnosticService(BaseService):
         self._check_initialized()
 
         # Use health checker for database health
-        health_result = await self.health_checker.check_health(
-            detailed=False, retry=False
-        )
+        health_result = await self.health_checker.check_health(detailed=False, retry=False)
 
         db_component = next(
             (c for c in health_result.health.components if c.name == "database"),
@@ -356,9 +352,7 @@ class DiagnosticService(BaseService):
         self._check_initialized()
 
         # Check MCP server health using health checker
-        health_result = await self.health_checker.check_health(
-            detailed=False, retry=False
-        )
+        health_result = await self.health_checker.check_health(detailed=False, retry=False)
 
         protocol_component = next(
             (c for c in health_result.health.components if c.name == "protocol"),
@@ -369,14 +363,10 @@ class DiagnosticService(BaseService):
         if protocol_component and protocol_component.error:
             issues.append(protocol_component.error)
 
-        configured = (
-            protocol_component is not None
-            and protocol_component.status.value
-            in [
-                "healthy",
-                "degraded",
-            ]
-        )
+        configured = protocol_component is not None and protocol_component.status.value in [
+            "healthy",
+            "degraded",
+        ]
         config_valid = configured  # If protocol works, config is valid
 
         project_root = self._config_service.get_project_root()
@@ -564,9 +554,7 @@ class DiagnosticService(BaseService):
 
         suggestions = []
         if missing:
-            suggestions.append(
-                f"Install missing packages: pip install {' '.join(missing)}"
-            )
+            suggestions.append(f"Install missing packages: pip install {' '.join(missing)}")
 
         all_satisfied = len(missing) == 0
 
@@ -665,9 +653,7 @@ class DiagnosticService(BaseService):
         lines.append("-" * 70)
         mcp = results.get("mcp_server", {})
         mcp_configured = mcp.get("configured", False)
-        lines.append(
-            f"Status: {'✓ Configured' if mcp_configured else '✗ Not Configured'}"
-        )
+        lines.append(f"Status: {'✓ Configured' if mcp_configured else '✗ Not Configured'}")
         lines.append(f"Config Valid: {mcp.get('config_valid', False)}")
         lines.append(f"Server Path: {mcp.get('server_path', 'N/A')}")
         if mcp.get("issues"):
@@ -706,9 +692,7 @@ class DiagnosticService(BaseService):
         lines.append("-" * 70)
         deps = results.get("dependencies", {})
         deps_satisfied = deps.get("all_satisfied", False)
-        lines.append(
-            f"Status: {'✓ All Satisfied' if deps_satisfied else '✗ Issues Found'}"
-        )
+        lines.append(f"Status: {'✓ All Satisfied' if deps_satisfied else '✗ Issues Found'}")
         if deps.get("missing"):
             lines.append("\nMissing:")
             for dep in deps["missing"]:
