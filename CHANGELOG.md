@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- towncrier release notes start -->
+
+## [1.6.0] - 2025-12-04
+
 ### Added
 - **Setup Command Enhancement**: Added `--with-git-hooks` flag for unified installation
   - `kuzu-memory setup --with-git-hooks` - Install MCP integration AND git hooks in one command
@@ -17,45 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dry-run support for preview mode
   - 25 comprehensive unit tests (all passing)
   - Helper functions: `_detect_git_repository()`, `_find_git_directory()`, `_install_git_hooks()`
-
-- **Update Command**: Check for and install PyPI updates
-  - `kuzu-memory update` - Interactive upgrade with confirmation
-  - `kuzu-memory update --check-only` - Check without upgrading
-  - Silent mode for cron jobs (`--quiet`)
-  - JSON output for automation (`--format json`)
-  - Pre-release support (`--pre`)
-  - Exit codes for scripting (0=current, 2=available, 1=error)
-  - PyPI integration with proper semantic version comparison
-  - Response time: < 0.5s
-
-- **Doctor Command Enhancements**: Selective diagnostics execution
-  - `--hooks/--no-hooks` flag to skip hooks checks (saves ~1.6s)
-  - `--server-lifecycle/--no-server-lifecycle` to skip server tests (saves ~3.0s)
-  - Core-only mode runs in ~0.25s vs full diagnostics ~4.5s
-  - 12 new hooks diagnostic checks
-  - 7 new server lifecycle checks
-  - Total 29 diagnostic checks
-
-- **Diagnostics Reference Documentation**: Complete reference guide
-  - Comprehensive documentation for all 29 checks
-  - Severity levels and auto-fix capabilities documented
-  - Performance benchmarks included
-  - CI/CD integration examples (GitHub Actions, cron, Docker)
-  - File: `docs/diagnostics-reference.md` (1382 lines)
-
-- **Repair Command**: New `kuzu-memory repair` command for manual MCP config repair
-  - Auto-detects all installed frameworks in a project
-  - Fixes broken `["mcp", "serve"]` args to correct `["mcp"]` format
-  - Works across all detected systems (Claude Code, Desktop, Cursor, VSCode, etc.)
-  - Provides verbose output for detailed repair information
-  - Complements automatic repair on CLI invocation
-
-### Changed
-- Added `packaging>=20.0` dependency for semantic version comparison in update checker
-- Enhanced CLI reference documentation with doctor command examples
-- Updated troubleshooting guide with update command issues
-
-<!-- towncrier release notes start -->
 
 ## [1.5.4] - 2025-12-04
 
@@ -981,7 +946,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.4...v1.6.0
 [1.5.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.5.1...v1.5.2
