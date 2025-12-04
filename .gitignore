@@ -185,6 +185,11 @@ Thumbs.db
 
 # Log files
 *.log
+*_output.log
+*_verification.log
+mypy_final_verification.log
+pre_publish_output.log
+test_output.log
 
 # Configuration files with sensitive data
 config.local.yaml
