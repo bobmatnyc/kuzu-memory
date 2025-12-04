@@ -109,7 +109,9 @@ class TestDeduplicationEngine:
         best_match = duplicates[0]
         assert best_match[1] >= 0.75  # Adjusted to realistic threshold
 
-    def test_normalized_similarity_with_punctuation(self, dedup_engine, sample_memories):
+    def test_normalized_similarity_with_punctuation(
+        self, dedup_engine, sample_memories
+    ):
         """Test that normalized similarity ignores punctuation differences."""
         new_content = "My name is Alice Johnson, and I work at TechCorp!"
 
@@ -143,7 +145,9 @@ class TestDeduplicationEngine:
         assert len(semantic_matches) > 0
         assert semantic_matches[0][1] >= 0.50  # Adjusted to realistic threshold
 
-    def test_semantic_similarity_different_structure(self, dedup_engine, sample_memories):
+    def test_semantic_similarity_different_structure(
+        self, dedup_engine, sample_memories
+    ):
         """Test semantic similarity with different sentence structure."""
         new_content = "TechCorp employs Alice Johnson in their development team."
 
@@ -156,7 +160,9 @@ class TestDeduplicationEngine:
 
     def test_semantic_similarity_partial_overlap(self, dedup_engine, sample_memories):
         """Test semantic similarity with partial token overlap."""
-        new_content = "I prefer Python programming language for backend development work."
+        new_content = (
+            "I prefer Python programming language for backend development work."
+        )
 
         duplicates = dedup_engine.find_duplicates(new_content, sample_memories)
 
@@ -267,7 +273,9 @@ class TestDeduplicationEngine:
         content = "My name is Alice Johnson and I work at TechCorp."
 
         # Filter by semantic type (facts/knowledge)
-        duplicates = dedup_engine.find_duplicates(content, sample_memories, MemoryType.SEMANTIC)
+        duplicates = dedup_engine.find_duplicates(
+            content, sample_memories, MemoryType.SEMANTIC
+        )
 
         # Should only find semantic memories
         for memory, _score, _match_type in duplicates:
@@ -278,7 +286,9 @@ class TestDeduplicationEngine:
         content = "My name is Alice Johnson and I work at TechCorp."
 
         # Filter by working type (shouldn't match semantic content)
-        duplicates = dedup_engine.find_duplicates(content, sample_memories, MemoryType.WORKING)
+        duplicates = dedup_engine.find_duplicates(
+            content, sample_memories, MemoryType.WORKING
+        )
 
         # Should find no matches in status memories
         assert len(duplicates) == 0
@@ -311,7 +321,9 @@ class TestDeduplicationEngine:
         duplicates = dedup_engine.find_duplicates(short_content, sample_memories)
 
         # Should not perform similarity checks on very short content
-        similarity_matches = [d for d in duplicates if d[2] in ["normalized", "semantic"]]
+        similarity_matches = [
+            d for d in duplicates if d[2] in ["normalized", "semantic"]
+        ]
         assert len(similarity_matches) == 0
 
     # Test Edge Cases and Error Handling

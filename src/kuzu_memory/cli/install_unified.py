@@ -137,14 +137,18 @@ def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None
             f"\n{i}. {status_icon} {system.name} ({system.health_status})",
             style=status_color,
         )
-        rich_print(f"   Files: {len(system.files_present)}/{system.details['total_files']}")
+        rich_print(
+            f"   Files: {len(system.files_present)}/{system.details['total_files']}"
+        )
         rich_print(f"   {mcp_status}")
 
     # Auto-select first detected system for repair/reinstall
     selected_system = installed_systems[0].name
 
     if len(installed_systems) == 1:
-        rich_print(f"\n🔄 Auto-selected: {selected_system} (reinstall/repair)", style="cyan")
+        rich_print(
+            f"\n🔄 Auto-selected: {selected_system} (reinstall/repair)", style="cyan"
+        )
     else:
         rich_print(
             f"\n🔄 Auto-selected: {selected_system} (first detected system)",
@@ -159,8 +163,12 @@ def _show_detection_menu(installed_systems: list[InstalledSystem]) -> str | None
 
 
 @click.command(name="install")
-@click.argument("integration", type=click.Choice(AVAILABLE_INTEGRATIONS), required=False)
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.argument(
+    "integration", type=click.Choice(AVAILABLE_INTEGRATIONS), required=False
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--force", is_flag=True, help="Force reinstall")
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
@@ -318,7 +326,9 @@ def install_command(
 
 @click.command(name="uninstall")
 @click.argument("integration", type=click.Choice(AVAILABLE_INTEGRATIONS))
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 def uninstall_command(
     integration: str,
@@ -375,7 +385,9 @@ def uninstall_command(
 
         # Show results
         if result.success:
-            rich_panel(result.message, title="✅ Uninstallation Complete", style="green")
+            rich_panel(
+                result.message, title="✅ Uninstallation Complete", style="green"
+            )
         else:
             rich_print(f"❌ {result.message}", style="red")
             if result.warnings:
@@ -394,7 +406,9 @@ def uninstall_command(
 
 @click.command(name="remove", hidden=True)
 @click.argument("integration", type=click.Choice(AVAILABLE_INTEGRATIONS))
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 def remove_command(
     integration: str,
@@ -412,7 +426,9 @@ def remove_command(
 
 
 @click.command(name="repair")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 def repair_command(
     project_root: str | None,
@@ -457,7 +473,9 @@ def repair_command(
             sys.exit(0)
 
         # Show detected systems
-        rich_print(f"\n✓ Found {len(detected_systems)} installed system(s):", style="green")
+        rich_print(
+            f"\n✓ Found {len(detected_systems)} installed system(s):", style="green"
+        )
         for system in detected_systems:
             rich_print(f"  • {system.name}", style="cyan")
 

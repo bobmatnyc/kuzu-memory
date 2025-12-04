@@ -119,7 +119,9 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # limit should be integer, not string
-            response = await client.call_tool("recall", {"query": "test", "limit": "five"})
+            response = await client.call_tool(
+                "recall", {"query": "test", "limit": "five"}
+            )
 
             assert response is not None
             # Should handle type error gracefully
@@ -204,7 +206,9 @@ class TestToolExecutionFailures:
             await client.initialize()
 
             # Special characters in query
-            response = await client.call_tool("recall", {"query": "!@#$%^&*()", "limit": 5})
+            response = await client.call_tool(
+                "recall", {"query": "!@#$%^&*()", "limit": 5}
+            )
 
             assert response is not None
             assert "result" in response or "error" in response

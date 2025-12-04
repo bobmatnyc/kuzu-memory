@@ -293,7 +293,9 @@ class TestConcurrentSessions:
             assert connected_count >= 3
 
             # Load test
-            results = await concurrent_sim.load_test(requests_per_client=requests_per_client)
+            results = await concurrent_sim.load_test(
+                requests_per_client=requests_per_client
+            )
 
             # Verify load handling
             assert results["total_requests"] >= requests_per_client * 3
@@ -475,7 +477,8 @@ class TestSessionCleanup:
         """Test cleanup of multiple sessions."""
         num_sessions = 3
         clients = [
-            MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_sessions)
+            MCPClientSimulator(project_root=project_root, timeout=10.0)
+            for _ in range(num_sessions)
         ]
 
         try:

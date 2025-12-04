@@ -149,7 +149,9 @@ def setup(
         already_initialized = db_path.exists()
 
         if already_initialized:
-            rich_print(f"✅ Memory database already initialized: {db_path}", style="dim")
+            rich_print(
+                f"✅ Memory database already initialized: {db_path}", style="dim"
+            )
             if force:
                 rich_print("   Force flag set - will reinitialize", style="yellow")
         else:
@@ -158,7 +160,9 @@ def setup(
         # Initialize or update database
         if not already_initialized or force:
             if dry_run:
-                rich_print("\n[DRY RUN] Would initialize memory database at:", style="yellow")
+                rich_print(
+                    "\n[DRY RUN] Would initialize memory database at:", style="yellow"
+                )
                 rich_print(f"  {db_path}", style="dim")
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
@@ -167,14 +171,18 @@ def setup(
                 except SystemExit:
                     # init command may exit with code 1 if already exists
                     if not force:
-                        rich_print("   Database already exists (use --force to overwrite)")
+                        rich_print(
+                            "   Database already exists (use --force to overwrite)"
+                        )
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2: AI TOOL DETECTION & INSTALLATION
         # ═══════════════════════════════════════════════════════════
 
         if skip_install:
-            rich_print("\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow")
+            rich_print(
+                "\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow"
+            )
         else:
             rich_print("\n🔍 Detecting installed AI tools...", style="cyan")
 
@@ -190,11 +198,11 @@ def setup(
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️"
-                        if system.health_status == "needs_repair"
-                        else "❌"
+                        else "⚠️" if system.health_status == "needs_repair" else "❌"
                     )
-                    rich_print(f"   {status_icon} {system.name}: {system.health_status}")
+                    rich_print(
+                        f"   {status_icon} {system.name}: {system.health_status}"
+                    )
 
                 # If integration specified, use it; otherwise use first detected
                 target_integration = integration or installed_systems[0].name
@@ -218,7 +226,9 @@ def setup(
                             f"\n⚙️  {action} {target_integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(ctx, target_integration, project_root, force=True)
+                        _install_integration(
+                            ctx, target_integration, project_root, force=True
+                        )
                 else:
                     rich_print(
                         f"\n✅ {target_integration} integration is up to date",
@@ -241,7 +251,9 @@ def setup(
                             f"\n⚙️  Installing {integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(ctx, integration, project_root, force=force)
+                        _install_integration(
+                            ctx, integration, project_root, force=force
+                        )
                 else:
                     # Auto-detect which tool user is likely using
                     rich_print(
@@ -309,11 +321,15 @@ def setup(
             next_steps = []
 
             if skip_install:
-                next_steps.append("• Install AI tool: kuzu-memory install <integration>")
+                next_steps.append(
+                    "• Install AI tool: kuzu-memory install <integration>"
+                )
 
             # Add git hooks status to next steps
             if with_git_hooks and git_hooks_installed:
-                next_steps.append("✅ Git hooks installed - commits will auto-sync to memory")
+                next_steps.append(
+                    "✅ Git hooks installed - commits will auto-sync to memory"
+                )
             elif not with_git_hooks and git_repo_detected:
                 next_steps.append("💡 Enable auto-sync: kuzu-memory git install-hooks")
 

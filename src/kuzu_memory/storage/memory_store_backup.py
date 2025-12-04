@@ -165,7 +165,10 @@ class MemoryStore:
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
             max_time = self.config.performance.max_generation_time_ms
 
-            if self.config.performance.enable_performance_monitoring and execution_time > max_time:
+            if (
+                self.config.performance.enable_performance_monitoring
+                and execution_time > max_time
+            ):
                 raise PerformanceThresholdError(
                     "generate_memories", execution_time / 1000, max_time / 1000
                 )
@@ -173,7 +176,9 @@ class MemoryStore:
             # Update statistics
             self._storage_stats["memories_stored"] += len(stored_memory_ids)
 
-            logger.info(f"Generated {len(stored_memory_ids)} memories in {execution_time:.1f}ms")
+            logger.info(
+                f"Generated {len(stored_memory_ids)} memories in {execution_time:.1f}ms"
+            )
 
             return stored_memory_ids
 
@@ -354,7 +359,9 @@ class MemoryStore:
                 agent_id=existing_memory.agent_id,
                 user_id=existing_memory.user_id,
                 session_id=existing_memory.session_id,
-                entities=list(set(existing_memory.entities + extracted_memory.entities)),
+                entities=list(
+                    set(existing_memory.entities + extracted_memory.entities)
+                ),
                 metadata={
                     **existing_memory.metadata,
                     **metadata,
@@ -420,7 +427,9 @@ class MemoryStore:
             logger.error(f"Failed to store new memory: {e}")
             return None
 
-    def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
+    def _store_memory_in_database(
+        self, memory: Memory, is_update: bool = False
+    ) -> None:
         """Store or update memory in the database."""
         try:
             memory_data = memory.to_dict()
@@ -499,13 +508,17 @@ class MemoryStore:
                     continue  # Skip unknown entity type
 
                 # Check if entity exists
-                check_query = "MATCH (e:Entity {normalized_name: $normalized_name}) RETURN e.id"
+                check_query = (
+                    "MATCH (e:Entity {normalized_name: $normalized_name}) RETURN e.id"
+                )
                 existing = self.db_adapter.execute_query(
                     check_query, {"normalized_name": normalized_name}
                 )
 
                 current_time = datetime.now()
-                entity_id = f"entity_{hashlib.md5(normalized_name.encode()).hexdigest()[:8]}"
+                entity_id = (
+                    f"entity_{hashlib.md5(normalized_name.encode()).hexdigest()[:8]}"
+                )
 
                 if existing:
                     # Update existing entity
@@ -570,7 +583,9 @@ class MemoryStore:
                         "confidence": 0.9,  # Default confidence for extracted entities
                     }
 
-                    self.db_adapter.execute_query(create_mentions_query, mentions_params)
+                    self.db_adapter.execute_query(
+                        create_mentions_query, mentions_params
+                    )
 
         except Exception as e:
             logger.error(f"Failed to store entities for memory {memory.id}: {e}")

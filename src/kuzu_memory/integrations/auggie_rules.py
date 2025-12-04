@@ -69,13 +69,18 @@ class AuggieRule:
                 # Handle different condition types
                 if isinstance(condition_value, dict):
                     if "contains" in condition_value:
-                        if condition_value["contains"].lower() not in str(context_value).lower():
+                        if (
+                            condition_value["contains"].lower()
+                            not in str(context_value).lower()
+                        ):
                             return False
                     elif "equals" in condition_value:
                         if context_value != condition_value["equals"]:
                             return False
                     elif "greater_than" in condition_value:
-                        if float(context_value) <= float(condition_value["greater_than"]):
+                        if float(context_value) <= float(
+                            condition_value["greater_than"]
+                        ):
                             return False
                     elif "less_than" in condition_value:
                         if float(context_value) >= float(condition_value["less_than"]):
@@ -102,7 +107,9 @@ class AuggieRule:
 
             for action_type, action_config in self.actions.items():
                 if action_type == "add_context":
-                    modifications["added_context"] = modifications.get("added_context", [])
+                    modifications["added_context"] = modifications.get(
+                        "added_context", []
+                    )
                     modifications["added_context"].append(action_config)
 
                 elif action_type == "modify_prompt":
@@ -115,11 +122,15 @@ class AuggieRule:
                     modifications["memory_priority"] = action_config
 
                 elif action_type == "filter_memories":
-                    modifications["memory_filters"] = modifications.get("memory_filters", [])
+                    modifications["memory_filters"] = modifications.get(
+                        "memory_filters", []
+                    )
                     modifications["memory_filters"].append(action_config)
 
                 elif action_type == "learn_pattern":
-                    modifications["learning_triggers"] = modifications.get("learning_triggers", [])
+                    modifications["learning_triggers"] = modifications.get(
+                        "learning_triggers", []
+                    )
                     modifications["learning_triggers"].append(action_config)
 
             # Update success rate based on execution success
@@ -168,7 +179,9 @@ class AuggieRuleEngine:
                     "prompt_length": {"greater_than": 10},
                     "memories_available": {"greater_than": 0},
                 },
-                actions={"add_context": {"max_memories": 5, "relevance_threshold": 0.7}},
+                actions={
+                    "add_context": {"max_memories": 5, "relevance_threshold": 0.7}
+                },
             ),
             AuggieRule(
                 id="conversation_learning",
@@ -255,7 +268,9 @@ class AuggieRuleEngine:
                     if rule.rule_type in rule_types and rule.enabled
                 ]
             else:
-                applicable_rules = [rule for rule in self.rules.values() if rule.enabled]
+                applicable_rules = [
+                    rule for rule in self.rules.values() if rule.enabled
+                ]
 
             # Sort rules by priority
             applicable_rules.sort(key=lambda r: r.priority.value)
@@ -318,7 +333,8 @@ class AuggieRuleEngine:
             "disabled_rules": len([r for r in self.rules.values() if not r.enabled]),
             "total_executions": self.total_executions,
             "successful_executions": self.successful_executions,
-            "success_rate": (self.successful_executions / max(self.total_executions, 1)) * 100,
+            "success_rate": (self.successful_executions / max(self.total_executions, 1))
+            * 100,
             "rules_by_type": {},
             "rules_by_priority": {},
             "top_executed_rules": [],
@@ -344,7 +360,9 @@ class AuggieRuleEngine:
         stats["rules_by_priority"] = rules_by_priority
 
         # Top executed rules
-        sorted_rules = sorted(self.rules.values(), key=lambda r: r.execution_count, reverse=True)
+        sorted_rules = sorted(
+            self.rules.values(), key=lambda r: r.execution_count, reverse=True
+        )
 
         stats["top_executed_rules"] = [
             {
@@ -375,7 +393,9 @@ class AuggieRuleEngine:
         cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
         self.execution_history = [
-            record for record in self.execution_history if record["executed_at"] > cutoff_date
+            record
+            for record in self.execution_history
+            if record["executed_at"] > cutoff_date
         ]
 
         self.last_cleanup = datetime.now()
@@ -415,9 +435,13 @@ class AuggieRuleEngine:
             for _rule_id, rule_dict in rules_data.items():
                 # Convert strings back to datetime objects
                 if rule_dict["created_at"]:
-                    rule_dict["created_at"] = datetime.fromisoformat(rule_dict["created_at"])
+                    rule_dict["created_at"] = datetime.fromisoformat(
+                        rule_dict["created_at"]
+                    )
                 if rule_dict["last_executed"]:
-                    rule_dict["last_executed"] = datetime.fromisoformat(rule_dict["last_executed"])
+                    rule_dict["last_executed"] = datetime.fromisoformat(
+                        rule_dict["last_executed"]
+                    )
 
                 # Convert strings back to enums
                 rule_dict["rule_type"] = RuleType(rule_dict["rule_type"])
