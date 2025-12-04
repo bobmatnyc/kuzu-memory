@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Setup Command Enhancement**: Added `--with-git-hooks` flag for unified installation
+  - `kuzu-memory setup --with-git-hooks` - Install MCP integration AND git hooks in one command
+  - Automatic git repository detection (searches up 5 parent directories)
+  - Non-blocking installation (setup continues even if git hooks fail)
+  - Opt-in design (default behavior unchanged for backward compatibility)
+  - Clear user messaging for git hooks installation status
+  - Dry-run support for preview mode
+  - 25 comprehensive unit tests (all passing)
+  - Helper functions: `_detect_git_repository()`, `_find_git_directory()`, `_install_git_hooks()`
+
 - **Update Command**: Check for and install PyPI updates
   - `kuzu-memory update` - Interactive upgrade with confirmation
   - `kuzu-memory update --check-only` - Check without upgrading
