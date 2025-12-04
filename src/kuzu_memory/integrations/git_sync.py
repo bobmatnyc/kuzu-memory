@@ -576,19 +576,23 @@ class GitSyncManager:
                 result = self.store_commit_as_memory(commit)
                 if result is not None:
                     synced_count += 1
-                    last_commit_sha = commit.hexsha
-                    last_timestamp = commit.committed_datetime
                 else:
                     skipped_count += 1
+
+                # Always track last processed commit, even if duplicate
+                # This ensures state updates correctly on subsequent syncs
+                last_commit_sha = commit.hexsha
+                last_timestamp = commit.committed_datetime
 
             except Exception as e:
                 logger.error(f"Failed to sync commit {commit.hexsha[:8]}: {e}")
                 # Continue with other commits
 
-        # Update sync state
-        if synced_count > 0 and last_timestamp:
+        # Update sync state - always update if we processed commits, even if all were duplicates
+        if last_timestamp:
             self.config.last_sync_timestamp = last_timestamp.isoformat()
-            self.config.last_commit_sha = last_commit_sha
+            if last_commit_sha:  # Only update SHA if we processed commits
+                self.config.last_commit_sha = last_commit_sha
 
         return {
             "success": True,

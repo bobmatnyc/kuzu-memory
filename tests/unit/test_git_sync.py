@@ -457,5 +457,62 @@ class TestGitSyncIntegration:
 
             assert result["success"] is True
             assert result["commits_synced"] == 1  # Only new commit
-            # Memory store should be called once
-            assert mock_memory_store.store_memory.call_count == 1
+            # Memory store should be called once via batch_store_memories
+            assert mock_memory_store.batch_store_memories.call_count == 1
+
+    def test_sync_all_duplicates_updates_state(self, config, tmp_path, mock_memory_store):
+        """Test that state updates even when all commits are duplicates (bug fix for 1M-XXX)."""
+        # Set last sync timestamp
+        config.last_sync_timestamp = "2024-01-01T12:00:00"
+        config.last_commit_sha = None  # Simulate state where SHA was never set
+
+        with patch("kuzu_memory.integrations.git_sync.git", create=True) as mock_git:
+            # Setup mock repo
+            mock_repo = MagicMock()
+            mock_git.Repo.return_value = mock_repo
+
+            # Create a commit that will be marked as duplicate
+            duplicate_commit = Mock()
+            duplicate_commit.hexsha = "duplicate123"
+            duplicate_commit.message = "feat: commit that already exists"
+            duplicate_commit.committed_datetime = datetime(2024, 1, 2, 12, 0, 0)
+            duplicate_commit.parents = []
+            duplicate_commit.tree.traverse.return_value = [Mock(path="test.py")]
+            duplicate_commit.author = Mock()
+            duplicate_commit.author.name = "Test"
+            duplicate_commit.author.email = "test@example.com"
+            duplicate_commit.committer = Mock()
+            duplicate_commit.committer.name = "Test"
+            duplicate_commit.committer.email = "test@example.com"
+
+            # Setup branch
+            branch = Mock()
+            branch.name = "main"
+            mock_repo.branches = [branch]
+            mock_repo.iter_commits.return_value = [duplicate_commit]
+            mock_repo.active_branch.name = "main"
+
+            # Mock memory store to return duplicate (empty batch result)
+            mock_memory_store.batch_store_memories = Mock(return_value=[])  # Duplicate detection
+            # Mock get_recent_memories to simulate duplicate check
+            duplicate_memory = Mock()
+            duplicate_memory.metadata = {"commit_sha": "duplicate123"}
+            mock_memory_store.get_recent_memories = Mock(return_value=[duplicate_memory])
+
+            manager = GitSyncManager(
+                repo_path=tmp_path,
+                config=config,
+                memory_store=mock_memory_store,
+            )
+            manager._repo = mock_repo
+            manager._git_available = True
+
+            result = manager.sync(mode="incremental")
+
+            # Assertions
+            assert result["success"] is True
+            assert result["commits_synced"] == 0  # All duplicates
+            assert result["commits_skipped"] == 1  # One duplicate
+            # CRITICAL: State should be updated even though all commits were duplicates
+            assert config.last_commit_sha == "duplicate123"
+            assert config.last_sync_timestamp == "2024-01-02T12:00:00"
