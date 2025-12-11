@@ -291,6 +291,48 @@ def setup(
                     git_hooks_installed = _install_git_hooks(ctx, project_root, force=force)
 
         # ═══════════════════════════════════════════════════════════
+        # PHASE 2.75: VERIFY HOOKS INSTALLATION
+        # ═══════════════════════════════════════════════════════════
+
+        if not skip_install and not dry_run:
+            # Verify hooks were installed correctly
+            rich_print("\n🔍 Verifying hooks installation...", style="cyan")
+
+            try:
+                from ..services import ConfigService
+                from ..services.service_manager import ServiceManager
+                from .async_utils import run_async
+
+                config_service = ConfigService(project_root)
+                config_service.initialize()
+
+                with ServiceManager.diagnostic_service(config_service) as diagnostic:
+                    hooks_status = run_async(diagnostic.check_hooks_status(project_root))
+
+                    overall = hooks_status["overall_status"]
+                    if overall == "fully_configured":
+                        rich_print("  ✅ All hooks verified successfully", style="green")
+                    elif overall == "partially_configured":
+                        rich_print("  ⚠️  Hooks partially configured", style="yellow")
+
+                        # Show what's missing
+                        if not hooks_status["git_hooks"]["installed"] and git_repo_detected:
+                            rich_print(
+                                "    - Git hooks: Not installed (use --with-git-hooks)", style="dim"
+                            )
+                        if not hooks_status["claude_code_hooks"]["installed"]:
+                            rich_print(
+                                "    - Claude Code hooks: Not configured", style="dim"
+                            )
+                    else:
+                        rich_print("  ⚠️  Hooks verification failed", style="yellow")
+
+                config_service.cleanup()
+
+            except Exception as e:
+                rich_print(f"  ⚠️  Hooks verification skipped: {e}", style="dim")
+
+        # ═══════════════════════════════════════════════════════════
         # PHASE 3: VERIFICATION & COMPLETION
         # ═══════════════════════════════════════════════════════════
 

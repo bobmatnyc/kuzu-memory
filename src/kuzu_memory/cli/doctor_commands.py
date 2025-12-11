@@ -169,6 +169,13 @@ def diagnose(
         project_path = Path(project_root) if project_root else Path.cwd()
         diagnostics = MCPDiagnostics(project_root=project_path, verbose=verbose)
 
+        # Initialize config service for hooks check
+        from ..services import ConfigService
+
+        project_path = Path(project_root) if project_root else Path.cwd()
+        config_service = ConfigService(project_path)
+        config_service.initialize()
+
         # Run diagnostics
         report = asyncio.run(
             diagnostics.run_full_diagnostics(
@@ -178,13 +185,70 @@ def diagnose(
             )
         )
 
+        # Add hooks status to report if requested
+        hooks_status = None
+        if hooks:
+            try:
+                with ServiceManager.diagnostic_service(config_service) as diagnostic:
+                    hooks_status = run_async(diagnostic.check_hooks_status(project_path))
+            except Exception:
+                # Hooks check failed - continue without hooks status
+                pass
+
+        config_service.cleanup()
+
         # Generate output based on format
         if format == "json":
-            output_content = json.dumps(report.to_dict(), indent=2)
+            report_dict = report.to_dict()
+            if hooks_status:
+                report_dict["hooks_status"] = hooks_status
+            output_content = json.dumps(report_dict, indent=2)
         elif format == "html":
             output_content = diagnostics.generate_html_report(report)
         else:  # text
             output_content = diagnostics.generate_text_report(report)
+
+            # Append hooks status to text report if available
+            if hooks_status:
+                output_content += "\n\n" + "=" * 70
+                output_content += "\nHOOKS STATUS"
+                output_content += "\n" + "-" * 70
+
+                # Git hooks
+                git_hooks = hooks_status["git_hooks"]
+                git_installed = "✅ Installed" if git_hooks["installed"] else "❌ Not installed"
+                output_content += f"\nGit Hooks: {git_installed}"
+                if git_hooks.get("path"):
+                    output_content += f"\n  Path: {git_hooks['path']}"
+                if git_hooks.get("installed") and not git_hooks.get("executable", True):
+                    output_content += "\n  ⚠️  Not executable"
+
+                # Claude Code hooks
+                cc_hooks = hooks_status["claude_code_hooks"]
+                cc_installed = "✅ Configured" if cc_hooks["installed"] else "❌ Not configured"
+                output_content += f"\nClaude Code Hooks: {cc_installed}"
+                if cc_hooks.get("events"):
+                    events_str = ", ".join(cc_hooks["events"])
+                    output_content += f"\n  Events: {events_str}"
+                if cc_hooks.get("installed") and not cc_hooks.get("valid", True):
+                    output_content += "\n  ⚠️  Invalid configuration"
+
+                # Overall status
+                overall = hooks_status["overall_status"]
+                if overall == "fully_configured":
+                    output_content += "\n\n✅ All hooks configured"
+                elif overall == "partially_configured":
+                    output_content += "\n\n⚠️  Partially configured"
+                else:
+                    output_content += "\n\n❌ No hooks configured"
+
+                # Recommendations
+                if hooks_status.get("recommendations"):
+                    output_content += "\n\nRecommendations:"
+                    for rec in hooks_status["recommendations"]:
+                        output_content += f"\n  • {rec}"
+
+                output_content += "\n" + "=" * 70
 
         # Save to file if requested
         if output:
@@ -466,6 +530,138 @@ def connection(
 
     except Exception as e:
         rich_print(f"❌ Connection test error: {e}", style="red")
+        if ctx.obj.get("debug") or verbose:
+            raise
+        sys.exit(1)
+
+
+@doctor.command()
+@click.option("--verbose", "-v", is_flag=True, help="Show detailed configuration")
+@click.option("--fix", is_flag=True, help="Attempt to install missing hooks")
+@click.option("--project-root", type=click.Path(exists=True, path_type=Path), help="Project root")
+@click.pass_context
+def hooks(
+    ctx: click.Context, verbose: bool, fix: bool, project_root: Path | None
+) -> None:
+    """
+    Check hooks installation status.
+
+    Verifies installation and configuration of:
+    - Git post-commit hooks (.git/hooks/post-commit)
+    - Claude Code hooks (.claude/settings.local.json)
+
+    Use --verbose to show detailed hook configuration.
+    Use --fix to attempt automatic installation of missing hooks.
+    """
+    from ..services import ConfigService
+
+    try:
+        console = Console()
+
+        # Initialize config service
+        project_path = project_root or Path.cwd()
+        config_service = ConfigService(project_path)
+        config_service.initialize()
+
+        try:
+            # Use DiagnosticService for hooks status check
+            with ServiceManager.diagnostic_service(config_service) as diagnostic:
+                # Run async hooks status check using run_async bridge
+                result = run_async(diagnostic.check_hooks_status(project_path))
+
+                # Display results with rich formatting
+                console.print("\n[bold]🪝 Hooks Status[/bold]\n")
+
+                # Git hooks
+                git_hooks = result["git_hooks"]
+                if git_hooks["installed"]:
+                    git_status = "[green]✅ Installed[/green]"
+                    if verbose and git_hooks.get("path"):
+                        git_status += f"\n    Path: {git_hooks['path']}"
+                    if not git_hooks.get("executable", True):
+                        git_status += "\n    [yellow]⚠️  Not executable[/yellow]"
+                else:
+                    git_status = "[red]❌ Not installed[/red]"
+
+                console.print(f"  Git Hooks: {git_status}")
+
+                # Claude Code hooks
+                cc_hooks = result["claude_code_hooks"]
+                if cc_hooks["installed"]:
+                    cc_status = "[green]✅ Configured[/green]"
+                    if verbose and cc_hooks.get("events"):
+                        events_str = ", ".join(cc_hooks["events"])
+                        cc_status += f"\n    Events: {events_str}"
+                    if not cc_hooks.get("valid", True):
+                        cc_status += "\n    [yellow]⚠️  Invalid configuration[/yellow]"
+                else:
+                    cc_status = "[red]❌ Not configured[/red]"
+
+                console.print(f"  Claude Code Hooks: {cc_status}")
+
+                # Overall status
+                overall = result["overall_status"]
+                if overall == "fully_configured":
+                    console.print("\n[green]✅ All hooks configured[/green]")
+                elif overall == "partially_configured":
+                    console.print("\n[yellow]⚠️  Partially configured[/yellow]")
+                else:
+                    console.print("\n[red]❌ No hooks configured[/red]")
+
+                # Recommendations
+                if result.get("recommendations"):
+                    console.print("\n[yellow]💡 Recommendations:[/yellow]")
+                    for rec in result["recommendations"]:
+                        console.print(f"  → {rec}")
+
+                # Fix option
+                if fix and overall != "fully_configured":
+                    console.print("\n[bold]🔧 Attempting to install missing hooks...[/bold]")
+
+                    # Install git hooks if missing
+                    if not git_hooks["installed"]:
+                        try:
+                            from .git_commands import install_hooks as git_install_hooks_cmd
+
+                            console.print("  Installing git hooks...")
+                            ctx.invoke(git_install_hooks_cmd, force=False)
+                        except Exception as e:
+                            console.print(f"  [yellow]⚠️  Git hooks install failed: {e}[/yellow]")
+
+                    # Install Claude Code hooks if missing
+                    if not cc_hooks["installed"]:
+                        try:
+                            from .install_unified import install_command
+
+                            console.print("  Installing Claude Code hooks...")
+                            ctx.invoke(
+                                install_command,
+                                integration="claude-code",
+                                force=False,
+                                dry_run=False,
+                                verbose=False,
+                            )
+                        except Exception as e:
+                            console.print(
+                                f"  [yellow]⚠️  Claude Code hooks install failed: {e}[/yellow]"
+                            )
+
+                    console.print("\n[green]✅ Hook installation complete[/green]")
+                    console.print("Run 'kuzu-memory doctor hooks' again to verify")
+
+                # Exit with appropriate code
+                if overall == "fully_configured":
+                    sys.exit(0)
+                elif overall == "partially_configured":
+                    sys.exit(1)
+                else:
+                    sys.exit(2)
+
+        finally:
+            config_service.cleanup()
+
+    except Exception as e:
+        console.print(f"[red]❌ Hooks check failed: {e}[/red]")
         if ctx.obj.get("debug") or verbose:
             raise
         sys.exit(1)

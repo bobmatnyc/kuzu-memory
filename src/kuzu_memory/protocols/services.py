@@ -741,6 +741,53 @@ class IDiagnosticService(Protocol):
         """
         ...
 
+    async def check_hooks_status(self, project_root: Path | None = None) -> dict[str, Any]:
+        """
+        Check status of all hooks (git and Claude Code).
+
+        Verifies installation and configuration of:
+        - Git post-commit hooks (.git/hooks/post-commit)
+        - Claude Code hooks (.claude/settings.local.json)
+
+        Args:
+            project_root: Optional project root directory (uses config service default if None)
+
+        Returns:
+            dict with keys:
+            - git_hooks: dict with installed, executable, path
+            - claude_code_hooks: dict with installed, valid, events
+            - overall_status: str - "fully_configured", "partially_configured", "not_configured"
+            - recommendations: list[str] - Actionable recommendations
+
+        Example:
+            >>> async with DiagnosticService(config_svc) as svc:
+            >>>     results = await svc.check_hooks_status()
+            >>>     if results["overall_status"] == "not_configured":
+            >>>         print("Recommendations:", results["recommendations"])
+        """
+        ...
+
+    async def check_mcp_installation(self, full: bool = False) -> dict[str, Any]:
+        """
+        Check MCP installation using py-mcp-installer-service diagnostics.
+
+        Args:
+            full: If True, include detailed diagnostics
+
+        Returns:
+            MCP installation status with keys:
+            - installed: bool
+            - version: str | None
+            - config_path: str | None
+            - issues: list[str]
+
+        Checks:
+        - MCP server is installed
+        - Configuration files exist
+        - Version compatibility
+        """
+        ...
+
     async def get_system_info(self) -> dict[str, Any]:
         """
         Get system information and environment details.

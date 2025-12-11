@@ -446,6 +446,159 @@ class DiagnosticService(BaseService):
             "issues": issues,
         }
 
+    async def check_hooks_status(self, project_root: Path | None = None) -> dict[str, Any]:
+        """
+        Check status of all hooks (git and Claude Code).
+
+        Verifies installation and configuration of:
+        - Git post-commit hooks (.git/hooks/post-commit)
+        - Claude Code hooks (.claude/settings.local.json)
+
+        Args:
+            project_root: Optional project root directory (uses config service default if None)
+
+        Returns:
+            dict with keys:
+            - git_hooks: dict with installed, executable, path
+            - claude_code_hooks: dict with installed, valid, events
+            - overall_status: str - "fully_configured", "partially_configured", "not_configured"
+            - recommendations: list[str] - Actionable recommendations
+
+        Raises:
+            RuntimeError: If service not initialized
+
+        Example:
+            >>> async with DiagnosticService(config_svc) as svc:
+            >>>     results = await svc.check_hooks_status()
+            >>>     if results["overall_status"] == "not_configured":
+            >>>         print("Recommendations:", results["recommendations"])
+        """
+        self._check_initialized()
+
+        import json
+        import os
+
+        # Use provided project root or get from config service
+        root = project_root or self._config_service.get_project_root()
+
+        result: dict[str, Any] = {
+            "git_hooks": {"installed": False, "executable": False, "path": None},
+            "claude_code_hooks": {"installed": False, "valid": False, "events": []},
+            "overall_status": "not_configured",
+            "recommendations": [],
+        }
+
+        # Check git hooks
+        git_hook = root / ".git" / "hooks" / "post-commit"
+        if git_hook.exists():
+            result["git_hooks"]["installed"] = True
+            result["git_hooks"]["path"] = str(git_hook)
+            result["git_hooks"]["executable"] = os.access(git_hook, os.X_OK)
+
+        # Check Claude Code hooks
+        claude_settings = root / ".claude" / "settings.local.json"
+        if claude_settings.exists():
+            try:
+                with open(claude_settings) as f:
+                    settings = json.load(f)
+
+                if "hooks" in settings and isinstance(settings["hooks"], dict):
+                    result["claude_code_hooks"]["installed"] = True
+
+                    # Extract event names
+                    events = list(settings["hooks"].keys())
+                    result["claude_code_hooks"]["events"] = events
+
+                    # Validate events (check if they're valid Claude Code events)
+                    result["claude_code_hooks"]["valid"] = self._validate_claude_hooks(
+                        settings["hooks"]
+                    )
+            except (OSError, json.JSONDecodeError) as e:
+                result["claude_code_hooks"]["error"] = f"Failed to parse settings: {e}"
+
+        # Determine overall status
+        git_ok = result["git_hooks"]["installed"]
+        claude_ok = result["claude_code_hooks"]["installed"]
+
+        if git_ok and claude_ok:
+            result["overall_status"] = "fully_configured"
+        elif git_ok or claude_ok:
+            result["overall_status"] = "partially_configured"
+        else:
+            result["overall_status"] = "not_configured"
+
+        # Add recommendations
+        if not git_ok:
+            result["recommendations"].append(
+                "Run 'kuzu-memory git install-hooks' to enable git integration"
+            )
+
+        if not claude_ok:
+            result["recommendations"].append(
+                "Run 'kuzu-memory install claude-code' to enable Claude Code hooks"
+            )
+
+        if git_ok and not result["git_hooks"]["executable"]:
+            result["recommendations"].append("Git hook exists but is not executable")
+
+        if claude_ok and not result["claude_code_hooks"]["valid"]:
+            result["recommendations"].append("Claude Code hooks config has invalid events")
+
+        return result
+
+    def _validate_claude_hooks(self, hooks: dict[str, Any]) -> bool:
+        """
+        Validate Claude Code hooks configuration.
+
+        Checks if hook events are valid Claude Code events and if commands
+        reference kuzu-memory correctly.
+
+        Args:
+            hooks: Hooks configuration dict from settings.local.json
+
+        Returns:
+            True if configuration is valid, False otherwise
+        """
+        # Valid Claude Code events (from claude_hooks.py)
+        valid_events = {
+            "UserPromptSubmit",
+            "PreToolUse",
+            "PostToolUse",
+            "Stop",
+            "SubagentStop",
+            "Notification",
+            "SessionStart",
+            "SessionEnd",
+            "PreCompact",
+        }
+
+        # Check if all events are valid
+        for event_name in hooks.keys():
+            if event_name not in valid_events:
+                logger.warning(f"Invalid Claude Code event: {event_name}")
+                return False
+
+        # Check if kuzu-memory hooks are present
+        has_kuzu_hooks = False
+        for _event_name, handlers in hooks.items():
+            if not isinstance(handlers, list):
+                continue
+
+            for handler_group in handlers:
+                if not isinstance(handler_group, dict):
+                    continue
+
+                for hook in handler_group.get("hooks", []):
+                    if not isinstance(hook, dict):
+                        continue
+
+                    command = hook.get("command", "")
+                    if "kuzu-memory" in command or "kuzu_memory" in command:
+                        has_kuzu_hooks = True
+                        break
+
+        return has_kuzu_hooks
+
     async def check_mcp_installation(self, full: bool = False) -> dict[str, Any]:
         """
         Check MCP installation using py-mcp-installer-service diagnostics.
