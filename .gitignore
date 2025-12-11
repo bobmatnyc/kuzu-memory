@@ -316,3 +316,8 @@ TEST_REPORT_MCP_ARGS_AUTOFIX.md
 
 # Release verification reports
 .release/
+
+# Added by Claude MPM /mpm-init
+.claude.json
+.claude/
+.mcp.json
