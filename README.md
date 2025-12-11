@@ -163,7 +163,7 @@ kuzu-memory uninstall claude-code
 - Existing configurations are preserved (use `--force` to overwrite)
 - Backups are created when overwriting existing files
 
-See [Claude Setup Guide](docs/CLAUDE_SETUP.md) for detailed instructions on Claude Desktop and Claude Code integration.
+See [Claude Setup Guide](docs/user/CLAUDE_SETUP.md) for detailed instructions on Claude Desktop and Claude Code integration.
 
 > **Note**: Previous installer names (e.g., `claude-desktop-pipx`, `claude-desktop-home`) still work but show deprecation warnings.
 
@@ -262,7 +262,7 @@ kuzu-memory repair --verbose
 - After upgrading from older versions
 - When integrations stop working unexpectedly
 
-See [Troubleshooting Guide](docs/developer/troubleshooting.md) for more repair scenarios.
+See [Troubleshooting Guide](docs/user/troubleshooting.md) for more repair scenarios.
 
 ### Git History Sync
 
@@ -291,7 +291,7 @@ kuzu-memory git install-hooks
 
 **Deduplication**: Running sync multiple times won't create duplicates - each commit SHA is stored once.
 
-See [Git Sync Guide](docs/GIT_SYNC.md) for detailed documentation.
+See [Git Sync Guide](docs/user/GIT_SYNC.md) for detailed documentation.
 
 ## 📖 Core Concepts
 
@@ -368,10 +368,10 @@ KuzuMemory uses a **service layer architecture** with dependency injection for c
 - ✅ **Resource safety** - automatic cleanup prevents leaks
 
 **For Developers:**
-- 📖 [Service Layer Architecture](docs/architecture/service-layer.md) - Comprehensive architecture guide
-- 💡 [Usage Examples](docs/examples/service-usage.md) - Copy-paste ready code samples
-- 🔄 [Migration Guide](docs/guides/migrating-to-services.md) - Migrate existing code
-- 📚 [API Reference](docs/api/services.md) - Complete API documentation
+- 📖 [Service Layer Architecture](docs/developer/service-layer.md) - Comprehensive architecture guide
+- 💡 [Usage Examples](docs/developer/service-usage.md) - Copy-paste ready code samples
+- 🔄 [Migration Guide](docs/developer/migrating-to-services.md) - Migrate existing code
+- 📚 [API Reference](docs/developer/services.md) - Complete API documentation
 
 ## 🔧 Configuration
 
@@ -468,7 +468,7 @@ pytest tests/mcp/performance/ --benchmark-only
 - ✅ Claude Code hooks (if configured)
 - ❌ Does NOT check Claude Desktop (use `kuzu-memory install claude-desktop` instead)
 
-See [MCP Testing Guide](docs/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Reference](docs/MCP_DIAGNOSTICS.md) for complete documentation.
+See [MCP Testing Guide](docs/user/MCP_TESTING_GUIDE.md) and [MCP Diagnostics Reference](docs/user/MCP_DIAGNOSTICS.md) for complete documentation.
 
 ## 🩺 System Diagnostics
 
@@ -575,7 +575,7 @@ From QA testing:
 - 0: All checks passed (or INFO level only)
 - 1: Some checks failed
 
-See [Diagnostics Reference](docs/diagnostics-reference.md) for detailed check documentation.
+See [Diagnostics Reference](docs/user/diagnostics-reference.md) for detailed check documentation.
 
 ## 🤝 Contributing
 

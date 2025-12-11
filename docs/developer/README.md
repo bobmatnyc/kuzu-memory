@@ -17,6 +17,14 @@ This documentation provides everything you need to understand, use, and contribu
 - 🚀 **[Async Operations](async-operations.md)** - Non-blocking memory operations
 - 🕒 **[Temporal Decay](temporal-decay.md)** - Memory retention and expiration system
 
+### **Architecture & Core Documentation**
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architectural documentation
+- **[CODE_STRUCTURE.md](CODE_STRUCTURE.md)** - Codebase organization and structure
+- **[MEMORY_SYSTEM.md](MEMORY_SYSTEM.md)** - Comprehensive memory system documentation
+- **[AI_INTEGRATION.md](AI_INTEGRATION.md)** - Detailed AI integration documentation
+- **[DATABASE_LOCATIONS.md](DATABASE_LOCATIONS.md)** - Database file locations and management
+- **[ACTIVITY_AWARE_TEMPORAL_DECAY.md](ACTIVITY_AWARE_TEMPORAL_DECAY.md)** - Advanced temporal decay implementation
+
 ---
 
 ## 🚀 **Getting Started**
@@ -290,5 +298,22 @@ KuzuMemory is released under the MIT License. See [LICENSE](../../LICENSE) for d
 2. Set up development environment
 3. Read contributing guidelines
 4. Start with small improvements
+
+## 🔗 Navigation
+
+- **[← Back to Main Docs](../README.md)** - Return to documentation home
+- **[User Docs →](../user/README.md)** - Installation and usage guides
+- **[Research Docs →](../research/README.md)** - Technical analysis and research
+- **[Product Docs →](../product/README.md)** - Product specifications and roadmaps
+
+## 📖 Related Resources
+
+- **[Main README](../../README.md)** - Project overview and quick start
+- **[CLAUDE.md](../../CLAUDE.md)** - AI assistant development guide (essential for AI developers!)
+- **[Contributing Guide](../../CONTRIBUTING.md)** - How to contribute to the project
+
+---
+
+**For AI Developers:** Make sure to read **[CLAUDE.md](../../CLAUDE.md)** for comprehensive AI assistant development guidelines and project-specific context.
 
 **Welcome to KuzuMemory - making AI assistants smarter, one memory at a time!** 🧠✨
