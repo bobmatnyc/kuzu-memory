@@ -79,9 +79,7 @@ class KuzuConnectionPool:
 
         self.db_path = db_path
         self.pool_size = pool_size
-        self._pool: Queue[Any] = Queue(
-            maxsize=pool_size
-        )  # kuzu.Connection has no type stubs
+        self._pool: Queue[Any] = Queue(maxsize=pool_size)  # kuzu.Connection has no type stubs
         self._lock = threading.Lock()
         self._initialized = False
         self._database: Any = None  # kuzu.Database has no type stubs
@@ -117,9 +115,7 @@ class KuzuConnectionPool:
                     self._pool.put(conn)
 
                 self._initialized = True
-                logger.info(
-                    f"Initialized Kuzu connection pool with {self.pool_size} connections"
-                )
+                logger.info(f"Initialized Kuzu connection pool with {self.pool_size} connections")
 
             except Exception as e:
                 raise DatabaseError(f"Failed to initialize connection pool: {e}")
@@ -161,9 +157,7 @@ class KuzuConnectionPool:
                     self._pool.put(connection, timeout=1.0)
                 except Exception:
                     # If we can't return to pool, create a new connection
-                    logger.warning(
-                        "Failed to return connection to pool, creating new one"
-                    )
+                    logger.warning("Failed to return connection to pool, creating new one")
                     try:
                         new_conn = self._create_connection()
                         self._pool.put(new_conn, timeout=1.0)
@@ -201,9 +195,7 @@ class KuzuAdapter:
     def __init__(self, db_path: Path, config: KuzuMemoryConfig) -> None:
         self.db_path = db_path
         self.config = config
-        self._pool = KuzuConnectionPool(
-            db_path, pool_size=config.storage.connection_pool_size
-        )
+        self._pool = KuzuConnectionPool(db_path, pool_size=config.storage.connection_pool_size)
         self._schema_initialized = False
 
     def initialize(self) -> None:
@@ -266,40 +258,28 @@ class KuzuAdapter:
             # Use a single connection for all schema operations
             with self._pool.get_connection() as conn:
                 # Create tables first
-                table_statements = [
-                    stmt.strip() for stmt in SCHEMA_DDL.split(";") if stmt.strip()
-                ]
+                table_statements = [stmt.strip() for stmt in SCHEMA_DDL.split(";") if stmt.strip()]
                 logger.info(f"Creating {len(table_statements)} table statements")
                 for i, statement in enumerate(table_statements):
                     if statement:
-                        logger.info(
-                            f"Executing table statement {i + 1}: {statement[:50]}..."
-                        )
+                        logger.info(f"Executing table statement {i + 1}: {statement[:50]}...")
                         try:
                             conn.execute(statement)
-                            logger.info(
-                                f"✅ Table statement {i + 1} completed successfully"
-                            )
+                            logger.info(f"✅ Table statement {i + 1} completed successfully")
                         except Exception as e:
                             logger.error(f"❌ Table statement {i + 1} failed: {e}")
                             logger.error(f"   Full statement: {statement}")
                             raise
 
                 # Then create indices
-                index_statements = [
-                    stmt.strip() for stmt in INDICES_DDL.split(";") if stmt.strip()
-                ]
+                index_statements = [stmt.strip() for stmt in INDICES_DDL.split(";") if stmt.strip()]
                 logger.info(f"Creating {len(index_statements)} index statements")
                 for i, statement in enumerate(index_statements):
                     if statement:
-                        logger.info(
-                            f"Executing index statement {i + 1}: {statement[:50]}..."
-                        )
+                        logger.info(f"Executing index statement {i + 1}: {statement[:50]}...")
                         try:
                             conn.execute(statement)
-                            logger.info(
-                                f"✅ Index statement {i + 1} completed successfully"
-                            )
+                            logger.info(f"✅ Index statement {i + 1} completed successfully")
                         except Exception as e:
                             logger.error(f"❌ Index statement {i + 1} failed: {e}")
                             # Indices failing is not critical, continue
@@ -310,14 +290,10 @@ class KuzuAdapter:
                 ]
                 for i, statement in enumerate(data_statements):
                     if statement:
-                        logger.info(
-                            f"Executing data statement {i + 1}: {statement[:50]}..."
-                        )
+                        logger.info(f"Executing data statement {i + 1}: {statement[:50]}...")
                         try:
                             conn.execute(statement)
-                            logger.info(
-                                f"✅ Data statement {i + 1} completed successfully"
-                            )
+                            logger.info(f"✅ Data statement {i + 1} completed successfully")
                         except Exception as e:
                             logger.error(f"❌ Data statement {i + 1} failed: {e}")
                             # Data insertion failing is not critical, continue
@@ -387,9 +363,7 @@ class KuzuAdapter:
                         self.config.performance.log_slow_operations
                         and execution_time_ms > timeout_ms * 0.8
                     ):
-                        logger.warning(
-                            f"Slow query ({execution_time_ms:.1f}ms): {query[:100]}..."
-                        )
+                        logger.warning(f"Slow query ({execution_time_ms:.1f}ms): {query[:100]}...")
 
                 return results
 
@@ -411,9 +385,7 @@ class KuzuAdapter:
 
     def execute_transaction(
         self,
-        queries: list[
-            tuple[str, dict[str, Any] | None]
-        ],  # List of (query, parameters) tuples
+        queries: list[tuple[str, dict[str, Any] | None]],  # List of (query, parameters) tuples
         timeout_ms: float | None = None,
     ) -> list[list[dict[str, Any]]]:
         """

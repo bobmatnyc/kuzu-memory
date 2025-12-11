@@ -132,7 +132,19 @@ def setup(
 
         # Detect project root
         try:
-            project_root = ctx.obj.get("project_root") or find_project_root()
+            project_root_raw = ctx.obj.get("project_root")
+            if project_root_raw is None:
+                project_root_raw = find_project_root()
+
+            # Ensure project_root is a Path object for type safety
+            if isinstance(project_root_raw, str):
+                project_root = Path(project_root_raw)
+            elif isinstance(project_root_raw, Path):
+                project_root = project_root_raw
+            else:
+                # Should not happen, but handle gracefully
+                raise ValueError(f"Unexpected project_root type: {type(project_root_raw)}")
+
             rich_print(f"\n📁 Project detected: {project_root}", style="green")
         except Exception as e:
             rich_print(
@@ -149,9 +161,7 @@ def setup(
         already_initialized = db_path.exists()
 
         if already_initialized:
-            rich_print(
-                f"✅ Memory database already initialized: {db_path}", style="dim"
-            )
+            rich_print(f"✅ Memory database already initialized: {db_path}", style="dim")
             if force:
                 rich_print("   Force flag set - will reinitialize", style="yellow")
         else:
@@ -160,9 +170,7 @@ def setup(
         # Initialize or update database
         if not already_initialized or force:
             if dry_run:
-                rich_print(
-                    "\n[DRY RUN] Would initialize memory database at:", style="yellow"
-                )
+                rich_print("\n[DRY RUN] Would initialize memory database at:", style="yellow")
                 rich_print(f"  {db_path}", style="dim")
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
@@ -171,18 +179,14 @@ def setup(
                 except SystemExit:
                     # init command may exit with code 1 if already exists
                     if not force:
-                        rich_print(
-                            "   Database already exists (use --force to overwrite)"
-                        )
+                        rich_print("   Database already exists (use --force to overwrite)")
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2: AI TOOL DETECTION & INSTALLATION
         # ═══════════════════════════════════════════════════════════
 
         if skip_install:
-            rich_print(
-                "\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow"
-            )
+            rich_print("\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow")
         else:
             rich_print("\n🔍 Detecting installed AI tools...", style="cyan")
 
@@ -198,11 +202,11 @@ def setup(
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️" if system.health_status == "needs_repair" else "❌"
+                        else "⚠️"
+                        if system.health_status == "needs_repair"
+                        else "❌"
                     )
-                    rich_print(
-                        f"   {status_icon} {system.name}: {system.health_status}"
-                    )
+                    rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 
                 # If integration specified, use it; otherwise use first detected
                 target_integration = integration or installed_systems[0].name
@@ -226,9 +230,7 @@ def setup(
                             f"\n⚙️  {action} {target_integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(
-                            ctx, target_integration, project_root, force=True
-                        )
+                        _install_integration(ctx, target_integration, project_root, force=True)
                 else:
                     rich_print(
                         f"\n✅ {target_integration} integration is up to date",
@@ -251,9 +253,7 @@ def setup(
                             f"\n⚙️  Installing {integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(
-                            ctx, integration, project_root, force=force
-                        )
+                        _install_integration(ctx, integration, project_root, force=force)
                 else:
                     # Auto-detect which tool user is likely using
                     rich_print(
@@ -300,9 +300,7 @@ def setup(
                     )
                 else:
                     rich_print("\n🪝 Installing git hooks...", style="cyan")
-                    git_hooks_installed = _install_git_hooks(
-                        ctx, project_root, force=force
-                    )
+                    git_hooks_installed = _install_git_hooks(ctx, project_root, force=force)
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2.75: VERIFY HOOKS INSTALLATION
@@ -321,31 +319,22 @@ def setup(
                 config_service.initialize()
 
                 with ServiceManager.diagnostic_service(config_service) as diagnostic:
-                    hooks_status = run_async(
-                        diagnostic.check_hooks_status(project_root)
-                    )
+                    hooks_status = run_async(diagnostic.check_hooks_status(project_root))
 
                     overall = hooks_status["overall_status"]
                     if overall == "fully_configured":
-                        rich_print(
-                            "  ✅ All hooks verified successfully", style="green"
-                        )
+                        rich_print("  ✅ All hooks verified successfully", style="green")
                     elif overall == "partially_configured":
                         rich_print("  ⚠️  Hooks partially configured", style="yellow")
 
                         # Show what's missing
-                        if (
-                            not hooks_status["git_hooks"]["installed"]
-                            and git_repo_detected
-                        ):
+                        if not hooks_status["git_hooks"]["installed"] and git_repo_detected:
                             rich_print(
                                 "    - Git hooks: Not installed (use --with-git-hooks)",
                                 style="dim",
                             )
                         if not hooks_status["claude_code_hooks"]["installed"]:
-                            rich_print(
-                                "    - Claude Code hooks: Not configured", style="dim"
-                            )
+                            rich_print("    - Claude Code hooks: Not configured", style="dim")
                     else:
                         rich_print("  ⚠️  Hooks verification failed", style="yellow")
 
@@ -371,15 +360,11 @@ def setup(
             next_steps = []
 
             if skip_install:
-                next_steps.append(
-                    "• Install AI tool: kuzu-memory install <integration>"
-                )
+                next_steps.append("• Install AI tool: kuzu-memory install <integration>")
 
             # Add git hooks status to next steps
             if with_git_hooks and git_hooks_installed:
-                next_steps.append(
-                    "✅ Git hooks installed - commits will auto-sync to memory"
-                )
+                next_steps.append("✅ Git hooks installed - commits will auto-sync to memory")
             elif not with_git_hooks and git_repo_detected:
                 next_steps.append("💡 Enable auto-sync: kuzu-memory git install-hooks")
 
@@ -499,9 +484,7 @@ def _find_git_directory(project_root: Path) -> Path | None:
     return None
 
 
-def _install_git_hooks(
-    ctx: click.Context, project_root: Path, force: bool = False
-) -> bool:
+def _install_git_hooks(ctx: click.Context, project_root: Path, force: bool = False) -> bool:
     """
     Install git post-commit hooks for automatic sync.
 

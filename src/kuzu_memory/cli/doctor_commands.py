@@ -37,9 +37,7 @@ from .service_manager import ServiceManager
 
 
 @click.group(invoke_without_command=True)
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save report to file")
 @click.option(
@@ -52,17 +50,13 @@ from .service_manager import ServiceManager
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def doctor(
     ctx: click.Context,
@@ -138,20 +132,14 @@ def doctor(
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def diagnose(
     ctx: click.Context,
@@ -202,9 +190,7 @@ def diagnose(
         if hooks:
             try:
                 with ServiceManager.diagnostic_service(config_service) as diagnostic:
-                    hooks_status = run_async(
-                        diagnostic.check_hooks_status(project_path)
-                    )
+                    hooks_status = run_async(diagnostic.check_hooks_status(project_path))
             except Exception:
                 # Hooks check failed - continue without hooks status
                 pass
@@ -230,9 +216,7 @@ def diagnose(
 
                 # Git hooks
                 git_hooks = hooks_status["git_hooks"]
-                git_installed = (
-                    "✅ Installed" if git_hooks["installed"] else "❌ Not installed"
-                )
+                git_installed = "✅ Installed" if git_hooks["installed"] else "❌ Not installed"
                 output_content += f"\nGit Hooks: {git_installed}"
                 if git_hooks.get("path"):
                     output_content += f"\n  Path: {git_hooks['path']}"
@@ -241,9 +225,7 @@ def diagnose(
 
                 # Claude Code hooks
                 cc_hooks = hooks_status["claude_code_hooks"]
-                cc_installed = (
-                    "✅ Configured" if cc_hooks["installed"] else "❌ Not configured"
-                )
+                cc_installed = "✅ Configured" if cc_hooks["installed"] else "❌ Not configured"
                 output_content += f"\nClaude Code Hooks: {cc_installed}"
                 if cc_hooks.get("events"):
                     events_str = ", ".join(cc_hooks["events"])
@@ -287,15 +269,11 @@ def diagnose(
                 style="yellow",
             )
 
-            if click.confirm(
-                "Would you like to attempt automatic fixes?", default=True
-            ):
+            if click.confirm("Would you like to attempt automatic fixes?", default=True):
                 rich_print("\n🔧 Attempting automatic fixes...", style="blue")
 
                 # Re-run diagnostics with auto-fix enabled
-                fix_report = asyncio.run(
-                    diagnostics.run_full_diagnostics(auto_fix=True)
-                )
+                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
 
                 # Show fix results
                 rich_print("\n📊 Fix Results:", style="blue")
@@ -323,9 +301,7 @@ def diagnose(
 
         # Exit with appropriate code
         if report.has_critical_errors:
-            rich_print(
-                "\n❌ Critical errors detected. See report for details.", style="red"
-            )
+            rich_print("\n❌ Critical errors detected. See report for details.", style="red")
             sys.exit(1)
         elif report.actionable_failures > 0:
             rich_print(
@@ -352,9 +328,7 @@ def diagnose(
 @click.option("--fix", is_flag=True, help="Auto-fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def mcp(
     ctx: click.Context,
@@ -425,18 +399,12 @@ def mcp(
                     elif status == "degraded":
                         rich_print("⚠️  MCP installation has issues", style="yellow")
                     elif status == "critical":
-                        rich_print(
-                            "❌ MCP installation has critical issues", style="red"
-                        )
+                        rich_print("❌ MCP installation has critical issues", style="red")
                     else:
-                        rich_print(
-                            f"Info: MCP installation status: {status}", style="blue"
-                        )
+                        rich_print(f"Info: MCP installation status: {status}", style="blue")
 
                     rich_print(f"   Platform: {platform}", style="dim")
-                    rich_print(
-                        f"   Checks: {checks_passed}/{checks_total} passed", style="dim"
-                    )
+                    rich_print(f"   Checks: {checks_passed}/{checks_total} passed", style="dim")
 
                 if issues:
                     rich_print("\n⚠️  Issues detected:", style="yellow")
@@ -459,9 +427,7 @@ def mcp(
                         adapter = MCPInstallerAdapter(project_root=project_path)
                         fixes = adapter.fix_issues(auto_fix=True)
                         if fixes:
-                            rich_print(
-                                f"\n✅ Applied {len(fixes)} fix(es):", style="green"
-                            )
+                            rich_print(f"\n✅ Applied {len(fixes)} fix(es):", style="green")
                             for fix_desc in fixes:
                                 rich_print(f"   • {fix_desc}", style="green")
                         else:
@@ -496,9 +462,7 @@ def mcp(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def connection(
     ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
@@ -542,9 +506,7 @@ def connection(
                 if connected:
                     rich_print("✅ Database connection is healthy", style="green")
                     rich_print(f"   Memories: {memory_count}", style="dim")
-                    rich_print(
-                        f"   Size: {db_size_bytes / (1024 * 1024):.2f} MB", style="dim"
-                    )
+                    rich_print(f"   Size: {db_size_bytes / (1024 * 1024):.2f} MB", style="dim")
                 else:
                     rich_print("❌ Database connection issues", style="red")
 
@@ -576,13 +538,9 @@ def connection(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed configuration")
 @click.option("--fix", is_flag=True, help="Attempt to install missing hooks")
-@click.option(
-    "--project-root", type=click.Path(exists=True, path_type=Path), help="Project root"
-)
+@click.option("--project-root", type=click.Path(exists=True, path_type=Path), help="Project root")
 @click.pass_context
-def hooks(
-    ctx: click.Context, verbose: bool, fix: bool, project_root: Path | None
-) -> None:
+def hooks(ctx: click.Context, verbose: bool, fix: bool, project_root: Path | None) -> None:
     """
     Check hooks installation status.
 
@@ -656,9 +614,7 @@ def hooks(
 
                 # Fix option
                 if fix and overall != "fully_configured":
-                    console.print(
-                        "\n[bold]🔧 Attempting to install missing hooks...[/bold]"
-                    )
+                    console.print("\n[bold]🔧 Attempting to install missing hooks...[/bold]")
 
                     # Install git hooks if missing
                     if not git_hooks["installed"]:
@@ -668,9 +624,7 @@ def hooks(
                             console.print("  Installing git hooks...")
                             ctx.invoke(git_install_hooks_cmd, force=False)
                         except Exception as e:
-                            console.print(
-                                f"  [yellow]⚠️  Git hooks install failed: {e}[/yellow]"
-                            )
+                            console.print(f"  [yellow]⚠️  Git hooks install failed: {e}[/yellow]")
 
                     # Install Claude Code hooks if missing
                     if not cc_hooks["installed"]:
@@ -714,18 +668,14 @@ def hooks(
 @doctor.command()
 @click.option("--detailed", is_flag=True, help="Show detailed component status")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
-@click.option(
-    "--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)"
-)
+@click.option("--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)")
 @click.option(
     "--interval",
     type=int,
     default=5,
     help="Check interval in seconds for continuous mode",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def health(
     ctx: click.Context,
@@ -822,9 +772,7 @@ def health(
                     console.print(f"  P50 Latency: {perf.latency_p50_ms:.2f}ms")
                     console.print(f"  P95 Latency: {perf.latency_p95_ms:.2f}ms")
                     console.print(f"  P99 Latency: {perf.latency_p99_ms:.2f}ms")
-                    console.print(
-                        f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s"
-                    )
+                    console.print(f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s")
                     console.print(f"  Error Rate: {perf.error_rate * 100:.2f}%")
 
                 # Resource metrics (if detailed)
@@ -839,9 +787,7 @@ def health(
                 # Summary
                 summary = result.health.to_dict()["summary"]
                 console.print("\n[bold]Component Summary[/bold]")
-                console.print(
-                    f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}"
-                )
+                console.print(f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}")
                 if summary["degraded"] > 0:
                     console.print(f"  [yellow]Degraded:[/yellow] {summary['degraded']}")
                 if summary["unhealthy"] > 0:

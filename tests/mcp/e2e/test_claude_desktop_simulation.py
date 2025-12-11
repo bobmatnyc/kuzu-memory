@@ -352,9 +352,7 @@ class TestClaudeDesktopConcurrentSessions:
         try:
             # Connect all clients
             connected_count = await concurrent_sim.connect_all()
-            assert (
-                connected_count >= 2
-            ), f"Only {connected_count}/{num_sessions} connected"
+            assert connected_count >= 2, f"Only {connected_count}/{num_sessions} connected"
 
             # Each session performs operations
             results = await concurrent_sim.concurrent_requests("ping", {})
@@ -383,16 +381,12 @@ class TestClaudeDesktopConcurrentSessions:
 
             # Concurrent tool calls
             tasks = [
-                client.call_tool("stats", {})
-                for client in concurrent_sim.clients
-                if client.process
+                client.call_tool("stats", {}) for client in concurrent_sim.clients if client.process
             ]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            successful = sum(
-                1 for r in results if r is not None and not isinstance(r, Exception)
-            )
+            successful = sum(1 for r in results if r is not None and not isinstance(r, Exception))
             assert successful >= 2
 
         finally:

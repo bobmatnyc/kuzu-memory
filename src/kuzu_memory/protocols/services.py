@@ -741,9 +741,7 @@ class IDiagnosticService(Protocol):
         """
         ...
 
-    async def check_hooks_status(
-        self, project_root: Path | None = None
-    ) -> dict[str, Any]:
+    async def check_hooks_status(self, project_root: Path | None = None) -> dict[str, Any]:
         """
         Check status of all hooks (git and Claude Code).
 

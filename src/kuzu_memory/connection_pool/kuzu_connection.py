@@ -132,9 +132,7 @@ class KuzuConnection(IConnection):
 
             def _create_database() -> None:
                 # Note: Kuzu uses max_num_threads parameter name
-                return kuzu.Database(
-                    self.database_path, max_num_threads=self.num_threads
-                )
+                return kuzu.Database(self.database_path, max_num_threads=self.num_threads)
 
             db = await loop.run_in_executor(None, _create_database)
 
@@ -142,9 +140,7 @@ class KuzuConnection(IConnection):
             self._shared_databases[self.database_path] = db
             self._db_ref_counts[self.database_path] = 1
 
-            logger.debug(
-                f"Created new shared Database instance for {self.database_path}"
-            )
+            logger.debug(f"Created new shared Database instance for {self.database_path}")
 
             return db
 
@@ -186,9 +182,7 @@ class KuzuConnection(IConnection):
                         if params:
                             # Kuzu doesn't support parameterized queries yet
                             # In practice, you'd need to format the query safely
-                            logger.warning(
-                                "Kuzu doesn't support parameterized queries yet"
-                            )
+                            logger.warning("Kuzu doesn't support parameterized queries yet")
 
                         # Type guard: _ensure_connected() guarantees _conn is not None
                         if not self._conn:
@@ -238,13 +232,9 @@ class KuzuConnection(IConnection):
             # Should never reach here, but raise last error if we do
             if last_error is not None:
                 raise last_error
-            raise RuntimeError(
-                "Query execution loop completed without success or error"
-            )
+            raise RuntimeError("Query execution loop completed without success or error")
 
-    async def execute_many(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
-    ) -> list[Any]:
+    async def execute_many(self, queries: list[tuple[str, dict[str, Any] | None]]) -> list[Any]:
         """
         Execute multiple queries on this connection.
 
@@ -342,9 +332,7 @@ class KuzuConnection(IConnection):
             if self._db_ref_counts[self.database_path] <= 0:
                 if self.database_path in self._shared_databases:
                     del self._shared_databases[self.database_path]
-                    logger.debug(
-                        f"Removed shared Database instance for {self.database_path}"
-                    )
+                    logger.debug(f"Removed shared Database instance for {self.database_path}")
 
                 del self._db_ref_counts[self.database_path]
                 # Note: Keep lock around for future connections

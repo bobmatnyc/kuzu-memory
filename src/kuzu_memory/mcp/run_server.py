@@ -46,9 +46,7 @@ class MCPProtocolHandler:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
         if "error" in request and "method" not in request:
-            return JSONRPCMessage.create_response(
-                request.get("id"), error=request["error"]
-            )
+            return JSONRPCMessage.create_response(request.get("id"), error=request["error"])
 
         request_id = request.get("id")
         method = request.get("method", "")
@@ -126,9 +124,7 @@ class MCPProtocolHandler:
                     try:
                         from .testing.health_checker import MCPHealthChecker
 
-                        health_checker = MCPHealthChecker(
-                            project_root=Path.cwd(), timeout=2.0
-                        )
+                        health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
                         health_result = await health_checker.check_health(
                             detailed=False, retry=False
                         )
@@ -180,20 +176,14 @@ class MCPProtocolHandler:
                 return None
             return JSONRPCMessage.create_response(
                 request_id,
-                error=JSONRPCError(
-                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
-                ),
+                error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"),
             )
 
-    async def _execute_tool(
-        self, tool_name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
         # Map tool names to server methods
         if not hasattr(self.server, tool_name):
-            raise JSONRPCError(
-                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
-            )
+            raise JSONRPCError(JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}")
 
         try:
             # Get the tool method
@@ -475,19 +465,26 @@ class MCPProtocolHandler:
                 if message is None:
                     break  # EOF
 
-                # Check for batch requests
+                # Check for batch requests (message could be list or dict)
                 if BatchRequestHandler.is_batch(message):
+                    # Type narrowing: if is_batch returns True, message is a list
+                    assert isinstance(message, list)
                     # Process batch
                     responses = await BatchRequestHandler.process_batch(
                         message, self.handle_request
                     )
                     if responses:
-                        self.protocol.write_message(responses)
+                        # Batch responses are a list, but write_message expects dict
+                        # Write each response individually
+                        for response in responses:
+                            self.protocol.write_message(response)
                 else:
+                    # Type narrowing: if not a batch, message is a dict
+                    assert isinstance(message, dict)
                     # Process single request
-                    response = await self.handle_request(message)
-                    if response is not None:
-                        self.protocol.write_message(response)
+                    response_or_none = await self.handle_request(message)
+                    if response_or_none is not None:
+                        self.protocol.write_message(response_or_none)
 
                     # Check if we should stop after processing
                     if not self.running:
@@ -497,14 +494,13 @@ class MCPProtocolHandler:
                 break
             except Exception as e:
                 logger.error(f"Error in main loop: {e}", exc_info=True)
-                # Send error response if possible
+                # Send error response if possible (with a dummy ID since we don't have a request)
                 error_response = JSONRPCMessage.create_response(
-                    None,
-                    error=JSONRPCError(
-                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
-                    ),
+                    1,  # Use dummy ID for unhandled errors
+                    error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"),
                 )
-                self.protocol.write_message(error_response)
+                if error_response is not None:
+                    self.protocol.write_message(error_response)
 
         logger.info("MCP server shutting down")
         self.protocol.close()

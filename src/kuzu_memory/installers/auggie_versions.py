@@ -31,11 +31,7 @@ class AuggieVersion:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AuggieVersion):
             return False
-        return (
-            self.major == other.major
-            and self.minor == other.minor
-            and self.patch == other.patch
-        )
+        return self.major == other.major and self.minor == other.minor and self.patch == other.patch
 
     def __lt__(self, other: AuggieVersion) -> bool:
         if self.major != other.major:
@@ -132,9 +128,7 @@ class AuggieVersionDetector:
         v1.0.0 rules don't have success metrics or decision trees.
         v2.0.0 rules have "Success Indicators" and "Decision Tree" sections.
         """
-        integration_file = (
-            self.project_root / ".augment" / "rules" / "kuzu-memory-integration.md"
-        )
+        integration_file = self.project_root / ".augment" / "rules" / "kuzu-memory-integration.md"
 
         if not integration_file.exists():
             return None
@@ -153,9 +147,7 @@ class AuggieVersionDetector:
 
             return None
         except OSError as e:
-            logger.warning(
-                f"Failed to read integration file for version detection: {e}"
-            )
+            logger.warning(f"Failed to read integration file for version detection: {e}")
             return None
 
     def write_version(self, version: AuggieVersion) -> bool:
@@ -214,9 +206,7 @@ class AuggieVersionDetector:
             "current_version": str(installed),
             "latest_version": str(CURRENT_VERSION),
             "changes": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get("changes", []),
-            "description": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get(
-                "description", ""
-            ),
+            "description": VERSION_HISTORY.get(str(CURRENT_VERSION), {}).get("description", ""),
         }
 
 

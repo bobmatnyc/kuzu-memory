@@ -124,9 +124,7 @@ class KuzuConnectionPool(IConnectionPool):
             self._all_connections.add(connection)
             self._created_connections += 1
 
-            logger.debug(
-                f"Created new connection (total: {len(self._all_connections)})"
-            )
+            logger.debug(f"Created new connection (total: {len(self._all_connections)})")
             return connection
 
         except Exception as e:
@@ -246,9 +244,7 @@ class KuzuConnectionPool(IConnectionPool):
         async with self.get_connection() as connection:
             return await connection.execute(query, params)
 
-    async def execute_many(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
-    ) -> list[Any]:
+    async def execute_many(self, queries: list[tuple[str, dict[str, Any] | None]]) -> list[Any]:
         """Execute multiple queries using connections from the pool."""
         async with self.get_connection() as connection:
             return await connection.execute_many(queries)
@@ -277,9 +273,7 @@ class KuzuConnectionPool(IConnectionPool):
                     connection = await self._create_connection()
                     self._available_connections.append(connection)
                 except Exception as e:
-                    logger.error(
-                        f"Failed to create connection during health check: {e}"
-                    )
+                    logger.error(f"Failed to create connection during health check: {e}")
                     break
 
             return {

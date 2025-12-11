@@ -15,9 +15,7 @@ def check_kuzu_cli():
     print("🔍 Checking for Kuzu CLI...")
 
     try:
-        result = subprocess.run(
-            ["kuzu", "--version"], capture_output=True, text=True, timeout=10
-        )
+        result = subprocess.run(["kuzu", "--version"], capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             print(f"✅ Kuzu CLI found: {result.stdout.strip()}")
             return True
@@ -147,20 +145,14 @@ def test_integration():
                 )
                 generation_time = (time.time() - start_time) * 1000
 
-                print(
-                    f"✅ Generated {len(memory_ids)} memories in {generation_time:.1f}ms"
-                )
+                print(f"✅ Generated {len(memory_ids)} memories in {generation_time:.1f}ms")
 
                 # Test memory recall
                 start_time = time.time()
-                context = memory.attach_memories(
-                    "What am I testing?", user_id="cli-test"
-                )
+                context = memory.attach_memories("What am I testing?", user_id="cli-test")
                 recall_time = (time.time() - start_time) * 1000
 
-                print(
-                    f"✅ Recalled {len(context.memories)} memories in {recall_time:.1f}ms"
-                )
+                print(f"✅ Recalled {len(context.memories)} memories in {recall_time:.1f}ms")
 
                 if context.memories:
                     print(f"📋 Top memory: {context.memories[0].content[:50]}...")
@@ -181,9 +173,7 @@ def test_integration():
                 )
                 python_generation_time = (time.time() - start_time) * 1000
 
-                print(
-                    f"✅ Generated {len(memory_ids)} memories in {python_generation_time:.1f}ms"
-                )
+                print(f"✅ Generated {len(memory_ids)} memories in {python_generation_time:.1f}ms")
 
                 # Performance comparison
                 if generation_time > 0 and python_generation_time > 0:

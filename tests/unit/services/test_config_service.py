@@ -189,9 +189,7 @@ class TestConfigServiceConfiguration:
         expected_config = {"cached": "value"}
         mock_file_content = json.dumps(expected_config)
 
-        with patch(
-            "builtins.open", mock_open(read_data=mock_file_content)
-        ) as mock_file:
+        with patch("builtins.open", mock_open(read_data=mock_file_content)) as mock_file:
             with patch.object(Path, "exists", return_value=True):
                 # First call
                 config1 = config_service_with_explicit_root.load_config()
@@ -214,9 +212,7 @@ class TestConfigServiceConfiguration:
         # Should return empty dict on error
         assert config == {}
 
-    def test_save_config_writes_to_file(
-        self, config_service_with_explicit_root, mock_project_root
-    ):
+    def test_save_config_writes_to_file(self, config_service_with_explicit_root, mock_project_root):
         """Test save_config writes configuration to file."""
         config_to_save = {"key": "value", "nested": {"data": 123}}
 
@@ -282,9 +278,7 @@ class TestConfigServiceGetValue:
         """Test get_config_value with simple key."""
         config = {"simple_key": "simple_value"}
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
             value = config_service_with_explicit_root.get_config_value("simple_key")
 
         assert value == "simple_value"
@@ -293,12 +287,8 @@ class TestConfigServiceGetValue:
         """Test get_config_value with dot notation for nested keys."""
         config = {"level1": {"level2": {"level3": "nested_value"}}}
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
-            value = config_service_with_explicit_root.get_config_value(
-                "level1.level2.level3"
-            )
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
+            value = config_service_with_explicit_root.get_config_value("level1.level2.level3")
 
         assert value == "nested_value"
 
@@ -308,9 +298,7 @@ class TestConfigServiceGetValue:
         """Test get_config_value returns default when key doesn't exist."""
         config = {"existing": "value"}
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
             value = config_service_with_explicit_root.get_config_value(
                 "missing_key", default="default_value"
             )
@@ -323,9 +311,7 @@ class TestConfigServiceGetValue:
         """Test get_config_value returns None by default when key missing."""
         config = {"existing": "value"}
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
             value = config_service_with_explicit_root.get_config_value("missing_key")
 
         assert value is None
@@ -336,9 +322,7 @@ class TestConfigServiceGetValue:
         """Test get_config_value returns default when partial nested path exists."""
         config = {"level1": {"level2": "value"}}
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
             # level2 exists but is not a dict, so level3 can't be accessed
             value = config_service_with_explicit_root.get_config_value(
                 "level1.level2.level3", default="fallback"
@@ -346,9 +330,7 @@ class TestConfigServiceGetValue:
 
         assert value == "fallback"
 
-    def test_get_config_value_handles_various_types(
-        self, config_service_with_explicit_root
-    ):
+    def test_get_config_value_handles_various_types(self, config_service_with_explicit_root):
         """Test get_config_value works with various data types."""
         config = {
             "string": "text",
@@ -358,12 +340,8 @@ class TestConfigServiceGetValue:
             "dict": {"nested": "value"},
         }
 
-        with patch.object(
-            config_service_with_explicit_root, "load_config", return_value=config
-        ):
-            assert (
-                config_service_with_explicit_root.get_config_value("string") == "text"
-            )
+        with patch.object(config_service_with_explicit_root, "load_config", return_value=config):
+            assert config_service_with_explicit_root.get_config_value("string") == "text"
             assert config_service_with_explicit_root.get_config_value("number") == 42
             assert config_service_with_explicit_root.get_config_value("boolean") is True
             assert config_service_with_explicit_root.get_config_value("list") == [
@@ -371,9 +349,7 @@ class TestConfigServiceGetValue:
                 2,
                 3,
             ]
-            assert config_service_with_explicit_root.get_config_value("dict") == {
-                "nested": "value"
-            }
+            assert config_service_with_explicit_root.get_config_value("dict") == {"nested": "value"}
 
 
 class TestConfigServiceUtilityMethods:
@@ -413,9 +389,7 @@ class TestConfigServiceContextManager:
     """Test context manager behavior."""
 
     @patch("kuzu_memory.services.config_service.find_project_root")
-    def test_context_manager_initializes_and_cleans_up(
-        self, mock_find_root, mock_project_root
-    ):
+    def test_context_manager_initializes_and_cleans_up(self, mock_find_root, mock_project_root):
         """Test context manager properly initializes and cleans up."""
         mock_find_root.return_value = mock_project_root
 

@@ -249,14 +249,12 @@ def get_best_installer(platform: str, project_root: Path) -> BaseInstaller:
             return adapter
         except Exception as e:
             logger.warning(
-                f"MCPInstallerAdapter failed for {platform}: {e}, "
-                "falling back to legacy installer"
+                f"MCPInstallerAdapter failed for {platform}: {e}, falling back to legacy installer"
             )
 
     # Fall back to legacy installer
     logger.debug(
-        f"Using legacy installer for {platform} "
-        f"(MCP adapter available: {HAS_MCP_INSTALLER})"
+        f"Using legacy installer for {platform} (MCP adapter available: {HAS_MCP_INSTALLER})"
     )
     installer = get_installer(platform_lower, project_root)
 

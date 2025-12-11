@@ -21,9 +21,7 @@ class JSONConfigError(Exception):
     pass
 
 
-def expand_variables(
-    config: dict[str, Any], variables: dict[str, str]
-) -> dict[str, Any]:
+def expand_variables(config: dict[str, Any], variables: dict[str, str]) -> dict[str, Any]:
     """
     Expand variables in JSON configuration.
 
@@ -391,18 +389,14 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                 new_args = _fix_mcp_args(old_args)
                 result["mcpServers"][server_name]["args"] = new_args
                 fixes.append(f"Fixed {server_name}: args {old_args} -> {new_args}")
-                logger.debug(
-                    f"Fixed broken MCP args in {server_name}: {old_args} -> {new_args}"
-                )
+                logger.debug(f"Fixed broken MCP args in {server_name}: {old_args} -> {new_args}")
 
             # Fix command if needed (for python -m pattern)
             if needs_cmd_fix:
                 old_command = server_config["command"]
                 new_command = _fix_command(old_command)
                 result["mcpServers"][server_name]["command"] = new_command
-                fixes.append(
-                    f"Fixed {server_name}: command '{old_command}' -> '{new_command}'"
-                )
+                fixes.append(f"Fixed {server_name}: command '{old_command}' -> '{new_command}'")
                 logger.debug(
                     f"Fixed broken MCP command in {server_name}: '{old_command}' -> '{new_command}'"
                 )
@@ -413,9 +407,7 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
             if not isinstance(project_config, dict):
                 continue
 
-            if "mcpServers" in project_config and isinstance(
-                project_config["mcpServers"], dict
-            ):
+            if "mcpServers" in project_config and isinstance(project_config["mcpServers"], dict):
                 for server_name, server_config in project_config["mcpServers"].items():
                     if not isinstance(server_config, dict):
                         continue
@@ -428,9 +420,9 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                     if needs_args_fix:
                         old_args = server_config["args"].copy()
                         new_args = _fix_mcp_args(old_args)
-                        result["projects"][project_path]["mcpServers"][server_name][
-                            "args"
-                        ] = new_args
+                        result["projects"][project_path]["mcpServers"][server_name]["args"] = (
+                            new_args
+                        )
                         fixes.append(
                             f"Fixed {server_name} in project {project_path}: args {old_args} -> {new_args}"
                         )
@@ -442,9 +434,9 @@ def fix_broken_mcp_args(config: dict[str, Any]) -> tuple[dict[str, Any], list[st
                     if needs_cmd_fix:
                         old_command = server_config["command"]
                         new_command = _fix_command(old_command)
-                        result["projects"][project_path]["mcpServers"][server_name][
-                            "command"
-                        ] = new_command
+                        result["projects"][project_path]["mcpServers"][server_name]["command"] = (
+                            new_command
+                        )
                         fixes.append(
                             f"Fixed {server_name} in project {project_path}: command '{old_command}' -> '{new_command}'"
                         )

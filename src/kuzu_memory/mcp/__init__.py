@@ -20,7 +20,9 @@ MCPServer = KuzuMemoryMCPServer
 
 def create_mcp_server(project_root: str | None = None) -> KuzuMemoryMCPServer:
     """Create and return an MCP server instance (backwards compatibility)."""
-    return KuzuMemoryMCPServer(project_root=project_root)
+    from pathlib import Path
+
+    return KuzuMemoryMCPServer(project_root=Path(project_root) if project_root else None)
 
 
 __all__ = [

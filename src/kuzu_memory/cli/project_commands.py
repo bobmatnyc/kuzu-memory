@@ -31,9 +31,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
-@click.option(
-    "--config-path", type=click.Path(), help="Path to save example configuration"
-)
+@click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.pass_context
 def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> None:
     """
@@ -65,9 +63,7 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> Non
 
         # Check if already initialized
         if db_path.exists() and not force:
-            rich_print(
-                f"⚠️  Project already initialized at {memories_dir}", style="yellow"
-            )
+            rich_print(f"⚠️  Project already initialized at {memories_dir}", style="yellow")
             rich_print("   Use --force to overwrite existing memories", style="dim")
             sys.exit(1)
 
@@ -115,16 +111,12 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> Non
 
             if auggie.is_auggie_project():
                 rich_print("\n🤖 Auggie project detected!")
-                if rich_confirm(
-                    "Would you like to set up Auggie integration?", default=True
-                ):
+                if rich_confirm("Would you like to set up Auggie integration?", default=True):
                     try:
                         auggie.setup_project_integration()
                         rich_print("✅ Auggie integration configured")
                     except Exception as e:
-                        rich_print(
-                            f"⚠️  Auggie integration setup failed: {e}", style="yellow"
-                        )
+                        rich_print(f"⚠️  Auggie integration setup failed: {e}", style="yellow")
         except ImportError:
             pass
 
@@ -246,9 +238,7 @@ def project(ctx: click.Context, verbose: bool) -> None:
                 if verbose:
                     rules_info = auggie.get_rules_summary()
                     rich_print(f"   Rules Files: {len(rules_info.get('files', []))}")
-                    rich_print(
-                        f"   Memory Rules: {len(rules_info.get('memory_rules', []))}"
-                    )
+                    rich_print(f"   Memory Rules: {len(rules_info.get('memory_rules', []))}")
         except ImportError:
             pass
 
@@ -368,9 +358,7 @@ def stats(ctx: click.Context, detailed: bool, output_format: str) -> None:
                         )
                         rich_print(f"   {source}: {count} ({percentage:.1f}%)")
 
-                rich_print(
-                    f"\n🕒 Recent Activity: {stats_data['recent_activity']} memories"
-                )
+                rich_print(f"\n🕒 Recent Activity: {stats_data['recent_activity']} memories")
 
                 if detailed:
                     # Additional detailed information
@@ -426,9 +414,7 @@ def cleanup(ctx: click.Context, force: bool) -> None:
         with KuzuMemory(db_path=db_path) as memory:
             # Note: These cleanup methods are not yet implemented in KuzuMemory
             # This is placeholder code for future functionality
-            rich_print(
-                "⚠️  Cleanup functionality not yet fully implemented", style="yellow"
-            )
+            rich_print("⚠️  Cleanup functionality not yet fully implemented", style="yellow")
             rich_print("Future features will include:")
             rich_print("  - Expired memory cleanup based on retention policies")
             rich_print("  - Duplicate detection and removal")

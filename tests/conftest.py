@@ -211,17 +211,15 @@ class MemoryTestHelper:
     @staticmethod
     def assert_memory_content_contains(memories: list, expected_content: str):
         """Assert that at least one memory contains the expected content."""
-        found = any(
-            expected_content.lower() in memory.content.lower() for memory in memories
-        )
+        found = any(expected_content.lower() in memory.content.lower() for memory in memories)
         assert found, f"No memory found containing '{expected_content}'"
 
     @staticmethod
     def assert_enhanced_prompt_contains(context, expected_content: str):
         """Assert that enhanced prompt contains expected content."""
-        assert (
-            expected_content.lower() in context.enhanced_prompt.lower()
-        ), f"Enhanced prompt does not contain '{expected_content}'"
+        assert expected_content.lower() in context.enhanced_prompt.lower(), (
+            f"Enhanced prompt does not contain '{expected_content}'"
+        )
 
     @staticmethod
     def count_memories_by_type(memories: list, memory_type) -> int:
@@ -234,23 +232,16 @@ class MemoryTestHelper:
         return {memory.content for memory in memories}
 
     @staticmethod
-    def assert_performance_within_limit(
-        actual_time_ms: float, limit_ms: float, operation: str
-    ):
+    def assert_performance_within_limit(actual_time_ms: float, limit_ms: float, operation: str):
         """Assert that operation time is within performance limit."""
-        assert (
-            actual_time_ms <= limit_ms
-        ), f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        assert actual_time_ms <= limit_ms, (
+            f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
+        )
 
     @staticmethod
-    def create_test_memory_content(
-        count: int, prefix: str = "Test memory"
-    ) -> list[str]:
+    def create_test_memory_content(count: int, prefix: str = "Test memory") -> list[str]:
         """Create a list of test memory contents."""
-        return [
-            f"{prefix} {i}: This is test content for memory number {i}."
-            for i in range(count)
-        ]
+        return [f"{prefix} {i}: This is test content for memory number {i}." for i in range(count)]
 
 
 @pytest.fixture
@@ -266,9 +257,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "benchmark: Performance benchmark tests")
     config.addinivalue_line("markers", "slow: Slow tests that take more time")
-    config.addinivalue_line(
-        "markers", "requires_kuzu: Tests that require Kuzu database"
-    )
+    config.addinivalue_line("markers", "requires_kuzu: Tests that require Kuzu database")
 
 
 # Skip tests if Kuzu is not available

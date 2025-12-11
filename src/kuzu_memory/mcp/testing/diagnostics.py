@@ -95,8 +95,7 @@ class DiagnosticReport:
     def has_critical_errors(self) -> bool:
         """Check if any critical errors exist."""
         return any(
-            r.severity == DiagnosticSeverity.CRITICAL and not r.success
-            for r in self.results
+            r.severity == DiagnosticSeverity.CRITICAL and not r.success for r in self.results
         )
 
     @property
@@ -163,9 +162,7 @@ class MCPDiagnostics:
         self.project_root = project_root or Path.cwd()
         self.verbose = verbose
         # PROJECT-LEVEL CONFIG ONLY
-        self.claude_code_config_path = (
-            self.project_root / ".claude" / "settings.local.json"
-        )
+        self.claude_code_config_path = self.project_root / ".claude" / "settings.local.json"
         self.memory_db_path = self.project_root / "kuzu-memories"
 
     async def check_configuration(self) -> list[DiagnosticResult]:
@@ -678,9 +675,7 @@ class MCPDiagnostics:
                     message=stdio_result.message,
                     error=stdio_result.error,
                     fix_suggestion=(
-                        "Check server logs and process status"
-                        if not stdio_result.success
-                        else None
+                        "Check server logs and process status" if not stdio_result.success else None
                     ),
                     duration_ms=stdio_result.duration_ms,
                 )
@@ -846,9 +841,7 @@ class MCPDiagnostics:
                                 )
                             else:
                                 error_msg = (
-                                    tool_response.get("error", {}).get(
-                                        "message", "Unknown error"
-                                    )
+                                    tool_response.get("error", {}).get("message", "Unknown error")
                                     if tool_response
                                     else "No response"
                                 )
@@ -1285,9 +1278,7 @@ class MCPDiagnostics:
                         message="Hook commands use relative paths (should be absolute)",
                         error=f"Relative paths found in {len(non_absolute_paths)} hook(s)",
                         fix_suggestion="Run: kuzu-memory install add claude-code --force to fix paths",
-                        metadata={
-                            "non_absolute": [f"{e}: {p}" for e, p in non_absolute_paths]
-                        },
+                        metadata={"non_absolute": [f"{e}: {p}" for e, p in non_absolute_paths]},
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1300,9 +1291,7 @@ class MCPDiagnostics:
                         message="Hook command executables not found",
                         error=f"Missing executables in {len(missing_executables)} hook(s)",
                         fix_suggestion="Run: kuzu-memory install add claude-code --force to fix paths",
-                        metadata={
-                            "missing": [f"{e}: {p}" for e, p in missing_executables]
-                        },
+                        metadata={"missing": [f"{e}: {p}" for e, p in missing_executables]},
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1456,17 +1445,13 @@ class MCPDiagnostics:
             # Create a temporary transcript file for testing
             import tempfile
 
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".jsonl", delete=False
-            ) as tf:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tf:
                 transcript_path = tf.name
                 # Write a test transcript entry
                 test_transcript = {
                     "message": {
                         "role": "assistant",
-                        "content": [
-                            {"type": "text", "text": "Test assistant response"}
-                        ],
+                        "content": [{"type": "text", "text": "Test assistant response"}],
                     }
                 }
                 tf.write(json.dumps(test_transcript) + "\n")
@@ -1569,9 +1554,7 @@ class MCPDiagnostics:
                 check_name="hook_cache_directory",
                 success=cache_dir_ok,
                 severity=(
-                    DiagnosticSeverity.SUCCESS
-                    if cache_dir_ok
-                    else DiagnosticSeverity.WARNING
+                    DiagnosticSeverity.SUCCESS if cache_dir_ok else DiagnosticSeverity.WARNING
                 ),
                 message=f"Hook cache directory {'is' if cache_dir_ok else 'is not'} accessible",
                 metadata={"cache_file": str(cache_file)},
@@ -1670,9 +1653,7 @@ class MCPDiagnostics:
         start = time.time()
         try:
             ping_msg = {"jsonrpc": "2.0", "method": "ping", "id": 1}
-            response = await asyncio.wait_for(
-                tester._send_request(ping_msg), timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(ping_msg), timeout=5.0)
 
             if response:
                 results.append(
@@ -1728,9 +1709,7 @@ class MCPDiagnostics:
                 "id": 2,
                 "params": {"protocolVersion": "2024-11-05"},
             }
-            response = await asyncio.wait_for(
-                tester._send_request(init_msg), timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(init_msg), timeout=5.0)
 
             if response and "result" in response:
                 results.append(
@@ -1739,11 +1718,7 @@ class MCPDiagnostics:
                         success=True,
                         severity=DiagnosticSeverity.SUCCESS,
                         message="Server protocol initialization successful",
-                        metadata={
-                            "protocol_version": response["result"].get(
-                                "protocolVersion"
-                            )
-                        },
+                        metadata={"protocol_version": response["result"].get("protocolVersion")},
                         duration_ms=(time.time() - start) * 1000,
                     )
                 )
@@ -1755,9 +1730,7 @@ class MCPDiagnostics:
                         severity=DiagnosticSeverity.ERROR,
                         message="Server protocol initialization failed",
                         error=(
-                            response.get("error", "Unknown error")
-                            if response
-                            else "No response"
+                            response.get("error", "Unknown error") if response else "No response"
                         ),
                         duration_ms=(time.time() - start) * 1000,
                     )
@@ -1789,9 +1762,7 @@ class MCPDiagnostics:
         start = time.time()
         try:
             tools_msg = {"jsonrpc": "2.0", "method": "tools/list", "id": 3}
-            response = await asyncio.wait_for(
-                tester._send_request(tools_msg), timeout=5.0
-            )
+            response = await asyncio.wait_for(tester._send_request(tools_msg), timeout=5.0)
 
             if response and "result" in response:
                 tools = response["result"].get("tools", [])
@@ -1816,9 +1787,7 @@ class MCPDiagnostics:
                         severity=DiagnosticSeverity.ERROR,
                         message="Server tools list failed",
                         error=(
-                            response.get("error", "Unknown error")
-                            if response
-                            else "No response"
+                            response.get("error", "Unknown error") if response else "No response"
                         ),
                         duration_ms=(time.time() - start) * 1000,
                     )
@@ -1857,9 +1826,7 @@ class MCPDiagnostics:
                 # Check if process terminated
                 if tester.process.poll() is not None:
                     exit_code = tester.process.returncode
-                    if (
-                        exit_code == 0 or exit_code == -15
-                    ):  # 0 = clean exit, -15 = SIGTERM
+                    if exit_code == 0 or exit_code == -15:  # 0 = clean exit, -15 = SIGTERM
                         results.append(
                             DiagnosticResult(
                                 check_name="server_shutdown_graceful",
@@ -1945,9 +1912,7 @@ class MCPDiagnostics:
             # Test that server responds after restart
             try:
                 test_msg = {"jsonrpc": "2.0", "method": "ping", "id": 99}
-                response = await asyncio.wait_for(
-                    tester._send_request(test_msg), timeout=5.0
-                )
+                response = await asyncio.wait_for(tester._send_request(test_msg), timeout=5.0)
 
                 if response:
                     results.append(
@@ -2085,9 +2050,7 @@ class MCPDiagnostics:
         lines.append("=" * 70)
         lines.append(f"Timestamp: {report.timestamp}")
         lines.append(f"Platform: {report.platform}")
-        lines.append(
-            f"Results: {report.passed}/{report.total} passed ({report.success_rate:.1f}%)"
-        )
+        lines.append(f"Results: {report.passed}/{report.total} passed ({report.success_rate:.1f}%)")
         lines.append(f"Duration: {report.total_duration_ms:.2f}ms")
         lines.append("=" * 70)
         lines.append("")
