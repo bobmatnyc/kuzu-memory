@@ -47,7 +47,9 @@ class CodexInstaller(BaseInstaller):
     @property
     def description(self) -> str:
         """Description of what this installer does."""
-        return "Install MCP server configuration for Codex (global: ~/.codex/config.toml)"
+        return (
+            "Install MCP server configuration for Codex (global: ~/.codex/config.toml)"
+        )
 
     def _get_config_path(self) -> Path:
         """Get path to Codex configuration file."""
@@ -130,7 +132,9 @@ class CodexInstaller(BaseInstaller):
                 )
 
             # 2. Load existing configuration
-            existing_config = load_toml_config(config_path) if config_path.exists() else {}
+            existing_config = (
+                load_toml_config(config_path) if config_path.exists() else {}
+            )
 
             # 3. Create KuzuMemory server config
             kuzu_config = self._create_kuzu_server_config()
@@ -140,7 +144,9 @@ class CodexInstaller(BaseInstaller):
             kuzu_config = expand_variables(kuzu_config, variables)
 
             # 5. Check if kuzu-memory is already configured
-            existing_servers = existing_config.get("mcp_servers", {})  # snake_case for Codex
+            existing_servers = existing_config.get(
+                "mcp_servers", {}
+            )  # snake_case for Codex
             kuzu_already_exists = "kuzu-memory" in existing_servers
 
             if kuzu_already_exists and not force:
@@ -177,7 +183,9 @@ class CodexInstaller(BaseInstaller):
                 # Use new config (force mode or no existing config)
                 merged_config = kuzu_config
                 if force and existing_config:
-                    self.warnings.append("Force mode: existing configuration will be backed up")
+                    self.warnings.append(
+                        "Force mode: existing configuration will be backed up"
+                    )
 
             # 7. Validate merged configuration
             validation_errors = validate_toml_mcp_config(merged_config)
@@ -201,7 +209,9 @@ class CodexInstaller(BaseInstaller):
                         f"existing server(s)"
                     )
                 if kuzu_already_exists and not force:
-                    message += "\nWould update existing kuzu-memory server configuration"
+                    message += (
+                        "\nWould update existing kuzu-memory server configuration"
+                    )
                 else:
                     message += "\nWould add new kuzu-memory server configuration"
                 return InstallationResult(
@@ -232,7 +242,9 @@ class CodexInstaller(BaseInstaller):
 
             # 12. Success message
             server_count = len(merged_config.get("mcp_servers", {}))
-            message = f"Successfully installed MCP configuration for {self.ai_system_name}"
+            message = (
+                f"Successfully installed MCP configuration for {self.ai_system_name}"
+            )
             message += f"\nConfiguration file: {config_path}"
             message += f"\nMCP servers configured: {server_count}"
             message += f"\nProject: {self.project_root}"

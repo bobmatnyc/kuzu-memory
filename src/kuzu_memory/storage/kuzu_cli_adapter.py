@@ -78,7 +78,9 @@ class KuzuCLIAdapter:
                 continue
 
         # If not found, assume it's in PATH
-        logger.warning("Kuzu CLI not found in common locations, assuming 'kuzu' is in PATH")
+        logger.warning(
+            "Kuzu CLI not found in common locations, assuming 'kuzu' is in PATH"
+        )
         return "kuzu"
 
     def execute_query(
@@ -114,7 +116,9 @@ class KuzuCLIAdapter:
                 query = self._substitute_parameters(query, parameters)
 
             # Create temporary file for query
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".cypher", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".cypher", delete=False
+            ) as f:
                 f.write(query)
                 query_file = f.name
 

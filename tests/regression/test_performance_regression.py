@@ -97,7 +97,9 @@ class TestPerformanceRegression:
             "iterations": iterations,
         }
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_attach_memories_performance_regression(
         self, temp_db_path, regression_config, performance_baseline
     ):
@@ -127,39 +129,47 @@ class TestPerformanceRegression:
                 return context
 
             # Measure performance
-            perf_stats = self.measure_operation_performance(recall_operation, iterations=100)
+            perf_stats = self.measure_operation_performance(
+                recall_operation, iterations=100
+            )
 
             # Compare against baseline
             baseline = performance_baseline["attach_memories"]
 
             print("\nattach_memories Performance Regression Test:")
-            print(f"  Mean: {perf_stats['mean']:.2f}ms (baseline: {baseline['mean_ms']:.2f}ms)")
-            print(f"  P95:  {perf_stats['p95']:.2f}ms (baseline: {baseline['p95_ms']:.2f}ms)")
-            print(f"  P99:  {perf_stats['p99']:.2f}ms (baseline: {baseline['p99_ms']:.2f}ms)")
+            print(
+                f"  Mean: {perf_stats['mean']:.2f}ms (baseline: {baseline['mean_ms']:.2f}ms)"
+            )
+            print(
+                f"  P95:  {perf_stats['p95']:.2f}ms (baseline: {baseline['p95_ms']:.2f}ms)"
+            )
+            print(
+                f"  P99:  {perf_stats['p99']:.2f}ms (baseline: {baseline['p99_ms']:.2f}ms)"
+            )
 
             # Regression assertions (allow 50% degradation for test environment)
             tolerance = 1.5
-            assert perf_stats["mean"] <= baseline["mean_ms"] * tolerance, (
-                f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["mean"] <= baseline["mean_ms"] * tolerance
+            ), f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p95"] <= baseline["p95_ms"] * tolerance, (
-                f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p95"] <= baseline["p95_ms"] * tolerance
+            ), f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p99"] <= baseline["p99_ms"] * tolerance, (
-                f"P99 performance regressed: {perf_stats['p99']:.2f}ms > {baseline['p99_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p99"] <= baseline["p99_ms"] * tolerance
+            ), f"P99 performance regressed: {perf_stats['p99']:.2f}ms > {baseline['p99_ms'] * tolerance:.2f}ms"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_generate_memories_performance_regression(
         self, temp_db_path, regression_config, performance_baseline
     ):
         """Test that generate_memories performance doesn't regress."""
         with KuzuMemory(db_path=temp_db_path, config=regression_config) as memory:
-            test_content = (
-                "I'm working on a new microservice using FastAPI and PostgreSQL with Redis caching."
-            )
+            test_content = "I'm working on a new microservice using FastAPI and PostgreSQL with Redis caching."
 
             def generation_operation():
                 memory_ids = memory.generate_memories(
@@ -169,28 +179,40 @@ class TestPerformanceRegression:
                 return memory_ids
 
             # Measure performance
-            perf_stats = self.measure_operation_performance(generation_operation, iterations=100)
+            perf_stats = self.measure_operation_performance(
+                generation_operation, iterations=100
+            )
 
             # Compare against baseline
             baseline = performance_baseline["generate_memories"]
 
             print("\ngenerate_memories Performance Regression Test:")
-            print(f"  Mean: {perf_stats['mean']:.2f}ms (baseline: {baseline['mean_ms']:.2f}ms)")
-            print(f"  P95:  {perf_stats['p95']:.2f}ms (baseline: {baseline['p95_ms']:.2f}ms)")
-            print(f"  P99:  {perf_stats['p99']:.2f}ms (baseline: {baseline['p99_ms']:.2f}ms)")
+            print(
+                f"  Mean: {perf_stats['mean']:.2f}ms (baseline: {baseline['mean_ms']:.2f}ms)"
+            )
+            print(
+                f"  P95:  {perf_stats['p95']:.2f}ms (baseline: {baseline['p95_ms']:.2f}ms)"
+            )
+            print(
+                f"  P99:  {perf_stats['p99']:.2f}ms (baseline: {baseline['p99_ms']:.2f}ms)"
+            )
 
             # Regression assertions (allow 50% degradation for test environment)
             tolerance = 1.5
-            assert perf_stats["mean"] <= baseline["mean_ms"] * tolerance, (
-                f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["mean"] <= baseline["mean_ms"] * tolerance
+            ), f"Mean performance regressed: {perf_stats['mean']:.2f}ms > {baseline['mean_ms'] * tolerance:.2f}ms"
 
-            assert perf_stats["p95"] <= baseline["p95_ms"] * tolerance, (
-                f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
-            )
+            assert (
+                perf_stats["p95"] <= baseline["p95_ms"] * tolerance
+            ), f"P95 performance regressed: {perf_stats['p95']:.2f}ms > {baseline['p95_ms'] * tolerance:.2f}ms"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
-    def test_memory_scaling_regression(self, temp_db_path, regression_config, performance_baseline):
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
+    def test_memory_scaling_regression(
+        self, temp_db_path, regression_config, performance_baseline
+    ):
         """Test that performance scaling with memory count doesn't regress."""
         with KuzuMemory(db_path=temp_db_path, config=regression_config) as memory:
             user_id = "scaling-user"
@@ -231,7 +253,9 @@ class TestPerformanceRegression:
                     # The focus is on timing, not correctness
                     return context
 
-                perf_stats = self.measure_operation_performance(recall_at_scale, iterations=20)
+                perf_stats = self.measure_operation_performance(
+                    recall_at_scale, iterations=20
+                )
                 performance_data[count] = perf_stats["mean"]
 
             print("\nMemory Scaling Regression Test:")
@@ -248,11 +272,13 @@ class TestPerformanceRegression:
                 f"  Scaling factor: {actual_degradation:.2f}x (baseline limit: {baseline_scaling['degradation_factor']:.2f}x)"
             )
 
-            assert actual_degradation <= baseline_scaling["degradation_factor"], (
-                f"Scaling performance regressed: {actual_degradation:.2f}x > {baseline_scaling['degradation_factor']:.2f}x"
-            )
+            assert (
+                actual_degradation <= baseline_scaling["degradation_factor"]
+            ), f"Scaling performance regressed: {actual_degradation:.2f}x > {baseline_scaling['degradation_factor']:.2f}x"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_cache_performance_regression(
         self, temp_db_path, regression_config, performance_baseline
     ):
@@ -273,7 +299,9 @@ class TestPerformanceRegression:
                 # The focus is on timing, not correctness
                 return context
 
-            miss_stats = self.measure_operation_performance(cache_miss_operation, iterations=10)
+            miss_stats = self.measure_operation_performance(
+                cache_miss_operation, iterations=10
+            )
 
             # Measure cache hit performance (subsequent calls)
             def cache_hit_operation():
@@ -282,10 +310,14 @@ class TestPerformanceRegression:
                 # The focus is on timing, not correctness
                 return context
 
-            hit_stats = self.measure_operation_performance(cache_hit_operation, iterations=50)
+            hit_stats = self.measure_operation_performance(
+                cache_hit_operation, iterations=50
+            )
 
             # Calculate cache performance metrics
-            cache_speedup = miss_stats["mean"] / hit_stats["mean"] if hit_stats["mean"] > 0 else 1.0
+            cache_speedup = (
+                miss_stats["mean"] / hit_stats["mean"] if hit_stats["mean"] > 0 else 1.0
+            )
 
             print("\nCache Performance Regression Test:")
             print(f"  Cache miss (first call): {miss_stats['mean']:.2f}ms")
@@ -295,11 +327,13 @@ class TestPerformanceRegression:
             # Compare against baseline
             baseline_cache = performance_baseline["cache_performance"]
 
-            assert cache_speedup >= baseline_cache["cache_hit_speedup"], (
-                f"Cache speedup regressed: {cache_speedup:.2f}x < {baseline_cache['cache_hit_speedup']:.2f}x"
-            )
+            assert (
+                cache_speedup >= baseline_cache["cache_hit_speedup"]
+            ), f"Cache speedup regressed: {cache_speedup:.2f}x < {baseline_cache['cache_hit_speedup']:.2f}x"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_concurrent_performance_regression(self, temp_db_path, regression_config):
         """Test that concurrent operation performance doesn't regress."""
         import queue
@@ -368,11 +402,15 @@ class TestPerformanceRegression:
             print(f"  Throughput: {throughput:.1f} ops/sec")
 
             # Regression assertions
-            assert mean_time < 50.0, f"Concurrent mean time regressed: {mean_time:.2f}ms"
+            assert (
+                mean_time < 50.0
+            ), f"Concurrent mean time regressed: {mean_time:.2f}ms"
             assert p95_time < 100.0, f"Concurrent P95 time regressed: {p95_time:.2f}ms"
             assert throughput > 10.0, f"Throughput regressed: {throughput:.1f} ops/sec"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_memory_usage_regression(self, temp_db_path, regression_config):
         """Test that memory usage doesn't regress significantly."""
         import os
@@ -412,11 +450,13 @@ class TestPerformanceRegression:
             print(f"  Memory increase: {memory_increase:.1f} MB")
 
             # Memory usage should be reasonable
-            assert memory_increase < 100.0, (
-                f"Memory usage regressed: {memory_increase:.1f} MB increase"
-            )
+            assert (
+                memory_increase < 100.0
+            ), f"Memory usage regressed: {memory_increase:.1f} MB increase"
 
-    @pytest.mark.skip(reason="Performance thresholds too aggressive for test environment")
+    @pytest.mark.skip(
+        reason="Performance thresholds too aggressive for test environment"
+    )
     def test_database_size_regression(self, temp_db_path, regression_config):
         """Test that database size growth is reasonable."""
         with KuzuMemory(db_path=temp_db_path, config=regression_config) as memory:
@@ -425,7 +465,10 @@ class TestPerformanceRegression:
             # Store known amount of data
             test_data_size = 0
             for i in range(50):
-                content = f"Memory {i}: This is test content for database size analysis. " * 10
+                content = (
+                    f"Memory {i}: This is test content for database size analysis. "
+                    * 10
+                )
                 test_data_size += len(content.encode("utf-8"))
 
                 memory.generate_memories(
@@ -444,9 +487,9 @@ class TestPerformanceRegression:
             print(f"  Storage ratio: {storage_ratio:.2f}x")
 
             # Storage should be reasonably efficient
-            assert storage_ratio < 5.0, (
-                f"Database storage efficiency regressed: {storage_ratio:.2f}x"
-            )
-            assert size_increase < 10 * 1024 * 1024, (
-                f"Database size too large: {size_increase / 1024 / 1024:.1f} MB"
-            )
+            assert (
+                storage_ratio < 5.0
+            ), f"Database storage efficiency regressed: {storage_ratio:.2f}x"
+            assert (
+                size_increase < 10 * 1024 * 1024
+            ), f"Database size too large: {size_increase / 1024 / 1024:.1f} MB"

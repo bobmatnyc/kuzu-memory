@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 # Add vendor path to sys.path for submodule imports
 _vendor_path = (
-    Path(__file__).parent.parent.parent.parent / "vendor" / "py-mcp-installer-service" / "src"
+    Path(__file__).parent.parent.parent.parent
+    / "vendor"
+    / "py-mcp-installer-service"
+    / "src"
 )
 if _vendor_path.exists() and str(_vendor_path) not in sys.path:
     sys.path.insert(0, str(_vendor_path))
@@ -44,9 +47,7 @@ try:
         PlatformInfo,
         Scope,
     )
-    from py_mcp_installer import (
-        InstallationResult as PyMCPInstallationResult,
-    )
+    from py_mcp_installer import InstallationResult as PyMCPInstallationResult
 
     HAS_MCP_INSTALLER = True
 except ImportError as e:
@@ -171,7 +172,9 @@ class MCPInstallerAdapter(BaseInstaller):
         self._dry_run = dry_run
         self._verbose = verbose
         self._platform = platform
-        self.installer = MCPInstaller(platform=platform, dry_run=dry_run, verbose=verbose)
+        self.installer = MCPInstaller(
+            platform=platform, dry_run=dry_run, verbose=verbose
+        )
 
         # Initialize diagnostic and inspection tools
         self.doctor = MCPDoctor(self.installer.platform_info)
@@ -315,7 +318,9 @@ class MCPInstallerAdapter(BaseInstaller):
                 warnings=[str(e)],
             )
 
-    def uninstall(self, server_name: str = "kuzu-memory", **kwargs: Any) -> InstallationResult:
+    def uninstall(
+        self, server_name: str = "kuzu-memory", **kwargs: Any
+    ) -> InstallationResult:
         """
         Uninstall MCP server configuration.
 
@@ -498,7 +503,9 @@ class MCPInstallerAdapter(BaseInstaller):
     # Conversion Helpers
     # ========================================================================
 
-    def _convert_installation_result(self, result: PyMCPInstallationResult) -> InstallationResult:
+    def _convert_installation_result(
+        self, result: PyMCPInstallationResult
+    ) -> InstallationResult:
         """
         Convert py-mcp-installer InstallationResult to kuzu-memory format.
 
@@ -522,7 +529,9 @@ class MCPInstallerAdapter(BaseInstaller):
                 # Backups would be in .backup_* files in same directory
                 backup_dir = result.config_path.parent
                 if backup_dir.exists():
-                    backup_files.extend(backup_dir.glob(f"{result.config_path.name}.backup_*"))
+                    backup_files.extend(
+                        backup_dir.glob(f"{result.config_path.name}.backup_*")
+                    )
 
         return InstallationResult(
             success=result.success,
@@ -611,7 +620,9 @@ class MCPInstallerAdapter(BaseInstaller):
         """
         try:
             inspection = self.inspector.inspect_installation()
-            return any("kuzu-memory" in server.lower() for server in inspection.server_names)
+            return any(
+                "kuzu-memory" in server.lower() for server in inspection.server_names
+            )
         except Exception as e:
             logger.debug(f"Failed to check MCP configuration: {e}")
             return False

@@ -161,7 +161,7 @@ class TestMCPInstallerAdapter:
             mock_installer.install_server.return_value = mock_result
 
             adapter = MCPInstallerAdapter(project_root=project_root)
-            result = adapter.install(
+            adapter.install(
                 server_name="custom-server",
                 command="python",
                 args=["-m", "custom_server"],
@@ -225,15 +225,20 @@ class TestMCPInstallerAdapter:
         mock_report.is_valid = True
         mock_report.server_names = ["kuzu-memory", "other-server"]
 
-        with patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
-        ) as mock_installer_class, patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPInspector"
-        ) as mock_inspector_class:
+        with (
+            patch(
+                "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+            ) as mock_installer_class,
+            patch(
+                "kuzu_memory.installers.mcp_installer_adapter.MCPInspector"
+            ) as mock_inspector_class,
+        ):
             # Set up platform info properly
             mock_platform_info = Mock()
             mock_platform_info.platform = Platform.CLAUDE_CODE
-            mock_platform_info.config_path = project_root / ".config" / "claude" / "mcp.json"
+            mock_platform_info.config_path = (
+                project_root / ".config" / "claude" / "mcp.json"
+            )
             mock_platform_info.cli_available = True
             mock_platform_info.confidence = 1.0
 
@@ -266,11 +271,12 @@ class TestMCPInstallerAdapter:
         mock_report.server_reports = {}
         mock_report.recommendations = []
 
-        with patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
-        ), patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPDoctor"
-        ) as mock_doctor_class:
+        with (
+            patch("kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"),
+            patch(
+                "kuzu_memory.installers.mcp_installer_adapter.MCPDoctor"
+            ) as mock_doctor_class,
+        ):
             mock_doctor = mock_doctor_class.return_value
             mock_doctor.diagnose.return_value = mock_report
 
@@ -296,11 +302,12 @@ class TestMCPInstallerAdapter:
         mock_report.issues = []
         mock_report.summary = "All servers configured correctly"
 
-        with patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
-        ), patch(
-            "kuzu_memory.installers.mcp_installer_adapter.MCPInspector"
-        ) as mock_inspector_class:
+        with (
+            patch("kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"),
+            patch(
+                "kuzu_memory.installers.mcp_installer_adapter.MCPInspector"
+            ) as mock_inspector_class,
+        ):
             mock_inspector = mock_inspector_class.return_value
             mock_inspector.inspect_installation.return_value = mock_report
 
@@ -341,7 +348,9 @@ class TestMCPInstallerNotAvailable:
     )
     def test_initialization_without_submodule(self, tmp_path: Path) -> None:
         """Test initialization fails gracefully without submodule."""
-        with pytest.raises(RuntimeError, match="py-mcp-installer-service is not available"):
+        with pytest.raises(
+            RuntimeError, match="py-mcp-installer-service is not available"
+        ):
             MCPInstallerAdapter(project_root=tmp_path)
 
     @pytest.mark.skipif(

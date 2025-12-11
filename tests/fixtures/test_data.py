@@ -297,7 +297,9 @@ class DataGenerator:
             "team_collaboration": self._generate_team_collaboration_scenario,
         }
 
-        generator = scenarios.get(scenario_name, self._generate_software_engineer_scenario)
+        generator = scenarios.get(
+            scenario_name, self._generate_software_engineer_scenario
+        )
         return generator()
 
     def _generate_software_engineer_scenario(self) -> DataScenario:
@@ -373,7 +375,9 @@ class DataGenerator:
             queries=queries,
             expected_outcomes={
                 "total_memories": len(memories),
-                "memory_types": {mt.value for mt in [m["memory_type"] for m in memories]},
+                "memory_types": {
+                    mt.value for mt in [m["memory_type"] for m in memories]
+                },
                 "recall_success_rate": 1.0,
             },
         )
@@ -439,7 +443,9 @@ class DataGenerator:
             queries=queries,
             expected_outcomes={
                 "total_memories": len(memories),
-                "memory_types": {mt.value for mt in [m["memory_type"] for m in memories]},
+                "memory_types": {
+                    mt.value for mt in [m["memory_type"] for m in memories]
+                },
                 "recall_success_rate": 1.0,
             },
         )
@@ -505,7 +511,9 @@ class DataGenerator:
             queries=queries,
             expected_outcomes={
                 "total_memories": len(memories),
-                "memory_types": {mt.value for mt in [m["memory_type"] for m in memories]},
+                "memory_types": {
+                    mt.value for mt in [m["memory_type"] for m in memories]
+                },
                 "recall_success_rate": 1.0,
             },
         )
@@ -564,7 +572,9 @@ class DataGenerator:
             queries=queries,
             expected_outcomes={
                 "total_memories": len(memories),
-                "memory_types": {mt.value for mt in [m["memory_type"] for m in memories]},
+                "memory_types": {
+                    mt.value for mt in [m["memory_type"] for m in memories]
+                },
                 "recall_success_rate": 1.0,
             },
         )
@@ -597,7 +607,9 @@ def generate_test_memories(
     return test_data_generator.generate_memory_batch(count, user_id, memory_types)
 
 
-def generate_performance_test_data(memory_count: int, user_count: int = 1) -> list[dict[str, Any]]:
+def generate_performance_test_data(
+    memory_count: int, user_count: int = 1
+) -> list[dict[str, Any]]:
     """Generate data for performance testing."""
     all_memories = []
 
@@ -605,7 +617,9 @@ def generate_performance_test_data(memory_count: int, user_count: int = 1) -> li
         user_id = f"perf-user-{user_idx}"
         memories_per_user = memory_count // user_count
 
-        user_memories = test_data_generator.generate_memory_batch(memories_per_user, user_id)
+        user_memories = test_data_generator.generate_memory_batch(
+            memories_per_user, user_id
+        )
         all_memories.extend(user_memories)
 
     return all_memories
