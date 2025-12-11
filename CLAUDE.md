@@ -28,12 +28,35 @@ kuzu-memory/
 │   ├── services/       # Service layer (DI pattern, lifecycle management)
 │   ├── cli/            # Click commands (thin wrappers around services)
 │   ├── mcp/            # MCP server implementation (JSON-RPC 2.0)
-│   ├── installers/     # Integration installers (Claude Code, Cursor, etc.)
+│   ├── installers/     # Integration installers (now includes MCPInstallerAdapter)
 │   ├── integrations/   # Third-party integrations (Auggie, git hooks)
 │   └── utils/          # Shared utilities
+├── vendor/             # Vendored dependencies (git submodules)
+│   └── py-mcp-installer-service/  # Multi-platform MCP installer
 ├── tests/              # pytest test suite
 ├── scripts/            # Build and release automation
 └── docs/               # Documentation and design specs
+```
+
+### Working with Vendored Dependencies
+
+KuzuMemory uses git submodules to vendor external dependencies:
+
+- **py-mcp-installer-service**: Provides multi-platform MCP installation support via an adapter layer
+- **Adapter Pattern**: `src/kuzu_memory/installers/mcp_installer_adapter.py` bridges the external API with kuzu-memory's `BaseInstaller` interface
+- **Submodule Location**: `vendor/py-mcp-installer-service/`
+
+When cloning or updating the repository, ensure submodules are initialized:
+
+```bash
+# Clone with submodules
+git clone --recurse-submodules https://github.com/bobmatnyc/kuzu-memory.git
+
+# Or initialize submodules after cloning
+git submodule update --init --recursive
+
+# Update submodules to latest versions
+git submodule update --remote
 ```
 
 ## Development Principles
@@ -103,10 +126,13 @@ def remember(ctx: click.Context, content: str, source: str) -> None:
 ### Setup Development Environment
 
 ```bash
-# Clone and install in editable mode
-git clone https://github.com/bobmatnyc/kuzu-memory.git
+# Clone with submodules and install in editable mode
+git clone --recurse-submodules https://github.com/bobmatnyc/kuzu-memory.git
 cd kuzu-memory
 python -m pip install -e ".[dev]"
+
+# If you forgot --recurse-submodules during clone
+git submodule update --init --recursive
 
 # Run quality gates before committing
 make pre-publish  # Runs: ruff, black, isort, mypy, pytest
@@ -249,11 +275,25 @@ def test_export_command(cli_runner, mock_db):
 
 ### Adding a New Integration
 
+**For MCP server installations**, prefer using the `MCPInstallerAdapter` which provides:
+
+- **Multi-platform support**: Claude Code, Claude Desktop, Cursor, Auggie, Windsurf, Codex, Gemini CLI, Antigravity
+- **Auto-detection**: Automatically detects installed platforms
+- **Unified diagnostics**: MCPDoctor and MCPInspector tools for troubleshooting
+- **Flexible installation**: Supports `uv run`, `pipx`, and direct execution methods
+- **Adapter pattern**: Bridges the external `py-mcp-installer-service` API with kuzu-memory's `BaseInstaller` interface
+
+**Example**: The MCP installer is already integrated via `mcp_installer_adapter.py`.
+
+**For custom integrations not covered by MCPInstallerAdapter**:
+
 1. **Create installer** in `src/kuzu_memory/installers/`
 2. **Implement `BaseInstaller` protocol**
 3. **Register in `installers/registry.py`**
 4. **Add to `AVAILABLE_INTEGRATIONS` in `cli/install_unified.py`**
 5. **Test installation with `kuzu-memory install <name> --dry-run`**
+
+**Note**: Only create custom installers for non-MCP integrations or when MCPInstallerAdapter doesn't support your use case.
 
 ## Error Handling Patterns
 
@@ -284,6 +324,29 @@ except Exception:  # Too broad
 - **docs/**: Detailed architecture, design decisions, research
 
 ## Git Workflow
+
+### Working with Submodules
+
+When cloning the repository:
+```bash
+# Clone with submodules initialized
+git clone --recurse-submodules https://github.com/bobmatnyc/kuzu-memory.git
+
+# If already cloned without submodules
+git submodule update --init --recursive
+```
+
+When updating submodules to latest versions:
+```bash
+# Update all submodules to their latest commits
+git submodule update --remote
+
+# Commit the submodule updates
+git add vendor/py-mcp-installer-service
+git commit -m "chore: update py-mcp-installer-service submodule"
+```
+
+### Feature Branch Workflow
 
 ```bash
 # Feature branch workflow
@@ -364,5 +427,5 @@ Check `docs/` directory for:
 
 ---
 
-**Last Updated**: 2025-12-04
-**Version**: 1.6.1
+**Last Updated**: 2025-12-11
+**Version**: 1.6.2
