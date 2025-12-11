@@ -273,6 +273,85 @@ def test_export_command(cli_runner, mock_db):
     assert result.exit_code == 0
 ```
 
+### Verifying and Managing Hooks
+
+KuzuMemory provides comprehensive hooks verification for both git hooks and Claude Code hooks to ensure integrations are properly configured.
+
+#### Hooks Verification Commands
+
+**Check Hooks Status:**
+
+```bash
+# Basic hooks check with summary
+kuzu-memory doctor hooks
+
+# Verbose output with detailed configuration (including events)
+kuzu-memory doctor hooks --verbose
+
+# Auto-fix missing hooks
+kuzu-memory doctor hooks --fix
+
+# Check hooks in specific project directory
+kuzu-memory doctor hooks --project-root /path/to/project
+```
+
+**Include Hooks in Full Diagnostics:**
+
+```bash
+# Run complete system diagnostics including hooks verification
+kuzu-memory doctor diagnose --hooks
+```
+
+#### Hook Types
+
+KuzuMemory supports two types of hooks:
+
+**Git Hooks:**
+- **Purpose**: Automatic memory synchronization on git events
+- **Location**: `.git/hooks/post-commit`
+- **Function**: Captures commit messages and code changes as project memories
+- **Verification**: Checks for hook file existence, executability, and correct configuration
+
+**Claude Code Hooks:**
+- **Purpose**: Event-driven memory capture during AI coding sessions
+- **Location**: `.claude/hooks/` directory
+- **Events**: UserPromptSubmit, Stop, SessionStart, and other lifecycle events
+- **Configuration**: `.claude/hooks.json` with event subscriptions
+- **Verification**: Checks hook scripts, configuration file, and event registrations
+
+#### Hooks Verification in Setup
+
+The `kuzu-memory setup` command now automatically verifies hooks after installation:
+
+```bash
+# Setup will check hooks and show recommendations
+kuzu-memory setup
+
+# Example output:
+# ✅ Git hooks: Installed and configured
+# ⚠️  Claude Code hooks: Missing (run 'kuzu-memory doctor hooks --fix')
+```
+
+#### Understanding Verification Results
+
+Hooks verification provides detailed status information:
+
+- **✅ Installed and Configured**: Hook is present, executable, and properly configured
+- **⚠️ Missing**: Hook is not installed (use `--fix` to install)
+- **❌ Misconfigured**: Hook exists but has configuration issues
+- **ℹ️ Not Applicable**: Hook type not available in current environment
+
+#### Common Hooks Issues
+
+**Issue**: Git hooks not triggering after commit
+**Fix**: Run `kuzu-memory doctor hooks --fix` to reinstall hooks with correct permissions
+
+**Issue**: Claude Code hooks not capturing events
+**Fix**: Verify `.claude/hooks.json` configuration with `kuzu-memory doctor hooks --verbose`
+
+**Issue**: Hooks installed but not working in new project
+**Fix**: Hooks are project-specific; run setup in each project directory
+
 ### Adding a New Integration
 
 **For MCP server installations**, prefer using the `MCPInstallerAdapter` which provides:
@@ -396,6 +475,21 @@ embedding = self.embedding_service.embed(content)  # Cached
 
 ## Troubleshooting
 
+### Diagnostic Tools
+
+KuzuMemory includes comprehensive diagnostic commands to help identify and resolve issues:
+
+```bash
+# Check system health and hooks status
+kuzu-memory doctor diagnose --hooks
+
+# Verify hooks configuration
+kuzu-memory doctor hooks --verbose
+
+# Auto-fix common hooks issues
+kuzu-memory doctor hooks --fix
+```
+
 ### Common Issues
 
 **Issue**: `kuzu-memory: command not found`
@@ -408,7 +502,13 @@ embedding = self.embedding_service.embed(content)  # Cached
 **Fix**: Use `tmp_path` fixture in tests, or add `force=True` flag
 
 **Issue**: MCP server not connecting
-**Fix**: Check `~/.claude.json` configuration, verify server path
+**Fix**: Check `~/.claude.json` configuration, verify server path. Run `kuzu-memory doctor diagnose --hooks` for comprehensive diagnostics
+
+**Issue**: Git hooks not triggering
+**Fix**: Verify hooks with `kuzu-memory doctor hooks --verbose`, then run `kuzu-memory doctor hooks --fix` if needed
+
+**Issue**: Claude Code hooks not capturing session events
+**Fix**: Check `.claude/hooks.json` exists and is properly configured. Use `kuzu-memory doctor hooks --verbose` to see event subscriptions
 
 ## Resources
 
