@@ -260,27 +260,39 @@ def diagnose(
 
 
 @doctor.command()
+@click.option("--full", "-f", is_flag=True, help="Run full protocol compliance tests")
+@click.option("--fix", is_flag=True, help="Auto-fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
-def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str | None) -> None:
+def mcp(
+    ctx: click.Context,
+    full: bool,
+    fix: bool,
+    verbose: bool,
+    output: str | None,
+    project_root: str | None,
+) -> None:
     """
-    PROJECT MCP-specific diagnostics.
+    Diagnose MCP server installation.
 
-    Validates PROJECT-LEVEL MCP server configuration:
-    - Claude Code MCP config (.claude/config.local.json)
-    - Protocol compliance
-    - Tool functionality
+    Runs comprehensive diagnostics on MCP server configuration:
+    - Platform detection
+    - Command accessibility
+    - Environment variables
+    - Configuration validation
 
-    Does NOT check Claude Desktop (user-level) MCP configuration.
+    With --full, also tests JSON-RPC protocol compliance.
+    With --fix, attempts to auto-fix detected issues.
 
-    Note: Uses DiagnosticService with async-to-sync bridge for I/O operations.
+    Note: Uses MCPInstallerAdapter for enhanced diagnostics.
     """
+    from ..installers.mcp_installer_adapter import HAS_MCP_INSTALLER
     from ..services import ConfigService
 
     try:
-        rich_print("🔍 Running MCP diagnostics...", style="blue")
+        rich_print("🔍 Running MCP installation diagnostics...", style="blue")
 
         # Initialize config service
         project_path = Path(project_root) if project_root else Path.cwd()
@@ -288,42 +300,90 @@ def mcp(ctx: click.Context, verbose: bool, output: str | None, project_root: str
         config_service.initialize()
 
         try:
-            # Use DiagnosticService for MCP health check
+            # Use DiagnosticService for MCP installation check
             with ServiceManager.diagnostic_service(config_service) as diagnostic:
-                # Run async health check using run_async bridge
-                mcp_health = run_async(diagnostic.check_mcp_server_health())
+                # Run async MCP installation check using run_async bridge
+                mcp_install = run_async(diagnostic.check_mcp_installation(full=full))
 
                 # Display results
-                configured = mcp_health.get("configured", False)
-                config_valid = mcp_health.get("config_valid", False)
-                issues = mcp_health.get("issues", [])
+                available = mcp_install.get("available", False)
+                status = mcp_install.get("status", "unknown")
+                platform = mcp_install.get("platform", "N/A")
+                checks_passed = mcp_install.get("checks_passed", 0)
+                checks_total = mcp_install.get("checks_total", 0)
+                issues = mcp_install.get("issues", [])
+                recommendations = mcp_install.get("recommendations", [])
 
-                if configured and config_valid:
-                    rich_print("✅ MCP server is configured and healthy", style="green")
-                elif configured:
-                    rich_print("⚠️  MCP server configured but has issues", style="yellow")
+                if not available:
+                    rich_print("⚠️  MCPInstallerAdapter not available", style="yellow")
+                    rich_print(
+                        "   Install py-mcp-installer-service submodule for enhanced diagnostics",
+                        style="dim",
+                    )
+                    if HAS_MCP_INSTALLER:
+                        rich_print("   Status: Available", style="green")
+                    else:
+                        rich_print("   Status: Not Available", style="red")
+                        rich_print(
+                            "   Run: git submodule update --init --recursive",
+                            style="dim",
+                        )
                 else:
-                    rich_print("❌ MCP server not configured", style="red")
+                    # Show status
+                    if status == "healthy":
+                        rich_print("✅ MCP installation is healthy", style="green")
+                    elif status == "degraded":
+                        rich_print("⚠️  MCP installation has issues", style="yellow")
+                    elif status == "critical":
+                        rich_print("❌ MCP installation has critical issues", style="red")
+                    else:
+                        rich_print(f"Info: MCP installation status: {status}", style="blue")
 
-                rich_print(
-                    f"   Server path: {mcp_health.get('server_path', 'N/A')}",
-                    style="dim",
-                )
+                    rich_print(f"   Platform: {platform}", style="dim")
+                    rich_print(f"   Checks: {checks_passed}/{checks_total} passed", style="dim")
 
                 if issues:
                     rich_print("\n⚠️  Issues detected:", style="yellow")
                     for issue in issues:
-                        rich_print(f"   • {issue}", style="yellow")
+                        severity = issue.get("severity", "unknown").upper()
+                        message = issue.get("message", "Unknown issue")
+                        rich_print(f"   • [{severity}] {message}", style="yellow")
+
+                if recommendations:
+                    rich_print("\n💡 Recommendations:", style="blue")
+                    for rec in recommendations:
+                        rich_print(f"   • {rec}", style="blue")
+
+                # Auto-fix if requested
+                if fix and available and issues:
+                    rich_print("\n🔧 Attempting automatic fixes...", style="blue")
+                    from ..installers.mcp_installer_adapter import MCPInstallerAdapter
+
+                    try:
+                        adapter = MCPInstallerAdapter(project_root=project_path)
+                        fixes = adapter.fix_issues(auto_fix=True)
+                        if fixes:
+                            rich_print(f"\n✅ Applied {len(fixes)} fix(es):", style="green")
+                            for fix_desc in fixes:
+                                rich_print(f"   • {fix_desc}", style="green")
+                        else:
+                            rich_print("\n⚠️  No auto-fixes available", style="yellow")
+                    except Exception as fix_error:
+                        rich_print(f"\n❌ Auto-fix failed: {fix_error}", style="red")
 
                 # Save to file if requested
                 if output:
                     output_path = Path(output)
-                    output_path.write_text(json.dumps(mcp_health, indent=2))
+                    output_path.write_text(json.dumps(mcp_install, indent=2))
                     rich_print(f"\n✅ Results saved to: {output_path}", style="green")
 
                 # Exit with appropriate code
-                all_healthy = configured and config_valid and len(issues) == 0
-                sys.exit(0 if all_healthy else 1)
+                if status == "healthy":
+                    sys.exit(0)
+                elif status in ["degraded", "warning"]:
+                    sys.exit(1)
+                else:
+                    sys.exit(2)
 
         finally:
             config_service.cleanup()

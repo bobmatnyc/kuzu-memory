@@ -6,6 +6,10 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from kuzu_memory.installers.mcp_installer_adapter import (
+    HAS_MCP_INSTALLER,
+    MCPInstallerAdapter,
+)
 from kuzu_memory.mcp.testing.diagnostics import MCPDiagnostics
 from kuzu_memory.mcp.testing.health_checker import MCPHealthChecker
 from kuzu_memory.services.base import BaseService
@@ -178,6 +182,7 @@ class DiagnosticService(BaseService):
         git_results = await self.check_git_integration()
         system_info = await self.get_system_info()
         deps_results = await self.verify_dependencies()
+        mcp_install_results = await self.check_mcp_installation(full=True)
 
         all_healthy = (
             config_results.get("valid", False)
@@ -194,6 +199,7 @@ class DiagnosticService(BaseService):
             "git_integration": git_results,
             "system_info": system_info,
             "dependencies": deps_results,
+            "mcp_installation": mcp_install_results,
             "timestamp": report.timestamp,
             "total_checks": report.total,
             "passed_checks": report.passed,
@@ -439,6 +445,105 @@ class DiagnosticService(BaseService):
             "last_sync": None,  # TODO: Get from config/metadata
             "issues": issues,
         }
+
+    async def check_mcp_installation(self, full: bool = False) -> dict[str, Any]:
+        """
+        Check MCP installation using py-mcp-installer-service diagnostics.
+
+        Uses MCPInstallerAdapter to run comprehensive MCP server diagnostics
+        including platform detection, command accessibility, environment variables,
+        and optionally JSON-RPC protocol compliance testing.
+
+        Args:
+            full: If True, also test server protocol compliance (slower but comprehensive)
+
+        Returns:
+            MCP installation diagnostic results with keys:
+            - available: bool - Whether MCPInstallerAdapter is available
+            - status: str - Overall status ("healthy", "degraded", "critical")
+            - platform: str - Detected platform
+            - checks_total: int - Total checks performed
+            - checks_passed: int - Passed checks
+            - issues: List[dict] - Detailed issues found
+            - server_reports: dict - Per-server diagnostics (in full mode)
+            - recommendations: List[str] - Actionable recommendations
+
+        Raises:
+            RuntimeError: If service not initialized
+
+        Performance:
+        - Quick mode: ~100-200ms (platform detection, config checks)
+        - Full mode: ~2-5 seconds (includes JSON-RPC protocol tests)
+
+        Example:
+            >>> async with DiagnosticService(config_svc) as svc:
+            >>>     # Quick check
+            >>>     results = await svc.check_mcp_installation()
+            >>>     # Full check with protocol tests
+            >>>     results = await svc.check_mcp_installation(full=True)
+        """
+        self._check_initialized()
+
+        # Check if MCPInstallerAdapter is available
+        if not HAS_MCP_INSTALLER:
+            return {
+                "available": False,
+                "status": "unavailable",
+                "platform": "unknown",
+                "checks_total": 0,
+                "checks_passed": 0,
+                "issues": [
+                    {
+                        "severity": "warning",
+                        "message": (
+                            "py-mcp-installer-service not available. "
+                            "Install submodule for enhanced MCP diagnostics: "
+                            "git submodule update --init --recursive"
+                        ),
+                    }
+                ],
+                "server_reports": {},
+                "recommendations": [
+                    "Install py-mcp-installer-service submodule for enhanced diagnostics",
+                    "Run: git submodule update --init --recursive",
+                ],
+            }
+
+        project_root = self._config_service.get_project_root()
+
+        try:
+            # Create MCPInstallerAdapter for diagnostics
+            adapter = MCPInstallerAdapter(project_root=project_root)
+
+            # Run diagnostics through adapter
+            diagnostic_results = adapter.run_diagnostics(full=full)
+
+            # Add platform information
+            diagnostic_results["platform"] = adapter.ai_system_name
+            diagnostic_results["available"] = True
+
+            return diagnostic_results
+
+        except Exception as e:
+            logger.exception(f"MCP installation check failed: {e}")
+            return {
+                "available": True,
+                "status": "error",
+                "platform": "unknown",
+                "checks_total": 0,
+                "checks_passed": 0,
+                "issues": [
+                    {
+                        "severity": "error",
+                        "message": f"MCP diagnostic failed: {e}",
+                    }
+                ],
+                "server_reports": {},
+                "recommendations": [
+                    "Check MCP configuration files",
+                    "Verify platform detection is correct",
+                ],
+            }
 
     async def get_system_info(self) -> dict[str, Any]:
         """
@@ -701,6 +806,35 @@ class DiagnosticService(BaseService):
             lines.append("\nSuggestions:")
             for suggestion in deps["suggestions"]:
                 lines.append(f"  • {suggestion}")
+
+        # MCP Installation Section
+        lines.append("\n" + "=" * 70)
+        lines.append("MCP INSTALLATION")
+        lines.append("-" * 70)
+        mcp_install = results.get("mcp_installation", {})
+        if mcp_install.get("available", False):
+            status = mcp_install.get("status", "unknown").upper()
+            status_symbol = "✓" if status == "HEALTHY" else "⚠️" if status == "DEGRADED" else "✗"
+            lines.append(f"Status: {status_symbol} {status}")
+            lines.append(f"Platform: {mcp_install.get('platform', 'N/A')}")
+            checks_passed = mcp_install.get("checks_passed", 0)
+            checks_total = mcp_install.get("checks_total", 0)
+            lines.append(f"Checks: {checks_passed}/{checks_total} passed")
+            if mcp_install.get("issues"):
+                lines.append("\nIssues:")
+                for issue in mcp_install["issues"][:5]:  # Limit to 5 issues
+                    severity = issue.get("severity", "unknown").upper()
+                    message = issue.get("message", "Unknown issue")
+                    lines.append(f"  • [{severity}] {message}")
+            if mcp_install.get("recommendations"):
+                lines.append("\nRecommendations:")
+                for rec in mcp_install["recommendations"][:3]:  # Limit to 3
+                    lines.append(f"  • {rec}")
+        else:
+            lines.append("Status: ⚠️ MCPInstallerAdapter not available")
+            lines.append(
+                "Note: Install py-mcp-installer-service submodule for enhanced diagnostics"
+            )
 
         # Summary
         lines.append("\n" + "=" * 70)

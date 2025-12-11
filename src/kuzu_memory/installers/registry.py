@@ -16,6 +16,12 @@ from .base import BaseInstaller
 from .claude_hooks import ClaudeHooksInstaller
 from .codex_installer import CodexInstaller
 from .cursor_installer import CursorInstaller
+from .mcp_installer_adapter import (
+    HAS_MCP_INSTALLER,
+    REVERSE_PLATFORM_MAP,
+    MCPInstallerAdapter,
+    is_mcp_installer_available,
+)
 from .universal import UniversalInstaller
 from .vscode_installer import VSCodeInstaller
 from .windsurf_installer import WindsurfInstaller
@@ -202,3 +208,62 @@ def register_installer(name: str, installer_class: type[BaseInstaller]) -> None:
         installer_class: Installer class
     """
     _registry.register(name, installer_class)
+
+
+def get_best_installer(platform: str, project_root: Path) -> BaseInstaller:
+    """
+    Get the best available installer for a platform.
+
+    Prefers MCPInstallerAdapter when available as it provides:
+    - Auto-detection of AI platforms
+    - Smart installation method selection (uv run, pipx, direct)
+    - Comprehensive diagnostics via MCPDoctor
+    - Configuration inspection and validation
+
+    Falls back to legacy installers when submodule is unavailable.
+
+    Args:
+        platform: Platform name (e.g., "cursor", "claude-code", "vscode")
+        project_root: Project root directory
+
+    Returns:
+        Best available installer instance for the platform
+
+    Raises:
+        ValueError: If platform is not supported by any installer
+
+    Example:
+        >>> installer = get_best_installer("cursor", Path.cwd())
+        >>> result = installer.install(force=False, dry_run=True)
+    """
+    platform_lower = platform.lower()
+
+    # Try MCPInstallerAdapter if available and platform is supported
+    if HAS_MCP_INSTALLER and platform_lower in REVERSE_PLATFORM_MAP:
+        try:
+            logger.debug(
+                f"Using MCPInstallerAdapter for {platform} "
+                f"(submodule available: {is_mcp_installer_available()})"
+            )
+            adapter = MCPInstallerAdapter(project_root, platform=platform_lower)
+            return adapter
+        except Exception as e:
+            logger.warning(
+                f"MCPInstallerAdapter failed for {platform}: {e}, "
+                "falling back to legacy installer"
+            )
+
+    # Fall back to legacy installer
+    logger.debug(
+        f"Using legacy installer for {platform} "
+        f"(MCP adapter available: {HAS_MCP_INSTALLER})"
+    )
+    installer = get_installer(platform_lower, project_root)
+
+    if installer is None:
+        raise ValueError(
+            f"No installer available for platform: {platform}. "
+            f"Available platforms: {', '.join(get_installer_names())}"
+        )
+
+    return installer
