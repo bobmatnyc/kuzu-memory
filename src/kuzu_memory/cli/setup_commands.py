@@ -312,7 +312,7 @@ def setup(
 
             try:
                 from ..services import ConfigService
-                from ..services.service_manager import ServiceManager
+                from .service_manager import ServiceManager
                 from .async_utils import run_async
 
                 config_service = ConfigService(project_root)
