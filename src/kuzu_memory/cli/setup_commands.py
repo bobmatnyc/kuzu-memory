@@ -312,8 +312,8 @@ def setup(
 
             try:
                 from ..services import ConfigService
-                from .service_manager import ServiceManager
                 from .async_utils import run_async
+                from .service_manager import ServiceManager
 
                 config_service = ConfigService(project_root)
                 config_service.initialize()
