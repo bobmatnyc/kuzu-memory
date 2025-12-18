@@ -303,10 +303,19 @@ def setup(
                         rich_print("  ✅ Claude Code hooks and MCP configured", style="green")
                         claude_hooks_installed = True
                     else:
-                        rich_print(f"  ⚠️ Claude Code hooks: {hooks_result.message}", style="yellow")
+                        rich_print(
+                            f"  ⚠️ Claude Code hooks: {hooks_result.message}",
+                            style="yellow",
+                        )
                 except Exception as e:
-                    rich_print(f"  ⚠️ Claude Code hooks installation failed: {e}", style="yellow")
-                    rich_print("    You can install manually: kuzu-memory install claude-code", style="dim")
+                    rich_print(
+                        f"  ⚠️ Claude Code hooks installation failed: {e}",
+                        style="yellow",
+                    )
+                    rich_print(
+                        "    You can install manually: kuzu-memory install claude-code",
+                        style="dim",
+                    )
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2.5: GIT HOOKS INSTALLATION
