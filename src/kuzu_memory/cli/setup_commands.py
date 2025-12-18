@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 
+from ..installers.claude_hooks import ClaudeHooksInstaller
 from ..utils.project_setup import (
     find_project_root,
     get_project_db_path,
@@ -53,9 +54,9 @@ from .install_unified import _detect_installed_systems
     help="Preview changes without modifying files",
 )
 @click.option(
-    "--with-git-hooks",
+    "--skip-git-hooks",
     is_flag=True,
-    help="Install git post-commit hooks for auto-sync (requires git repo)",
+    help="Skip git post-commit hooks installation (auto-installs when git repo detected)",
 )
 @click.pass_context
 def setup(
@@ -64,7 +65,7 @@ def setup(
     integration: str | None,
     force: bool,
     dry_run: bool,
-    with_git_hooks: bool,
+    skip_git_hooks: bool,
 ) -> None:
     """
     🚀 Smart setup - Initialize and configure KuzuMemory (RECOMMENDED).
@@ -78,33 +79,34 @@ def setup(
       2. Initializes memory database (if needed)
       3. Auto-detects installed AI tools
       4. Installs/updates integrations intelligently
-      5. Installs git hooks (if --with-git-hooks)
-      6. Verifies everything is working
+      5. Auto-installs Claude Code hooks and MCP
+      6. Auto-installs git hooks (when git repo detected)
+      7. Verifies everything is working
 
     \b
     🚀 EXAMPLES:
       # Smart setup (recommended - auto-detects everything)
       kuzu-memory setup
 
-      # Setup with git hooks for auto-sync
-      kuzu-memory setup --with-git-hooks
+      # Setup without git hooks
+      kuzu-memory setup --skip-git-hooks
 
-      # Setup for specific integration with git hooks
-      kuzu-memory setup --integration claude-code --with-git-hooks
+      # Setup for specific integration without git hooks
+      kuzu-memory setup --integration claude-code --skip-git-hooks
 
       # Initialize only (skip AI tool installation)
       kuzu-memory setup --skip-install
 
-      # Force reinstall everything including git hooks
-      kuzu-memory setup --force --with-git-hooks
+      # Force reinstall everything
+      kuzu-memory setup --force
 
       # Preview what would happen
-      kuzu-memory setup --dry-run --with-git-hooks
+      kuzu-memory setup --dry-run
 
     \b
     💡 TIP:
       For most users, just run 'kuzu-memory setup' with no arguments.
-      Add --with-git-hooks to enable automatic commit syncing.
+      Git hooks and Claude Code hooks are installed automatically.
 
     \b
     ⚙️  ADVANCED USAGE:
@@ -124,6 +126,8 @@ def setup(
             "✅ Initialize memory database\n"
             "✅ Detect installed AI tools\n"
             "✅ Configure integrations\n"
+            "✅ Install Claude Code hooks and MCP\n"
+            "✅ Install git hooks (if git repo detected)\n"
             "✅ Verify setup\n\n"
             f"Mode: {'DRY RUN (preview only)' if dry_run else 'LIVE SETUP'}",
             title="🚀 KuzuMemory Setup",
@@ -175,7 +179,8 @@ def setup(
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
                 try:
-                    ctx.invoke(init, force=force)
+                    # Explicitly pass None for Path-typed options to avoid Sentinel error
+                    ctx.invoke(init, force=force, config_path=None, project_root=None)
                 except SystemExit:
                     # init command may exit with code 1 if already exists
                     if not force:
@@ -279,28 +284,51 @@ def setup(
                         )
 
         # ═══════════════════════════════════════════════════════════
+        # PHASE 2.25: CLAUDE CODE HOOKS & MCP INSTALLATION
+        # ═══════════════════════════════════════════════════════════
+
+        claude_hooks_installed = False
+        if not skip_install:
+            if dry_run:
+                rich_print(
+                    "\n[DRY RUN] Would install Claude Code hooks and MCP",
+                    style="yellow",
+                )
+            else:
+                rich_print("\n🪝 Installing Claude Code hooks and MCP...", style="cyan")
+                try:
+                    hooks_installer = ClaudeHooksInstaller(project_root)
+                    hooks_result = hooks_installer.install(force=force, dry_run=dry_run)
+                    if hooks_result.success:
+                        rich_print("  ✅ Claude Code hooks and MCP configured", style="green")
+                        claude_hooks_installed = True
+                    else:
+                        rich_print(f"  ⚠️ Claude Code hooks: {hooks_result.message}", style="yellow")
+                except Exception as e:
+                    rich_print(f"  ⚠️ Claude Code hooks installation failed: {e}", style="yellow")
+                    rich_print("    You can install manually: kuzu-memory install claude-code", style="dim")
+
+        # ═══════════════════════════════════════════════════════════
         # PHASE 2.5: GIT HOOKS INSTALLATION
         # ═══════════════════════════════════════════════════════════
 
         git_hooks_installed = False
         git_repo_detected = _detect_git_repository(project_root)
 
-        if with_git_hooks:
-            if not git_repo_detected:
+        if git_repo_detected and not skip_git_hooks:
+            if dry_run:
                 rich_print(
-                    "\n⚠️  Git hooks requested but no git repository detected",
+                    "\n[DRY RUN] Would install git hooks for auto-sync",
                     style="yellow",
                 )
-                rich_print("   Skipping git hooks installation", style="dim")
             else:
-                if dry_run:
-                    rich_print(
-                        "\n[DRY RUN] Would install git hooks for auto-sync",
-                        style="yellow",
-                    )
-                else:
-                    rich_print("\n🪝 Installing git hooks...", style="cyan")
-                    git_hooks_installed = _install_git_hooks(ctx, project_root, force=force)
+                rich_print("\n🪝 Installing git hooks...", style="cyan")
+                git_hooks_installed = _install_git_hooks(ctx, project_root, force=force)
+        elif not git_repo_detected and not skip_git_hooks:
+            rich_print(
+                "\n⚠️  Git repository not detected - skipping git hooks installation",
+                style="yellow",
+            )
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2.75: VERIFY HOOKS INSTALLATION
@@ -362,11 +390,16 @@ def setup(
             if skip_install:
                 next_steps.append("• Install AI tool: kuzu-memory install <integration>")
 
-            # Add git hooks status to next steps
-            if with_git_hooks and git_hooks_installed:
+            # Add hooks status to next steps
+            if git_hooks_installed:
                 next_steps.append("✅ Git hooks installed - commits will auto-sync to memory")
-            elif not with_git_hooks and git_repo_detected:
+            elif not skip_git_hooks and git_repo_detected:
+                next_steps.append("💡 Note: Git hooks installation attempted - check status above")
+            elif skip_git_hooks and git_repo_detected:
                 next_steps.append("💡 Enable auto-sync: kuzu-memory git install-hooks")
+
+            if claude_hooks_installed:
+                next_steps.append("✅ Claude Code hooks configured - ready to use")
 
             next_steps.extend(
                 [
@@ -376,20 +409,30 @@ def setup(
                 ]
             )
 
-            # Determine git hooks status message
+            # Determine hooks status messages
             if git_hooks_installed:
                 git_hooks_status = "✅ Installed"
-            elif with_git_hooks and not git_repo_detected:
-                git_hooks_status = "⚠️ Not installed (no git repo)"
+            elif skip_git_hooks:
+                git_hooks_status = "⏭️  Skipped (--skip-git-hooks)"
+            elif not git_repo_detected:
+                git_hooks_status = "⚠️  Not installed (no git repo)"
             else:
                 git_hooks_status = "❌ Not installed"
+
+            if claude_hooks_installed:
+                claude_hooks_status = "✅ Installed"
+            elif skip_install:
+                claude_hooks_status = "⏭️  Skipped (--skip-install)"
+            else:
+                claude_hooks_status = "❌ Not installed"
 
             rich_panel(
                 "Setup Complete! 🎉\n\n"
                 f"📁 Project: {project_root}\n"
                 f"🗄️  Database: {db_path}\n"
                 f"📂 Memories: {memories_dir}\n"
-                f"🪝 Git Hooks: {git_hooks_status}\n\n"
+                f"🪝 Git Hooks: {git_hooks_status}\n"
+                f"🤖 Claude Code Hooks: {claude_hooks_status}\n\n"
                 "Next steps:\n" + "\n".join(next_steps),
                 title="✅ KuzuMemory Ready",
                 style="green",
@@ -425,6 +468,7 @@ def _install_integration(
         ctx.invoke(
             install_command,
             integration=integration_name,
+            project_root=None,
             force=force,
             dry_run=False,
             verbose=False,
