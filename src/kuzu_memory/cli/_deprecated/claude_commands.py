@@ -28,8 +28,12 @@ def claude_group(ctx: click.Context) -> None:
 
 
 @claude_group.command(name="install")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
-@click.option("--force", is_flag=True, help="Force installation even if already installed")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
+@click.option(
+    "--force", is_flag=True, help="Force installation even if already installed"
+)
 @click.option("--no-test", is_flag=True, help="Skip installation testing")
 @click.pass_context
 def install_claude_hooks(
@@ -168,10 +172,14 @@ def install_claude_hooks(
 
 
 @claude_group.command(name="uninstall")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--force", is_flag=True, help="Force uninstall without confirmation")
 @click.pass_context
-def uninstall_claude_hooks(ctx: click.Context, project_root: str | None, force: bool) -> None:
+def uninstall_claude_hooks(
+    ctx: click.Context, project_root: str | None, force: bool
+) -> None:
     """
     [DEPRECATED] Uninstall Claude Code hooks.
 
@@ -209,7 +217,9 @@ def uninstall_claude_hooks(ctx: click.Context, project_root: str | None, force: 
 
         # Confirm uninstallation
         if not force:
-            if not rich_confirm("Are you sure you want to uninstall Claude hooks?", default=False):
+            if not rich_confirm(
+                "Are you sure you want to uninstall Claude hooks?", default=False
+            ):
                 rich_print("Uninstallation cancelled.")
                 return
 
@@ -239,10 +249,14 @@ def uninstall_claude_hooks(ctx: click.Context, project_root: str | None, force: 
 
 
 @claude_group.command(name="status")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
 @click.pass_context
-def claude_status(ctx: click.Context, project_root: str | None, output_json: bool) -> None:
+def claude_status(
+    ctx: click.Context, project_root: str | None, output_json: bool
+) -> None:
     """
     [DEPRECATED] Check Claude Code hooks installation status.
 
@@ -320,7 +334,9 @@ def claude_status(ctx: click.Context, project_root: str | None, output_json: boo
 
 
 @claude_group.command(name="test")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
 def test_claude_integration(ctx: click.Context, project_root: str | None) -> None:
     """
@@ -357,7 +373,9 @@ def test_claude_integration(ctx: click.Context, project_root: str | None) -> Non
                 ["kuzu-memory", "--version"], capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0:
-                tests.append(("KuzuMemory CLI", True, f"Version: {result.stdout.strip()}"))
+                tests.append(
+                    ("KuzuMemory CLI", True, f"Version: {result.stdout.strip()}")
+                )
             else:
                 tests.append(("KuzuMemory CLI", False, "CLI command failed"))
         except Exception as e:
@@ -423,7 +441,9 @@ def test_claude_integration(ctx: click.Context, project_root: str | None) -> Non
 
 
 @claude_group.command(name="mcp-server")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
 def run_mcp_server(ctx: click.Context, project_root: str | None) -> None:
     """
@@ -442,7 +462,9 @@ def run_mcp_server(ctx: click.Context, project_root: str | None) -> None:
         from ..integrations.mcp_server import MCP_AVAILABLE, main
 
         if not MCP_AVAILABLE:
-            rich_print("❌ MCP SDK not installed. Install with: pip install mcp", style="red")
+            rich_print(
+                "❌ MCP SDK not installed. Install with: pip install mcp", style="red"
+            )
             sys.exit(1)
 
         # Set project root in environment if specified
@@ -522,7 +544,9 @@ def claude_wizard(ctx: click.Context) -> None:
         # Step 4: Initialize KuzuMemory if needed
         if not status["kuzu_initialized"]:
             rich_print("\n🧠 Step 4: Initialize KuzuMemory")
-            if rich_confirm("KuzuMemory not initialized. Initialize now?", default=True):
+            if rich_confirm(
+                "KuzuMemory not initialized. Initialize now?", default=True
+            ):
                 import subprocess
 
                 subprocess.run(["kuzu-memory", "init"], cwd=project_root)
@@ -550,7 +574,9 @@ def claude_wizard(ctx: click.Context) -> None:
                 )
 
                 # Step 6: Test
-                if rich_confirm("\n🧪 Would you like to test the integration?", default=True):
+                if rich_confirm(
+                    "\n🧪 Would you like to test the integration?", default=True
+                ):
                     ctx.invoke(test_claude_integration)
             else:
                 rich_print(f"❌ Installation failed: {result.message}", style="red")

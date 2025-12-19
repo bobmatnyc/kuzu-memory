@@ -147,8 +147,12 @@ def service_with_memory(mock_config_service, mock_memory_service):
 def test_initialization_creates_diagnostics_and_health_checker(mock_config_service):
     """Test that initialization creates diagnostics and health checker."""
     with (
-        patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics") as mock_diag_class,
-        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
+        patch(
+            "kuzu_memory.services.diagnostic_service.MCPDiagnostics"
+        ) as mock_diag_class,
+        patch(
+            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
+        ) as mock_health_class,
     ):
         service = DiagnosticService(config_service=mock_config_service)
         service.initialize()
@@ -645,7 +649,9 @@ def test_initializes_config_service(mock_config_service):
         mock_config_service.initialize.assert_called_once()
 
 
-def test_initializes_memory_service_if_provided(mock_config_service, mock_memory_service):
+def test_initializes_memory_service_if_provided(
+    mock_config_service, mock_memory_service
+):
     """Test initializes memory service if provided."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
@@ -664,7 +670,9 @@ def test_works_without_memory_service(service):
     """Test service works without memory service."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
+        patch(
+            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
+        ) as mock_health_class,
     ):
         # Create health checker with database component
         db_component = ComponentHealth(
@@ -722,7 +730,9 @@ async def test_database_health_without_memory_service(service):
     """Test database health check works without memory service."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
+        patch(
+            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
+        ) as mock_health_class,
     ):
         db_component = ComponentHealth(
             name="database",
@@ -789,11 +799,15 @@ async def test_connection_errors(service):
     """Test connection errors are handled."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
+        patch(
+            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
+        ) as mock_health_class,
     ):
         # Mock health check to raise exception
         mock_health = Mock()
-        mock_health.check_health = AsyncMock(side_effect=ConnectionError("Server unavailable"))
+        mock_health.check_health = AsyncMock(
+            side_effect=ConnectionError("Server unavailable")
+        )
         mock_health_class.return_value = mock_health
 
         service.initialize()
@@ -899,7 +913,9 @@ async def test_with_all_dependencies(
         assert db_result["db_size_bytes"] == 1024 * 1024
 
 
-async def test_with_minimal_dependencies(service, mock_diagnostics, mock_health_checker):
+async def test_with_minimal_dependencies(
+    service, mock_diagnostics, mock_health_checker
+):
     """Test with minimal dependencies (no memory service)."""
     with (
         patch(

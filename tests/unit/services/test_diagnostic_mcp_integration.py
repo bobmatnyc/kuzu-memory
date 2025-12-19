@@ -57,7 +57,9 @@ async def test_check_mcp_installation_when_unavailable(mock_config_service):
             assert len(result["recommendations"]) > 0
 
             # Verify warning message
-            assert any("submodule" in issue["message"].lower() for issue in result["issues"])
+            assert any(
+                "submodule" in issue["message"].lower() for issue in result["issues"]
+            )
 
     finally:
         service.cleanup()
@@ -175,7 +177,9 @@ async def test_check_mcp_installation_handles_errors(mock_config_service):
             assert result["status"] == "error"
             assert result["platform"] == "unknown"
             assert len(result["issues"]) > 0
-            assert any("failed" in issue["message"].lower() for issue in result["issues"])
+            assert any(
+                "failed" in issue["message"].lower() for issue in result["issues"]
+            )
 
     finally:
         service.cleanup()

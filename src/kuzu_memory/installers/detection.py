@@ -270,7 +270,9 @@ def get_installed_systems(project_root: Path | None = None) -> list[str]:
     return [s.installer_name for s in installed]
 
 
-def get_system_info(installer_name: str, project_root: Path | None = None) -> dict[str, Any] | None:
+def get_system_info(
+    installer_name: str, project_root: Path | None = None
+) -> dict[str, Any] | None:
     """
     Get detailed information about an AI system.
 

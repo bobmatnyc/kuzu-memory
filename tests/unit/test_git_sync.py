@@ -97,7 +97,9 @@ class TestGitSyncManager:
         """Test initialization when gitpython not installed."""
         # Mock the import to raise ImportError
         with patch.dict("sys.modules", {"git": None}):
-            with patch("builtins.__import__", side_effect=ImportError("No module named 'git'")):
+            with patch(
+                "builtins.__import__", side_effect=ImportError("No module named 'git'")
+            ):
                 manager = GitSyncManager(
                     repo_path=tmp_path,
                     config=config,
@@ -460,7 +462,9 @@ class TestGitSyncIntegration:
             # Memory store should be called once via batch_store_memories
             assert mock_memory_store.batch_store_memories.call_count == 1
 
-    def test_sync_all_duplicates_updates_state(self, config, tmp_path, mock_memory_store):
+    def test_sync_all_duplicates_updates_state(
+        self, config, tmp_path, mock_memory_store
+    ):
         """Test that state updates even when all commits are duplicates (bug fix for 1M-XXX)."""
         # Set last sync timestamp
         config.last_sync_timestamp = "2024-01-01T12:00:00"
@@ -493,11 +497,15 @@ class TestGitSyncIntegration:
             mock_repo.active_branch.name = "main"
 
             # Mock memory store to return duplicate (empty batch result)
-            mock_memory_store.batch_store_memories = Mock(return_value=[])  # Duplicate detection
+            mock_memory_store.batch_store_memories = Mock(
+                return_value=[]
+            )  # Duplicate detection
             # Mock get_recent_memories to simulate duplicate check
             duplicate_memory = Mock()
             duplicate_memory.metadata = {"commit_sha": "duplicate123"}
-            mock_memory_store.get_recent_memories = Mock(return_value=[duplicate_memory])
+            mock_memory_store.get_recent_memories = Mock(
+                return_value=[duplicate_memory]
+            )
 
             manager = GitSyncManager(
                 repo_path=tmp_path,

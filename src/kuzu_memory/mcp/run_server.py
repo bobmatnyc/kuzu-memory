@@ -46,7 +46,9 @@ class MCPProtocolHandler:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
         if "error" in request and "method" not in request:
-            return JSONRPCMessage.create_response(request.get("id"), error=request["error"])
+            return JSONRPCMessage.create_response(
+                request.get("id"), error=request["error"]
+            )
 
         request_id = request.get("id")
         method = request.get("method", "")
@@ -124,7 +126,9 @@ class MCPProtocolHandler:
                     try:
                         from .testing.health_checker import MCPHealthChecker
 
-                        health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
+                        health_checker = MCPHealthChecker(
+                            project_root=Path.cwd(), timeout=2.0
+                        )
                         health_result = await health_checker.check_health(
                             detailed=False, retry=False
                         )
@@ -176,14 +180,20 @@ class MCPProtocolHandler:
                 return None
             return JSONRPCMessage.create_response(
                 request_id,
-                error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"),
+                error=JSONRPCError(
+                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
+                ),
             )
 
-    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_tool(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
         # Map tool names to server methods
         if not hasattr(self.server, tool_name):
-            raise JSONRPCError(JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}")
+            raise JSONRPCError(
+                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
+            )
 
         try:
             # Get the tool method
@@ -497,7 +507,9 @@ class MCPProtocolHandler:
                 # Send error response if possible (with a dummy ID since we don't have a request)
                 error_response = JSONRPCMessage.create_response(
                     1,  # Use dummy ID for unhandled errors
-                    error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"),
+                    error=JSONRPCError(
+                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
+                    ),
                 )
                 if error_response is not None:
                     self.protocol.write_message(error_response)

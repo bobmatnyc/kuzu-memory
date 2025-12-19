@@ -71,7 +71,9 @@ def sync(
     try:
         # Convert project_root to Path if provided
         project_root_path = (
-            Path(project_root) if project_root else ctx.obj.get("project_root", Path.cwd())
+            Path(project_root)
+            if project_root
+            else ctx.obj.get("project_root", Path.cwd())
         )
         db_path = get_project_db_path(project_root_path)
         config_loader = get_config_loader()
@@ -115,9 +117,13 @@ def sync(
                     # Perform sync
                     if not quiet:
                         if dry_run:
-                            rich_print("[cyan]Dry run:[/cyan] Previewing commits to sync...")
+                            rich_print(
+                                "[cyan]Dry run:[/cyan] Previewing commits to sync..."
+                            )
                         else:
-                            rich_print(f"[cyan]Syncing git commits ({mode} mode)...[/cyan]")
+                            rich_print(
+                                f"[cyan]Syncing git commits ({mode} mode)...[/cyan]"
+                            )
 
                     result = sync_manager.sync(mode=mode, dry_run=dry_run)
 
@@ -157,12 +163,12 @@ def sync(
 
                         # Show skipped count if any duplicates were found
                         if result.get("commits_skipped", 0) > 0:
-                            status_msg += (
-                                f"Commits skipped (duplicates): {result['commits_skipped']}\n"
-                            )
+                            status_msg += f"Commits skipped (duplicates): {result['commits_skipped']}\n"
 
                         if result.get("last_sync_timestamp"):
-                            status_msg += f"Last sync: {result['last_sync_timestamp']}\n"
+                            status_msg += (
+                                f"Last sync: {result['last_sync_timestamp']}\n"
+                            )
                         if result.get("last_commit_sha"):
                             status_msg += f"Last commit: {result['last_commit_sha']}\n"
 

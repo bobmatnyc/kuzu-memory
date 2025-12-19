@@ -44,7 +44,9 @@ class AutoGitSyncManager:
         """
         self.git_sync = git_sync_manager
         self.config = config
-        self.state_path = state_path or (Path.cwd() / ".kuzu-memory" / "git_sync_state.json")
+        self.state_path = state_path or (
+            Path.cwd() / ".kuzu-memory" / "git_sync_state.json"
+        )
         self._state: dict[str, Any] = self._load_state()
 
     def _load_state(self) -> dict[str, Any]:

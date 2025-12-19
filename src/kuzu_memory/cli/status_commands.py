@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--validate", is_flag=True, help="Run health validation checks")
-@click.option("--project", "show_project", is_flag=True, help="Show detailed project information")
+@click.option(
+    "--project", "show_project", is_flag=True, help="Show detailed project information"
+)
 @click.option("--detailed", is_flag=True, help="Show detailed statistics")
 @click.option(
     "--format",
@@ -39,7 +41,9 @@ logger = logging.getLogger(__name__)
     type=click.Choice([OutputFormat.TEXT.value, OutputFormat.JSON.value]),
     help="Output format",
 )
-@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
+@click.option(
+    "--db-path", type=click.Path(), help="Database path (overrides project default)"
+)
 @click.pass_context
 def status(
     ctx: click.Context,
@@ -183,18 +187,26 @@ def status(
                 try:
                     # Test basic operations
                     memory.get_recent_memories(limit=1)
-                    health_checks.append({"check": "database_connection", "status": "pass"})
+                    health_checks.append(
+                        {"check": "database_connection", "status": "pass"}
+                    )
 
                     # Test write capability (use kuzu_memory for store_memory method)
                     if hasattr(memory, "kuzu_memory"):
                         km = memory.kuzu_memory
-                        test_id = km.store_memory("_health_check_test", source="health_check")
+                        test_id = km.store_memory(
+                            "_health_check_test", source="health_check"
+                        )
                         if test_id:
-                            health_checks.append({"check": "write_capability", "status": "pass"})
+                            health_checks.append(
+                                {"check": "write_capability", "status": "pass"}
+                            )
                             # Clean up test memory
                             km.delete_memory(test_id)
                         else:
-                            health_checks.append({"check": "write_capability", "status": "fail"})
+                            health_checks.append(
+                                {"check": "write_capability", "status": "fail"}
+                            )
                     else:
                         health_checks.append(
                             {
@@ -238,9 +250,13 @@ def status(
                     rich_print("\n📁 Project Information:")
                     rich_print(f"   Root: {stats_data['project_root']}")
                     rich_print(f"   Database: {stats_data['database_path']}")
-                    rich_print(f"   Memories Dir: {stats_data.get('memories_directory', 'N/A')}")
+                    rich_print(
+                        f"   Memories Dir: {stats_data.get('memories_directory', 'N/A')}"
+                    )
                     rich_print("\n⚙️  Configuration:")
-                    rich_print(f"   Source: {stats_data.get('config_source', 'default')}")
+                    rich_print(
+                        f"   Source: {stats_data.get('config_source', 'default')}"
+                    )
                     if stats_data.get("config_path"):
                         rich_print(f"   Path: {stats_data['config_path']}")
 
@@ -264,11 +280,15 @@ def status(
                     if oldest_memory:
                         assert isinstance(oldest_memory, datetime)
                         rich_print("\n📅 Memory Timeline:")
-                        rich_print(f"   Oldest: {oldest_memory.strftime('%Y-%m-%d %H:%M')}")
+                        rich_print(
+                            f"   Oldest: {oldest_memory.strftime('%Y-%m-%d %H:%M')}"
+                        )
                         newest_memory = stats_data.get("newest_memory")
                         if newest_memory:
                             assert isinstance(newest_memory, datetime)
-                            rich_print(f"   Newest: {newest_memory.strftime('%Y-%m-%d %H:%M')}")
+                            rich_print(
+                                f"   Newest: {newest_memory.strftime('%Y-%m-%d %H:%M')}"
+                            )
 
                     daily_activity = stats_data.get("daily_activity")
                     if daily_activity:
@@ -278,9 +298,13 @@ def status(
                             rich_print(f"   {date}: {count} memories")
 
                 if validate:
-                    health_status = cast(str, stats_data.get("health_status", "unknown"))
+                    health_status = cast(
+                        str, stats_data.get("health_status", "unknown")
+                    )
                     health_icon = "✅" if health_status == "healthy" else "⚠️"
-                    rich_print(f"\n🏥 Health Status: {health_icon} {health_status.title()}")
+                    rich_print(
+                        f"\n🏥 Health Status: {health_icon} {health_status.title()}"
+                    )
 
                     health_checks_obj = stats_data.get("health_checks")
                     if health_checks_obj:
@@ -290,7 +314,9 @@ def status(
                             status_icon = "✅" if check["status"] == "pass" else "❌"
                             rich_print(f"   {status_icon} {check['check']}")
                             if check.get("error"):
-                                rich_print(f"      Error: {check['error']}", style="dim")
+                                rich_print(
+                                    f"      Error: {check['error']}", style="dim"
+                                )
 
     except Exception as e:
         if ctx.obj.get("debug"):

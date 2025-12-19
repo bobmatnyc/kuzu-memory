@@ -63,7 +63,9 @@ class DependencyContainer:
         self._services: dict[str, Any] = {}
         self._factories: dict[str, Callable[[], Any]] = {}
         self._singletons: dict[str, Any] = {}
-        self._lock = RLock()  # Reentrant lock allows same thread to acquire multiple times
+        self._lock = (
+            RLock()
+        )  # Reentrant lock allows same thread to acquire multiple times
         self._resolving: set[str] = (
             set()
         )  # Track services currently being resolved (prevent circular deps)
@@ -256,7 +258,11 @@ class DependencyContainer:
             ...     config = container.resolve(IConfigService)
         """
         name = interface.__name__
-        return name in self._services or name in self._singletons or name in self._factories
+        return (
+            name in self._services
+            or name in self._singletons
+            or name in self._factories
+        )
 
     def clear(self) -> None:
         """

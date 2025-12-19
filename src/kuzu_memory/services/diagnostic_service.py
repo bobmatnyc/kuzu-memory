@@ -91,7 +91,9 @@ class DiagnosticService(BaseService):
         if self._memory_service and not self._memory_service.is_initialized:
             self._memory_service.initialize()
 
-        self.logger.info(f"DiagnosticService initialized with project_root={project_root}")
+        self.logger.info(
+            f"DiagnosticService initialized with project_root={project_root}"
+        )
 
     def _do_cleanup(self) -> None:
         """Clean up diagnostic resources."""
@@ -289,7 +291,9 @@ class DiagnosticService(BaseService):
         self._check_initialized()
 
         # Use health checker for database health
-        health_result = await self.health_checker.check_health(detailed=False, retry=False)
+        health_result = await self.health_checker.check_health(
+            detailed=False, retry=False
+        )
 
         db_component = next(
             (c for c in health_result.health.components if c.name == "database"),
@@ -358,7 +362,9 @@ class DiagnosticService(BaseService):
         self._check_initialized()
 
         # Check MCP server health using health checker
-        health_result = await self.health_checker.check_health(detailed=False, retry=False)
+        health_result = await self.health_checker.check_health(
+            detailed=False, retry=False
+        )
 
         protocol_component = next(
             (c for c in health_result.health.components if c.name == "protocol"),
@@ -369,10 +375,14 @@ class DiagnosticService(BaseService):
         if protocol_component and protocol_component.error:
             issues.append(protocol_component.error)
 
-        configured = protocol_component is not None and protocol_component.status.value in [
-            "healthy",
-            "degraded",
-        ]
+        configured = (
+            protocol_component is not None
+            and protocol_component.status.value
+            in [
+                "healthy",
+                "degraded",
+            ]
+        )
         config_valid = configured  # If protocol works, config is valid
 
         project_root = self._config_service.get_project_root()
@@ -446,7 +456,9 @@ class DiagnosticService(BaseService):
             "issues": issues,
         }
 
-    async def check_hooks_status(self, project_root: Path | None = None) -> dict[str, Any]:
+    async def check_hooks_status(
+        self, project_root: Path | None = None
+    ) -> dict[str, Any]:
         """
         Check status of all hooks (git and Claude Code).
 
@@ -542,7 +554,9 @@ class DiagnosticService(BaseService):
             result["recommendations"].append("Git hook exists but is not executable")
 
         if claude_ok and not result["claude_code_hooks"]["valid"]:
-            result["recommendations"].append("Claude Code hooks config has invalid events")
+            result["recommendations"].append(
+                "Claude Code hooks config has invalid events"
+            )
 
         return result
 
@@ -812,7 +826,9 @@ class DiagnosticService(BaseService):
 
         suggestions = []
         if missing:
-            suggestions.append(f"Install missing packages: pip install {' '.join(missing)}")
+            suggestions.append(
+                f"Install missing packages: pip install {' '.join(missing)}"
+            )
 
         all_satisfied = len(missing) == 0
 
@@ -911,7 +927,9 @@ class DiagnosticService(BaseService):
         lines.append("-" * 70)
         mcp = results.get("mcp_server", {})
         mcp_configured = mcp.get("configured", False)
-        lines.append(f"Status: {'✓ Configured' if mcp_configured else '✗ Not Configured'}")
+        lines.append(
+            f"Status: {'✓ Configured' if mcp_configured else '✗ Not Configured'}"
+        )
         lines.append(f"Config Valid: {mcp.get('config_valid', False)}")
         lines.append(f"Server Path: {mcp.get('server_path', 'N/A')}")
         if mcp.get("issues"):
@@ -950,7 +968,9 @@ class DiagnosticService(BaseService):
         lines.append("-" * 70)
         deps = results.get("dependencies", {})
         deps_satisfied = deps.get("all_satisfied", False)
-        lines.append(f"Status: {'✓ All Satisfied' if deps_satisfied else '✗ Issues Found'}")
+        lines.append(
+            f"Status: {'✓ All Satisfied' if deps_satisfied else '✗ Issues Found'}"
+        )
         if deps.get("missing"):
             lines.append("\nMissing:")
             for dep in deps["missing"]:
@@ -967,7 +987,9 @@ class DiagnosticService(BaseService):
         mcp_install = results.get("mcp_installation", {})
         if mcp_install.get("available", False):
             status = mcp_install.get("status", "unknown").upper()
-            status_symbol = "✓" if status == "HEALTHY" else "⚠️" if status == "DEGRADED" else "✗"
+            status_symbol = (
+                "✓" if status == "HEALTHY" else "⚠️" if status == "DEGRADED" else "✗"
+            )
             lines.append(f"Status: {status_symbol} {status}")
             lines.append(f"Platform: {mcp_install.get('platform', 'N/A')}")
             checks_passed = mcp_install.get("checks_passed", 0)

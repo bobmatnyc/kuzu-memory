@@ -83,7 +83,9 @@ class ServiceManager:
             db_path = get_project_db_path()
 
         # Create and initialize service
-        service = MemoryService(db_path=db_path, enable_git_sync=enable_git_sync, config=config)
+        service = MemoryService(
+            db_path=db_path, enable_git_sync=enable_git_sync, config=config
+        )
         service.initialize()
 
         try:

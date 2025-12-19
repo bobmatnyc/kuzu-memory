@@ -37,7 +37,9 @@ class AsyncMemoryCLI:
         self.status_reporter = get_status_reporter()
         self.queue_manager = get_queue_manager()
 
-    def enhance_sync(self, prompt: str, max_memories: int = 5, output_format: str = "plain") -> str:
+    def enhance_sync(
+        self, prompt: str, max_memories: int = 5, output_format: str = "plain"
+    ) -> str:
         """
         Synchronous prompt enhancement (needed for immediate AI response).
 
@@ -51,7 +53,9 @@ class AsyncMemoryCLI:
         """
         try:
             with KuzuMemory(db_path=self.db_path) as memory:
-                context = memory.attach_memories(prompt=prompt, max_memories=max_memories)
+                context = memory.attach_memories(
+                    prompt=prompt, max_memories=max_memories
+                )
 
                 if output_format == "json":
                     result = {
@@ -119,7 +123,9 @@ class AsyncMemoryCLI:
 
             if not quiet:
                 print(f"✅ Learning task queued (ID: {task_id[:8]}...)")
-                print(f"   Processing: {content[:60]}{'...' if len(content) > 60 else ''}")
+                print(
+                    f"   Processing: {content[:60]}{'...' if len(content) > 60 else ''}"
+                )
 
             # Optionally wait for completion
             if wait_for_completion:
@@ -129,15 +135,20 @@ class AsyncMemoryCLI:
                 if not quiet:
                     if final_status["status"] == "completed":
                         print("   ✅ Task completed successfully")
-                        if "result" in final_status and "memories_count" in final_status.get(
-                            "result", {}
+                        if (
+                            "result" in final_status
+                            and "memories_count" in final_status.get("result", {})
                         ):
                             count = final_status["result"]["memories_count"]
                             print(f"   📝 Extracted {count} memories")
                     elif final_status["status"] == "failed":
-                        print(f"   ❌ Task failed: {final_status.get('error', 'Unknown error')}")
+                        print(
+                            f"   ❌ Task failed: {final_status.get('error', 'Unknown error')}"
+                        )
                     elif final_status["status"] == "timeout":
-                        print(f"   ⏱️  Task is still processing (timeout after {timeout}s)")
+                        print(
+                            f"   ⏱️  Task is still processing (timeout after {timeout}s)"
+                        )
             elif not quiet:
                 print("   Note: Memories are extracted from pattern-matching phrases")
 
@@ -233,7 +244,9 @@ class AsyncMemoryCLI:
             "task_id": task_id,
             "status": task.status.value,
             "task_type": task.task_type.value,
-            "content": (task.content[:100] + "..." if len(task.content) > 100 else task.content),
+            "content": (
+                task.content[:100] + "..." if len(task.content) > 100 else task.content
+            ),
             "source": task.source,
             "created_at": task.created_at.isoformat(),
             "age_seconds": task.age_seconds,
@@ -271,7 +284,9 @@ class AsyncMemoryCLI:
             },
         }
 
-    def wait_for_task(self, task_id: str, timeout_seconds: float = 30.0) -> dict[str, Any]:
+    def wait_for_task(
+        self, task_id: str, timeout_seconds: float = 30.0
+    ) -> dict[str, Any]:
         """
         Wait for a task to complete (useful for testing).
 

@@ -101,7 +101,9 @@ def store(
             try:
                 parsed_metadata = json.loads(metadata)
             except json.JSONDecodeError as e:
-                rich_print(f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow")
+                rich_print(
+                    f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow"
+                )
 
         # Add CLI context
         parsed_metadata.update(
@@ -205,10 +207,14 @@ def learn(
                 parsed_metadata = json.loads(metadata)
             except json.JSONDecodeError as e:
                 if not quiet:
-                    rich_print(f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow")
+                    rich_print(
+                        f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow"
+                    )
 
         # Add CLI context
-        parsed_metadata.update({"cli_timestamp": datetime.now().isoformat(), "cli_source": source})
+        parsed_metadata.update(
+            {"cli_timestamp": datetime.now().isoformat(), "cli_source": source}
+        )
 
         # Asynchronous learning with smart waiting
         try:
@@ -242,7 +248,9 @@ def learn(
                 )
                 rich_print("   [i]  Task is processing in background", style="dim")
             elif result.get("status") == "failed" and not quiet:
-                rich_print(f"❌ {result.get('message', 'Learning failed')}", style="red")
+                rich_print(
+                    f"❌ {result.get('message', 'Learning failed')}", style="red"
+                )
 
         except ImportError as e:
             if not quiet:
@@ -255,7 +263,9 @@ def learn(
             db_path = get_project_db_path(ctx.obj.get("project_root"))
 
             with KuzuMemory(db_path=db_path) as memory:
-                memory_id = memory.remember(content, source=source, metadata=parsed_metadata)
+                memory_id = memory.remember(
+                    content, source=source, metadata=parsed_metadata
+                )
 
                 if not quiet:
                     rich_print(
@@ -296,7 +306,9 @@ def learn(
     is_flag=True,
     help="Show detailed ranking explanation including temporal decay",
 )
-@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
+@click.option(
+    "--db-path", type=click.Path(), help="Database path (overrides project default)"
+)
 @click.pass_context
 def recall(
     ctx: click.Context,
@@ -345,7 +357,9 @@ def recall(
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recall operation (performance optimization)
-        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(
+            db_path=db_path_obj, enable_git_sync=False
+        ) as memory:
             # Build filters
             filters = {}
             if session_id:
@@ -433,7 +447,9 @@ def recall(
                 for i, mem in enumerate(memories, 1):
                     style = "green" if i <= 3 else "yellow" if i <= 6 else "white"
 
-                    content_preview = mem.content[:200] + ("..." if len(mem.content) > 200 else "")
+                    content_preview = mem.content[:200] + (
+                        "..." if len(mem.content) > 200 else ""
+                    )
                     rich_print(f"{i}. {content_preview}", style=style)
 
                     # Show metadata
@@ -451,7 +467,9 @@ def recall(
 
                     # Show ranking explanation if requested
                     if explain_ranking and hasattr(mem, "ranking_explanation"):
-                        rich_print(f"   🎯 Ranking: {mem.ranking_explanation}", style="cyan")
+                        rich_print(
+                            f"   🎯 Ranking: {mem.ranking_explanation}", style="cyan"
+                        )
 
                     rich_print("")  # Empty line
 
@@ -481,7 +499,9 @@ def recall(
     type=click.Choice(["context", OutputFormat.PLAIN.value, OutputFormat.JSON.value]),
     help="Output format (context=enhanced prompt, plain=just context, json=raw)",
 )
-@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
+@click.option(
+    "--db-path", type=click.Path(), help="Database path (overrides project default)"
+)
 @click.pass_context
 def enhance(
     ctx: click.Context,
@@ -516,7 +536,9 @@ def enhance(
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only enhance operation (performance optimization)
-        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(
+            db_path=db_path_obj, enable_git_sync=False
+        ) as memory:
             # Get relevant memories using the attach_memories API
             memory_context = memory.attach_memories(prompt, max_memories=max_memories)
             memories = memory_context.memories
@@ -532,7 +554,9 @@ def enhance(
                     }
                     rich_print(json.dumps(result, indent=2))
                 else:
-                    rich_print(f"[i]  No relevant memories found for: '{prompt}'", style="blue")
+                    rich_print(
+                        f"[i]  No relevant memories found for: '{prompt}'", style="blue"
+                    )
                     if output_format != "plain":
                         rich_print(memory_context.enhanced_prompt or prompt)
                 return
@@ -593,7 +617,9 @@ def enhance(
     default="safe",
     help="Pruning strategy to use",
 )
-@click.option("--execute", is_flag=True, help="Actually prune memories (default is dry-run)")
+@click.option(
+    "--execute", is_flag=True, help="Actually prune memories (default is dry-run)"
+)
 @click.option(
     "--backup/--no-backup",
     default=True,
@@ -660,7 +686,9 @@ def prune(
         db_path_obj = Path(db_path) if db_path else None
 
         # Use ServiceManager for memory service lifecycle (disable git sync for prune)
-        with ServiceManager.memory_service(db_path_obj, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(
+            db_path_obj, enable_git_sync=False
+        ) as memory:
             # MemoryPruner needs access to underlying kuzu_memory
             # Use the kuzu_memory property exposed by MemoryService
             pruner = MemoryPruner(memory.kuzu_memory)
@@ -736,11 +764,15 @@ def prune(
             # Savings estimate
             content_mb = stats.estimated_content_savings_bytes / (1024 * 1024)
             db_mb = stats.estimated_db_savings_bytes / (1024 * 1024)
-            db_percentage = (stats.estimated_db_savings_bytes / db_size * 100) if db_size > 0 else 0
+            db_percentage = (
+                (stats.estimated_db_savings_bytes / db_size * 100) if db_size > 0 else 0
+            )
 
             rich_print("\n💾 Expected Savings:", style="bold blue")
             rich_print(f"   Content: {content_mb:.2f} MB")
-            rich_print(f"   Database: ~{db_mb:.0f} MB (~{db_percentage:.1f}%, estimated)")
+            rich_print(
+                f"   Database: ~{db_mb:.0f} MB (~{db_percentage:.1f}%, estimated)"
+            )
 
             # Execute or show dry-run message
             if execute:
@@ -753,7 +785,9 @@ def prune(
                 if not force:
                     rich_print(f"\n   Strategy: {strategy}")
                     rich_print(f"   Backup: {'yes' if backup else 'NO'}")
-                    confirm = click.confirm("\n   Do you want to continue?", default=False)
+                    confirm = click.confirm(
+                        "\n   Do you want to continue?", default=False
+                    )
                     if not confirm:
                         rich_print("\n❌ Pruning cancelled by user", style="yellow")
                         return
@@ -776,7 +810,9 @@ def prune(
                     final_count = memory.get_memory_count()
                     final_size = memory.get_database_size()
                     actual_reduction = db_size - final_size
-                    actual_percentage = (actual_reduction / db_size * 100) if db_size > 0 else 0
+                    actual_percentage = (
+                        (actual_reduction / db_size * 100) if db_size > 0 else 0
+                    )
 
                     rich_print("\n📊 Final Database:", style="bold blue")
                     rich_print(f"   Memories: {final_count:,} (was {total_memories:,})")
@@ -807,12 +843,18 @@ def prune(
     "--format",
     "output_format",
     default=OutputFormat.TABLE.value,
-    type=click.Choice([OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]),
+    type=click.Choice(
+        [OutputFormat.TABLE.value, OutputFormat.JSON.value, OutputFormat.LIST.value]
+    ),
     help="Output format",
 )
-@click.option("--db-path", type=click.Path(), help="Database path (overrides project default)")
+@click.option(
+    "--db-path", type=click.Path(), help="Database path (overrides project default)"
+)
 @click.pass_context
-def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | None) -> None:
+def recent(
+    ctx: click.Context, limit: int, output_format: str, db_path: str | None
+) -> None:
     """
     🕒 Show recent memories stored in the project.
 
@@ -846,7 +888,9 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | No
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recent operation (performance optimization)
-        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(
+            db_path=db_path_obj, enable_git_sync=False
+        ) as memory:
             # Track query performance
             start_time = time.time()
             memories = memory.get_recent_memories(limit=limit)

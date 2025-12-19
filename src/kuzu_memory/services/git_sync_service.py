@@ -306,7 +306,9 @@ kuzu-memory git sync --incremental --quiet 2>/dev/null || true
             # Check if it's our hook
             content = hook_file.read_text()
             if "KuzuMemory" not in content:
-                self.logger.warning("Hook exists but is not a KuzuMemory hook, skipping removal")
+                self.logger.warning(
+                    "Hook exists but is not a KuzuMemory hook, skipping removal"
+                )
                 return False
 
             # Remove hook

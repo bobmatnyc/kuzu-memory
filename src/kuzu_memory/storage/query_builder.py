@@ -116,7 +116,9 @@ class QueryBuilder:
 
                 # Use a more efficient query structure with list_contains
                 # This avoids dynamic query building in loops
-                conditions.append("ANY(word IN $search_words WHERE LOWER(m.content) CONTAINS word)")
+                conditions.append(
+                    "ANY(word IN $search_words WHERE LOWER(m.content) CONTAINS word)"
+                )
 
             # Construct final query
             where_clause = " AND ".join(conditions) if conditions else "1=1"
@@ -227,7 +229,9 @@ class QueryBuilder:
             result = self.db_adapter.execute_query(query, memory_data)
 
             if not result:
-                raise DatabaseError(f"Failed to {'update' if is_update else 'create'} memory")
+                raise DatabaseError(
+                    f"Failed to {'update' if is_update else 'create'} memory"
+                )
 
             # Update performance stats
             execution_time = (datetime.now() - start_time).total_seconds()
@@ -266,8 +270,12 @@ class QueryBuilder:
                 elif isinstance(entity, dict):
                     entity_name = entity.get("name", "").strip()
                     entity_type = entity.get("type", DEFAULT_ENTITY_TYPE)
-                    entity_confidence = entity.get("confidence", DEFAULT_ENTITY_CONFIDENCE)
-                    extraction_method = entity.get("extraction_method", DEFAULT_EXTRACTION_METHOD)
+                    entity_confidence = entity.get(
+                        "confidence", DEFAULT_ENTITY_CONFIDENCE
+                    )
+                    extraction_method = entity.get(
+                        "extraction_method", DEFAULT_EXTRACTION_METHOD
+                    )
                 else:
                     logger.warning(f"Skipping invalid entity format: {type(entity)}")
                     continue
@@ -328,7 +336,9 @@ class QueryBuilder:
             execution_time = (datetime.now() - start_time).total_seconds()
             self._update_query_stats(execution_time, len(memory.entities))
 
-            logger.debug(f"Stored {len(memory.entities)} entities for memory {memory.id}")
+            logger.debug(
+                f"Stored {len(memory.entities)} entities for memory {memory.id}"
+            )
 
         except Exception as e:
             self.query_stats["queries_failed"] += 1
@@ -357,7 +367,9 @@ class QueryBuilder:
             # Apply filters
             for filter_key, filter_value in filters.items():
                 if filter_value is not None:
-                    if filter_key == "memory_type" and isinstance(filter_value, MemoryType):
+                    if filter_key == "memory_type" and isinstance(
+                        filter_value, MemoryType
+                    ):
                         conditions.append(f"m.memory_type = ${filter_key}")
                         params[filter_key] = filter_value.value
                     else:
@@ -549,7 +561,9 @@ class QueryBuilder:
                     query: str = str(query_info["query"])
                     # Only include parameters that this query needs
                     params_list = list(query_info["params"])
-                    query_params = {k: v for k, v in all_params.items() if k in params_list}
+                    query_params = {
+                        k: v for k, v in all_params.items() if k in params_list
+                    }
 
                     results = self.db_adapter.execute_query(query, query_params)
 
@@ -559,7 +573,8 @@ class QueryBuilder:
                         stats[stat_name] = results[0]["recent_count"] if results else 0
                     else:
                         stats[stat_name] = {
-                            result[next(iter(result.keys()))]: result["count"] for result in results
+                            result[next(iter(result.keys()))]: result["count"]
+                            for result in results
                         }
 
                 except Exception as e:
@@ -580,7 +595,9 @@ class QueryBuilder:
             logger.error(f"Error getting memory statistics: {e}")
             return {}
 
-    def _convert_db_result_to_memory(self, memory_data: dict[str, Any]) -> Memory | None:
+    def _convert_db_result_to_memory(
+        self, memory_data: dict[str, Any]
+    ) -> Memory | None:
         """
         Convert database result to Memory object.
 
@@ -597,7 +614,9 @@ class QueryBuilder:
                 try:
                     metadata = json.loads(memory_data["metadata"])
                 except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse metadata for memory {memory_data.get('id')}")
+                    logger.warning(
+                        f"Failed to parse metadata for memory {memory_data.get('id')}"
+                    )
 
             # Handle legacy memory types
             memory_type_str = memory_data["memory_type"]
@@ -705,7 +724,9 @@ class QueryBuilder:
         # First check if it's a legacy type
         if type_str.lower() in legacy_mapping:
             converted_type = legacy_mapping[type_str.lower()]
-            logger.debug(f"Converted legacy memory type '{type_str}' to '{converted_type.value}'")
+            logger.debug(
+                f"Converted legacy memory type '{type_str}' to '{converted_type.value}'"
+            )
             return converted_type
 
         # Then check if it's a standard cognitive type
@@ -725,13 +746,18 @@ class QueryBuilder:
             "total_queries": self.query_stats["queries_executed"],
             "failed_queries": self.query_stats["queries_failed"],
             "success_rate": (
-                (self.query_stats["queries_executed"] - self.query_stats["queries_failed"])
+                (
+                    self.query_stats["queries_executed"]
+                    - self.query_stats["queries_failed"]
+                )
                 / max(self.query_stats["queries_executed"], 1)
             )
             * 100,
             "average_query_time": self.query_stats["avg_query_time"],
             "slow_query_count": len(self.query_stats["slow_queries"]),
-            "recent_slow_queries": self.query_stats["slow_queries"][-5:],  # Last 5 slow queries
+            "recent_slow_queries": self.query_stats["slow_queries"][
+                -5:
+            ],  # Last 5 slow queries
         }
 
     def batch_store_memories(self, memories: list[Memory]) -> list[str]:
@@ -805,7 +831,9 @@ class QueryBuilder:
                 batch_data.append(memory_data)
 
             # Execute batch insert
-            results = self.db_adapter.execute_query(batch_query, {"memories": batch_data})
+            results = self.db_adapter.execute_query(
+                batch_query, {"memories": batch_data}
+            )
 
             # Collect stored IDs
             for result in results:
@@ -815,7 +843,9 @@ class QueryBuilder:
             execution_time = (datetime.now() - start_time).total_seconds()
             self._update_query_stats(execution_time, len(stored_ids))
 
-            logger.info(f"Batch stored {len(stored_ids)} memories in {execution_time:.2f}s")
+            logger.info(
+                f"Batch stored {len(stored_ids)} memories in {execution_time:.2f}s"
+            )
             return stored_ids
 
         except Exception as e:
@@ -869,7 +899,9 @@ class QueryBuilder:
             execution_time = (datetime.now() - start_time).total_seconds()
             self._update_query_stats(execution_time, len(memories))
 
-            logger.debug(f"Batch retrieved {len(memories)} memories in {execution_time:.2f}s")
+            logger.debug(
+                f"Batch retrieved {len(memories)} memories in {execution_time:.2f}s"
+            )
             return memories
 
         except Exception as e:

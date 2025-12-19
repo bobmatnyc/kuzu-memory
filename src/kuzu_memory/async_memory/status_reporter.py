@@ -142,7 +142,9 @@ class MemoryStatusReporter:
 
         logger.info("Stopped memory status reporter")
 
-    def add_callback(self, level: ReportLevel, callback: Callable[[StatusReport], None]) -> None:
+    def add_callback(
+        self, level: ReportLevel, callback: Callable[[StatusReport], None]
+    ) -> None:
         """
         Add a callback for status reports at a specific level.
 
@@ -339,7 +341,9 @@ def get_status_reporter() -> MemoryStatusReporter:
     return _status_reporter
 
 
-def add_status_callback(level: ReportLevel, callback: Callable[[StatusReport], None]) -> None:
+def add_status_callback(
+    level: ReportLevel, callback: Callable[[StatusReport], None]
+) -> None:
     """Add a callback for status reports."""
     reporter = get_status_reporter()
     reporter.add_callback(level, callback)
