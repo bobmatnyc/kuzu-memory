@@ -9,7 +9,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from kuzu_memory.core.config import KuzuMemoryConfig
@@ -96,7 +96,9 @@ class AutoTuneService:
         try:
             if db_path.exists():
                 if db_path.is_dir():
-                    db_size_mb = sum(f.stat().st_size for f in db_path.rglob("*") if f.is_file()) / (1024 * 1024)
+                    db_size_mb = sum(
+                        f.stat().st_size for f in db_path.rglob("*") if f.is_file()
+                    ) / (1024 * 1024)
                 else:
                     db_size_mb = db_path.stat().st_size / (1024 * 1024)
         except Exception as e:
@@ -164,7 +166,9 @@ class AutoTuneService:
         try:
             # Get current stats
             memory_count, db_size_mb = self.get_database_stats()
-            logger.info(f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database")
+            logger.info(
+                f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database"
+            )
 
             # Check for warnings
             if memory_count >= self.MEMORY_COUNT_WARN:
@@ -196,7 +200,6 @@ class AutoTuneService:
             # Auto-prune if needed
             if auto_prune and memory_count >= self.MEMORY_COUNT_PRUNE:
                 strategy = self.select_prune_strategy(memory_count)
-                target_count = self.MEMORY_COUNT_WARN  # Prune down to 50k
 
                 if memory_count >= self.MEMORY_COUNT_EMERGENCY:
                     actions.append(
@@ -239,7 +242,7 @@ class AutoTuneService:
                 success=False,
                 memory_count=0,
                 db_size_mb=0,
-                actions_taken=actions + [f"Error: {e}"],
+                actions_taken=[*actions, f"Error: {e}"],
                 warnings=warnings,
                 execution_time_ms=execution_time_ms,
             )
