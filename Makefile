@@ -191,32 +191,31 @@ release: quality test
 build: quality
 	@echo "🔨 Building package..."
 	@python3 scripts/version.py build-info
-	python3 -m build
+	uv build
 	@echo "✅ Package built successfully"
 
 publish: build
 	@echo "📤 Publishing to PyPI..."
 	@if [ ! -f .env.local ]; then \
 		echo "❌ Error: .env.local not found"; \
-		echo "Create .env.local with: PYPI_API_KEY=<your-token>"; \
+		echo "Create .env.local with: UV_PUBLISH_TOKEN=<your-token>"; \
 		exit 1; \
 	fi
-	@if ! grep -q "PYPI_API_KEY" .env.local; then \
-		echo "❌ Error: PYPI_API_KEY not found in .env.local"; \
-		echo "Add to .env.local: PYPI_API_KEY=<your-token>"; \
+	@if ! grep -q "UV_PUBLISH_TOKEN" .env.local && ! grep -q "PYPI_API_KEY" .env.local; then \
+		echo "❌ Error: UV_PUBLISH_TOKEN or PYPI_API_KEY not found in .env.local"; \
+		echo "Add to .env.local: UV_PUBLISH_TOKEN=<your-token>"; \
 		exit 1; \
 	fi
 	@echo "🔑 Loading PyPI credentials from .env.local..."
 	@export $$(grep -v '^#' .env.local | grep -v '^\s*$$' | xargs) && \
-		if [ -z "$$PYPI_API_KEY" ]; then \
-			echo "❌ Error: PYPI_API_KEY is empty in .env.local"; \
+		TOKEN=$${UV_PUBLISH_TOKEN:-$$PYPI_API_KEY} && \
+		if [ -z "$$TOKEN" ]; then \
+			echo "❌ Error: No PyPI token found in .env.local"; \
 			exit 1; \
 		fi && \
-		export TWINE_USERNAME=__token__ && \
-		export TWINE_PASSWORD=$$PYPI_API_KEY && \
 		VERSION=$$(python3 -c "import sys; sys.path.insert(0, 'src'); from kuzu_memory.__version__ import __version__; print(__version__)") && \
 		echo "📦 Publishing version $$VERSION to PyPI..." && \
-		python3 -m twine upload dist/kuzu_memory-$$VERSION*
+		UV_PUBLISH_TOKEN=$$TOKEN uv publish
 	@echo "✅ Package published to PyPI"
 
 clean:
