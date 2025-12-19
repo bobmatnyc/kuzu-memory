@@ -298,7 +298,8 @@ def setup(
                 rich_print("\n🪝 Installing Claude Code hooks and MCP...", style="cyan")
                 try:
                     hooks_installer = ClaudeHooksInstaller(project_root)
-                    hooks_result = hooks_installer.install(force=force, dry_run=dry_run)
+                    # Always update hooks on setup - no force flag needed
+                    hooks_result = hooks_installer.install(force=True, dry_run=dry_run)
                     if hooks_result.success:
                         rich_print("  ✅ Claude Code hooks and MCP configured", style="green")
                         claude_hooks_installed = True
@@ -332,7 +333,8 @@ def setup(
                 )
             else:
                 rich_print("\n🪝 Installing git hooks...", style="cyan")
-                git_hooks_installed = _install_git_hooks(ctx, project_root, force=force)
+                # Always update git hooks on setup - no force flag needed
+                git_hooks_installed = _install_git_hooks(ctx, project_root, force=True)
         elif not git_repo_detected and not skip_git_hooks:
             rich_print(
                 "\n⚠️  Git repository not detected - skipping git hooks installation",
