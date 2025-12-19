@@ -5,6 +5,9 @@ Combines initialization and installation into a single intelligent command
 that auto-detects existing installations and updates them as needed.
 """
 
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -19,6 +22,139 @@ from ..utils.project_setup import (
 from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
+from .update_commands import VersionChecker
+
+
+def _check_and_upgrade_if_needed() -> bool:
+    """
+    Check for newer version and auto-upgrade if available.
+
+    Non-blocking: Returns False if check/upgrade fails, but doesn't raise.
+
+    Returns:
+        True if upgraded successfully, False otherwise (including no update available)
+    """
+    try:
+        checker = VersionChecker()
+
+        # Silently check for updates (no progress messages)
+        check_result = checker.get_latest_version(include_pre=False)
+
+        # Handle errors silently
+        if check_result.get("error"):
+            return False
+
+        # Compare versions
+        comparison = checker.compare_versions(check_result["version"])
+
+        # No update available
+        if not comparison["update_available"]:
+            return False
+
+        # Update available - show notification
+        current = comparison["current"]
+        latest = comparison["latest"]
+        version_type = comparison["version_type"]
+
+        version_type_emoji = {
+            "major": "🚀",
+            "minor": "✨",
+            "patch": "🔧",
+            "unknown": "📦",
+        }
+        emoji = version_type_emoji.get(version_type, "📦")
+
+        rich_print(
+            f"\n{emoji} Update available: {current} → {latest} ({version_type})",
+            style="cyan",
+        )
+        rich_print("   Upgrading kuzu-memory automatically...", style="dim")
+
+        # Attempt upgrade
+        upgrade_result = _run_auto_upgrade()
+
+        if upgrade_result["success"]:
+            rich_print("   ✅ Successfully upgraded to latest version!", style="green")
+            rich_print(
+                "   🔄 Restarting setup with new version...\n",
+                style="dim",
+            )
+            return True
+        else:
+            # Upgrade failed - show warning but continue
+            rich_print(
+                f"   ⚠️  Auto-upgrade failed: {upgrade_result.get('error', 'Unknown error')}",
+                style="yellow",
+            )
+            rich_print("   Continuing with current version...\n", style="dim")
+            return False
+
+    except Exception:
+        # Silently fail - don't block setup
+        return False
+
+
+def _run_auto_upgrade() -> dict[str, bool | str | None]:
+    """
+    Execute upgrade using uv or pip (with uv preferred).
+
+    Returns:
+        dict with keys:
+            - success: bool
+            - error: str | None
+    """
+    try:
+        # Check if uv is available
+        uv_available = shutil.which("uv") is not None
+
+        if uv_available:
+            # Use uv pip install --upgrade
+            result = subprocess.run(
+                ["uv", "pip", "install", "--upgrade", "kuzu-memory"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        else:
+            # Fallback to pip
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", "kuzu-memory"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+        if result.returncode == 0:
+            return {"success": True, "error": None}
+        else:
+            return {"success": False, "error": result.stderr.strip() or "Upgrade failed"}
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "Upgrade timed out after 60 seconds"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _restart_setup_after_upgrade(ctx: click.Context) -> None:
+    """
+    Re-execute setup command after successful upgrade.
+
+    Preserves all command-line flags from original invocation.
+    """
+    try:
+        # Get original command line arguments
+        args = sys.argv[1:]  # Skip script name
+
+        # Re-execute kuzu-memory with same arguments
+        os.execvp("kuzu-memory", ["kuzu-memory", *args])
+
+    except Exception as e:
+        # If re-execution fails, just continue with current version
+        rich_print(
+            f"⚠️  Could not restart setup: {e}",
+            style="yellow",
+        )
+        rich_print("   Continuing with newly installed version...\n", style="dim")
 
 
 @click.command()
@@ -58,6 +194,11 @@ from .install_unified import _detect_installed_systems
     is_flag=True,
     help="Skip git post-commit hooks installation (auto-installs when git repo detected)",
 )
+@click.option(
+    "--skip-version-check",
+    is_flag=True,
+    help="Skip automatic version check and upgrade",
+)
 @click.pass_context
 def setup(
     ctx: click.Context,
@@ -66,6 +207,7 @@ def setup(
     force: bool,
     dry_run: bool,
     skip_git_hooks: bool,
+    skip_version_check: bool,
 ) -> None:
     """
     🚀 Smart setup - Initialize and configure KuzuMemory (RECOMMENDED).
@@ -75,6 +217,7 @@ def setup(
 
     \b
     🎯 WHAT IT DOES:
+      0. Checks for updates and auto-upgrades (if newer version available)
       1. Detects project root automatically
       2. Initializes memory database (if needed)
       3. Auto-detects installed AI tools
@@ -91,6 +234,9 @@ def setup(
       # Setup without git hooks
       kuzu-memory setup --skip-git-hooks
 
+      # Setup without auto-upgrade check
+      kuzu-memory setup --skip-version-check
+
       # Setup for specific integration without git hooks
       kuzu-memory setup --integration claude-code --skip-git-hooks
 
@@ -106,7 +252,8 @@ def setup(
     \b
     💡 TIP:
       For most users, just run 'kuzu-memory setup' with no arguments.
-      Git hooks and Claude Code hooks are installed automatically.
+      It will auto-upgrade to the latest version, then install git hooks
+      and Claude Code hooks automatically.
 
     \b
     ⚙️  ADVANCED USAGE:
@@ -114,8 +261,30 @@ def setup(
       • kuzu-memory init                # Just initialize
       • kuzu-memory install <tool>      # Just install integration
       • kuzu-memory git install-hooks   # Just install git hooks
+      • kuzu-memory update              # Just check/upgrade version
     """
     try:
+        # ═══════════════════════════════════════════════════════════
+        # PHASE 0: VERSION CHECK & AUTO-UPGRADE
+        # ═══════════════════════════════════════════════════════════
+
+        # Check for updates and auto-upgrade if available (non-blocking)
+        if not dry_run and not skip_version_check:
+            upgraded = _check_and_upgrade_if_needed()
+
+            if upgraded:
+                # Successfully upgraded - restart setup with new version
+                _restart_setup_after_upgrade(ctx)
+                # If we reach here, restart failed - continue with new version
+                rich_print(
+                    "⚠️  Setup restart failed, but upgrade was successful.",
+                    style="yellow",
+                )
+                rich_print(
+                    "   You may want to run 'kuzu-memory setup' again to ensure latest features.\n",
+                    style="dim",
+                )
+
         # ═══════════════════════════════════════════════════════════
         # PHASE 1: PROJECT DETECTION & INITIALIZATION
         # ═══════════════════════════════════════════════════════════
@@ -207,9 +376,7 @@ def setup(
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️"
-                        if system.health_status == "needs_repair"
-                        else "❌"
+                        else "⚠️" if system.health_status == "needs_repair" else "❌"
                     )
                     rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 
