@@ -321,3 +321,4 @@ TEST_REPORT_MCP_ARGS_AUTOFIX.md
 .claude.json
 .claude/
 .mcp.json
+.claude/

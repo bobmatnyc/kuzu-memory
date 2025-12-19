@@ -1,9 +1,0 @@
-#!/bin/bash
-# KuzuMemory wrapper for source-based installation
-# This script ensures the source code is used instead of installed package
-
-# Set PYTHONPATH to use source code
-export PYTHONPATH="/Users/masa/Projects/kuzu-memory/src:${PYTHONPATH}"
-
-# Use system Python to run kuzu-memory CLI
-exec /opt/homebrew/bin/python3 -m kuzu_memory.cli.commands "$@"
