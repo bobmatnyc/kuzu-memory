@@ -835,11 +835,11 @@ kuzu-memory learn "test content" --sync
 
 ### 3. Optimize System
 ```bash
-# Enable CLI adapter for better performance
-kuzu-memory optimize --enable-cli
+# Auto-tune for large databases
+kuzu-memory doctor autotune
 
-# Monitor performance
-kuzu-memory stats --detailed
+# Run diagnostics
+kuzu-memory doctor diagnose
 ```
 
 ## 🤖 {ai_system} Specific Integration
@@ -909,11 +909,11 @@ kuzu-memory create-config ./kuzu-config.json
 
 ### Performance Tuning
 ```bash
-# Interactive optimization
-kuzu-memory optimize
+# Auto-tune database performance
+kuzu-memory doctor autotune
 
-# Enable CLI adapter (recommended)
-kuzu-memory optimize --enable-cli
+# Run full diagnostics
+kuzu-memory doctor diagnose
 ```
 
 ## 📁 File Structure
@@ -950,11 +950,11 @@ kuzu-memory stats --detailed
 
 ### Performance Issues
 ```bash
-# Check system performance
-kuzu-memory optimize
+# Auto-tune database
+kuzu-memory doctor autotune
 
-# Analyze temporal decay
-kuzu-memory temporal-analysis --detailed
+# Manual prune if needed
+kuzu-memory prune --strategy percentage --percentage 20
 ```
 
 ## 🎯 Next Steps
@@ -969,7 +969,7 @@ kuzu-memory temporal-analysis --detailed
 - **CLI Reference**: `kuzu-memory --help`
 - **Examples**: See `examples/` directory
 - **Configuration**: `kuzu-memory create-config --help`
-- **Performance**: `kuzu-memory optimize --help`
+- **Diagnostics**: `kuzu-memory doctor --help`
 
 ---
 
@@ -1029,9 +1029,7 @@ class ExampleGenerator:
         return True
 
     @staticmethod
-    def create_integration_guide(
-        project_root: Path, ai_system: str = "Your AI System"
-    ) -> bool:
+    def create_integration_guide(project_root: Path, ai_system: str = "Your AI System") -> bool:
         """Create main integration guide."""
         guide_content = IntegrationTemplates.get_integration_guide(ai_system)
         guide_path = project_root / "kuzu-memory-integration.md"

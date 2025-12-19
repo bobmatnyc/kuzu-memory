@@ -205,8 +205,8 @@ Ask yourself every session:
 # Run diagnostics
 kuzu-memory doctor
 
-# If database issues
-kuzu-memory optimize --repair
+# If database issues - run autotune
+kuzu-memory doctor autotune
 
 # If still failing, inform user:
 "I'm having trouble accessing the project memory system.
@@ -243,8 +243,8 @@ kuzu-memory status --verbose
 # Check database size
 kuzu-memory stats
 
-# If database > 100MB, suggest
-kuzu-memory optimize --vacuum
+# If database > 100MB, suggest autotune
+kuzu-memory doctor autotune
 ```
 
 ### Example 3: Context Not Relevant
@@ -459,8 +459,8 @@ $ kuzu-memory stats
 # Step 3: If > 1000 memories, optimize
 $ kuzu-memory memory enhance "question" --max-memories 3
 
-# Step 4: If database large
-$ kuzu-memory optimize --vacuum
+# Step 4: If database large - run autotune
+$ kuzu-memory doctor autotune
 ```
 
 ## 🚀 Performance Optimization Patterns
@@ -586,8 +586,8 @@ After each session, ask yourself:
 $ kuzu-memory doctor
 
 # Common fixes
-$ kuzu-memory optimize --repair    # Database issues
-$ kuzu-memory optimize --vacuum    # Large database
+$ kuzu-memory doctor autotune      # Auto-tune and prune
+$ kuzu-memory doctor diagnose      # Full diagnostics
 $ kuzu-memory status --verbose     # Check metrics
 
 # If still broken, inform user:
@@ -646,8 +646,8 @@ kuzu-memory stats --format json
 kuzu-memory doctor
 
 # Optimization
-kuzu-memory optimize --vacuum
-kuzu-memory optimize --repair
+kuzu-memory doctor autotune
+kuzu-memory doctor diagnose
 ```
 
 ## ✅ Success Criteria
@@ -850,7 +850,7 @@ kuzu-memory status
 kuzu-memory doctor
 
 # Optimize
-kuzu-memory optimize --vacuum
+kuzu-memory doctor autotune
 ```
 
 ## ✨ Remember

@@ -90,22 +90,17 @@ def rich_table(
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers, *rows])
-            for i in range(len(headers))
+            max(len(str(row[i])) for row in [headers, *rows]) for i in range(len(headers))
         ]
 
         # Header
-        header_row = " | ".join(
-            headers[i].ljust(col_widths[i]) for i in range(len(headers))
-        )
+        header_row = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
         print(header_row)
         print("-" * len(header_row))
 
         # Rows
         for row in rows:
-            row_str = " | ".join(
-                str(row[i]).ljust(col_widths[i]) for i in range(len(row))
-            )
+            row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
             print(row_str)
         return None
 
@@ -259,7 +254,7 @@ def format_performance_stats(
 
     # Add performance tip if slow
     if query_time_ms > 1000:
-        tip = "\n💡 Tip: Large databases may need optimization. Consider running 'kuzu-memory optimize' (if available)"
+        tip = "\n💡 Tip: Large databases may need optimization. Run 'kuzu-memory doctor autotune' to auto-prune"
         return (stats_line, time_style, tip)
 
     return (stats_line, time_style, None)

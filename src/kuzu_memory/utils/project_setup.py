@@ -12,9 +12,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-def find_project_root(
-    start_path: Path | None = None, _home_dir: Path | None = None
-) -> Path | None:
+def find_project_root(start_path: Path | None = None, _home_dir: Path | None = None) -> Path | None:
     """
     Find the project root by looking for common project indicators.
 
@@ -94,9 +92,7 @@ def find_project_root(
         # Check if this parent has project indicators
         parent_indicator = has_project_indicator(parent)
         if parent_indicator:
-            logger.debug(
-                f"Found project root at {parent} (indicator: {parent_indicator})"
-            )
+            logger.debug(f"Found project root at {parent} (indicator: {parent_indicator})")
             return parent
 
     # STEP 3: No project root found, use current directory
@@ -302,11 +298,11 @@ kuzu-memory init --force
 
 ### Performance Issues
 ```bash
-# Optimize database
-kuzu-memory optimize
+# Auto-tune and optimize database
+kuzu-memory doctor autotune
 
-# Clean up old memories
-kuzu-memory cleanup
+# Manual pruning of old memories
+kuzu-memory prune --strategy percentage --percentage 20
 ```
 
 ---
