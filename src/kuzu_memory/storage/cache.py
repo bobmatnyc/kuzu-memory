@@ -271,6 +271,10 @@ class MemoryCache:
         self._query_cache.clear()
         self._cache.clear()
 
+    def clear(self) -> None:
+        """Clear all caches (alias for clear_all)."""
+        self.clear_all()
+
     def clear_all(self) -> None:
         """Clear all caches."""
         self._cache.clear()
