@@ -185,7 +185,7 @@ class AggressivePruningStrategy(PruningStrategy):
     Aggressive pruning strategy - drastic pruning for critically large databases.
 
     Rules:
-    - Only git_sync source type
+    - Works on ALL source types except protected ones
     - Any of:
       - Older than 180 days
       - Older than 60 days AND < 2 changed files
@@ -205,10 +205,6 @@ class AggressivePruningStrategy(PruningStrategy):
 
     def should_prune(self, memory: dict[str, Any]) -> tuple[bool, str]:
         """Check if memory meets aggressive pruning criteria."""
-        # Only prune git_sync memories
-        if memory.get("source_type") != "git_sync":
-            return False, "not git_sync"
-
         # Check age
         created_at = memory.get("created_at")
         if not created_at:
@@ -243,6 +239,90 @@ class AggressivePruningStrategy(PruningStrategy):
         return False, "does not meet criteria"
 
 
+class PercentagePruningStrategy(PruningStrategy):
+    """
+    Percentage-based pruning strategy - prune oldest X% of memories.
+
+    Rules:
+    - Works on ALL source types except protected ones
+    - Prunes the oldest X% of memories by creation date
+    - No other criteria - just age-based
+    - Expected: Configurable reduction (default 30%)
+    """
+
+    def __init__(self, percentage: float = 30.0) -> None:
+        """
+        Initialize percentage pruning strategy.
+
+        Args:
+            percentage: Percentage of oldest memories to prune (0-100)
+        """
+        if not 0 < percentage <= 100:
+            raise ValueError("Percentage must be between 0 and 100")
+
+        super().__init__(
+            "percentage",
+            f"Prune oldest {percentage}% of memories by creation date",
+        )
+        self.percentage = percentage
+        self._cutoff_timestamp: datetime | None = None
+
+    def set_cutoff_from_memories(self, memories: list[dict[str, Any]]) -> None:
+        """
+        Calculate cutoff timestamp from memory list.
+
+        This must be called before should_prune() is used, with the full list
+        of non-protected memories.
+
+        Args:
+            memories: List of all non-protected memories
+        """
+        if not memories:
+            self._cutoff_timestamp = None
+            return
+
+        # Extract timestamps
+        timestamps = []
+        for memory in memories:
+            created_at = memory.get("created_at")
+            if created_at:
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at)
+                timestamps.append(created_at)
+
+        if not timestamps:
+            self._cutoff_timestamp = None
+            return
+
+        # Sort and find cutoff
+        timestamps.sort()
+        cutoff_index = int(len(timestamps) * (self.percentage / 100.0))
+        self._cutoff_timestamp = timestamps[cutoff_index] if cutoff_index < len(timestamps) else None
+
+        logger.debug(
+            f"Percentage pruning: {len(timestamps)} memories, "
+            f"cutoff at {self._cutoff_timestamp} ({self.percentage}%)"
+        )
+
+    def should_prune(self, memory: dict[str, Any]) -> tuple[bool, str]:
+        """Check if memory is in oldest X%."""
+        if self._cutoff_timestamp is None:
+            return False, "cutoff not calculated"
+
+        created_at = memory.get("created_at")
+        if not created_at:
+            return False, "no created_at"
+
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+
+        if created_at <= self._cutoff_timestamp:
+            age_days = (datetime.now() - created_at).days
+            return True, f"in oldest {self.percentage}% ({age_days} days old)"
+
+        return False, f"newer than cutoff"
+
+
 # Protected memory sources that should never be pruned
 PROTECTED_SOURCES = ["claude-code-hook", "cli", "project-initialization"]
 
@@ -267,6 +347,7 @@ class MemoryPruner:
             "safe": SafePruningStrategy(),
             "intelligent": IntelligentPruningStrategy(),
             "aggressive": AggressivePruningStrategy(),
+            "percentage": PercentagePruningStrategy(percentage=30.0),
         }
 
     def _is_protected(self, memory: dict[str, Any]) -> bool:
@@ -290,13 +371,18 @@ class MemoryPruner:
             )
 
         strategy = self.strategies[strategy_name]
-        logger.info(
-            f"Analyzing memories with '{strategy_name}' strategy: {strategy.description}"
-        )
+        logger.info(f"Analyzing memories with '{strategy_name}' strategy: {strategy.description}")
 
         # Get all memories with metadata
         memories = self._get_all_memories_with_metadata()
         total_count = len(memories)
+
+        # Separate protected from non-protected memories
+        non_protected_memories = [m for m in memories if not self._is_protected(m)]
+
+        # For percentage strategy, calculate cutoff from non-protected memories
+        if isinstance(strategy, PercentagePruningStrategy):
+            strategy.set_cutoff_from_memories(non_protected_memories)
 
         # Categorize memories
         to_prune = []
@@ -423,9 +509,7 @@ class MemoryPruner:
                 )
 
             strategy = self.strategies[strategy_name]
-            logger.info(
-                f"Starting prune with '{strategy_name}' strategy (execute={execute})"
-            )
+            logger.info(f"Starting prune with '{strategy_name}' strategy (execute={execute})")
 
             # Create backup if requested and executing
             backup_path = None
@@ -434,6 +518,14 @@ class MemoryPruner:
 
             # Get memories to prune
             memories = self._get_all_memories_with_metadata()
+
+            # Separate protected from non-protected memories
+            non_protected_memories = [m for m in memories if not self._is_protected(m)]
+
+            # For percentage strategy, calculate cutoff from non-protected memories
+            if isinstance(strategy, PercentagePruningStrategy):
+                strategy.set_cutoff_from_memories(non_protected_memories)
+
             to_prune = []
 
             for memory in memories:
@@ -548,18 +640,13 @@ class MemoryPruner:
             try:
                 self.memory.memory_store.db_adapter.execute_query(query, {"ids": batch})
                 total_deleted += len(batch)
-                logger.debug(
-                    f"Deleted batch of {len(batch)} memories ({total_deleted} total)"
-                )
+                logger.debug(f"Deleted batch of {len(batch)} memories ({total_deleted} total)")
             except Exception as e:
                 logger.error(f"Failed to delete batch: {e}")
                 # Continue with next batch
 
         # Clear cache after deletion
-        if (
-            hasattr(self.memory.memory_store, "cache")
-            and self.memory.memory_store.cache
-        ):
+        if hasattr(self.memory.memory_store, "cache") and self.memory.memory_store.cache:
             self.memory.memory_store.cache.clear()
 
         return total_deleted
