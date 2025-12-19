@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.6.8] - 2025-12-19
+
+### Added
+- Auto-tuning service for large database maintenance (`kuzu-memory doctor autotune`)
+  - Automatic timeout scaling based on database size
+  - Threshold-based pruning (50k warn, 100k auto-prune, 250k critical, 500k emergency)
+  - Three pruning strategies: safe, intelligent, aggressive
+- Automatic version check and auto-update on `kuzu-memory setup`
+  - Checks PyPI for newer versions
+  - Auto-upgrades using `uv` (preferred) or `pip` (fallback)
+  - `--skip-version-check` flag to disable
+
+### Fixed
+- `MemoryCache.clear()` method for prune compatibility
+- Prune strategies now correctly handle `changed_files` as list or int
+
+## [1.6.7] - 2025-12-19
+
+### Changed
+- Updated Makefile to use `uv build` and `uv publish`
+
 ## [1.6.6] - 2025-12-17
 
 ### Changed
@@ -976,7 +997,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.6...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.8...HEAD
+[1.6.8]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.7...v1.6.8
+[1.6.7]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.3...v1.6.4
