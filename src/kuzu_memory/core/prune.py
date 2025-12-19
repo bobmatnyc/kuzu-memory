@@ -106,6 +106,9 @@ class SafePruningStrategy(PruningStrategy):
         # Check changed files or content size
         metadata = memory.get("metadata", {})
         changed_files = metadata.get("changed_files", 0)
+        # Handle case where changed_files is a list (of filenames) instead of a count
+        if isinstance(changed_files, list):
+            changed_files = len(changed_files)
         content_size = len(memory.get("content", ""))
 
         if changed_files < self.max_changed_files:
@@ -165,6 +168,9 @@ class IntelligentPruningStrategy(PruningStrategy):
         # Check changed files
         metadata = memory.get("metadata", {})
         changed_files = metadata.get("changed_files", 0)
+        # Handle case where changed_files is a list (of filenames) instead of a count
+        if isinstance(changed_files, list):
+            changed_files = len(changed_files)
         if changed_files >= self.max_changed_files:
             return False, f"too many files ({changed_files} files)"
 
@@ -220,6 +226,9 @@ class AggressivePruningStrategy(PruningStrategy):
         # Moderately old + minimal files
         metadata = memory.get("metadata", {})
         changed_files = metadata.get("changed_files", 0)
+        # Handle case where changed_files is a list (of filenames) instead of a count
+        if isinstance(changed_files, list):
+            changed_files = len(changed_files)
         if age_days > self.moderate_age_days and changed_files < self.max_changed_files:
             return (
                 True,
@@ -533,7 +542,7 @@ class MemoryPruner:
             """
 
             try:
-                self.memory.memory_store.db_adapter.execute_write(query, {"ids": batch})
+                self.memory.memory_store.db_adapter.execute_query(query, {"ids": batch})
                 total_deleted += len(batch)
                 logger.debug(f"Deleted batch of {len(batch)} memories ({total_deleted} total)")
             except Exception as e:

@@ -833,4 +833,134 @@ def health(
         sys.exit(1)
 
 
+@doctor.command()
+@click.option("--dry-run", is_flag=True, help="Show what would be done without doing it")
+@click.option("--no-prune", is_flag=True, help="Skip automatic pruning even if thresholds exceeded")
+@click.option("--no-timeout-adjust", is_flag=True, help="Skip automatic timeout adjustment")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.pass_context
+def autotune(
+    ctx: click.Context,
+    dry_run: bool,
+    no_prune: bool,
+    no_timeout_adjust: bool,
+    verbose: bool,
+    project_root: str | None,
+) -> None:
+    """
+    🎛️ Auto-tune database performance and maintenance.
+
+    Automatically adjusts performance parameters and triggers maintenance
+    operations based on database size and usage patterns.
+
+    Actions taken:
+    - Adjusts query timeouts based on database size
+    - Triggers automatic pruning if memory count exceeds thresholds
+    - Reports warnings for large databases
+
+    Thresholds:
+    - 50k memories: Warning
+    - 100k memories: Auto-prune (intelligent strategy)
+    - 250k memories: Auto-prune (aggressive strategy)
+    - 500k memories: Emergency prune
+
+    \b
+    🎯 EXAMPLES:
+      # Run auto-tuning
+      kuzu-memory doctor autotune
+
+      # Preview what would be done
+      kuzu-memory doctor autotune --dry-run
+
+      # Only adjust timeouts, no pruning
+      kuzu-memory doctor autotune --no-prune
+    """
+    from ..core.memory import KuzuMemory
+    from ..services.autotune_service import AutoTuneService
+    from ..utils.project_setup import find_project_root, get_project_db_path
+
+    try:
+        # Determine project root
+        if project_root:
+            project_path = Path(project_root)
+        else:
+            found_root = find_project_root()
+            project_path = found_root if found_root else Path.cwd()
+
+        db_path = get_project_db_path(project_path)
+
+        if not db_path.exists():
+            rich_print("❌ Project not initialized. Run 'kuzu-memory init' first.", style="red")
+            sys.exit(1)
+
+        rich_print("🎛️ [bold cyan]Running Auto-Tune...[/bold cyan]\n")
+        rich_print(f"Project: {project_path}", style="dim")
+        rich_print(f"Database: {db_path}\n", style="dim")
+
+        # Initialize memory and run auto-tune
+        memory = KuzuMemory(db_path=db_path)
+
+        try:
+            service = AutoTuneService(memory)
+            result = service.run(
+                auto_prune=not no_prune,
+                auto_adjust_timeout=not no_timeout_adjust,
+                dry_run=dry_run,
+            )
+
+            # Display results
+            if result.success:
+                rich_print(f"📊 Database Stats:", style="cyan")
+                rich_print(f"   Memories: {result.memory_count:,}", style="white")
+                rich_print(f"   Size: {result.db_size_mb:.1f} MB", style="white")
+                rich_print(f"   Execution time: {result.execution_time_ms:.1f}ms\n", style="dim")
+
+                if result.warnings:
+                    rich_print("⚠️  Warnings:", style="yellow")
+                    for warning in result.warnings:
+                        rich_print(f"   • {warning}", style="yellow")
+                    rich_print("")
+
+                if result.actions_taken:
+                    action_label = "Actions (dry-run):" if dry_run else "Actions Taken:"
+                    rich_print(f"🔧 {action_label}", style="green" if not dry_run else "blue")
+                    for action in result.actions_taken:
+                        rich_print(f"   • {action}", style="green" if not dry_run else "blue")
+                    rich_print("")
+
+                if result.new_timeout_ms:
+                    rich_print(
+                        f"⏱️  New query timeout: {result.new_timeout_ms}ms",
+                        style="cyan",
+                    )
+
+                if result.pruned_count > 0:
+                    rich_print(
+                        f"🗑️  Pruned: {result.pruned_count:,} memories",
+                        style="green",
+                    )
+
+                if not result.warnings and not result.actions_taken:
+                    rich_print("✅ Database is healthy, no tuning needed.", style="green")
+                else:
+                    rich_print("\n✅ Auto-tune complete.", style="green")
+
+            else:
+                rich_print(f"❌ Auto-tune failed", style="red")
+                for action in result.actions_taken:
+                    if "Error" in action:
+                        rich_print(f"   {action}", style="red")
+                sys.exit(1)
+
+        finally:
+            memory.close()
+
+    except Exception as e:
+        rich_print(f"❌ Auto-tune error: {e}", style="red")
+        if ctx.obj.get("debug") or verbose:
+            raise
+        sys.exit(1)
+
+
 __all__ = ["doctor"]
