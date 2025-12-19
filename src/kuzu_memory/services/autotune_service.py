@@ -138,8 +138,8 @@ class AutoTuneService:
             # Critical: prune 30% using percentage strategy
             return "percentage", {"percentage": 30.0}
         elif memory_count >= self.MEMORY_COUNT_PRUNE:
-            # Normal auto-prune: use updated aggressive strategy (works on all sources)
-            return "aggressive", {}
+            # Normal auto-prune: prune 20% using percentage strategy
+            return "percentage", {"percentage": 20.0}
         else:
             return "safe", {}
 
