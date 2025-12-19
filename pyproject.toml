@@ -46,8 +46,7 @@ nlp = [
     "numpy>=1.24",           # Numerical computing for batch processing
 ]
 ner = [
-    "spacy>=3.5",           # Optional NER
-    "en-core-web-sm"        # Small English model
+    "spacy>=3.5",           # Optional NER (run: python -m spacy download en_core_web_sm)
 ]
 dev = [
     "pytest>=7.0",

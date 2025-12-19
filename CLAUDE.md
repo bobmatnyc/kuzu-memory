@@ -126,13 +126,19 @@ def remember(ctx: click.Context, content: str, source: str) -> None:
 ### Setup Development Environment
 
 ```bash
-# Clone with submodules and install in editable mode
+# Clone with submodules
 git clone --recurse-submodules https://github.com/bobmatnyc/kuzu-memory.git
 cd kuzu-memory
-python -m pip install -e ".[dev]"
 
 # If you forgot --recurse-submodules during clone
 git submodule update --init --recursive
+
+# Sync dependencies with uv (creates .venv and installs all deps)
+uv sync --all-extras
+
+# Run CLI from source
+uv run kuzu-memory --version
+uv run kuzu-memory --help
 
 # Run quality gates before committing
 make pre-publish  # Runs: ruff, black, isort, mypy, pytest
