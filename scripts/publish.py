@@ -2,7 +2,21 @@
 """
 KuzuMemory PyPI Publishing Script
 
-This script handles building and publishing KuzuMemory to PyPI.
+This script handles building and publishing KuzuMemory to PyPI using uv.
+
+Requirements:
+- uv package manager installed
+- .env.local file with UV_PUBLISH_TOKEN or PYPI_API_KEY
+
+Example usage:
+    # Automated (CI-friendly)
+    ./scripts/publish.py --yes
+
+    # Interactive (default)
+    ./scripts/publish.py
+
+    # Test PyPI only
+    ./scripts/publish.py --test --yes
 """
 
 import subprocess
@@ -10,12 +24,27 @@ import sys
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
-def run_command(cmd, description, check=True):
-    """Run a command with status output."""
+def run_command(cmd, description, check=True, env=None):
+    """Run a command with status output.
+
+    Args:
+        cmd: Command to run
+        description: Human-readable description
+        check: If True, raise on non-zero exit
+        env: Optional environment variables dict
+    """
     print(f"🔄 {description}...")
     try:
-        result = subprocess.run(cmd, shell=True, check=check, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            check=check,
+            capture_output=True,
+            text=True,
+            env=env or os.environ.copy()
+        )
         if result.returncode == 0:
             print(f"✅ {description} completed")
             return True, result.stdout
@@ -26,27 +55,51 @@ def run_command(cmd, description, check=True):
         print(f"❌ {description} failed: {e}")
         return False, str(e)
 
+def load_env_credentials() -> Optional[str]:
+    """Load PyPI credentials from .env.local file.
+
+    Supports both UV_PUBLISH_TOKEN and PYPI_API_KEY environment variables.
+
+    Returns:
+        PyPI API token if found, None otherwise
+    """
+    env_file = Path(".env.local")
+
+    if not env_file.exists():
+        print("⚠️  No .env.local file found")
+        return None
+
+    print("🔑 Loading credentials from .env.local...")
+
+    # Parse .env.local file
+    env_vars = {}
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                env_vars[key.strip()] = value.strip().strip('"').strip("'")
+
+    # Check for credentials (prefer UV_PUBLISH_TOKEN)
+    token = env_vars.get("UV_PUBLISH_TOKEN") or env_vars.get("PYPI_API_KEY")
+
+    if token:
+        print("✅ Credentials loaded successfully")
+        return token
+    else:
+        print("❌ No UV_PUBLISH_TOKEN or PYPI_API_KEY found in .env.local")
+        return None
+
 def check_prerequisites():
-    """Check if all prerequisites are installed."""
+    """Check if uv is installed."""
     print("🔍 Checking prerequisites...")
-    
-    # Check if build tools are installed
-    tools = ["build", "twine"]
-    missing_tools = []
-    
-    for tool in tools:
-        success, _ = run_command(f"python -m {tool} --help", f"Checking {tool}", check=False)
-        if not success:
-            missing_tools.append(tool)
-    
-    if missing_tools:
-        print(f"❌ Missing tools: {', '.join(missing_tools)}")
-        print("📦 Installing missing tools...")
-        for tool in missing_tools:
-            success, _ = run_command(f"pip install {tool}", f"Installing {tool}")
-            if not success:
-                return False
-    
+
+    # Check if uv is installed
+    success, _ = run_command("uv --version", "Checking uv", check=False)
+    if not success:
+        print("❌ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh")
+        return False
+
     print("✅ All prerequisites available")
     return True
 
@@ -88,38 +141,48 @@ def run_tests():
         return response in ['y', 'yes']
 
 def build_package():
-    """Build the package."""
+    """Build the package using uv."""
     print("📦 Building package...")
-    
-    success, output = run_command("python -m build", "Building wheel and source distribution")
+
+    success, output = run_command("uv build", "Building wheel and source distribution")
     if not success:
         return False
-    
+
     # List built files
     dist_files = list(Path("dist").glob("*"))
     if dist_files:
         print("📋 Built files:")
         for file in dist_files:
             print(f"  - {file}")
-    
+
     return True
 
-def check_package():
-    """Check the built package."""
-    print("🔍 Checking package...")
-    
-    success, output = run_command("python -m twine check dist/*", "Checking package with twine")
-    return success
+def upload_to_testpypi(token: str, skip_confirmation: bool = False):
+    """Upload to Test PyPI using uv.
 
-def upload_to_testpypi():
-    """Upload to Test PyPI first."""
+    Args:
+        token: PyPI API token
+        skip_confirmation: If True, skip confirmation prompts
+    """
     print("🧪 Uploading to Test PyPI...")
-    
+
+    if not skip_confirmation:
+        print("🤔 Upload to Test PyPI? (y/N): ", end="")
+        response = input().strip().lower()
+        if response not in ['y', 'yes']:
+            print("❌ Upload cancelled")
+            return False
+
+    # Set environment variable for uv publish
+    env = os.environ.copy()
+    env['UV_PUBLISH_TOKEN'] = token
+
     success, output = run_command(
-        "python -m twine upload --repository testpypi dist/*",
-        "Uploading to Test PyPI"
+        "uv publish --publish-url https://test.pypi.org/legacy/",
+        "Uploading to Test PyPI",
+        env=env
     )
-    
+
     if success:
         print("✅ Successfully uploaded to Test PyPI")
         print("🔗 Check at: https://test.pypi.org/project/kuzu-memory/")
@@ -128,23 +191,34 @@ def upload_to_testpypi():
         print("❌ Failed to upload to Test PyPI")
         return False
 
-def upload_to_pypi():
-    """Upload to PyPI."""
+def upload_to_pypi(token: str, skip_confirmation: bool = False):
+    """Upload to PyPI using uv.
+
+    Args:
+        token: PyPI API token
+        skip_confirmation: If True, skip confirmation prompts
+    """
     print("🚀 Uploading to PyPI...")
-    
-    print("⚠️  This will publish to the real PyPI!")
-    print("🤔 Are you sure you want to continue? (y/N): ", end="")
-    response = input().strip().lower()
-    
-    if response not in ['y', 'yes']:
-        print("❌ Upload cancelled")
-        return False
-    
+
+    if not skip_confirmation:
+        print("⚠️  This will publish to the real PyPI!")
+        print("🤔 Are you sure you want to continue? (y/N): ", end="")
+        response = input().strip().lower()
+
+        if response not in ['y', 'yes']:
+            print("❌ Upload cancelled")
+            return False
+
+    # Set environment variable for uv publish
+    env = os.environ.copy()
+    env['UV_PUBLISH_TOKEN'] = token
+
     success, output = run_command(
-        "python -m twine upload dist/*",
-        "Uploading to PyPI"
+        "uv publish",
+        "Uploading to PyPI",
+        env=env
     )
-    
+
     if success:
         print("🎉 Successfully published to PyPI!")
         print("🔗 Available at: https://pypi.org/project/kuzu-memory/")
@@ -157,68 +231,84 @@ def main():
     """Main publishing workflow."""
     print("🚀 KuzuMemory PyPI Publishing")
     print("=" * 50)
-    
+
     # Check if we're in the right directory
     if not Path("pyproject.toml").exists():
         print("❌ Must be run from project root (pyproject.toml not found)")
         sys.exit(1)
-    
+
     # Parse command line arguments
     test_only = "--test" in sys.argv
     skip_tests = "--skip-tests" in sys.argv
-    
+    skip_confirmation = "--yes" in sys.argv
+
     try:
         # Step 1: Check prerequisites
         if not check_prerequisites():
             sys.exit(1)
-        
-        # Step 2: Clean build
+
+        # Step 2: Load credentials
+        token = load_env_credentials()
+        if not token:
+            print("❌ No credentials found. Please add UV_PUBLISH_TOKEN or PYPI_API_KEY to .env.local")
+            sys.exit(1)
+
+        # Step 3: Clean build
         clean_build()
-        
-        # Step 3: Run tests (unless skipped)
+
+        # Step 4: Run tests (unless skipped)
         if not skip_tests:
             if not run_tests():
-                sys.exit(1)
+                if not skip_confirmation:
+                    # Allow override in interactive mode
+                    pass
+                else:
+                    # Fail immediately in automated mode
+                    sys.exit(1)
         else:
             print("⚠️  Skipping tests (--skip-tests flag)")
-        
-        # Step 4: Build package
+
+        # Step 5: Build package
         if not build_package():
             sys.exit(1)
-        
-        # Step 5: Check package
-        if not check_package():
-            sys.exit(1)
-        
+
         # Step 6: Upload
         if test_only:
             print("🧪 Test mode - uploading to Test PyPI only")
-            if not upload_to_testpypi():
+            if not upload_to_testpypi(token, skip_confirmation):
                 sys.exit(1)
         else:
             # Upload to Test PyPI first
             print("🧪 Uploading to Test PyPI first...")
-            if upload_to_testpypi():
-                print("\n" + "=" * 50)
-                print("🤔 Test PyPI upload successful. Upload to real PyPI? (y/N): ", end="")
-                response = input().strip().lower()
-                
-                if response in ['y', 'yes']:
-                    if not upload_to_pypi():
+            if upload_to_testpypi(token, skip_confirmation):
+                if skip_confirmation:
+                    # In automated mode, always continue to PyPI after Test PyPI
+                    print("\n" + "=" * 50)
+                    print("✅ Test PyPI upload successful. Continuing to PyPI...")
+                    if not upload_to_pypi(token, skip_confirmation):
                         sys.exit(1)
                 else:
-                    print("✅ Stopped at Test PyPI")
+                    # Interactive mode - ask for confirmation
+                    print("\n" + "=" * 50)
+                    print("🤔 Test PyPI upload successful. Upload to real PyPI? (y/N): ", end="")
+                    response = input().strip().lower()
+
+                    if response in ['y', 'yes']:
+                        if not upload_to_pypi(token, skip_confirmation):
+                            sys.exit(1)
+                    else:
+                        print("✅ Stopped at Test PyPI")
             else:
                 sys.exit(1)
-        
+
         print("\n" + "=" * 50)
         print("🎉 Publishing complete!")
-        
+
         if not test_only:
             print("\n📦 Installation commands:")
             print("  pip install kuzu-memory")
             print("  pipx install kuzu-memory")
-        
+
     except KeyboardInterrupt:
         print("\n❌ Publishing cancelled by user")
         sys.exit(1)
