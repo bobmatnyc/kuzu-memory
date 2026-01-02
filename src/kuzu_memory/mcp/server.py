@@ -189,9 +189,7 @@ class KuzuMemoryMCPServer:
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
-        async def handle_call_tool(
-            name: str, arguments: dict[str, Any]
-        ) -> list[TextContent]:
+        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
@@ -224,9 +222,7 @@ class KuzuMemoryMCPServer:
                 )
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
-                result = await self._stats(
-                    bool(detailed) if detailed is not None else False
-                )
+                result = await self._stats(bool(detailed) if detailed is not None else False)
             else:
                 result = f"Unknown tool: {name}"
 
@@ -277,9 +273,7 @@ class KuzuMemoryMCPServer:
                     stderr=asyncio.subprocess.PIPE,
                     cwd=self.project_root,
                 )
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=10.0
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
 
                 if process.returncode == 0:
                     return stdout.decode().strip()
@@ -310,6 +304,7 @@ class KuzuMemoryMCPServer:
             return "Error: No prompt provided"
 
         args = [
+            "memory",
             "enhance",
             prompt,
             "--max-memories",
@@ -324,7 +319,7 @@ class KuzuMemoryMCPServer:
         if not content:
             return "Error: No content provided"
 
-        args = ["learn", content, "--source", source, "--quiet"]
+        args = ["memory", "learn", content, "--source", source, "--quiet", "--no-wait"]
         # Fire and forget - don't wait for completion
         return await self._run_command(args, capture_output=False)
 
@@ -333,7 +328,7 @@ class KuzuMemoryMCPServer:
         if not query:
             return "Error: No query provided"
 
-        args = ["recall", query, "--limit", str(limit), "--format", "json"]
+        args = ["memory", "recall", query, "--max-memories", str(limit), "--format", "json"]
         result = await self._run_command(args)
 
         # Parse and format the JSON output
@@ -353,12 +348,12 @@ class KuzuMemoryMCPServer:
         if not content:
             return "Error: No content provided"
 
-        args = ["remember", content, "--type", memory_type]
+        args = ["memory", "store", content, "--source", memory_type]
         return await self._run_command(args)
 
     async def _stats(self, detailed: bool = False) -> str:
         """Get memory system statistics."""
-        args = ["stats", "--format", "json"]
+        args = ["status", "--format", "json"]
         if detailed:
             args.append("--detailed")
 
@@ -395,9 +390,7 @@ class KuzuMemoryMCPServer:
 
         # Use stdio_server async context manager for proper stream handling
         async with stdio_server() as (read_stream, write_stream):
-            logger.info(
-                f"KuzuMemory MCP Server running for project: {self.project_root}"
-            )
+            logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
 
             try:
                 # Run the MCP server with proper streams
@@ -462,18 +455,18 @@ class SimplifiedMCPServer:
 
         if method == "enhance":
             result = await self._run_cli_command(
-                ["enhance", params.get("prompt", ""), "--format", "plain"]
+                ["memory", "enhance", params.get("prompt", ""), "--format", "plain"]
             )
         elif method == "learn":
             result = await self._run_cli_command(
-                ["learn", params.get("content", ""), "--quiet"]
+                ["memory", "learn", params.get("content", ""), "--quiet", "--no-wait"]
             )
         elif method == "recall":
             result = await self._run_cli_command(
-                ["recall", params.get("query", ""), "--format", "json"]
+                ["memory", "recall", params.get("query", ""), "--format", "json"]
             )
         elif method == "stats":
-            result = await self._run_cli_command(["stats", "--format", "json"])
+            result = await self._run_cli_command(["status", "--format", "json"])
         else:
             result = {"error": f"Unknown method: {method}"}
 
