@@ -53,6 +53,22 @@ class VersionManager:
         major, minor, patch = map(int, parts.split("."))
         return major, minor, patch
 
+    def update_pyproject_version(self, new_version: str) -> None:
+        """Update version in pyproject.toml."""
+        if not self.pyproject_file.exists():
+            print(f"Warning: pyproject.toml not found at {self.pyproject_file}")
+            return
+
+        content = self.pyproject_file.read_text()
+        # Replace version = "X.X.X" with new version
+        new_content = re.sub(
+            r'^version\s*=\s*"[^"]*"',
+            f'version = "{new_version}"',
+            content,
+            flags=re.MULTILINE
+        )
+        self.pyproject_file.write_text(new_content)
+
     def bump_version(self, bump_type: str) -> str:
         """Bump version according to semantic versioning rules."""
         current = self.get_current_version()
@@ -72,6 +88,7 @@ class VersionManager:
 
         new_version = f"{major}.{minor}.{patch}"
         self.version_file.write_text(new_version + "\n")
+        self.update_pyproject_version(new_version)
         return new_version
 
     def get_git_info(self) -> Dict[str, str]:
@@ -315,6 +332,7 @@ def main():
         current = vm.get_current_version()
         new_version = vm.bump_version(args.type)
         print(f"🚀 Bumped version: {current} → {new_version}")
+        print(f"📝 Updated VERSION and pyproject.toml")
 
         # Update changelog
         vm.update_changelog(new_version, args.changelog)
