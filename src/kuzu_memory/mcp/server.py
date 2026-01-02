@@ -189,7 +189,9 @@ class KuzuMemoryMCPServer:
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
-        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        async def handle_call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> list[TextContent]:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
@@ -222,7 +224,9 @@ class KuzuMemoryMCPServer:
                 )
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
-                result = await self._stats(bool(detailed) if detailed is not None else False)
+                result = await self._stats(
+                    bool(detailed) if detailed is not None else False
+                )
             else:
                 result = f"Unknown tool: {name}"
 
@@ -273,7 +277,9 @@ class KuzuMemoryMCPServer:
                     stderr=asyncio.subprocess.PIPE,
                     cwd=self.project_root,
                 )
-                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=10.0
+                )
 
                 if process.returncode == 0:
                     return stdout.decode().strip()
@@ -328,7 +334,15 @@ class KuzuMemoryMCPServer:
         if not query:
             return "Error: No query provided"
 
-        args = ["memory", "recall", query, "--max-memories", str(limit), "--format", "json"]
+        args = [
+            "memory",
+            "recall",
+            query,
+            "--max-memories",
+            str(limit),
+            "--format",
+            "json",
+        ]
         result = await self._run_command(args)
 
         # Parse and format the JSON output
@@ -390,7 +404,9 @@ class KuzuMemoryMCPServer:
 
         # Use stdio_server async context manager for proper stream handling
         async with stdio_server() as (read_stream, write_stream):
-            logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
+            logger.info(
+                f"KuzuMemory MCP Server running for project: {self.project_root}"
+            )
 
             try:
                 # Run the MCP server with proper streams

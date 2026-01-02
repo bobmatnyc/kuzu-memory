@@ -371,7 +371,8 @@ async def multiple_clients(project_root: Path):
 
     num_clients = 3
     clients = [
-        MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_clients)
+        MCPClientSimulator(project_root=project_root, timeout=10.0)
+        for _ in range(num_clients)
     ]
 
     # Connect all
@@ -398,13 +399,19 @@ def sample_tool_calls() -> list[dict[str, Any]]:
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 1,
-            "params": {"name": "kuzu_enhance", "arguments": {"prompt": "test", "limit": 5}},
+            "params": {
+                "name": "kuzu_enhance",
+                "arguments": {"prompt": "test", "limit": 5},
+            },
         },
         {
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 2,
-            "params": {"name": "kuzu_recall", "arguments": {"query": "test", "limit": 5}},
+            "params": {
+                "name": "kuzu_recall",
+                "arguments": {"query": "test", "limit": 5},
+            },
         },
         {
             "jsonrpc": "2.0",
@@ -416,7 +423,10 @@ def sample_tool_calls() -> list[dict[str, Any]]:
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 4,
-            "params": {"name": "kuzu_remember", "arguments": {"content": "test memory"}},
+            "params": {
+                "name": "kuzu_remember",
+                "arguments": {"content": "test memory"},
+            },
         },
         {
             "jsonrpc": "2.0",
@@ -478,7 +488,10 @@ def tool_execution_scenarios() -> dict[str, dict[str, Any]]:
             "tool": "kuzu_enhance",
             "arguments": {"prompt": "test prompt", "limit": 5},
         },
-        "recall_query": {"tool": "kuzu_recall", "arguments": {"query": "test", "limit": 5}},
+        "recall_query": {
+            "tool": "kuzu_recall",
+            "arguments": {"query": "test", "limit": 5},
+        },
         "stats_json": {"tool": "kuzu_stats", "arguments": {"format": "json"}},
         "remember_content": {
             "tool": "kuzu_remember",
@@ -525,7 +538,9 @@ def concurrent_simulator(project_root: Path):
     """
     from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator
 
-    return ConcurrentClientSimulator(num_clients=5, project_root=project_root, timeout=10.0)
+    return ConcurrentClientSimulator(
+        num_clients=5, project_root=project_root, timeout=10.0
+    )
 
 
 # Pytest configuration for async tests

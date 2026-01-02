@@ -40,7 +40,7 @@ class TestSessionLifecycle:
             # Phase 3: Active session
             active_start = time.time()
             for _ in range(5):
-                await client.call_tool("stats", {})
+                await client.call_tool("kuzu_stats", {})
             active_time = time.time() - active_start
 
             # Phase 4: Shutdown
@@ -96,15 +96,15 @@ class TestSessionLifecycle:
             await client.initialize()
 
             # Perform operations that affect state
-            await client.call_tool("remember", {"content": "Session state test"})
+            await client.call_tool("kuzu_remember", {"content": "Session state test"})
             await asyncio.sleep(0.3)
 
             # Query to verify state persisted
-            recall = await client.call_tool("recall", {"query": "Session state"})
+            recall = await client.call_tool("kuzu_recall", {"query": "Session state"})
             assert recall is not None
 
             # Continue operations
-            stats = await client.call_tool("stats", {})
+            stats = await client.call_tool("kuzu_stats", {})
             assert stats is not None
 
         finally:
@@ -125,7 +125,7 @@ class TestSessionLifecycle:
             assert pid is not None
 
             # Perform some operations
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
 
             # Disconnect
             await client.disconnect()
@@ -177,7 +177,7 @@ class TestSessionStateManagement:
             await client.initialize()
 
             # Perform various operations
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
             await client.call_tool("project", {})
             await client.send_request("ping", {})
 
@@ -203,9 +203,9 @@ class TestSessionStateManagement:
             await client.initialize()
 
             # Mix of successes and errors
-            await client.call_tool("stats", {})  # Success
+            await client.call_tool("kuzu_stats", {})  # Success
             await client.call_tool("nonexistent", {})  # Error
-            await client.call_tool("stats", {})  # Success
+            await client.call_tool("kuzu_stats", {})  # Success
 
             # Check error tracking
             stats = client.get_session_stats()
@@ -237,7 +237,7 @@ class TestConcurrentSessions:
             for client in concurrent_sim.clients:
                 if client.process:
                     await client.initialize()
-                    await client.call_tool("stats", {})
+                    await client.call_tool("kuzu_stats", {})
 
             # Verify sessions are independent
             for client in concurrent_sim.clients:
@@ -266,11 +266,11 @@ class TestConcurrentSessions:
             client1, client2 = concurrent_sim.clients
 
             # Client 1 operations
-            r1 = await client1.call_tool("stats", {})
+            r1 = await client1.call_tool("kuzu_stats", {})
             await client1.call_tool("project", {})
 
             # Client 2 operations
-            r3 = await client2.call_tool("stats", {})
+            r3 = await client2.call_tool("kuzu_stats", {})
             await client2.send_request("ping", {})
 
             # Verify both sessions worked
@@ -321,13 +321,13 @@ class TestSessionTimeoutHandling:
             await client.initialize()
 
             # Active operation
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
 
             # Idle period
             await asyncio.sleep(2.0)
 
             # Should still work after idle
-            response = await client.call_tool("stats", {})
+            response = await client.call_tool("kuzu_stats", {})
             assert response is not None
 
         finally:
@@ -344,7 +344,7 @@ class TestSessionTimeoutHandling:
             await client.initialize()
 
             # Operation that might timeout
-            response = await client.call_tool("stats", {"detailed": True})
+            response = await client.call_tool("kuzu_stats", {"detailed": True})
 
             # Should handle timeout gracefully
             if response is None:
@@ -372,7 +372,7 @@ class TestSessionTimeoutHandling:
             await client.initialize()
 
             # Potentially timeout-inducing operation
-            await client.call_tool("stats", {"detailed": True})
+            await client.call_tool("kuzu_stats", {"detailed": True})
 
             # Recovery operations
             for _ in range(3):
@@ -383,7 +383,7 @@ class TestSessionTimeoutHandling:
                 await asyncio.sleep(0.2)
 
             # Verify recovered
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
             # Should work or at least respond
 
         finally:
@@ -406,7 +406,7 @@ class TestSessionCleanup:
             await client.initialize()
 
             # Active session
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
 
             # Graceful shutdown
             shutdown_response = await client.send_request("shutdown", {})
@@ -433,7 +433,7 @@ class TestSessionCleanup:
             await client.initialize()
 
             # Active operations
-            await client.call_tool("stats", {})
+            await client.call_tool("kuzu_stats", {})
 
             # Force disconnect
             await client.disconnect()
@@ -456,7 +456,7 @@ class TestSessionCleanup:
             await client.initialize()
 
             # Start operation
-            task = asyncio.create_task(client.call_tool("stats", {}))
+            task = asyncio.create_task(client.call_tool("kuzu_stats", {}))
 
             # Immediate disconnect
             await client.disconnect()

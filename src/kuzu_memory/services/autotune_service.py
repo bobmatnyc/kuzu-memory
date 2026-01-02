@@ -169,7 +169,9 @@ class AutoTuneService:
         try:
             # Get current stats
             memory_count, db_size_mb = self.get_database_stats()
-            logger.info(f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database")
+            logger.info(
+                f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database"
+            )
 
             # Check for warnings
             if memory_count >= self.MEMORY_COUNT_WARN:
@@ -200,7 +202,9 @@ class AutoTuneService:
 
             # Auto-prune if needed
             if auto_prune and memory_count >= self.MEMORY_COUNT_PRUNE:
-                strategy_name, strategy_kwargs = self.select_prune_strategy(memory_count)
+                strategy_name, strategy_kwargs = self.select_prune_strategy(
+                    memory_count
+                )
 
                 if memory_count >= self.MEMORY_COUNT_EMERGENCY:
                     pct = strategy_kwargs.get("percentage", "N/A")
@@ -218,11 +222,15 @@ class AutoTuneService:
                     )
 
                 if not dry_run:
-                    pruned_count = self._execute_prune(strategy_name, strategy_kwargs, memory_count)
+                    pruned_count = self._execute_prune(
+                        strategy_name, strategy_kwargs, memory_count
+                    )
                     actions.append(f"Pruned {pruned_count:,} memories")
                 else:
                     # Estimate what would be pruned
-                    estimated = self._estimate_prune(strategy_name, strategy_kwargs, memory_count)
+                    estimated = self._estimate_prune(
+                        strategy_name, strategy_kwargs, memory_count
+                    )
                     actions.append(f"Would prune approximately {estimated:,} memories")
 
             execution_time_ms = (time.time() - start_time) * 1000

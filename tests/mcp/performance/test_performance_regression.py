@@ -62,7 +62,7 @@ class TestPerformanceRegression:
 
         for _ in range(10):
             start = time.perf_counter()
-            await initialized_client.call_tool("stats", {})
+            await initialized_client.call_tool("kuzu_stats", {})
             latency = (time.perf_counter() - start) * 1000
             latencies.append(latency)
 
@@ -320,7 +320,7 @@ class TestRegressionReporting:
         latencies = []
         for _ in range(5):
             start = time.perf_counter()
-            await initialized_client.call_tool("stats", {})
+            await initialized_client.call_tool("kuzu_stats", {})
             latency = (time.perf_counter() - start) * 1000
             latencies.append(latency)
 

@@ -211,7 +211,7 @@ class TestClaudeDesktopToolExecution:
             await client.initialize()
 
             # Step 1: Get current stats
-            stats_response = await client.call_tool("stats", {"format": "json"})
+            stats_response = await client.call_tool("kuzu_stats", {"format": "json"})
             assert stats_response is not None
 
             # Step 2: Check recent memories
@@ -264,7 +264,7 @@ class TestClaudeDesktopSessionPersistence:
 
             # Perform 10 operations
             for _ in range(10):
-                response = await client.call_tool("stats", {"format": "json"})
+                response = await client.call_tool("kuzu_stats", {"format": "json"})
                 assert response is not None
 
                 # Brief pause between operations
@@ -322,7 +322,7 @@ class TestClaudeDesktopSessionPersistence:
             await client.initialize()
 
             # Pattern: success → error → success
-            success1 = await client.call_tool("stats", {})
+            success1 = await client.call_tool("kuzu_stats", {})
             assert success1 is not None
 
             # Trigger error
@@ -330,7 +330,7 @@ class TestClaudeDesktopSessionPersistence:
             assert "error" in error
 
             # Should recover
-            success2 = await client.call_tool("stats", {})
+            success2 = await client.call_tool("kuzu_stats", {})
             assert success2 is not None
 
         finally:
@@ -383,7 +383,7 @@ class TestClaudeDesktopConcurrentSessions:
 
             # Concurrent tool calls
             tasks = [
-                client.call_tool("stats", {})
+                client.call_tool("kuzu_stats", {})
                 for client in concurrent_sim.clients
                 if client.process
             ]
@@ -428,7 +428,7 @@ class TestClaudeDesktopRealWorldPatterns:
             assert learn is not None
 
             # 3. Check stats
-            stats = await client.call_tool("stats", {"format": "json"})
+            stats = await client.call_tool("kuzu_stats", {"format": "json"})
             assert stats is not None
 
         finally:
@@ -453,7 +453,9 @@ class TestClaudeDesktopRealWorldPatterns:
 
             for query in queries:
                 # Recall relevant context
-                recall = await client.call_tool("recall", {"query": query, "limit": 5})
+                recall = await client.call_tool(
+                    "kuzu_recall", {"query": query, "limit": 5}
+                )
                 assert recall is not None
 
                 # Enhance with context
@@ -483,7 +485,7 @@ class TestClaudeDesktopRealWorldPatterns:
 
             # Active session operations
             for _ in range(5):
-                await client.call_tool("stats", {})
+                await client.call_tool("kuzu_stats", {})
                 await asyncio.sleep(0.1)
 
             # Session end - graceful shutdown
@@ -512,7 +514,7 @@ class TestClaudeDesktopRealWorldPatterns:
             await client.initialize()
 
             # Normal operation
-            success1 = await client.call_tool("stats", {})
+            success1 = await client.call_tool("kuzu_stats", {})
             assert success1 is not None
 
             # Encounter error
@@ -525,7 +527,7 @@ class TestClaudeDesktopRealWorldPatterns:
 
             # Multiple operations after recovery
             for _ in range(3):
-                response = await client.call_tool("stats", {})
+                response = await client.call_tool("kuzu_stats", {})
                 assert response is not None
 
         finally:

@@ -117,7 +117,7 @@ class TestConcurrentExecution:
             await client.initialize()
             results = []
             for _ in range(num_ops_per_client):
-                result = await client.call_tool("stats", {})
+                result = await client.call_tool("kuzu_stats", {})
                 results.append(result is not None)
             return results
 
@@ -201,7 +201,7 @@ class TestLoadBalancing:
             for _ in range(30):
                 try:
                     result = await asyncio.wait_for(
-                        client.call_tool("stats", {}), timeout=2.0
+                        client.call_tool("kuzu_stats", {}), timeout=2.0
                     )
                     if result is not None:
                         successes += 1

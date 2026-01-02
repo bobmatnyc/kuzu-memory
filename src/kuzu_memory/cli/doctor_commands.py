@@ -663,7 +663,9 @@ def hooks(
                     # Install git hooks if missing
                     if not git_hooks["installed"]:
                         try:
-                            from .git_commands import install_hooks as git_install_hooks_cmd
+                            from .git_commands import (
+                                install_hooks as git_install_hooks_cmd,
+                            )
 
                             console.print("  Installing git hooks...")
                             ctx.invoke(git_install_hooks_cmd, force=False)

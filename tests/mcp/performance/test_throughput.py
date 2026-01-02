@@ -53,7 +53,7 @@ class TestSequentialThroughput:
         start_time = time.perf_counter()
 
         for _ in range(num_operations):
-            result = await initialized_client.call_tool("stats", {})
+            result = await initialized_client.call_tool("kuzu_stats", {})
             assert result is not None
 
         elapsed = time.perf_counter() - start_time
@@ -169,7 +169,7 @@ class TestConcurrentThroughput:
         async def client_worker(client):
             await client.initialize()
             for _ in range(num_ops_per_client):
-                await client.call_tool("stats", {})
+                await client.call_tool("kuzu_stats", {})
 
         start_time = time.perf_counter()
         await asyncio.gather(*[client_worker(c) for c in multiple_clients])

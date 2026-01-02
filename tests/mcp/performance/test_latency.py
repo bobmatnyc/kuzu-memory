@@ -104,7 +104,7 @@ class TestToolCallLatency:
 
         async def call_stats():
             start = time.perf_counter()
-            result = await initialized_client.call_tool("stats", {})
+            result = await initialized_client.call_tool("kuzu_stats", {})
             latency = (time.perf_counter() - start) * 1000
             return latency, result
 
@@ -122,7 +122,7 @@ class TestToolCallLatency:
         async def call_recall():
             start = time.perf_counter()
             result = await initialized_client.call_tool(
-                "recall", {"query": "test", "limit": 5}
+                "kuzu_recall", {"query": "test", "limit": 5}
             )
             latency = (time.perf_counter() - start) * 1000
             return latency, result
@@ -299,14 +299,14 @@ class TestLatencyConsistency:
         """Test if there's a warmup effect on latency."""
         # First call (potential warmup)
         start = time.perf_counter()
-        await initialized_client.call_tool("stats", {})
+        await initialized_client.call_tool("kuzu_stats", {})
         first_latency = (time.perf_counter() - start) * 1000
 
         # Subsequent calls
         subsequent_latencies = []
         for _ in range(5):
             start = time.perf_counter()
-            await initialized_client.call_tool("stats", {})
+            await initialized_client.call_tool("kuzu_stats", {})
             latency = (time.perf_counter() - start) * 1000
             subsequent_latencies.append(latency)
 
