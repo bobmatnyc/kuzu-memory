@@ -118,7 +118,7 @@ async def test_client():
     response = await client.initialize()
 
     # Call tools
-    result = await client.call_tool("enhance", {
+    result = await client.call_tool("kuzu_enhance", {
         "prompt": "Test prompt",
         "limit": 5
     })

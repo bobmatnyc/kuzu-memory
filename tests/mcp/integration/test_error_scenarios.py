@@ -97,8 +97,8 @@ class TestInvalidParameterErrors:
 
             await client.initialize()
 
-            # enhance requires 'prompt' parameter
-            response = await client.call_tool("enhance", {})
+            # kuzu_enhance requires 'prompt' parameter
+            response = await client.call_tool("kuzu_enhance", {})
 
             assert response is not None
             # Should error for missing required param
@@ -119,9 +119,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # limit should be integer, not string
-            response = await client.call_tool(
-                "recall", {"query": "test", "limit": "five"}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "test", "limit": "five"})
 
             assert response is not None
             # Should handle type error gracefully
@@ -141,7 +139,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # Negative limit
-            response = await client.call_tool("recall", {"query": "test", "limit": -5})
+            response = await client.call_tool("kuzu_recall", {"query": "test", "limit": -5})
 
             assert response is not None
             # Should handle gracefully
@@ -161,7 +159,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # Null query
-            response = await client.call_tool("recall", {"query": None, "limit": 5})
+            response = await client.call_tool("kuzu_recall", {"query": None, "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -186,7 +184,7 @@ class TestToolExecutionFailures:
             await client.initialize()
 
             # Empty query
-            response = await client.call_tool("recall", {"query": "", "limit": 5})
+            response = await client.call_tool("kuzu_recall", {"query": "", "limit": 5})
 
             assert response is not None
             # Should handle empty string gracefully
@@ -206,9 +204,7 @@ class TestToolExecutionFailures:
             await client.initialize()
 
             # Special characters in query
-            response = await client.call_tool(
-                "recall", {"query": "!@#$%^&*()", "limit": 5}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "!@#$%^&*()", "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -228,7 +224,7 @@ class TestToolExecutionFailures:
 
             # Very long prompt (10KB)
             long_prompt = "x" * 10000
-            response = await client.call_tool("enhance", {"prompt": long_prompt})
+            response = await client.call_tool("kuzu_enhance", {"prompt": long_prompt})
 
             assert response is not None
             # Should handle or error gracefully
@@ -254,7 +250,7 @@ class TestTimeoutScenarios:
             await client.initialize()
 
             # Call with very short timeout
-            response = await client.call_tool("stats", {"detailed": True})
+            response = await client.call_tool("kuzu_stats", {"detailed": True})
 
             # Should complete or timeout
             if response is None:
@@ -277,7 +273,7 @@ class TestTimeoutScenarios:
             await client.initialize()
 
             # First request might timeout
-            response1 = await client.call_tool("stats", {"detailed": True})
+            response1 = await client.call_tool("kuzu_stats", {"detailed": True})
 
             # Second request should work
             response2 = await client.send_request("ping", {})
@@ -309,7 +305,7 @@ class TestErrorRecovery:
             assert "error" in error_response
 
             # Should still work after error
-            success_response = await client.call_tool("stats", {})
+            success_response = await client.call_tool("kuzu_stats", {})
             assert success_response is not None
             assert "result" in success_response or "error" not in success_response
 
@@ -355,7 +351,7 @@ class TestErrorRecovery:
                     response = await client.call_tool("nonexistent", {})
                 else:
                     # Success
-                    response = await client.call_tool("stats", {})
+                    response = await client.call_tool("kuzu_stats", {})
 
                 results.append(response is not None)
 
@@ -383,9 +379,9 @@ class TestBatchErrorHandling:
 
             # Send multiple requests, some invalid
             responses = []
-            responses.append(await client.call_tool("stats", {}))
+            responses.append(await client.call_tool("kuzu_stats", {}))
             responses.append(await client.call_tool("nonexistent", {}))
-            responses.append(await client.call_tool("stats", {}))
+            responses.append(await client.call_tool("kuzu_stats", {}))
 
             # Should have mix of successes and errors
             successes = sum(1 for r in responses if r and "result" in r)

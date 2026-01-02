@@ -92,7 +92,7 @@ def sample_requests() -> dict[str, dict[str, Any]]:
             "method": "tools/call",
             "id": 4,
             "params": {
-                "name": "enhance",
+                "name": "kuzu_enhance",
                 "arguments": {"prompt": "test prompt", "limit": 5},
             },
         },
@@ -101,7 +101,7 @@ def sample_requests() -> dict[str, dict[str, Any]]:
             "method": "tools/call",
             "id": 5,
             "params": {
-                "name": "recall",
+                "name": "kuzu_recall",
                 "arguments": {"query": "test query", "limit": 5},
             },
         },
@@ -109,7 +109,7 @@ def sample_requests() -> dict[str, dict[str, Any]]:
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 6,
-            "params": {"name": "stats", "arguments": {"format": "json"}},
+            "params": {"name": "kuzu_stats", "arguments": {"format": "json"}},
         },
         "shutdown": {"jsonrpc": "2.0", "method": "shutdown", "id": 99},
         "notification": {
@@ -129,7 +129,7 @@ def sample_tools() -> list[dict[str, Any]]:
     """
     return [
         {
-            "name": "enhance",
+            "name": "kuzu_enhance",
             "description": "Enhance prompts with relevant project context",
             "inputSchema": {
                 "type": "object",
@@ -144,7 +144,7 @@ def sample_tools() -> list[dict[str, Any]]:
             },
         },
         {
-            "name": "recall",
+            "name": "kuzu_recall",
             "description": "Query memories for relevant information",
             "inputSchema": {
                 "type": "object",
@@ -156,7 +156,7 @@ def sample_tools() -> list[dict[str, Any]]:
             },
         },
         {
-            "name": "stats",
+            "name": "kuzu_stats",
             "description": "Get memory system statistics",
             "inputSchema": {
                 "type": "object",
@@ -281,7 +281,7 @@ def batch_requests() -> list[dict[str, Any]]:
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 3,
-            "params": {"name": "stats", "arguments": {}},
+            "params": {"name": "kuzu_stats", "arguments": {}},
         },
     ]
 
@@ -371,8 +371,7 @@ async def multiple_clients(project_root: Path):
 
     num_clients = 3
     clients = [
-        MCPClientSimulator(project_root=project_root, timeout=10.0)
-        for _ in range(num_clients)
+        MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_clients)
     ]
 
     # Connect all
@@ -399,25 +398,25 @@ def sample_tool_calls() -> list[dict[str, Any]]:
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 1,
-            "params": {"name": "enhance", "arguments": {"prompt": "test", "limit": 5}},
+            "params": {"name": "kuzu_enhance", "arguments": {"prompt": "test", "limit": 5}},
         },
         {
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 2,
-            "params": {"name": "recall", "arguments": {"query": "test", "limit": 5}},
+            "params": {"name": "kuzu_recall", "arguments": {"query": "test", "limit": 5}},
         },
         {
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 3,
-            "params": {"name": "stats", "arguments": {"format": "json"}},
+            "params": {"name": "kuzu_stats", "arguments": {"format": "json"}},
         },
         {
             "jsonrpc": "2.0",
             "method": "tools/call",
             "id": 4,
-            "params": {"name": "remember", "arguments": {"content": "test memory"}},
+            "params": {"name": "kuzu_remember", "arguments": {"content": "test memory"}},
         },
         {
             "jsonrpc": "2.0",
@@ -451,7 +450,7 @@ def error_scenarios() -> dict[str, dict[str, Any]]:
                 "jsonrpc": "2.0",
                 "method": "tools/call",
                 "id": 2,
-                "params": {"name": "enhance", "arguments": {}},  # Missing prompt
+                "params": {"name": "kuzu_enhance", "arguments": {}},  # Missing prompt
             },
             "expected_error_code": -32602,
         },
@@ -476,13 +475,13 @@ def tool_execution_scenarios() -> dict[str, dict[str, Any]]:
     """
     return {
         "enhance_basic": {
-            "tool": "enhance",
+            "tool": "kuzu_enhance",
             "arguments": {"prompt": "test prompt", "limit": 5},
         },
-        "recall_query": {"tool": "recall", "arguments": {"query": "test", "limit": 5}},
-        "stats_json": {"tool": "stats", "arguments": {"format": "json"}},
+        "recall_query": {"tool": "kuzu_recall", "arguments": {"query": "test", "limit": 5}},
+        "stats_json": {"tool": "kuzu_stats", "arguments": {"format": "json"}},
         "remember_content": {
-            "tool": "remember",
+            "tool": "kuzu_remember",
             "arguments": {"content": "test memory"},
         },
         "recent_memories": {"tool": "recent", "arguments": {"limit": 10}},
@@ -506,7 +505,7 @@ async def session_with_history(mcp_client):
     await mcp_client.initialize()
 
     # Build some history
-    await mcp_client.call_tool("stats", {})
+    await mcp_client.call_tool("kuzu_stats", {})
     await mcp_client.send_request("ping", {})
     await mcp_client.call_tool("project", {})
 
@@ -526,9 +525,7 @@ def concurrent_simulator(project_root: Path):
     """
     from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator
 
-    return ConcurrentClientSimulator(
-        num_clients=5, project_root=project_root, timeout=10.0
-    )
+    return ConcurrentClientSimulator(num_clients=5, project_root=project_root, timeout=10.0)
 
 
 # Pytest configuration for async tests
@@ -643,7 +640,7 @@ def compliance_test_scenarios() -> dict[str, Any]:
             {
                 "jsonrpc": "2.0",
                 "method": "tools/call",
-                "params": {"name": "stats", "arguments": {}},
+                "params": {"name": "kuzu_stats", "arguments": {}},
                 "id": 3,
             },
         ],

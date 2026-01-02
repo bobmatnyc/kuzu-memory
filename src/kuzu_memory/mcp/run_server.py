@@ -46,9 +46,7 @@ class MCPProtocolHandler:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
         if "error" in request and "method" not in request:
-            return JSONRPCMessage.create_response(
-                request.get("id"), error=request["error"]
-            )
+            return JSONRPCMessage.create_response(request.get("id"), error=request["error"])
 
         request_id = request.get("id")
         method = request.get("method", "")
@@ -126,9 +124,7 @@ class MCPProtocolHandler:
                     try:
                         from .testing.health_checker import MCPHealthChecker
 
-                        health_checker = MCPHealthChecker(
-                            project_root=Path.cwd(), timeout=2.0
-                        )
+                        health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
                         health_result = await health_checker.check_health(
                             detailed=False, retry=False
                         )
@@ -180,27 +176,22 @@ class MCPProtocolHandler:
                 return None
             return JSONRPCMessage.create_response(
                 request_id,
-                error=JSONRPCError(
-                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
-                ),
+                error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"),
             )
 
-    async def _execute_tool(
-        self, tool_name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
-        # Map tool names to server methods
-        if not hasattr(self.server, tool_name):
-            raise JSONRPCError(
-                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
-            )
+        # Map tool names to server methods (strip kuzu_ prefix, add _ prefix)
+        method_name = "_" + tool_name.removeprefix("kuzu_")
+        if not hasattr(self.server, method_name):
+            raise JSONRPCError(JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}")
 
         try:
             # Get the tool method
-            tool_method = getattr(self.server, tool_name)
+            tool_method = getattr(self.server, method_name)
 
-            # Execute the tool
-            result = tool_method(**arguments)
+            # Execute the tool (await since methods are async)
+            result = await tool_method(**arguments)
 
             # Format response according to MCP spec
             if isinstance(result, dict) and "success" in result:
@@ -209,15 +200,15 @@ class MCPProtocolHandler:
                     content = []
 
                     # Determine the main content based on tool type
-                    if tool_name == "enhance":
+                    if tool_name == "kuzu_enhance":
                         text = result.get("enhanced_prompt", "")
-                    elif tool_name in ["recall", "recent"]:
+                    elif tool_name in ["kuzu_recall", "recent"]:
                         memories = result.get("memories", [])
                         if isinstance(memories, list):
                             text = json.dumps(memories, indent=2)
                         else:
                             text = str(memories)
-                    elif tool_name == "stats":
+                    elif tool_name == "kuzu_stats":
                         stats = result.get("stats", {})
                         if isinstance(stats, dict):
                             text = json.dumps(stats, indent=2)
@@ -267,7 +258,7 @@ class MCPProtocolHandler:
         # Define tools with MCP-compatible schema
         tool_definitions = [
             {
-                "name": "enhance",
+                "name": "kuzu_enhance",
                 "description": "Enhance prompts with relevant project context from memory",
                 "inputSchema": {
                     "type": "object",
@@ -294,7 +285,7 @@ class MCPProtocolHandler:
                 },
             },
             {
-                "name": "learn",
+                "name": "kuzu_learn",
                 "description": "Store a learning asynchronously (non-blocking)",
                 "inputSchema": {
                     "type": "object",
@@ -318,7 +309,7 @@ class MCPProtocolHandler:
                 },
             },
             {
-                "name": "recall",
+                "name": "kuzu_recall",
                 "description": "Query memories for relevant information",
                 "inputSchema": {
                     "type": "object",
@@ -342,7 +333,7 @@ class MCPProtocolHandler:
                 },
             },
             {
-                "name": "remember",
+                "name": "kuzu_remember",
                 "description": "Store a direct memory",
                 "inputSchema": {
                     "type": "object",
@@ -365,7 +356,7 @@ class MCPProtocolHandler:
                 },
             },
             {
-                "name": "stats",
+                "name": "kuzu_stats",
                 "description": "Get memory system statistics",
                 "inputSchema": {
                     "type": "object",
@@ -507,9 +498,7 @@ class MCPProtocolHandler:
                 # Send error response if possible (with a dummy ID since we don't have a request)
                 error_response = JSONRPCMessage.create_response(
                     1,  # Use dummy ID for unhandled errors
-                    error=JSONRPCError(
-                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
-                    ),
+                    error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"),
                 )
                 if error_response is not None:
                     self.protocol.write_message(error_response)
