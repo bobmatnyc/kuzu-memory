@@ -1,0 +1,62 @@
+refactor: migrate setup command to use SelfUpdater from py-mcp-installer-service
+
+Replace manual version checking and upgrade logic with SelfUpdater class
+from vendored py-mcp-installer-service dependency.
+
+## Changes
+
+### setup_commands.py
+- Replace VersionChecker with SelfUpdater for upgrade detection
+- Remove _run_auto_upgrade() function (~40 lines of manual subprocess logic)
+- Add installation method detection (pip, pipx, uv, homebrew, development)
+- Improve user feedback by showing detected installation method
+- Handle development mode gracefully (prompt manual upgrade)
+
+### update_commands.py
+- Add documentation recommending SelfUpdater for new code
+- Keep VersionChecker for backward compatibility with `kuzu-memory update` command
+- Add deprecation note in class docstring
+
+## Benefits
+
+- **Multi-platform support**: Automatically detects and uses correct upgrade command
+- **Development mode detection**: Prevents accidental upgrades in dev environments
+- **Code reduction**: -40 lines of manual upgrade logic
+- **Better maintainability**: Reuses well-tested code from py-mcp-installer-service
+- **Improved UX**: Shows installation method to user for transparency
+
+## Testing
+
+- ✅ Python syntax validation (py_compile)
+- ✅ Ruff linting (all checks passed)
+- ✅ Mypy type checking (strict mode, no errors)
+- ✅ Import verification (SelfUpdater loads from vendored dependency)
+- ✅ Integration test (all components working)
+
+## Backward Compatibility
+
+- No breaking changes to public API
+- All existing commands and flags preserved
+- `kuzu-memory update` still works (uses VersionChecker)
+- `kuzu-memory setup` behavior unchanged (improved implementation)
+
+## Migration Notes
+
+**Before:**
+```python
+checker = VersionChecker()
+check_result = checker.get_latest_version(include_pre=False)
+comparison = checker.compare_versions(check_result["version"])
+if comparison["update_available"]:
+    upgrade_result = _run_auto_upgrade()  # Manual subprocess
+```
+
+**After:**
+```python
+updater = SelfUpdater("kuzu-memory", current_version=__version__)
+result = updater.check_for_updates()
+if result.update_available:
+    success = updater.update(confirm=False)  # Auto-detects method
+```
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
