@@ -30,7 +30,7 @@ repos:
       - id: mypy
         name: mypy-typecheck
         description: "Static type checking with MyPy"
-        additional_dependencies: [pydantic, click, types-PyYML, types-python-dateutil]
+        additional_dependencies: [pydantic, click, types-PyYAML, types-python-dateutil]
         args: [--ignore-missing-imports, --strict]
         files: ^src/
 
