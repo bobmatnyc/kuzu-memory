@@ -489,11 +489,22 @@ class TestClaudeDesktopRealWorldPatterns:
             shutdown = await client.send_request("shutdown", {})
             assert shutdown is not None
 
-            await asyncio.sleep(0.5)
-
-            # Verify clean shutdown
+            # Wait for process termination with timeout
             if client.process:
-                assert client.process.poll() is not None
+                max_wait = 2.0  # Maximum wait time in seconds
+                wait_interval = 0.1  # Check every 100ms
+                elapsed = 0.0
+
+                while elapsed < max_wait:
+                    if client.process.poll() is not None:
+                        break
+                    await asyncio.sleep(wait_interval)
+                    elapsed += wait_interval
+
+                # Verify clean shutdown
+                assert (
+                    client.process.poll() is not None
+                ), f"Process did not terminate within {max_wait}s after shutdown request"
 
         finally:
             # Cleanup
