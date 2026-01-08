@@ -6,10 +6,13 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 
+@pytest.mark.asyncio
 async def test_mcp_tools():
     """Test MCP tool definitions."""
     from kuzu_memory.mcp.server import KuzuMemoryMCPServer
