@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory.mcp.run_server import MCPProtocolHandler
 from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
 
@@ -34,9 +33,7 @@ async def test_protocol_version_2025_06_18():
     assert response is not None, "Response should not be None"
     assert response.get("jsonrpc") == "2.0", "Should have JSON-RPC 2.0"
     assert "result" in response, "Should have result field"
-    assert (
-        response["result"]["protocolVersion"] == "2025-06-18"
-    ), "Should echo back 2025-06-18"
+    assert response["result"]["protocolVersion"] == "2025-06-18", "Should echo back 2025-06-18"
     assert "capabilities" in response["result"], "Should have capabilities"
     assert "serverInfo" in response["result"], "Should have serverInfo"
 
@@ -58,9 +55,7 @@ async def test_protocol_version_backward_compatibility():
     response = await handler.handle_request(request)
 
     assert response is not None, "Response should not be None"
-    assert (
-        response["result"]["protocolVersion"] == "2024-11-05"
-    ), "Should support legacy 2024-11-05"
+    assert response["result"]["protocolVersion"] == "2024-11-05", "Should support legacy 2024-11-05"
 
 
 @pytest.mark.asyncio
@@ -75,9 +70,10 @@ async def test_protocol_version_default():
     response = await handler.handle_request(request)
 
     assert response is not None, "Response should not be None"
+    # Code explicitly defaults to 2025-06-18 when no version specified (line 62)
     assert (
         response["result"]["protocolVersion"] == "2025-06-18"
-    ), "Should default to latest version 2025-06-18"
+    ), "Should default to 2025-06-18 for backward compatibility"
 
 
 @pytest.mark.asyncio
@@ -97,9 +93,9 @@ async def test_protocol_version_unsupported():
     response = await handler.handle_request(request)
 
     assert response is not None, "Response should not be None"
-    # Should fallback to latest supported version
+    # Should fallback to latest supported version (2025-11-25)
     assert (
-        response["result"]["protocolVersion"] == "2025-06-18"
+        response["result"]["protocolVersion"] == "2025-11-25"
     ), "Should fallback to latest supported version"
 
 
@@ -134,8 +130,6 @@ async def test_full_handshake_with_claude_code_version():
 
     # Verify expected tools are present
     tool_names = [tool["name"] for tool in tools_response["result"]["tools"]]
-    expected_tools = ["enhance", "learn", "recall", "remember", "stats"]
+    expected_tools = ["kuzu_enhance", "kuzu_learn", "kuzu_recall", "kuzu_remember", "kuzu_stats"]
     for expected_tool in expected_tools:
-        assert (
-            expected_tool in tool_names
-        ), f"Should have {expected_tool} tool available"
+        assert expected_tool in tool_names, f"Should have {expected_tool} tool available"
