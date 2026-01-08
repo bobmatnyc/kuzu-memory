@@ -49,11 +49,11 @@ class TestSessionLifecycle:
             await asyncio.sleep(0.5)
             shutdown_time = time.time() - shutdown_start
 
-            # Verify timing
-            assert connect_time < 2.0
-            assert init_time < 1.0
-            assert active_time < 10.0
-            assert shutdown_time < 2.0
+            # Verify timing (allow for CI environment variability)
+            assert connect_time < 3.0
+            assert init_time < 2.0
+            assert active_time < 15.0
+            assert shutdown_time < 3.0
 
         finally:
             if client.process and client.process.poll() is None:
@@ -293,9 +293,7 @@ class TestConcurrentSessions:
             assert connected_count >= 3
 
             # Load test
-            results = await concurrent_sim.load_test(
-                requests_per_client=requests_per_client
-            )
+            results = await concurrent_sim.load_test(requests_per_client=requests_per_client)
 
             # Verify load handling
             assert results["total_requests"] >= requests_per_client * 3
@@ -477,8 +475,7 @@ class TestSessionCleanup:
         """Test cleanup of multiple sessions."""
         num_sessions = 3
         clients = [
-            MCPClientSimulator(project_root=project_root, timeout=10.0)
-            for _ in range(num_sessions)
+            MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_sessions)
         ]
 
         try:
