@@ -6,8 +6,6 @@ that auto-detects existing installations and updates them as needed.
 """
 
 import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -22,12 +20,20 @@ from ..utils.project_setup import (
 from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
-from .update_commands import VersionChecker
+
+# Import SelfUpdater from vendored py-mcp-installer-service
+try:
+    from py_mcp_installer.self_updater import InstallMethod, SelfUpdater
+except ImportError:
+    # Fallback to vendored version if not installed
+    vendor_path = Path(__file__).parent.parent.parent.parent / "vendor" / "py-mcp-installer-service" / "src"
+    sys.path.insert(0, str(vendor_path))
+    from py_mcp_installer.self_updater import InstallMethod, SelfUpdater
 
 
 def _check_and_upgrade_if_needed() -> bool:
     """
-    Check for newer version and auto-upgrade if available.
+    Check for newer version and auto-upgrade if available using SelfUpdater.
 
     Non-blocking: Returns False if check/upgrade fails, but doesn't raise.
 
@@ -40,39 +46,43 @@ def _check_and_upgrade_if_needed() -> bool:
         if os.environ.get("KUZU_MEMORY_UPGRADE_ATTEMPTED") == "1":
             return False
 
-        checker = VersionChecker()
+        from ..__version__ import __version__
 
-        # Silently check for updates (no progress messages)
-        check_result = checker.get_latest_version(include_pre=False)
+        # Create SelfUpdater instance
+        updater = SelfUpdater("kuzu-memory", current_version=__version__)
 
-        # Handle errors silently
-        if check_result.get("error"):
-            return False
-
-        # Compare versions
-        comparison = checker.compare_versions(check_result["version"])
+        # Check for updates
+        result = updater.check_for_updates()
 
         # No update available
-        if not comparison["update_available"]:
+        if not result.update_available:
             return False
 
-        # Update available - show notification
-        current = comparison["current"]
-        latest = comparison["latest"]
-        version_type = comparison["version_type"]
+        # Determine version type (major/minor/patch)
+        current_parts = result.current_version.split(".")
+        latest_parts = result.latest_version.split(".")
+
+        version_type = "patch"
+        if len(current_parts) >= 1 and len(latest_parts) >= 1:
+            if current_parts[0] != latest_parts[0]:
+                version_type = "major"
+            elif len(current_parts) >= 2 and len(latest_parts) >= 2:
+                if current_parts[1] != latest_parts[1]:
+                    version_type = "minor"
 
         version_type_emoji = {
             "major": "🚀",
             "minor": "✨",
             "patch": "🔧",
-            "unknown": "📦",
         }
         emoji = version_type_emoji.get(version_type, "📦")
 
+        # Show update info
         rich_print(
-            f"\n{emoji} Update available: {current} → {latest} ({version_type})",
+            f"\n{emoji} Update available: {result.current_version} → {result.latest_version} ({version_type})",
             style="cyan",
         )
+        rich_print(f"   Installed via: {result.install_method.value}", style="dim")
 
         # Ask user for confirmation before upgrading
         if not click.confirm(
@@ -82,15 +92,25 @@ def _check_and_upgrade_if_needed() -> bool:
             rich_print("   Skipping upgrade - continuing with current version", style="dim")
             return False
 
-        rich_print("   Upgrading kuzu-memory...", style="dim")
+        # Handle development mode separately
+        if result.install_method == InstallMethod.DEVELOPMENT:
+            rich_print(
+                "   Development mode detected. Please upgrade manually:",
+                style="yellow",
+            )
+            rich_print(f"   {result.upgrade_command}", style="dim")
+            return False
 
         # Set environment variable to prevent infinite loops
         os.environ["KUZU_MEMORY_UPGRADE_ATTEMPTED"] = "1"
 
-        # Attempt upgrade
-        upgrade_result = _run_auto_upgrade()
+        # Show upgrade command
+        rich_print(f"   Running: {result.upgrade_command}", style="dim")
 
-        if upgrade_result["success"]:
+        # Perform upgrade using SelfUpdater
+        success = updater.update(confirm=False)  # Already confirmed above
+
+        if success:
             rich_print("   ✅ Successfully upgraded to latest version!", style="green")
             rich_print(
                 "   🔄 Restarting setup with new version...\n",
@@ -100,59 +120,18 @@ def _check_and_upgrade_if_needed() -> bool:
         else:
             # Upgrade failed - show warning but continue
             rich_print(
-                f"   ⚠️  Auto-upgrade failed: {upgrade_result.get('error', 'Unknown error')}",
+                "   ⚠️  Auto-upgrade failed. Continuing with current version.",
                 style="yellow",
             )
-            rich_print("   Continuing with current version...\n", style="dim")
+            rich_print(
+                f"   Try manually: {result.upgrade_command}",
+                style="dim",
+            )
             return False
 
     except Exception:
         # Silently fail - don't block setup
         return False
-
-
-def _run_auto_upgrade() -> dict[str, bool | str | None]:
-    """
-    Execute upgrade using uv or pip (with uv preferred).
-
-    Returns:
-        dict with keys:
-            - success: bool
-            - error: str | None
-    """
-    try:
-        # Check if uv is available
-        uv_available = shutil.which("uv") is not None
-
-        if uv_available:
-            # Use uv pip install --upgrade
-            result = subprocess.run(
-                ["uv", "pip", "install", "--upgrade", "kuzu-memory"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-        else:
-            # Fallback to pip
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "--upgrade", "kuzu-memory"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-
-        if result.returncode == 0:
-            return {"success": True, "error": None}
-        else:
-            return {
-                "success": False,
-                "error": result.stderr.strip() or "Upgrade failed",
-            }
-
-    except subprocess.TimeoutExpired:
-        return {"success": False, "error": "Upgrade timed out after 60 seconds"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
 
 
 def _restart_setup_after_upgrade(ctx: click.Context) -> None:

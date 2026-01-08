@@ -2,6 +2,7 @@
 Update checker and upgrade commands for KuzuMemory CLI.
 
 Provides functionality to check for and install updates from PyPI.
+Uses SelfUpdater from py-mcp-installer-service for consistent upgrade handling.
 """
 
 from __future__ import annotations
@@ -21,9 +22,18 @@ from .cli_utils import rich_confirm, rich_panel, rich_print
 
 logger = logging.getLogger(__name__)
 
+# NOTE: SelfUpdater from py-mcp-installer-service is now available and preferred
+# for new code. See setup_commands.py for usage example.
+# This module maintains the legacy VersionChecker for backward compatibility.
+
 
 class VersionChecker:
-    """Handles version checking against PyPI."""
+    """Handles version checking against PyPI.
+
+    NOTE: This class is maintained for backward compatibility.
+    For new code, prefer using SelfUpdater from py-mcp-installer-service
+    which provides multi-installation-method support (pip, pipx, uv, homebrew).
+    """
 
     PYPI_API_URL = "https://pypi.org/pypi/kuzu-memory/json"
     TIMEOUT = 10  # seconds
