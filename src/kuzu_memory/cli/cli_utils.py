@@ -90,22 +90,17 @@ def rich_table(
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers, *rows])
-            for i in range(len(headers))
+            max(len(str(row[i])) for row in [headers, *rows]) for i in range(len(headers))
         ]
 
         # Header
-        header_row = " | ".join(
-            headers[i].ljust(col_widths[i]) for i in range(len(headers))
-        )
+        header_row = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
         print(header_row)
         print("-" * len(header_row))
 
         # Rows
         for row in rows:
-            row_str = " | ".join(
-                str(row[i]).ljust(col_widths[i]) for i in range(len(row))
-            )
+            row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
             print(row_str)
         return None
 

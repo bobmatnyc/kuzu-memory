@@ -99,9 +99,7 @@ class MemoryEnhancer:
             for extraction in extracted_memories:
                 try:
                     # Update metadata to include original content context
-                    updated_metadata = (
-                        extraction.metadata.copy() if extraction.metadata else {}
-                    )
+                    updated_metadata = extraction.metadata.copy() if extraction.metadata else {}
                     updated_metadata.update(
                         {
                             "original_content": content,
@@ -203,9 +201,7 @@ class MemoryEnhancer:
                 for entity in entities:
                     if self._entity_appears_in_content(entity, memory.content):
                         # Calculate relevance score based on entity context and memory content
-                        relevance_score = self._calculate_entity_relevance(
-                            entity, memory
-                        )
+                        relevance_score = self._calculate_entity_relevance(entity, memory)
 
                         if relevance_score > 0.3:  # Threshold for entity relevance
                             memory_entity = {
@@ -262,9 +258,7 @@ class MemoryEnhancer:
             action = dedup_result.get("action", "store")
 
             if action == "skip":
-                logger.debug(
-                    f"Skipping duplicate memory: {extracted_memory.content[:50]}..."
-                )
+                logger.debug(f"Skipping duplicate memory: {extracted_memory.content[:50]}...")
                 return None
             elif action == "update":
                 # Update existing memory
@@ -316,9 +310,7 @@ class MemoryEnhancer:
             logger.warning(f"Error checking entity appearance: {e}")
             return False
 
-    def _calculate_entity_relevance(
-        self, entity: dict[str, Any], memory: ExtractedMemory
-    ) -> float:
+    def _calculate_entity_relevance(self, entity: dict[str, Any], memory: ExtractedMemory) -> float:
         """
         Calculate relevance score between an entity and a memory.
 
@@ -529,9 +521,7 @@ class MemoryEnhancer:
                     "updated_at": datetime.now(),
                     "update_source": base_memory_data.get("source", "unknown"),
                     "update_reason": "deduplication_merge",
-                    "original_confidence": existing_memory.metadata.get(
-                        "confidence", 1.0
-                    ),
+                    "original_confidence": existing_memory.metadata.get("confidence", 1.0),
                     "new_confidence": extracted_memory.confidence,
                 }
             )
@@ -554,10 +544,7 @@ class MemoryEnhancer:
                 for new_entity in extracted_memory.entities:
                     if isinstance(new_entity, dict):
                         entity_name = new_entity.get("name", "")
-                        if (
-                            entity_name
-                            and entity_name.lower() not in existing_entity_names
-                        ):
+                        if entity_name and entity_name.lower() not in existing_entity_names:
                             existing_memory.entities.append(new_entity)
                             existing_entity_names.add(entity_name.lower())
                     elif isinstance(new_entity, str) and new_entity:
@@ -620,9 +607,7 @@ class MemoryEnhancer:
             logger.error(f"Error creating new memory: {e}")
             raise
 
-    def detect_relationships(
-        self, memories: list[ExtractedMemory]
-    ) -> list[dict[str, Any]]:
+    def detect_relationships(self, memories: list[ExtractedMemory]) -> list[dict[str, Any]]:
         """
         Detect relationships between extracted memories.
 
@@ -636,14 +621,10 @@ class MemoryEnhancer:
             if len(memories) < 2:
                 return []
 
-            relationships = self.relationship_detector.detect_memory_relationships(
-                memories
-            )
+            relationships = self.relationship_detector.detect_memory_relationships(memories)
             self.enhancement_stats["relationships_found"] += len(relationships)
 
-            logger.debug(
-                f"Detected {len(relationships)} relationships between memories"
-            )
+            logger.debug(f"Detected {len(relationships)} relationships between memories")
             return relationships
 
         except Exception as e:
@@ -676,9 +657,7 @@ class MemoryEnhancer:
 
         # Error rate
         total_operations = (
-            stats["memories_processed"]
-            + stats["entities_extracted"]
-            + stats["relationships_found"]
+            stats["memories_processed"] + stats["entities_extracted"] + stats["relationships_found"]
         )
         if total_operations > 0:
             stats["error_rate"] = (stats["extraction_errors"] / total_operations) * 100

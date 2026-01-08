@@ -29,12 +29,8 @@ class AttachMemoriesRequest(BaseModel):
     """Validated input for attach_memories method."""
 
     prompt: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
-    max_memories: Annotated[int, Field(ge=1, le=MAX_MEMORY_LIMIT)] = (
-        DEFAULT_MEMORY_LIMIT
-    )
-    strategy: str = Field(
-        DEFAULT_RECALL_STRATEGY, pattern=r"^(auto|keyword|entity|temporal)$"
-    )
+    max_memories: Annotated[int, Field(ge=1, le=MAX_MEMORY_LIMIT)] = DEFAULT_MEMORY_LIMIT
+    strategy: str = Field(DEFAULT_RECALL_STRATEGY, pattern=r"^(auto|keyword|entity|temporal)$")
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     agent_id: str = Field(DEFAULT_AGENT_ID, max_length=MAX_ID_LENGTH)
@@ -114,9 +110,7 @@ class RecallRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=MAX_CONTENT_LENGTH)
     limit: Annotated[int, Field(ge=1, le=MAX_MEMORY_LIMIT)] = DEFAULT_MEMORY_LIMIT
-    decay_factor: Annotated[float, Field(ge=MIN_DECAY_FACTOR, le=MAX_DECAY_FACTOR)] = (
-        0.9
-    )
+    decay_factor: Annotated[float, Field(ge=MIN_DECAY_FACTOR, le=MAX_DECAY_FACTOR)] = 0.9
     user_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     session_id: str | None = Field(None, max_length=MAX_ID_LENGTH)
     memory_types: list[MemoryType] | None = None
@@ -134,17 +128,13 @@ class RecallRequest(BaseModel):
 class BatchMemoryRequest(BaseModel):
     """Validated input for batch memory operations."""
 
-    memories: Annotated[
-        list[MemoryCreationRequest], Field(min_length=1, max_length=1000)
-    ]
+    memories: Annotated[list[MemoryCreationRequest], Field(min_length=1, max_length=1000)]
     deduplicate: bool = Field(True, description="Whether to check for duplicates")
     merge_similar: bool = Field(False, description="Whether to merge similar memories")
 
     @field_validator("memories")
     @classmethod
-    def validate_batch_size(
-        cls, v: list[MemoryCreationRequest]
-    ) -> list[MemoryCreationRequest]:
+    def validate_batch_size(cls, v: list[MemoryCreationRequest]) -> list[MemoryCreationRequest]:
         """Ensure batch size is reasonable."""
         if len(v) > 100:
             import logging

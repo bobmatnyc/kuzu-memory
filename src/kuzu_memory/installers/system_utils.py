@@ -61,11 +61,7 @@ class SystemDetector:
     def get_shell() -> str:
         """Get the current shell name."""
         if SystemDetector.is_windows():
-            return (
-                "cmd"
-                if "COMSPEC" not in os.environ
-                else os.environ["COMSPEC"].split("\\")[-1]
-            )
+            return "cmd" if "COMSPEC" not in os.environ else os.environ["COMSPEC"].split("\\")[-1]
         else:
             shell = os.environ.get("SHELL", "/bin/bash")
             return shell.split("/")[-1]
@@ -167,9 +163,7 @@ class FileOperations:
             return False
 
     @staticmethod
-    def find_files(
-        directory: Path, pattern: str = "*", recursive: bool = True
-    ) -> list[Path]:
+    def find_files(directory: Path, pattern: str = "*", recursive: bool = True) -> list[Path]:
         """Find files matching a pattern in a directory."""
         try:
             if recursive:
@@ -220,9 +214,7 @@ class ProcessRunner:
             logger.error(f"Command timed out after {timeout}s: {' '.join(command)}")
             raise
         except subprocess.CalledProcessError as e:
-            logger.error(
-                f"Command failed with code {e.returncode}: {' '.join(command)}"
-            )
+            logger.error(f"Command failed with code {e.returncode}: {' '.join(command)}")
             if e.stderr:
                 logger.error(f"Error output: {e.stderr}")
             raise
@@ -280,8 +272,7 @@ class ProjectDetector:
 
         # Python projects
         if any(
-            (project_root / f).exists()
-            for f in ["setup.py", "pyproject.toml", "requirements.txt"]
+            (project_root / f).exists() for f in ["setup.py", "pyproject.toml", "requirements.txt"]
         ):
             project_types.append("python")
 
@@ -294,9 +285,7 @@ class ProjectDetector:
             project_types.append("git")
 
         # Docker projects
-        if any(
-            (project_root / f).exists() for f in ["Dockerfile", "docker-compose.yml"]
-        ):
+        if any((project_root / f).exists() for f in ["Dockerfile", "docker-compose.yml"]):
             project_types.append("docker")
 
         # Various frameworks and tools
@@ -343,8 +332,7 @@ class ProjectDetector:
             "root": str(project_root),
             "types": ProjectDetector.detect_project_type(project_root),
             "configs": {
-                k: str(v)
-                for k, v in ProjectDetector.find_config_files(project_root).items()
+                k: str(v) for k, v in ProjectDetector.find_config_files(project_root).items()
             },
             "size": len(list(project_root.rglob("*"))) if project_root.exists() else 0,
             "has_kuzu_memory": (project_root / ".kuzu-memory").exists(),
@@ -388,9 +376,7 @@ class EnvironmentValidator:
         return {
             "python_version_ok": EnvironmentValidator.check_python_version(),
             "disk_space_ok": EnvironmentValidator.check_disk_space(),
-            "write_permissions_ok": EnvironmentValidator.check_write_permissions(
-                project_root
-            ),
+            "write_permissions_ok": EnvironmentValidator.check_write_permissions(project_root),
             "kuzu_memory_available": ProcessRunner.test_kuzu_memory_cli(),
             "system_info": SystemDetector.get_system_info(),
             "package_managers": SystemDetector.detect_package_managers(),

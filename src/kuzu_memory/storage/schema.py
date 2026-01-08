@@ -207,9 +207,7 @@ def get_query(query_name: str) -> str:
     """
     if query_name not in SCHEMA_QUERIES:
         available_queries = ", ".join(SCHEMA_QUERIES.keys())
-        raise KeyError(
-            f"Query '{query_name}' not found. Available queries: {available_queries}"
-        )
+        raise KeyError(f"Query '{query_name}' not found. Available queries: {available_queries}")
 
     return SCHEMA_QUERIES[query_name]
 

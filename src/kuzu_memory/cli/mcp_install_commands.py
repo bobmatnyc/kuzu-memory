@@ -51,9 +51,7 @@ def mcp_install_group() -> None:
 @click.option("--verbose", is_flag=True, help="Show detailed information")
 @click.option("--available", is_flag=True, help="Show only available systems")
 @click.option("--installed", is_flag=True, help="Show only installed systems")
-def mcp_status(
-    project: str | None, verbose: bool, available: bool, installed: bool
-) -> None:
+def mcp_status(project: str | None, verbose: bool, available: bool, installed: bool) -> None:
     """
     Show MCP installation status for all systems.
 
@@ -125,9 +123,7 @@ def mcp_status(
 @mcp_install_group.command(name="install")
 @click.argument(
     "system",
-    type=click.Choice(
-        ["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]
-    ),
+    type=click.Choice(["claude-desktop", "claude-code", "cursor", "vscode", "windsurf"]),
 )
 @click.option("--dry-run", is_flag=True, help="Preview changes without installing")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
@@ -279,9 +275,7 @@ def install_mcp(
 @click.option("--verbose", is_flag=True, help="Show detailed information")
 @click.option("--available", is_flag=True, help="Show only available systems")
 @click.option("--installed", is_flag=True, help="Show only installed systems")
-def detect_alias(
-    project: str | None, verbose: bool, available: bool, installed: bool
-) -> None:
+def detect_alias(project: str | None, verbose: bool, available: bool, installed: bool) -> None:
     """[DEPRECATED] Use 'mcp status' instead."""
     print("⚠️  Warning: 'mcp detect' is deprecated. Please use 'mcp status' instead.\n")
     import click

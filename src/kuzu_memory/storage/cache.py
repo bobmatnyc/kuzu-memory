@@ -188,14 +188,10 @@ class MemoryCache:
             ttl_seconds: Time-to-live for cached items
         """
         self._cache = LRUCache(maxsize, ttl_seconds)
-        self._memory_cache = LRUCache(
-            maxsize // 2, ttl_seconds * 2
-        )  # Longer TTL for memories
+        self._memory_cache = LRUCache(maxsize // 2, ttl_seconds * 2)  # Longer TTL for memories
         self._query_cache = LRUCache(maxsize // 2, ttl_seconds)
 
-    def _generate_query_key(
-        self, query: str, parameters: dict[str, Any] | None = None
-    ) -> str:
+    def _generate_query_key(self, query: str, parameters: dict[str, Any] | None = None) -> str:
         """Generate cache key for query results."""
         key_data = query
         if parameters:
@@ -209,9 +205,7 @@ class MemoryCache:
         """Generate cache key for memory objects."""
         return f"memory:{memory_id}"
 
-    def _generate_recall_key(
-        self, prompt: str, strategy: str, max_memories: int
-    ) -> str:
+    def _generate_recall_key(self, prompt: str, strategy: str, max_memories: int) -> str:
         """Generate cache key for recall results."""
         key_data = f"{prompt}:{strategy}:{max_memories}"
         return f"recall:{hashlib.md5(key_data.encode()).hexdigest()}"
@@ -294,9 +288,7 @@ class MemoryCache:
             "memory_cache": self._memory_cache.get_stats(),
             "query_cache": self._query_cache.get_stats(),
             "total_size": (
-                self._cache.size()
-                + self._memory_cache.size()
-                + self._query_cache.size()
+                self._cache.size() + self._memory_cache.size() + self._query_cache.size()
             ),
         }
 
