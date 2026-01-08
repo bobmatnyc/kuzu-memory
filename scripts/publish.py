@@ -1,320 +1,346 @@
 #!/usr/bin/env python3
-"""
-KuzuMemory PyPI Publishing Script
+"""Automated publish script for kuzu-memory.
 
-This script handles building and publishing KuzuMemory to PyPI using uv.
-
-Requirements:
-- uv package manager installed
-- .env.local file with UV_PUBLISH_TOKEN or PYPI_API_KEY
-
-Example usage:
-    # Automated (CI-friendly)
-    ./scripts/publish.py --yes
-
-    # Interactive (default)
-    ./scripts/publish.py
-
-    # Test PyPI only
-    ./scripts/publish.py --test --yes
+Usage:
+    python scripts/publish.py [--bump patch|minor|major] [--dry-run] [--skip-tests] [--skip-github]
 """
 
+import argparse
+import os
+import re
 import subprocess
 import sys
-import os
-import shutil
 from pathlib import Path
-from typing import Optional
 
-def run_command(cmd, description, check=True, env=None):
-    """Run a command with status output.
 
-    Args:
-        cmd: Command to run
-        description: Human-readable description
-        check: If True, raise on non-zero exit
-        env: Optional environment variables dict
-    """
-    print(f"🔄 {description}...")
-    try:
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            check=check,
-            capture_output=True,
-            text=True,
-            env=env or os.environ.copy()
+class Publisher:
+    """Handles the complete publish workflow."""
+
+    def __init__(self, project_root: Path, dry_run: bool = False):
+        self.project_root = project_root
+        self.dry_run = dry_run
+        self.version_file = project_root / "VERSION"
+        self.pyproject_file = project_root / "pyproject.toml"
+        self.version_py = project_root / "src" / "kuzu_memory" / "__version__.py"
+
+    def get_current_version(self) -> str:
+        """Read current version from VERSION file."""
+        if not self.version_file.exists():
+            raise FileNotFoundError(f"VERSION file not found: {self.version_file}")
+        return self.version_file.read_text().strip()
+
+    def bump_version(self, bump_type: str) -> str:
+        """Bump version and return new version string."""
+        current = self.get_current_version()
+
+        # Validate current version format
+        if not re.match(r'^\d+\.\d+\.\d+$', current):
+            raise ValueError(f"Invalid version format: {current}")
+
+        major, minor, patch = map(int, current.split("."))
+
+        if bump_type == "major":
+            major += 1
+            minor = 0
+            patch = 0
+        elif bump_type == "minor":
+            minor += 1
+            patch = 0
+        else:  # patch
+            patch += 1
+
+        new_version = f"{major}.{minor}.{patch}"
+
+        if not self.dry_run:
+            # Update VERSION file
+            self.version_file.write_text(new_version + "\n")
+
+            # Update pyproject.toml
+            if self.pyproject_file.exists():
+                content = self.pyproject_file.read_text()
+                content = re.sub(
+                    r'version\s*=\s*"[^"]*"',
+                    f'version = "{new_version}"',
+                    content,
+                    count=1
+                )
+                self.pyproject_file.write_text(content)
+
+            # Update __version__.py
+            if self.version_py.exists():
+                content = self.version_py.read_text()
+                content = re.sub(
+                    r'__version__\s*=\s*"[^"]*"',
+                    f'__version__ = "{new_version}"',
+                    content
+                )
+                self.version_py.write_text(content)
+
+        return new_version
+
+    def get_pypi_token(self) -> str:
+        """Get PyPI token from env or .env.local file."""
+        # Check environment variable first (both UV_PUBLISH_TOKEN and PYPI_API_KEY)
+        token = os.environ.get("UV_PUBLISH_TOKEN") or os.environ.get("PYPI_API_KEY")
+        if token:
+            return token
+
+        # Fall back to .env.local
+        env_file = self.project_root / ".env.local"
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("PYPI_API_KEY=") or line.startswith("UV_PUBLISH_TOKEN="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+
+        raise ValueError(
+            "No PyPI token found. Set UV_PUBLISH_TOKEN or PYPI_API_KEY env var, "
+            "or add to .env.local file"
         )
-        if result.returncode == 0:
-            print(f"✅ {description} completed")
-            return True, result.stdout
+
+    def run(
+        self, cmd: list[str], check: bool = True, capture: bool = False
+    ) -> subprocess.CompletedProcess:
+        """Run a command."""
+        print(f"  $ {' '.join(cmd)}")
+
+        # Always execute read-only commands
+        read_only_commands = {"git", "cat", "grep", "ls", "find"}
+        if self.dry_run and cmd[0] not in read_only_commands:
+            print("    [DRY RUN - skipped]")
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+
+        return subprocess.run(
+            cmd, cwd=self.project_root, check=check, capture_output=capture, text=True
+        )
+
+    def run_quality_checks(self) -> bool:
+        """Run linting and tests."""
+        print("\n📋 Running quality checks...")
+
+        checks = [
+            (["uv", "run", "ruff", "check", "src/"], "Ruff linting"),
+            (
+                ["uv", "run", "mypy", "src/kuzu_memory", "--ignore-missing-imports"],
+                "Type checking",
+            ),
+            (["uv", "run", "pytest", "tests/", "-x", "-q"], "Tests"),
+        ]
+
+        for cmd, name in checks:
+            print(f"\n  {name}...")
+            result = self.run(cmd, check=False)
+            if result.returncode != 0:
+                print(f"  ❌ {name} failed!")
+                return False
+            print(f"  ✅ {name} passed")
+
+        return True
+
+    def build(self) -> bool:
+        """Build distribution files."""
+        print("\n📦 Building distribution...")
+
+        # Clean old builds
+        dist_dir = self.project_root / "dist"
+        if dist_dir.exists() and not self.dry_run:
+            print("  Cleaning old builds...")
+            for f in dist_dir.glob("*"):
+                f.unlink()
+
+        result = self.run(["uv", "build"], check=False)
+        if result.returncode != 0:
+            return False
+
+        # Verify build artifacts exist
+        if not self.dry_run:
+            whl_files = list(dist_dir.glob("*.whl"))
+            tar_files = list(dist_dir.glob("*.tar.gz"))
+            if not whl_files or not tar_files:
+                print("  ❌ Build artifacts not found!")
+                return False
+            print(f"  Built: {whl_files[0].name}")
+            print(f"  Built: {tar_files[0].name}")
+
+        return True
+
+    def publish_pypi(self) -> bool:
+        """Publish to PyPI."""
+        print("\n🚀 Publishing to PyPI...")
+
+        try:
+            token = self.get_pypi_token()
+        except ValueError as e:
+            print(f"  ❌ {e}")
+            return False
+
+        if self.dry_run:
+            print("  [DRY RUN - would publish to PyPI]")
+            return True
+
+        # Use uv publish with token
+        result = self.run(["uv", "publish", "--token", token], check=False)
+        return result.returncode == 0
+
+    def git_commit_and_tag(self, version: str) -> bool:
+        """Commit version bump and create tag."""
+        print(f"\n🏷️  Git commit and tag v{version}...")
+
+        if self.dry_run:
+            print("  [DRY RUN - would commit and tag]")
+            return True
+
+        # Check for uncommitted changes (excluding version files)
+        status = self.run(["git", "status", "--porcelain"], capture=True)
+        if status.stdout:
+            # Filter out version files
+            other_changes = [
+                line for line in status.stdout.splitlines()
+                if not any(f in line for f in ["VERSION", "pyproject.toml", "__version__.py"])
+            ]
+            if other_changes:
+                print("  ⚠️  Warning: Uncommitted changes detected:")
+                for line in other_changes[:5]:  # Show first 5
+                    print(f"    {line}")
+
+        # Stage version files
+        files_to_add = ["VERSION", "pyproject.toml", "src/kuzu_memory/__version__.py"]
+        self.run(["git", "add"] + files_to_add)
+
+        # Commit
+        commit_result = self.run(
+            ["git", "commit", "-m", f"chore: bump version to {version}", "--no-verify"],
+            check=False,
+        )
+        if commit_result.returncode != 0:
+            print("  ⚠️  Commit failed (files may already be committed)")
+
+        # Tag
+        tag_result = self.run(["git", "tag", f"v{version}"], check=False)
+        if tag_result.returncode != 0:
+            print(f"  ⚠️  Tag v{version} may already exist")
+
+        # Push commit and tag
+        self.run(["git", "push", "origin", "main"], check=False)
+        self.run(["git", "push", "origin", f"v{version}"], check=False)
+
+        return True
+
+    def create_github_release(self, version: str) -> bool:
+        """Create GitHub release."""
+        print(f"\n📣 Creating GitHub release v{version}...")
+
+        if self.dry_run:
+            print("  [DRY RUN - would create GitHub release]")
+            return True
+
+        # Check if gh CLI is available
+        gh_check = subprocess.run(
+            ["which", "gh"], capture_output=True, text=True
+        )
+        if gh_check.returncode != 0:
+            print("  ⚠️  gh CLI not found. Skipping GitHub release.")
+            print("     Install: https://cli.github.com/")
+            return False
+
+        result = self.run(
+            ["gh", "release", "create", f"v{version}", "--generate-notes"], check=False
+        )
+
+        return result.returncode == 0
+
+    def publish(
+        self, bump_type: str = "patch", skip_tests: bool = False, skip_github: bool = False
+    ) -> bool:
+        """Run the complete publish workflow."""
+        print(f"🚀 Publishing kuzu-memory ({bump_type} release)")
+        if self.dry_run:
+            print("   [DRY RUN MODE]")
+
+        # 1. Quality checks
+        if not skip_tests:
+            if not self.run_quality_checks():
+                print("\n❌ Quality checks failed. Aborting.")
+                return False
         else:
-            print(f"❌ {description} failed: {result.stderr}")
-            return False, result.stderr
-    except subprocess.CalledProcessError as e:
-        print(f"❌ {description} failed: {e}")
-        return False, str(e)
+            print("\n⚠️  Skipping quality checks")
 
-def load_env_credentials() -> Optional[str]:
-    """Load PyPI credentials from .env.local file.
+        # 2. Bump version
+        current = self.get_current_version()
+        new_version = self.bump_version(bump_type)
+        print(f"\n📝 Version: {current} → {new_version}")
 
-    Supports both UV_PUBLISH_TOKEN and PYPI_API_KEY environment variables.
-
-    Returns:
-        PyPI API token if found, None otherwise
-    """
-    env_file = Path(".env.local")
-
-    if not env_file.exists():
-        print("⚠️  No .env.local file found")
-        return None
-
-    print("🔑 Loading credentials from .env.local...")
-
-    # Parse .env.local file
-    env_vars = {}
-    with open(env_file) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                env_vars[key.strip()] = value.strip().strip('"').strip("'")
-
-    # Check for credentials (prefer UV_PUBLISH_TOKEN)
-    token = env_vars.get("UV_PUBLISH_TOKEN") or env_vars.get("PYPI_API_KEY")
-
-    if token:
-        print("✅ Credentials loaded successfully")
-        return token
-    else:
-        print("❌ No UV_PUBLISH_TOKEN or PYPI_API_KEY found in .env.local")
-        return None
-
-def check_prerequisites():
-    """Check if uv is installed."""
-    print("🔍 Checking prerequisites...")
-
-    # Check if uv is installed
-    success, _ = run_command("uv --version", "Checking uv", check=False)
-    if not success:
-        print("❌ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh")
-        return False
-
-    print("✅ All prerequisites available")
-    return True
-
-def clean_build():
-    """Clean previous build artifacts."""
-    print("🧹 Cleaning build artifacts...")
-    
-    dirs_to_clean = ["build", "dist", "*.egg-info"]
-    for pattern in dirs_to_clean:
-        for path in Path(".").glob(pattern):
-            if path.is_dir():
-                shutil.rmtree(path)
-                print(f"  Removed directory: {path}")
-            elif path.is_file():
-                path.unlink()
-                print(f"  Removed file: {path}")
-    
-    print("✅ Build artifacts cleaned")
-
-def run_tests():
-    """Run tests before publishing."""
-    print("🧪 Running tests...")
-    
-    # Check if pytest is available
-    success, _ = run_command("python -m pytest --version", "Checking pytest", check=False)
-    if not success:
-        print("⚠️  pytest not available, skipping tests")
-        return True
-    
-    # Run tests
-    success, output = run_command("python -m pytest tests/ -v", "Running test suite", check=False)
-    if success:
-        print("✅ All tests passed")
-        return True
-    else:
-        print("❌ Tests failed")
-        print("🤔 Continue anyway? (y/N): ", end="")
-        response = input().strip().lower()
-        return response in ['y', 'yes']
-
-def build_package():
-    """Build the package using uv."""
-    print("📦 Building package...")
-
-    success, output = run_command("uv build", "Building wheel and source distribution")
-    if not success:
-        return False
-
-    # List built files
-    dist_files = list(Path("dist").glob("*"))
-    if dist_files:
-        print("📋 Built files:")
-        for file in dist_files:
-            print(f"  - {file}")
-
-    return True
-
-def upload_to_testpypi(token: str, skip_confirmation: bool = False):
-    """Upload to Test PyPI using uv.
-
-    Args:
-        token: PyPI API token
-        skip_confirmation: If True, skip confirmation prompts
-    """
-    print("🧪 Uploading to Test PyPI...")
-
-    if not skip_confirmation:
-        print("🤔 Upload to Test PyPI? (y/N): ", end="")
-        response = input().strip().lower()
-        if response not in ['y', 'yes']:
-            print("❌ Upload cancelled")
+        # 3. Build
+        if not self.build():
+            print("\n❌ Build failed. Aborting.")
             return False
+        print("  ✅ Build successful")
 
-    # Set environment variable for uv publish
-    env = os.environ.copy()
-    env['UV_PUBLISH_TOKEN'] = token
+        # 4. Git commit and tag
+        if not self.git_commit_and_tag(new_version):
+            print("\n⚠️  Git operations had issues (continuing...)")
 
-    success, output = run_command(
-        "uv publish --publish-url https://test.pypi.org/legacy/",
-        "Uploading to Test PyPI",
-        env=env
-    )
-
-    if success:
-        print("✅ Successfully uploaded to Test PyPI")
-        print("🔗 Check at: https://test.pypi.org/project/kuzu-memory/")
-        return True
-    else:
-        print("❌ Failed to upload to Test PyPI")
-        return False
-
-def upload_to_pypi(token: str, skip_confirmation: bool = False):
-    """Upload to PyPI using uv.
-
-    Args:
-        token: PyPI API token
-        skip_confirmation: If True, skip confirmation prompts
-    """
-    print("🚀 Uploading to PyPI...")
-
-    if not skip_confirmation:
-        print("⚠️  This will publish to the real PyPI!")
-        print("🤔 Are you sure you want to continue? (y/N): ", end="")
-        response = input().strip().lower()
-
-        if response not in ['y', 'yes']:
-            print("❌ Upload cancelled")
+        # 5. Publish to PyPI
+        if not self.publish_pypi():
+            print("\n❌ PyPI publish failed.")
             return False
+        print("  ✅ Published to PyPI")
 
-    # Set environment variable for uv publish
-    env = os.environ.copy()
-    env['UV_PUBLISH_TOKEN'] = token
+        # 6. GitHub release
+        if not skip_github:
+            if not self.create_github_release(new_version):
+                print("\n⚠️  GitHub release creation had issues")
+            else:
+                print("  ✅ GitHub release created")
+        else:
+            print("\n⚠️  Skipping GitHub release")
 
-    success, output = run_command(
-        "uv publish",
-        "Uploading to PyPI",
-        env=env
-    )
+        print(f"\n✅ Successfully published kuzu-memory v{new_version}!")
+        print(f"   PyPI: https://pypi.org/project/kuzu-memory/{new_version}/")
+        if not skip_github:
+            print(
+                f"   GitHub: https://github.com/bobmatnyc/kuzu-memory/releases/tag/v{new_version}"
+            )
 
-    if success:
-        print("🎉 Successfully published to PyPI!")
-        print("🔗 Available at: https://pypi.org/project/kuzu-memory/")
         return True
-    else:
-        print("❌ Failed to upload to PyPI")
-        return False
+
 
 def main():
-    """Main publishing workflow."""
-    print("🚀 KuzuMemory PyPI Publishing")
-    print("=" * 50)
+    parser = argparse.ArgumentParser(description="Publish kuzu-memory to PyPI")
+    parser.add_argument(
+        "--bump",
+        "-b",
+        choices=["patch", "minor", "major"],
+        default="patch",
+        help="Version bump type (default: patch)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Show what would be done without doing it",
+    )
+    parser.add_argument(
+        "--skip-tests", action="store_true", help="Skip quality checks"
+    )
+    parser.add_argument(
+        "--skip-github", action="store_true", help="Skip GitHub release creation"
+    )
 
-    # Check if we're in the right directory
-    if not Path("pyproject.toml").exists():
-        print("❌ Must be run from project root (pyproject.toml not found)")
-        sys.exit(1)
+    args = parser.parse_args()
 
-    # Parse command line arguments
-    test_only = "--test" in sys.argv
-    skip_tests = "--skip-tests" in sys.argv
-    skip_confirmation = "--yes" in sys.argv
+    project_root = Path(__file__).parent.parent
+    publisher = Publisher(project_root, dry_run=args.dry_run)
 
     try:
-        # Step 1: Check prerequisites
-        if not check_prerequisites():
-            sys.exit(1)
-
-        # Step 2: Load credentials
-        token = load_env_credentials()
-        if not token:
-            print("❌ No credentials found. Please add UV_PUBLISH_TOKEN or PYPI_API_KEY to .env.local")
-            sys.exit(1)
-
-        # Step 3: Clean build
-        clean_build()
-
-        # Step 4: Run tests (unless skipped)
-        if not skip_tests:
-            if not run_tests():
-                if not skip_confirmation:
-                    # Allow override in interactive mode
-                    pass
-                else:
-                    # Fail immediately in automated mode
-                    sys.exit(1)
-        else:
-            print("⚠️  Skipping tests (--skip-tests flag)")
-
-        # Step 5: Build package
-        if not build_package():
-            sys.exit(1)
-
-        # Step 6: Upload
-        if test_only:
-            print("🧪 Test mode - uploading to Test PyPI only")
-            if not upload_to_testpypi(token, skip_confirmation):
-                sys.exit(1)
-        else:
-            # Upload to Test PyPI first
-            print("🧪 Uploading to Test PyPI first...")
-            if upload_to_testpypi(token, skip_confirmation):
-                if skip_confirmation:
-                    # In automated mode, always continue to PyPI after Test PyPI
-                    print("\n" + "=" * 50)
-                    print("✅ Test PyPI upload successful. Continuing to PyPI...")
-                    if not upload_to_pypi(token, skip_confirmation):
-                        sys.exit(1)
-                else:
-                    # Interactive mode - ask for confirmation
-                    print("\n" + "=" * 50)
-                    print("🤔 Test PyPI upload successful. Upload to real PyPI? (y/N): ", end="")
-                    response = input().strip().lower()
-
-                    if response in ['y', 'yes']:
-                        if not upload_to_pypi(token, skip_confirmation):
-                            sys.exit(1)
-                    else:
-                        print("✅ Stopped at Test PyPI")
-            else:
-                sys.exit(1)
-
-        print("\n" + "=" * 50)
-        print("🎉 Publishing complete!")
-
-        if not test_only:
-            print("\n📦 Installation commands:")
-            print("  pip install kuzu-memory")
-            print("  pipx install kuzu-memory")
-
-    except KeyboardInterrupt:
-        print("\n❌ Publishing cancelled by user")
-        sys.exit(1)
+        success = publisher.publish(
+            bump_type=args.bump, skip_tests=args.skip_tests, skip_github=args.skip_github
+        )
+        sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ Publishing failed: {e}")
+        print(f"\n❌ Fatal error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
