@@ -158,9 +158,9 @@ class TestConcurrentDatabaseAccess:
                 else:
                     count = 0
                 # Only assert if we had successful writes
-                assert count >= len(
-                    successful
-                ), f"Expected at least {len(successful)} nodes, found {count}"
+                assert count >= len(successful), (
+                    f"Expected at least {len(successful)} nodes, found {count}"
+                )
 
         finally:
             await pool.close_all()
@@ -469,9 +469,9 @@ class TestConcurrentDatabaseAccess:
                 result = await conn.execute("MATCH (n:StressTest) RETURN count(*) as count")
                 count = result[0]["count"] if result else 0
                 successful_writes = results.count(True)
-                assert (
-                    count >= successful_writes
-                ), f"Expected at least {successful_writes} nodes, found {count}"
+                assert count >= successful_writes, (
+                    f"Expected at least {successful_writes} nodes, found {count}"
+                )
 
             # Verify shared Database is still working
             assert temp_db_path in KuzuConnection._shared_databases

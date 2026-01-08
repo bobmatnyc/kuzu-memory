@@ -510,9 +510,9 @@ class TestClaudeDesktopRealWorldPatterns:
                     elapsed += wait_interval
 
                 # Verify clean shutdown
-                assert (
-                    client.process.poll() is not None
-                ), f"Process did not terminate within {max_wait}s after shutdown request"
+                assert client.process.poll() is not None, (
+                    f"Process did not terminate within {max_wait}s after shutdown request"
+                )
 
         finally:
             # Cleanup

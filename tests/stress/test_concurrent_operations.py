@@ -167,9 +167,9 @@ class TestConcurrentOperations:
             total_operations = num_workers * queries_per_worker
             success_rate = len(successful_results) / total_operations
 
-            assert (
-                success_rate > 0.95
-            ), f"Success rate {success_rate:.1%} too low under concurrent load"
+            assert success_rate > 0.95, (
+                f"Success rate {success_rate:.1%} too low under concurrent load"
+            )
             assert len(failed_results) == 0, f"Failed operations: {failed_results}"
 
             # Performance analysis
@@ -181,12 +181,12 @@ class TestConcurrentOperations:
             avg_memory_count = sum(memory_counts) / len(memory_counts)
 
             # Assertions for concurrent performance
-            assert (
-                avg_response_time < 100.0
-            ), f"Average response time {avg_response_time:.2f}ms too high"
-            assert (
-                max_response_time < 500.0
-            ), f"Max response time {max_response_time:.2f}ms too high"
+            assert avg_response_time < 100.0, (
+                f"Average response time {avg_response_time:.2f}ms too high"
+            )
+            assert max_response_time < 500.0, (
+                f"Max response time {max_response_time:.2f}ms too high"
+            )
             assert avg_memory_count > 1.0, f"Average memory count {avg_memory_count:.1f} too low"
 
             print("Concurrent Read Performance:")
@@ -517,9 +517,9 @@ class TestConcurrentOperations:
                 print(f"  Max response time: {max_response_time:.2f}ms")
 
                 # Connection pool should handle contention gracefully
-                assert (
-                    avg_response_time < 500.0
-                ), f"Average response time {avg_response_time:.2f}ms too high"
+                assert avg_response_time < 500.0, (
+                    f"Average response time {avg_response_time:.2f}ms too high"
+                )
 
     def test_memory_pressure_stress(self, temp_db_path, stress_config):
         """Test system under memory pressure conditions."""
@@ -575,9 +575,9 @@ class TestConcurrentOperations:
                     assert len(memory_ids) > 0, f"Failed to generate memory for entry {i}"
 
                     # Validate generation time doesn't degrade significantly
-                    assert (
-                        generation_time < 1000.0
-                    ), f"Generation time {generation_time:.2f}ms too high at entry {i}"
+                    assert generation_time < 1000.0, (
+                        f"Generation time {generation_time:.2f}ms too high at entry {i}"
+                    )
 
                 # Test recall performance at this memory count
                 recall_queries = [
@@ -600,9 +600,9 @@ class TestConcurrentOperations:
                     recall_times.append(recall_time)
                     memory_counts_returned.append(len(context.memories))
 
-                    assert (
-                        recall_time < 500.0
-                    ), f"Recall time {recall_time:.2f}ms too high with {target_count} memories"
+                    assert recall_time < 500.0, (
+                        f"Recall time {recall_time:.2f}ms too high with {target_count} memories"
+                    )
                     # Don't assert on memory count in stress tests - focus on performance
 
                 avg_generation_time = (
@@ -632,9 +632,9 @@ class TestConcurrentOperations:
             max_recall = max(recall_times_by_count)
             degradation_ratio = max_recall / min_recall
 
-            assert (
-                degradation_ratio < 5.0
-            ), f"Performance degraded {degradation_ratio:.1f}x under memory pressure"
+            assert degradation_ratio < 5.0, (
+                f"Performance degraded {degradation_ratio:.1f}x under memory pressure"
+            )
 
             print("Memory Pressure Analysis:")
             print(f"  Performance degradation ratio: {degradation_ratio:.1f}x")

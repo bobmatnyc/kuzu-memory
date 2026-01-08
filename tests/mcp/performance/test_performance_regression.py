@@ -52,9 +52,9 @@ class TestPerformanceRegression:
         print(f"  Current: {avg_latency:.2f}ms")
         print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Connection latency regressed by {degradation * 100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Connection latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_tool_call_latency_regression(self, initialized_client):
@@ -76,9 +76,9 @@ class TestPerformanceRegression:
         print(f"  Current: {avg_latency:.2f}ms")
         print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Tool latency regressed by {degradation * 100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Tool latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_roundtrip_latency_regression(self, initialized_client):
@@ -100,9 +100,9 @@ class TestPerformanceRegression:
         print(f"  Current: {avg_latency:.2f}ms")
         print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Roundtrip latency regressed by {degradation * 100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Roundtrip latency regressed by {degradation * 100:.1f}%"
+        )
 
     @pytest.mark.asyncio
     async def test_throughput_regression(self, initialized_client):
@@ -123,9 +123,9 @@ class TestPerformanceRegression:
         print(f"  Current: {throughput:.2f} ops/sec")
         print(f"  Degradation: {degradation * 100:.1f}%")
 
-        assert (
-            degradation < REGRESSION_THRESHOLD
-        ), f"Throughput regressed by {degradation * 100:.1f}%"
+        assert degradation < REGRESSION_THRESHOLD, (
+            f"Throughput regressed by {degradation * 100:.1f}%"
+        )
 
 
 @pytest.mark.performance

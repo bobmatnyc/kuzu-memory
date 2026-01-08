@@ -9,7 +9,6 @@ import re
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.extraction.entities import Entity, EntityExtractor
 from kuzu_memory.utils.exceptions import ExtractionError
 
@@ -75,17 +74,15 @@ class TestEntityExtractor:
 
         for text, expected_languages in test_cases:
             entities = entity_extractor.extract_entities(text)
-            language_entities = [
-                e for e in entities if e.entity_type == "programming_language"
-            ]
+            language_entities = [e for e in entities if e.entity_type == "programming_language"]
 
             assert len(language_entities) > 0, f"No languages found in: {text}"
 
             found_languages = {e.text for e in language_entities}
             for expected_lang in expected_languages:
-                assert (
-                    expected_lang in found_languages
-                ), f"Expected language '{expected_lang}' not found"
+                assert expected_lang in found_languages, (
+                    f"Expected language '{expected_lang}' not found"
+                )
 
     def test_technology_framework_extraction(self, entity_extractor):
         """Test extraction of technologies and frameworks."""
@@ -113,8 +110,7 @@ class TestEntityExtractor:
             for expected_tech in expected_techs:
                 # Allow partial matches for compound names
                 found_match = any(
-                    expected_tech.lower() in found_tech.lower()
-                    for found_tech in found_techs
+                    expected_tech.lower() in found_tech.lower() for found_tech in found_techs
                 )
                 assert found_match, f"Expected technology '{expected_tech}' not found"
 
@@ -143,9 +139,7 @@ class TestEntityExtractor:
 
         for text, expected_compounds in test_cases:
             entities = entity_extractor.extract_entities(text)
-            compound_entities = [
-                e for e in entities if e.entity_type == "compound_entity"
-            ]
+            compound_entities = [e for e in entities if e.entity_type == "compound_entity"]
 
             # Should find compound entities
             assert len(compound_entities) > 0, f"No compound entities found in: {text}"
@@ -156,9 +150,9 @@ class TestEntityExtractor:
                     expected_compound.lower() in found_compound.lower()
                     for found_compound in found_compounds
                 )
-                assert (
-                    found_match
-                ), f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
+                assert found_match, (
+                    f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
+                )
 
     def test_person_name_extraction(self, entity_extractor):
         """Test extraction of person names."""
@@ -183,8 +177,7 @@ class TestEntityExtractor:
                 found_names = {e.text for e in person_entities}
                 for expected_name in expected_names:
                     found_match = any(
-                        expected_name.lower() in found_name.lower()
-                        for found_name in found_names
+                        expected_name.lower() in found_name.lower() for found_name in found_names
                     )
                     assert found_match, f"Expected name '{expected_name}' not found"
 
@@ -211,12 +204,9 @@ class TestEntityExtractor:
                 found_orgs = {e.text for e in org_entities}
                 for expected_org in expected_orgs:
                     found_match = any(
-                        expected_org.lower() in found_org.lower()
-                        for found_org in found_orgs
+                        expected_org.lower() in found_org.lower() for found_org in found_orgs
                     )
-                    assert (
-                        found_match
-                    ), f"Expected organization '{expected_org}' not found"
+                    assert found_match, f"Expected organization '{expected_org}' not found"
 
     # Test File and URL Extraction
     def test_file_extraction(self, entity_extractor):
@@ -243,9 +233,7 @@ class TestEntityExtractor:
 
             found_files = {e.text for e in file_entities}
             for expected_file in expected_files:
-                assert (
-                    expected_file in found_files
-                ), f"Expected file '{expected_file}' not found"
+                assert expected_file in found_files, f"Expected file '{expected_file}' not found"
 
     def test_url_extraction(self, entity_extractor):
         """Test extraction of URLs and domains."""
@@ -268,9 +256,7 @@ class TestEntityExtractor:
 
                 found_urls = {e.text for e in url_entities}
                 for expected_url in expected_urls:
-                    found_match = any(
-                        expected_url in found_url for found_url in found_urls
-                    )
+                    found_match = any(expected_url in found_url for found_url in found_urls)
                     assert found_match, f"Expected URL '{expected_url}' not found"
 
     # Test Version and Date Extraction
@@ -292,9 +278,9 @@ class TestEntityExtractor:
 
                 found_versions = {e.text for e in version_entities}
                 for expected_version in expected_versions:
-                    assert (
-                        expected_version in found_versions
-                    ), f"Expected version '{expected_version}' not found"
+                    assert expected_version in found_versions, (
+                        f"Expected version '{expected_version}' not found"
+                    )
 
     def test_date_extraction(self, entity_extractor):
         """Test extraction of dates and times."""
@@ -312,9 +298,7 @@ class TestEntityExtractor:
             if expected_dates:
                 found_dates = {e.text for e in date_entities}
                 for expected_date in expected_dates:
-                    found_match = any(
-                        expected_date in found_date for found_date in found_dates
-                    )
+                    found_match = any(expected_date in found_date for found_date in found_dates)
                     assert found_match, f"Expected date '{expected_date}' not found"
 
     # Test Entity Filtering and Deduplication
@@ -350,9 +334,7 @@ class TestEntityExtractor:
 
         # Should filter out single-character entities
         for entity in entities:
-            assert (
-                len(entity.text) >= 2
-            ), f"Single character entity found: {entity.text}"
+            assert len(entity.text) >= 2, f"Single character entity found: {entity.text}"
 
     # Test Entity Relationships
     def test_entity_relationship_detection(self, entity_extractor):
@@ -477,17 +459,13 @@ class TestEntityExtractor:
         test_pattern = r"\b(Python|Java|JavaScript)\b"
         test_text = "I use Python and Java for development."
 
-        matches = entity_extractor.test_entity_pattern(
-            test_pattern, test_text, "test_language"
-        )
+        matches = entity_extractor.test_entity_pattern(test_pattern, test_text, "test_language")
 
         assert len(matches) == 2
         assert matches[0]["entity_text"] == "Python"
         assert matches[1]["entity_text"] == "Java"
 
         # Test invalid pattern
-        invalid_matches = entity_extractor.test_entity_pattern(
-            "[invalid", test_text, "test"
-        )
+        invalid_matches = entity_extractor.test_entity_pattern("[invalid", test_text, "test")
         assert len(invalid_matches) == 1
         assert "error" in invalid_matches[0]

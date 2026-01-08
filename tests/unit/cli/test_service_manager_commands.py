@@ -66,9 +66,9 @@ class TestRecallCommand:
 
                 result = runner.invoke(recall, ["test query", "--format", "simple"], obj={})
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
+                )
                 mock_memory_service.attach_memories.assert_called_once()
                 assert "test query" in mock_memory_service.attach_memories.call_args[0][0]
 

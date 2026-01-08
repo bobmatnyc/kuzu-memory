@@ -47,9 +47,9 @@ class TestProtocolVersionNegotiation:
         if response and "result" in response:
             result = response["result"]
             assert "protocolVersion" in result, "Initialize result must include protocolVersion"
-            assert (
-                result["protocolVersion"] in MCP_PROTOCOL_VERSIONS
-            ), "Must be valid protocol version"
+            assert result["protocolVersion"] in MCP_PROTOCOL_VERSIONS, (
+                "Must be valid protocol version"
+            )
 
         await mcp_client.disconnect()
 
@@ -202,9 +202,9 @@ class TestToolsList:
                 "kuzu_remember",
                 "kuzu_learn",
             }
-            assert expected_tools.issubset(
-                tool_names
-            ), f"Missing required tools: {expected_tools - tool_names}"
+            assert expected_tools.issubset(tool_names), (
+                f"Missing required tools: {expected_tools - tool_names}"
+            )
 
 
 @pytest.mark.compliance
@@ -298,9 +298,9 @@ class TestToolSchemaValidation:
                     properties = schema["properties"]
 
                     for req_field in required:
-                        assert (
-                            req_field in properties
-                        ), f"Required field {req_field} not in properties"
+                        assert req_field in properties, (
+                            f"Required field {req_field} not in properties"
+                        )
 
     @pytest.mark.asyncio
     async def test_parameter_types_specified(self, initialized_client):
@@ -409,9 +409,9 @@ class TestServerInfo:
             # Import package version
             from kuzu_memory.__version__ import __version__
 
-            assert (
-                server_version == __version__
-            ), f"Server version {server_version} does not match package version {__version__}"
+            assert server_version == __version__, (
+                f"Server version {server_version} does not match package version {__version__}"
+            )
 
         await mcp_client.disconnect()
 

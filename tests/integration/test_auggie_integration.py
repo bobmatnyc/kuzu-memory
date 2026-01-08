@@ -10,7 +10,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory import KuzuMemory
 
 # Skip import errors for Auggie integration
@@ -100,9 +99,7 @@ class TestAuggieIntegration:
         assert len(integration.rule_engine.rules) > 0  # Default rules loaded
         assert integration.integration_stats["prompts_enhanced"] == 0
 
-    def test_prompt_enhancement_with_memories(
-        self, auggie_integration, sample_user_data
-    ):
+    def test_prompt_enhancement_with_memories(self, auggie_integration, sample_user_data):
         """Test that prompts are enhanced using memories and rules."""
         user_id = sample_user_data
         prompt = "How do I write a Python function?"
@@ -165,8 +162,7 @@ class TestAuggieIntegration:
             # Should mention user's preferences or tech stack
             enhanced_lower = enhanced_prompt.lower()
             assert any(
-                tech in enhanced_lower
-                for tech in ["python", "fastapi", "postgresql", "pytest"]
+                tech in enhanced_lower for tech in ["python", "fastapi", "postgresql", "pytest"]
             )
 
     def test_response_learning_basic(self, auggie_integration, sample_user_data):
@@ -186,9 +182,7 @@ class TestAuggieIntegration:
         assert "quality_score" in learning_result
         assert learning_result["quality_score"] > 0
 
-    def test_response_learning_with_correction(
-        self, auggie_integration, sample_user_data
-    ):
+    def test_response_learning_with_correction(self, auggie_integration, sample_user_data):
         """Test learning from user corrections."""
         user_id = sample_user_data
 
@@ -242,17 +236,11 @@ class TestAuggieIntegration:
         )
 
         # Test with general prompt (should trigger different rules)
-        general_enhancement = auggie_integration.enhance_prompt(
-            "What's the weather like?", user_id
-        )
+        general_enhancement = auggie_integration.enhance_prompt("What's the weather like?", user_id)
 
         # Should have different rule applications
-        coding_rules = coding_enhancement["rule_modifications"].get(
-            "executed_rules", []
-        )
-        general_rules = general_enhancement["rule_modifications"].get(
-            "executed_rules", []
-        )
+        coding_rules = coding_enhancement["rule_modifications"].get("executed_rules", [])
+        general_rules = general_enhancement["rule_modifications"].get("executed_rules", [])
 
         # Coding prompt should trigger more rules due to context
         assert len(coding_rules) >= len(general_rules)
@@ -284,9 +272,7 @@ class TestAuggieIntegration:
 
         # Should include preference-related context
         enhanced_prompt = enhancement["enhanced_prompt"]
-        assert (
-            "fastapi" in enhanced_prompt.lower() or "react" in enhanced_prompt.lower()
-        )
+        assert "fastapi" in enhanced_prompt.lower() or "react" in enhanced_prompt.lower()
 
     def test_learning_callback_integration(self, auggie_integration):
         """Test that learning callbacks are properly integrated."""
@@ -310,9 +296,7 @@ class TestAuggieIntegration:
         assert callback_data is not None
         assert "new_insight" in callback_data
 
-    def test_integration_statistics_tracking(
-        self, auggie_integration, sample_user_data
-    ):
+    def test_integration_statistics_tracking(self, auggie_integration, sample_user_data):
         """Test that integration statistics are properly tracked."""
         user_id = sample_user_data
 
@@ -322,9 +306,7 @@ class TestAuggieIntegration:
 
         # Perform operations
         auggie_integration.enhance_prompt("Test prompt", user_id)
-        auggie_integration.learn_from_interaction(
-            "Test prompt", "Test response", user_id=user_id
-        )
+        auggie_integration.learn_from_interaction("Test prompt", "Test response", user_id=user_id)
 
         # Check updated statistics
         final_stats = auggie_integration.get_integration_statistics()
@@ -388,9 +370,7 @@ class TestAuggieIntegration:
         def enhance_prompt_worker():
             try:
                 for i in range(5):
-                    enhancement = auggie_integration.enhance_prompt(
-                        f"Test prompt {i}", user_id
-                    )
+                    enhancement = auggie_integration.enhance_prompt(f"Test prompt {i}", user_id)
                     results.append(enhancement)
                     time.sleep(0.01)  # Small delay
             except Exception as e:
@@ -442,6 +422,4 @@ class TestAuggieIntegration:
 
         # Should mention technologies from memories
         enhanced_lower = enhanced_prompt.lower()
-        assert any(
-            tech in enhanced_lower for tech in ["python", "fastapi", "postgresql"]
-        )
+        assert any(tech in enhanced_lower for tech in ["python", "fastapi", "postgresql"])

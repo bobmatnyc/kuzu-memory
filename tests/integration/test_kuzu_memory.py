@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory import KuzuMemory, KuzuMemoryConfig
 from kuzu_memory.core.models import MemoryType
 from kuzu_memory.utils.exceptions import ValidationError
@@ -67,9 +66,7 @@ class TestKuzuMemoryIntegration:
             assert len(context1.memories) > 0
             assert context1.confidence > 0
 
-            context2 = memory.attach_memories(
-                "What database are we using?", user_id="test-user"
-            )
+            context2 = memory.attach_memories("What database are we using?", user_id="test-user")
 
             assert "PostgreSQL" in context2.enhanced_prompt
             assert len(context2.memories) > 0
@@ -100,15 +97,11 @@ class TestKuzuMemoryIntegration:
             assert len(memory_types) > 1
 
             # Semantic memories (facts and general knowledge) should have high importance
-            semantic_memories = [
-                mem for mem in memories if mem.memory_type == MemoryType.SEMANTIC
-            ]
+            semantic_memories = [mem for mem in memories if mem.memory_type == MemoryType.SEMANTIC]
             if semantic_memories:
                 assert all(mem.importance >= 0.9 for mem in semantic_memories)
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_duplicate_memory_handling(self, temp_db_path, test_config):
         """Test that duplicate memories are handled correctly."""
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:
@@ -154,9 +147,7 @@ class TestKuzuMemoryIntegration:
             enhanced_prompt = context.enhanced_prompt.lower()
             assert "newcorp" in enhanced_prompt or "python" in enhanced_prompt
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_entity_extraction(self, temp_db_path, test_config):
         """Test entity extraction and entity-based recall."""
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:
@@ -200,9 +191,7 @@ class TestKuzuMemoryIntegration:
             assert len(context.memories) > 0
             assert context.strategy_used == "temporal"
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_performance_requirements(self, temp_db_path, test_config):
         """Test that performance requirements are met."""
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:
@@ -215,9 +204,7 @@ class TestKuzuMemoryIntegration:
 
             # Test attach_memories performance
             start_time = time.time()
-            context = memory.attach_memories(
-                "What are my test memories?", user_id="test-user"
-            )
+            context = memory.attach_memories("What are my test memories?", user_id="test-user")
             attach_time_ms = (time.time() - start_time) * 1000
 
             # Should be reasonably fast (relaxed for testing environment)
@@ -245,9 +232,7 @@ class TestKuzuMemoryIntegration:
 
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:
             # Store a status memory (should expire quickly)
-            memory.generate_memories(
-                "Currently working on testing.", user_id="test-user"
-            )
+            memory.generate_memories("Currently working on testing.", user_id="test-user")
 
             # Cleanup expired memories
             cleaned_count = memory.cleanup_expired_memories()
@@ -278,9 +263,7 @@ class TestKuzuMemoryIntegration:
             assert perf_stats["avg_generate_time_ms"] > 0
             assert perf_stats["avg_attach_time_ms"] > 0
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_context_manager(self, temp_db_path, test_config):
         """Test that KuzuMemory works as a context manager."""
         # Test successful context manager usage
@@ -308,9 +291,7 @@ class TestKuzuMemoryIntegration:
                     "Test prompt", strategy="invalid_strategy", user_id="test-user"
                 )
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_user_isolation(self, temp_db_path, test_config):
         """Test that memories are properly isolated between users."""
         with KuzuMemory(db_path=temp_db_path, config=test_config) as memory:

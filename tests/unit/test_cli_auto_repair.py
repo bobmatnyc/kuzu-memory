@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from kuzu_memory.cli.commands import _silent_repair_mcp_configs
 
 
@@ -21,22 +20,16 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_repairs_broken_config(
-        self, mock_home, mock_load, mock_fix, mock_save, tmp_path
-    ):
+    def test_repairs_broken_config(self, mock_home, mock_load, mock_fix, mock_save, tmp_path):
         """Test that broken configs are repaired silently."""
         # Setup
         claude_json = tmp_path / ".claude.json"
         mock_home.return_value = tmp_path
 
         broken_config = {
-            "mcpServers": {
-                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
-            }
+            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
         }
-        fixed_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
-        }
+        fixed_config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}}
         fixes = ["Fixed kuzu-memory: args ['mcp', 'serve'] -> ['mcp']"]
 
         mock_load.return_value = broken_config
@@ -117,18 +110,14 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_repairs_multiple_projects(
-        self, mock_home, mock_load, mock_fix, mock_save, tmp_path
-    ):
+    def test_repairs_multiple_projects(self, mock_home, mock_load, mock_fix, mock_save, tmp_path):
         """Test repairing multiple project-specific configurations."""
         # Setup
         claude_json = tmp_path / ".claude.json"
         mock_home.return_value = tmp_path
 
         broken_config = {
-            "mcpServers": {
-                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
-            },
+            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}},
             "projects": {
                 "/project1": {
                     "mcpServers": {
@@ -153,14 +142,10 @@ class TestSilentRepairMcpConfigs:
             "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}},
             "projects": {
                 "/project1": {
-                    "mcpServers": {
-                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}
-                    }
+                    "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
                 },
                 "/project2": {
-                    "mcpServers": {
-                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}
-                    }
+                    "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
                 },
             },
         }
@@ -185,9 +170,7 @@ class TestSilentRepairMcpConfigs:
     @patch("kuzu_memory.installers.json_utils.fix_broken_mcp_args")
     @patch("kuzu_memory.installers.json_utils.load_json_config")
     @patch("kuzu_memory.cli.commands.Path.home")
-    def test_only_fixes_kuzu_memory_servers(
-        self, mock_home, mock_load, mock_fix, tmp_path
-    ):
+    def test_only_fixes_kuzu_memory_servers(self, mock_home, mock_load, mock_fix, tmp_path):
         """Test that only kuzu-memory servers are fixed."""
         # Setup
         claude_json = tmp_path / ".claude.json"
@@ -232,7 +215,6 @@ class TestCliAutoRepairIntegration:
     def test_auto_repair_called_on_status_command(self, mock_repair):
         """Test that auto-repair is called when running status command."""
         from click.testing import CliRunner
-
         from kuzu_memory.cli.commands import cli
 
         runner = CliRunner()
@@ -250,7 +232,6 @@ class TestCliAutoRepairIntegration:
     def test_auto_repair_skipped_on_help(self, mock_repair):
         """Test that auto-repair is skipped for help commands."""
         from click.testing import CliRunner
-
         from kuzu_memory.cli.commands import cli
 
         runner = CliRunner()
@@ -266,7 +247,6 @@ class TestCliAutoRepairIntegration:
     def test_auto_repair_skipped_when_no_subcommand(self, mock_repair):
         """Test that auto-repair is skipped when no subcommand is provided."""
         from click.testing import CliRunner
-
         from kuzu_memory.cli.commands import cli
 
         runner = CliRunner()
