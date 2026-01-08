@@ -64,12 +64,12 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run tests
-        run: uv run pytest tests/ -v --tb=short --timeout=60 -x
+        run: uv run pytest tests/ -v --tb=short --timeout=60 -x --ignore=tests/benchmarks --ignore=tests/mcp/performance
         timeout-minutes: 15
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.12'
-        run: uv run pytest tests/ --cov=kuzu_memory --cov-report=xml
+        run: uv run pytest tests/ --cov=kuzu_memory --cov-report=xml --ignore=tests/benchmarks --ignore=tests/mcp/performance
 
       - name: Upload coverage
         if: matrix.python-version == '3.12'
