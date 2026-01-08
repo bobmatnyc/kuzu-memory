@@ -19,6 +19,7 @@ from .auggie_rules_v2 import (
 from .auggie_versions import (
     CURRENT_VERSION,
     AuggieRuleMigrator,
+    AuggieVersion,
     AuggieVersionDetector,
 )
 from .base import BaseInstaller, InstallationError, InstallationResult
@@ -106,11 +107,24 @@ class AuggieInstallerV2(BaseInstaller):
             # Handle upgrade scenario
             if installed_version:
                 if installed_version >= CURRENT_VERSION:
-                    # Already at latest version - reinstall/update
-                    logger.info(
-                        f"Already at latest version {CURRENT_VERSION}. Updating installation."
-                    )
-                    # Continue with installation to update files
+                    # Already at latest version
+                    if not force:
+                        logger.info(
+                            f"Already at latest version {CURRENT_VERSION}. Use force=True to reinstall."
+                        )
+                        return InstallationResult(
+                            success=True,
+                            ai_system=self.ai_system_name,
+                            files_created=[],
+                            files_modified=[],
+                            backup_files=[],
+                            message=f"Already at latest version {CURRENT_VERSION}",
+                            warnings=[],
+                        )
+                    else:
+                        # Force reinstall
+                        logger.info(f"Force reinstall of version {CURRENT_VERSION}.")
+                        # Continue with installation to update files
                 else:
                     # Upgrade needed
                     if auto_migrate:
@@ -184,7 +198,7 @@ class AuggieInstallerV2(BaseInstaller):
 
     def _upgrade_installation(
         self,
-        from_version: dict[str, Any],
+        from_version: AuggieVersion,
         detector: AuggieVersionDetector,
         dry_run: bool = False,
     ) -> InstallationResult:
