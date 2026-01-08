@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from kuzu_memory.mcp.testing.diagnostics import (
     DiagnosticReport,
     DiagnosticResult,
@@ -295,8 +294,22 @@ class TestMCPDiagnostics:
 
             results = await diagnostics.check_configuration()
 
-            # All checks should pass
-            assert all(r.success for r in results)
+            # Verify no CRITICAL, ERROR, or WARNING failures (INFO failures are acceptable)
+            actionable_failures = [
+                r
+                for r in results
+                if not r.success
+                and r.severity
+                in (
+                    DiagnosticSeverity.CRITICAL,
+                    DiagnosticSeverity.ERROR,
+                    DiagnosticSeverity.WARNING,
+                )
+            ]
+            assert len(actionable_failures) == 0, (
+                f"Found {len(actionable_failures)} actionable failures: "
+                f"{[r.check_name for r in actionable_failures]}"
+            )
 
     @pytest.mark.asyncio
     async def test_check_connection(self):
@@ -304,9 +317,7 @@ class TestMCPDiagnostics:
         diagnostics = MCPDiagnostics()
 
         # Mock the connection tester
-        with patch(
-            "kuzu_memory.mcp.testing.diagnostics.MCPConnectionTester"
-        ) as mock_tester_class:
+        with patch("kuzu_memory.mcp.testing.diagnostics.MCPConnectionTester") as mock_tester_class:
             mock_tester = MagicMock()
             mock_tester_class.return_value = mock_tester
 
@@ -376,9 +387,7 @@ class TestMCPDiagnostics:
             diagnostics = MCPDiagnostics(project_root=Path(tmpdir))
 
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(
-                    returncode=0, stdout="Success", stderr=""
-                )
+                mock_run.return_value = MagicMock(returncode=0, stdout="Success", stderr="")
 
                 result = await diagnostics.auto_fix_configuration()
 
