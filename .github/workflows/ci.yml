@@ -64,7 +64,8 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run tests
-        run: uv run pytest tests/ -v --tb=short
+        run: uv run pytest tests/ -v --tb=short --timeout=60 -x
+        timeout-minutes: 15
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.12'
