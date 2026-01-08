@@ -285,7 +285,7 @@ class TestMCPInitialization:
         assert "result" in response
         result = response["result"]
         # Should use a supported version (not the requested unsupported one)
-        assert result["protocolVersion"] in ["2025-06-18", "2024-11-05"]
+        assert result["protocolVersion"] in ["2025-11-25", "2025-06-18", "2024-11-05"]
 
 
 class TestMCPToolsList:

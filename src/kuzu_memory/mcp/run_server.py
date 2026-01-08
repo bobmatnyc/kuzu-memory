@@ -62,7 +62,7 @@ class MCPProtocolHandler:
                 client_protocol_version = params.get("protocolVersion", "2025-06-18")
 
                 # List of supported protocol versions (latest first)
-                supported_versions = ["2025-06-18", "2024-11-05"]
+                supported_versions = ["2025-11-25", "2025-06-18", "2024-11-05"]
 
                 # Use client's version if supported, otherwise use latest supported
                 if client_protocol_version in supported_versions:
