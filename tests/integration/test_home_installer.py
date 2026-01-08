@@ -379,7 +379,7 @@ class TestHomeInstallerDocumentation:
             # May or may not be documented yet
             assert len(content) > 0
 
-        @pytest.mark.skip(reason="Documentation not yet written - TODO")
+    @pytest.mark.skip(reason="Documentation not yet written - TODO")
     def test_documentation_exists(self):
         """Test that documentation file exists."""
         doc_path = Path(__file__).parent.parent.parent / "docs" / "HOME_INSTALLATION.md"
