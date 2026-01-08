@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from kuzu_memory.mcp.testing.diagnostics import (
     DiagnosticReport,
     DiagnosticResult,
@@ -474,44 +475,97 @@ class TestMCPDiagnostics:
             patch.object(diagnostics, "check_tools") as mock_tools,
             patch.object(diagnostics, "check_performance") as mock_perf,
         ):
-            # Setup mocks to return successful results
+            # Setup mocks to return multiple successful results
+            # (reflecting expanded diagnostics system)
             mock_config.return_value = [
                 DiagnosticResult(
-                    check_name="config",
+                    check_name="config_check_1",
                     success=True,
                     severity=DiagnosticSeverity.SUCCESS,
                     message="OK",
-                )
+                ),
+                DiagnosticResult(
+                    check_name="config_check_2",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
+                DiagnosticResult(
+                    check_name="config_check_3",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
             ]
             mock_connection.return_value = [
                 DiagnosticResult(
-                    check_name="connection",
+                    check_name="connection_check_1",
                     success=True,
                     severity=DiagnosticSeverity.SUCCESS,
                     message="OK",
-                )
+                ),
+                DiagnosticResult(
+                    check_name="connection_check_2",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
+                DiagnosticResult(
+                    check_name="connection_check_3",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
             ]
             mock_tools.return_value = [
                 DiagnosticResult(
-                    check_name="tools",
+                    check_name="tools_check_1",
                     success=True,
                     severity=DiagnosticSeverity.SUCCESS,
                     message="OK",
-                )
+                ),
+                DiagnosticResult(
+                    check_name="tools_check_2",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
+                DiagnosticResult(
+                    check_name="tools_check_3",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
             ]
             mock_perf.return_value = [
                 DiagnosticResult(
-                    check_name="performance",
+                    check_name="performance_check_1",
                     success=True,
                     severity=DiagnosticSeverity.SUCCESS,
                     message="OK",
-                )
+                ),
+                DiagnosticResult(
+                    check_name="performance_check_2",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
+                DiagnosticResult(
+                    check_name="performance_check_3",
+                    success=True,
+                    severity=DiagnosticSeverity.SUCCESS,
+                    message="OK",
+                ),
             ]
 
-            report = await diagnostics.run_full_diagnostics(auto_fix=False)
+            # Disable extra checks (hooks, lifecycle) to isolate the 4 core diagnostic categories
+            report = await diagnostics.run_full_diagnostics(
+                auto_fix=False, check_hooks=False, check_server_lifecycle=False
+            )
 
-            assert report.total == 4
-            assert report.passed == 4
+            # Verify report has correct number of results (12 total from 4 categories x 3 each)
+            assert report.total == 12
+            assert report.passed == 12
             assert not report.has_critical_errors
             mock_config.assert_called_once()
             mock_connection.assert_called_once()
