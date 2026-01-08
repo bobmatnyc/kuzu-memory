@@ -5,10 +5,13 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 
+@pytest.mark.asyncio
 async def test_mcp_init():
     """Test basic MCP server initialization."""
     try:

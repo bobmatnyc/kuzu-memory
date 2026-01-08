@@ -147,12 +147,8 @@ def service_with_memory(mock_config_service, mock_memory_service):
 def test_initialization_creates_diagnostics_and_health_checker(mock_config_service):
     """Test that initialization creates diagnostics and health checker."""
     with (
-        patch(
-            "kuzu_memory.services.diagnostic_service.MCPDiagnostics"
-        ) as mock_diag_class,
-        patch(
-            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
-        ) as mock_health_class,
+        patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics") as mock_diag_class,
+        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
         service = DiagnosticService(config_service=mock_config_service)
         service.initialize()
@@ -241,6 +237,7 @@ def test_initialization_without_memory_service(mock_config_service):
 # ============================================================================
 
 
+@pytest.mark.asyncio
 async def test_run_full_diagnostics_aggregates_results(
     service, mock_diagnostics, mock_health_checker
 ):
@@ -272,6 +269,7 @@ async def test_run_full_diagnostics_aggregates_results(
         assert "passed_checks" in result
 
 
+@pytest.mark.asyncio
 async def test_check_configuration_delegates(service, mock_diagnostics):
     """Test check_configuration delegates to MCPDiagnostics."""
     with (
@@ -295,6 +293,7 @@ async def test_check_configuration_delegates(service, mock_diagnostics):
         assert "project_root" in result
 
 
+@pytest.mark.asyncio
 async def test_check_database_health_delegates(
     service_with_memory, mock_health_checker, mock_memory_service
 ):
@@ -329,6 +328,7 @@ async def test_check_database_health_delegates(
         assert result["db_size_bytes"] == 1024 * 1024
 
 
+@pytest.mark.asyncio
 async def test_check_mcp_server_health_delegates(service, mock_health_checker):
     """Test check_mcp_server_health delegates to MCPHealthChecker."""
     with (
@@ -352,6 +352,7 @@ async def test_check_mcp_server_health_delegates(service, mock_health_checker):
         assert "issues" in result
 
 
+@pytest.mark.asyncio
 async def test_check_git_integration_delegates(service):
     """Test check_git_integration checks git availability."""
     with (
@@ -379,6 +380,7 @@ async def test_check_git_integration_delegates(service):
         assert result["available"] is True
 
 
+@pytest.mark.asyncio
 async def test_get_system_info_delegates(service):
     """Test get_system_info collects system information."""
     with (
@@ -397,6 +399,7 @@ async def test_get_system_info_delegates(service):
         assert "install_path" in result
 
 
+@pytest.mark.asyncio
 async def test_verify_dependencies_delegates(service):
     """Test verify_dependencies checks required packages."""
     with (
@@ -649,9 +652,7 @@ def test_initializes_config_service(mock_config_service):
         mock_config_service.initialize.assert_called_once()
 
 
-def test_initializes_memory_service_if_provided(
-    mock_config_service, mock_memory_service
-):
+def test_initializes_memory_service_if_provided(mock_config_service, mock_memory_service):
     """Test initializes memory service if provided."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
@@ -670,9 +671,7 @@ def test_works_without_memory_service(service):
     """Test service works without memory service."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch(
-            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
-        ) as mock_health_class,
+        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
         # Create health checker with database component
         db_component = ComponentHealth(
@@ -713,6 +712,7 @@ def test_works_without_memory_service(service):
 # ============================================================================
 
 
+@pytest.mark.asyncio
 async def test_async_methods_before_initialization_raise(service):
     """Test async methods raise before initialization."""
     # Should raise RuntimeError
@@ -726,13 +726,12 @@ async def test_async_methods_before_initialization_raise(service):
         await service.check_database_health()
 
 
+@pytest.mark.asyncio
 async def test_database_health_without_memory_service(service):
     """Test database health check works without memory service."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch(
-            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
-        ) as mock_health_class,
+        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
         db_component = ComponentHealth(
             name="database",
@@ -763,6 +762,7 @@ async def test_database_health_without_memory_service(service):
         assert result["memory_count"] == 0
 
 
+@pytest.mark.asyncio
 async def test_diagnostics_failures_handled_gracefully(service, mock_diagnostics):
     """Test diagnostic failures are handled gracefully."""
     with (
@@ -795,19 +795,16 @@ async def test_diagnostics_failures_handled_gracefully(service, mock_diagnostics
         assert "Config invalid" in result["issues"][0]
 
 
+@pytest.mark.asyncio
 async def test_connection_errors(service):
     """Test connection errors are handled."""
     with (
         patch("kuzu_memory.services.diagnostic_service.MCPDiagnostics"),
-        patch(
-            "kuzu_memory.services.diagnostic_service.MCPHealthChecker"
-        ) as mock_health_class,
+        patch("kuzu_memory.services.diagnostic_service.MCPHealthChecker") as mock_health_class,
     ):
         # Mock health check to raise exception
         mock_health = Mock()
-        mock_health.check_health = AsyncMock(
-            side_effect=ConnectionError("Server unavailable")
-        )
+        mock_health.check_health = AsyncMock(side_effect=ConnectionError("Server unavailable"))
         mock_health_class.return_value = mock_health
 
         service.initialize()
@@ -817,6 +814,7 @@ async def test_connection_errors(service):
             await service.check_database_health()
 
 
+@pytest.mark.asyncio
 async def test_permission_errors(service):
     """Test permission errors are handled."""
     with (
@@ -840,6 +838,7 @@ async def test_permission_errors(service):
 # ============================================================================
 
 
+@pytest.mark.asyncio
 async def test_full_diagnostic_workflow(service, mock_diagnostics, mock_health_checker):
     """Test complete diagnostic workflow."""
     with (
@@ -869,6 +868,7 @@ async def test_full_diagnostic_workflow(service, mock_diagnostics, mock_health_c
         assert "HEALTHY" in report
 
 
+@pytest.mark.asyncio
 async def test_health_check_workflow(service, mock_health_checker):
     """Test health check workflow."""
     with (
@@ -889,6 +889,7 @@ async def test_health_check_workflow(service, mock_health_checker):
         assert mcp_result["configured"] is True
 
 
+@pytest.mark.asyncio
 async def test_with_all_dependencies(
     service_with_memory, mock_diagnostics, mock_health_checker, mock_memory_service
 ):
@@ -913,9 +914,8 @@ async def test_with_all_dependencies(
         assert db_result["db_size_bytes"] == 1024 * 1024
 
 
-async def test_with_minimal_dependencies(
-    service, mock_diagnostics, mock_health_checker
-):
+@pytest.mark.asyncio
+async def test_with_minimal_dependencies(service, mock_diagnostics, mock_health_checker):
     """Test with minimal dependencies (no memory service)."""
     with (
         patch(

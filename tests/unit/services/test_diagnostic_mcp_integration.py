@@ -36,6 +36,7 @@ def mock_config_service():
 # ============================================================================
 
 
+@pytest.mark.asyncio
 async def test_check_mcp_installation_when_unavailable(mock_config_service):
     """Test check_mcp_installation when MCPInstallerAdapter is unavailable."""
     # Create service
@@ -57,14 +58,13 @@ async def test_check_mcp_installation_when_unavailable(mock_config_service):
             assert len(result["recommendations"]) > 0
 
             # Verify warning message
-            assert any(
-                "submodule" in issue["message"].lower() for issue in result["issues"]
-            )
+            assert any("submodule" in issue["message"].lower() for issue in result["issues"])
 
     finally:
         service.cleanup()
 
 
+@pytest.mark.asyncio
 async def test_check_mcp_installation_when_available(mock_config_service):
     """Test check_mcp_installation when MCPInstallerAdapter is available."""
     # Create service
@@ -110,6 +110,7 @@ async def test_check_mcp_installation_when_available(mock_config_service):
         service.cleanup()
 
 
+@pytest.mark.asyncio
 async def test_check_mcp_installation_full_mode(mock_config_service):
     """Test check_mcp_installation with full protocol tests."""
     # Create service
@@ -155,6 +156,7 @@ async def test_check_mcp_installation_full_mode(mock_config_service):
         service.cleanup()
 
 
+@pytest.mark.asyncio
 async def test_check_mcp_installation_handles_errors(mock_config_service):
     """Test check_mcp_installation handles adapter errors gracefully."""
     # Create service
@@ -177,9 +179,7 @@ async def test_check_mcp_installation_handles_errors(mock_config_service):
             assert result["status"] == "error"
             assert result["platform"] == "unknown"
             assert len(result["issues"]) > 0
-            assert any(
-                "failed" in issue["message"].lower() for issue in result["issues"]
-            )
+            assert any("failed" in issue["message"].lower() for issue in result["issues"])
 
     finally:
         service.cleanup()
@@ -190,6 +190,7 @@ async def test_check_mcp_installation_handles_errors(mock_config_service):
 # ============================================================================
 
 
+@pytest.mark.asyncio
 async def test_run_full_diagnostics_includes_mcp_installation(mock_config_service):
     """Test that run_full_diagnostics includes MCP installation check."""
     # Create service
