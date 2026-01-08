@@ -69,6 +69,23 @@ class VersionManager:
         )
         self.pyproject_file.write_text(new_content)
 
+    def update_version_py(self, new_version: str) -> None:
+        """Update version in src/kuzu_memory/__version__.py."""
+        version_py_file = self.project_root / "src" / "kuzu_memory" / "__version__.py"
+        if not version_py_file.exists():
+            print(f"Warning: __version__.py not found at {version_py_file}")
+            return
+
+        content = version_py_file.read_text()
+        # Replace __version__ = "X.X.X" with new version
+        new_content = re.sub(
+            r'^__version__\s*=\s*"[^"]*"',
+            f'__version__ = "{new_version}"',
+            content,
+            flags=re.MULTILINE
+        )
+        version_py_file.write_text(new_content)
+
     def bump_version(self, bump_type: str) -> str:
         """Bump version according to semantic versioning rules."""
         current = self.get_current_version()
@@ -89,6 +106,7 @@ class VersionManager:
         new_version = f"{major}.{minor}.{patch}"
         self.version_file.write_text(new_version + "\n")
         self.update_pyproject_version(new_version)
+        self.update_version_py(new_version)
         return new_version
 
     def get_git_info(self) -> Dict[str, str]:
@@ -332,7 +350,7 @@ def main():
         current = vm.get_current_version()
         new_version = vm.bump_version(args.type)
         print(f"🚀 Bumped version: {current} → {new_version}")
-        print(f"📝 Updated VERSION and pyproject.toml")
+        print(f"📝 Updated VERSION, pyproject.toml, and __version__.py")
 
         # Update changelog
         vm.update_changelog(new_version, args.changelog)

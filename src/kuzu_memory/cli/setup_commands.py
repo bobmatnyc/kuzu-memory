@@ -35,6 +35,11 @@ def _check_and_upgrade_if_needed() -> bool:
         True if upgraded successfully, False otherwise (including no update available)
     """
     try:
+        # DEFENSIVE: Prevent infinite upgrade loops
+        # If we've already attempted an upgrade in this session, skip
+        if os.environ.get("KUZU_MEMORY_UPGRADE_ATTEMPTED") == "1":
+            return False
+
         checker = VersionChecker()
 
         # Silently check for updates (no progress messages)
@@ -68,7 +73,19 @@ def _check_and_upgrade_if_needed() -> bool:
             f"\n{emoji} Update available: {current} → {latest} ({version_type})",
             style="cyan",
         )
-        rich_print("   Upgrading kuzu-memory automatically...", style="dim")
+
+        # Ask user for confirmation before upgrading
+        if not click.confirm(
+            "   Upgrade now?",
+            default=True,
+        ):
+            rich_print("   Skipping upgrade - continuing with current version", style="dim")
+            return False
+
+        rich_print("   Upgrading kuzu-memory...", style="dim")
+
+        # Set environment variable to prevent infinite loops
+        os.environ["KUZU_MEMORY_UPGRADE_ATTEMPTED"] = "1"
 
         # Attempt upgrade
         upgrade_result = _run_auto_upgrade()
