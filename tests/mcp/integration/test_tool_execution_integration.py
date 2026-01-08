@@ -31,7 +31,7 @@ class TestToolExecution:
 
             # Call enhance tool
             response = await client.call_tool(
-                "kuzu_enhance", {"prompt": "test prompt", "limit": 5}
+                "kuzu_enhance", {"prompt": "test prompt", "max_memories": 5}
             )
 
             assert response is not None
@@ -56,7 +56,7 @@ class TestToolExecution:
 
             # Call learn tool
             response = await client.call_tool(
-                "learn", {"content": "Test learning content", "source": "test"}
+                "kuzu_learn", {"content": "Test learning content", "source": "test"}
             )
 
             assert response is not None
@@ -81,9 +81,7 @@ class TestToolExecution:
             await client.initialize()
 
             # Call recall tool
-            response = await client.call_tool(
-                "kuzu_recall", {"query": "test query", "limit": 5}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "test query", "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -106,9 +104,7 @@ class TestToolExecution:
             await client.initialize()
 
             # Call remember tool
-            response = await client.call_tool(
-                "remember", {"content": "Test memory", "source": "test"}
-            )
+            response = await client.call_tool("kuzu_remember", {"content": "Test memory"})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -127,7 +123,7 @@ class TestToolExecution:
             await client.initialize()
 
             # Call stats tool
-            response = await client.call_tool("kuzu_stats", {"format": "json"})
+            response = await client.call_tool("kuzu_stats", {"detailed": False})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -242,23 +238,17 @@ class TestToolDiscovery:
                 tools = response["result"].get("tools", [])
                 tool_names = [t.get("name") for t in tools]
 
-                # Should include all 9 tools
+                # Should include all 5 tools
                 expected_tools = [
-                    "enhance",
-                    "learn",
-                    "recall",
-                    "remember",
-                    "stats",
-                    "recent",
-                    "cleanup",
-                    "project",
-                    "init",
+                    "kuzu_enhance",
+                    "kuzu_learn",
+                    "kuzu_recall",
+                    "kuzu_remember",
+                    "kuzu_stats",
                 ]
 
                 for tool in expected_tools:
-                    assert (
-                        tool in tool_names
-                    ), f"Missing tool: {tool}, found: {tool_names}"
+                    assert tool in tool_names, f"Missing tool: {tool}, found: {tool_names}"
 
         finally:
             await client.disconnect()
@@ -347,10 +337,10 @@ class TestToolParameterValidation:
 
             await client.initialize()
 
-            # Call stats with invalid format type
+            # Call stats with invalid detailed type
             response = await client.call_tool(
-                "stats",
-                {"format": 123},  # Should be string
+                "kuzu_stats",
+                {"detailed": "invalid"},  # Should be boolean
             )
 
             assert response is not None
@@ -421,7 +411,7 @@ class TestToolErrorHandling:
 
             # Try to cause execution failure with invalid input
             response = await client.call_tool(
-                "recall",
+                "kuzu_recall",
                 {"query": "", "limit": -1},  # Invalid limit
             )
 

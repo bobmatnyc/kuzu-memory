@@ -114,15 +114,11 @@ class TestClaudeDesktopToolDiscovery:
             # Verify all expected tools are present
             tool_names = [t.get("name") for t in tools]
             expected = [
-                "enhance",
-                "learn",
-                "recall",
-                "remember",
-                "stats",
-                "recent",
-                "cleanup",
-                "project",
-                "init",
+                "kuzu_enhance",
+                "kuzu_learn",
+                "kuzu_recall",
+                "kuzu_remember",
+                "kuzu_stats",
             ]
 
             for tool in expected:
@@ -151,7 +147,7 @@ class TestClaudeDesktopToolDiscovery:
             tools = tools_response["result"].get("tools", [])
 
             # Find enhance tool and inspect its schema
-            enhance_tool = next((t for t in tools if t["name"] == "enhance"), None)
+            enhance_tool = next((t for t in tools if t["name"] == "kuzu_enhance"), None)
             assert enhance_tool is not None
 
             # Should have parameter schema
@@ -178,7 +174,7 @@ class TestClaudeDesktopToolExecution:
 
             # Step 1: Remember something
             remember_response = await client.call_tool(
-                "remember", {"content": "Test memory for E2E workflow", "source": "e2e"}
+                "kuzu_remember", {"content": "Test memory for E2E workflow"}
             )
             assert remember_response is not None
 
@@ -187,21 +183,21 @@ class TestClaudeDesktopToolExecution:
 
             # Step 2: Recall the memory
             recall_response = await client.call_tool(
-                "recall", {"query": "E2E workflow", "limit": 5}
+                "kuzu_recall", {"query": "E2E workflow", "limit": 5}
             )
             assert recall_response is not None
 
             # Step 3: Enhance prompt with memories
             enhance_response = await client.call_tool(
-                "enhance", {"prompt": "Continue E2E test", "limit": 5}
+                "kuzu_enhance", {"prompt": "Continue E2E test", "max_memories": 5}
             )
             assert enhance_response is not None
 
         finally:
             await client.disconnect()
 
-    async def test_stats_and_cleanup_workflow(self, project_root):
-        """Test stats inspection and cleanup workflow."""
+    async def test_stats_and_recall_workflow(self, project_root):
+        """Test stats inspection and recall workflow."""
         client = MCPClientSimulator(project_root=project_root, timeout=15.0)
 
         try:
@@ -211,22 +207,22 @@ class TestClaudeDesktopToolExecution:
             await client.initialize()
 
             # Step 1: Get current stats
-            stats_response = await client.call_tool("kuzu_stats", {"format": "json"})
+            stats_response = await client.call_tool("kuzu_stats", {"detailed": False})
             assert stats_response is not None
 
-            # Step 2: Check recent memories
-            recent_response = await client.call_tool("recent", {"limit": 5})
-            assert recent_response is not None
+            # Step 2: Recall recent memories
+            recall_response = await client.call_tool("kuzu_recall", {"query": "test", "limit": 5})
+            assert recall_response is not None
 
-            # Step 3: Dry-run cleanup
-            cleanup_response = await client.call_tool("cleanup", {"dry_run": True})
-            assert cleanup_response is not None
+            # Step 3: Get detailed stats
+            detailed_stats_response = await client.call_tool("kuzu_stats", {"detailed": True})
+            assert detailed_stats_response is not None
 
         finally:
             await client.disconnect()
 
-    async def test_project_inspection_workflow(self, project_root):
-        """Test project inspection and initialization workflow."""
+    async def test_learning_workflow(self, project_root):
+        """Test learning and retrieval workflow."""
         client = MCPClientSimulator(project_root=project_root, timeout=15.0)
 
         try:
@@ -235,13 +231,20 @@ class TestClaudeDesktopToolExecution:
 
             await client.initialize()
 
-            # Step 1: Get project info
-            project_response = await client.call_tool("project", {"verbose": False})
-            assert project_response is not None
+            # Step 1: Learn something
+            learn_response = await client.call_tool(
+                "kuzu_learn", {"content": "Test learning content", "source": "e2e-test"}
+            )
+            assert learn_response is not None
 
-            # Step 2: Ensure initialized (idempotent)
-            init_response = await client.call_tool("init", {})
-            assert init_response is not None
+            # Step 2: Wait for async processing
+            await asyncio.sleep(0.5)
+
+            # Step 3: Verify it can be recalled
+            recall_response = await client.call_tool(
+                "kuzu_recall", {"query": "learning", "limit": 5}
+            )
+            assert recall_response is not None
 
         finally:
             await client.disconnect()
@@ -291,9 +294,9 @@ class TestClaudeDesktopSessionPersistence:
             operations = [
                 ("request", "ping", {}),
                 ("notification", "notifications/test", {}),
-                ("tool", "stats", {}),
+                ("tool", "kuzu_stats", {}),
                 ("request", "ping", {}),
-                ("tool", "project", {}),
+                ("tool", "kuzu_stats", {"detailed": True}),
             ]
 
             for op_type, method, params in operations:
@@ -352,9 +355,7 @@ class TestClaudeDesktopConcurrentSessions:
         try:
             # Connect all clients
             connected_count = await concurrent_sim.connect_all()
-            assert (
-                connected_count >= 2
-            ), f"Only {connected_count}/{num_sessions} connected"
+            assert connected_count >= 2, f"Only {connected_count}/{num_sessions} connected"
 
             # Each session performs operations
             results = await concurrent_sim.concurrent_requests("ping", {})
@@ -390,9 +391,7 @@ class TestClaudeDesktopConcurrentSessions:
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            successful = sum(
-                1 for r in results if r is not None and not isinstance(r, Exception)
-            )
+            successful = sum(1 for r in results if r is not None and not isinstance(r, Exception))
             assert successful >= 2
 
         finally:
@@ -417,18 +416,18 @@ class TestClaudeDesktopRealWorldPatterns:
             # Pattern: enhance prompt → execute → learn from result
             # 1. Enhance coding prompt
             enhance = await client.call_tool(
-                "enhance", {"prompt": "Help me write a Python function", "limit": 5}
+                "kuzu_enhance", {"prompt": "Help me write a Python function", "max_memories": 5}
             )
             assert enhance is not None
 
             # 2. Learn from interaction
             learn = await client.call_tool(
-                "learn", {"content": "User requested Python function help"}
+                "kuzu_learn", {"content": "User requested Python function help"}
             )
             assert learn is not None
 
             # 3. Check stats
-            stats = await client.call_tool("kuzu_stats", {"format": "json"})
+            stats = await client.call_tool("kuzu_stats", {"detailed": False})
             assert stats is not None
 
         finally:
@@ -453,14 +452,12 @@ class TestClaudeDesktopRealWorldPatterns:
 
             for query in queries:
                 # Recall relevant context
-                recall = await client.call_tool(
-                    "kuzu_recall", {"query": query, "limit": 5}
-                )
+                recall = await client.call_tool("kuzu_recall", {"query": query, "limit": 5})
                 assert recall is not None
 
                 # Enhance with context
                 enhance = await client.call_tool(
-                    "enhance", {"prompt": f"Explain {query}", "limit": 5}
+                    "kuzu_enhance", {"prompt": f"Explain {query}", "max_memories": 5}
                 )
                 assert enhance is not None
 
@@ -522,7 +519,7 @@ class TestClaudeDesktopRealWorldPatterns:
             assert "error" in error
 
             # Continue operation (error recovery)
-            success2 = await client.call_tool("project", {})
+            success2 = await client.call_tool("kuzu_recall", {"query": "test", "limit": 5})
             assert success2 is not None
 
             # Multiple operations after recovery
