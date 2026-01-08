@@ -15,6 +15,7 @@ from tests.mcp.fixtures.mock_clients import MCPClientSimulator
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolExecution:
     """Integration tests for individual tool execution."""
 
@@ -215,6 +216,7 @@ class TestToolExecution:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolDiscovery:
     """Tests for tool discovery and listing."""
 
@@ -303,6 +305,7 @@ class TestToolDiscovery:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolParameterValidation:
     """Tests for tool parameter validation."""
 
@@ -375,6 +378,7 @@ class TestToolParameterValidation:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolErrorHandling:
     """Tests for tool execution error scenarios."""
 
@@ -425,6 +429,7 @@ class TestToolErrorHandling:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolConcurrency:
     """Tests for concurrent tool execution."""
 
@@ -483,6 +488,7 @@ class TestToolConcurrency:
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.flaky_process
 class TestToolTimeouts:
     """Tests for tool execution timeout scenarios."""
 

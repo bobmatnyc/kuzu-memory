@@ -16,6 +16,7 @@ from tests.mcp.fixtures.mock_clients import MCPClientSimulator
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestStdioCommunication:
     """Integration tests for stdio communication transport."""
 
@@ -28,9 +29,7 @@ class TestStdioCommunication:
             assert connected
 
             # Send message with UTF-8 characters
-            response = await client.send_request(
-                "ping", {"data": "Hello 世界 🌍"}, request_id=1
-            )
+            response = await client.send_request("ping", {"data": "Hello 世界 🌍"}, request_id=1)
 
             assert response is not None
             assert response.get("id") == 1
@@ -79,9 +78,7 @@ class TestStdioCommunication:
             # Create large payload (10KB)
             large_data = "x" * 10000
 
-            response = await client.send_request(
-                "ping", {"data": large_data}, request_id=1
-            )
+            response = await client.send_request("ping", {"data": large_data}, request_id=1)
 
             assert response is not None
             # Should handle large message gracefully
@@ -136,9 +133,7 @@ class TestStdioCommunication:
 
             # Verify all received
             successful = sum(1 for r in responses if r is not None)
-            assert (
-                successful >= num_requests * 0.8
-            ), f"Only {successful}/{num_requests} succeeded"
+            assert successful >= num_requests * 0.8, f"Only {successful}/{num_requests} succeeded"
 
         finally:
             await client.disconnect()
@@ -200,9 +195,7 @@ class TestStdioCommunication:
             assert connected
 
             for i, test_case in enumerate(test_cases):
-                response = await client.send_request(
-                    "ping", test_case, request_id=i + 1
-                )
+                response = await client.send_request("ping", test_case, request_id=i + 1)
                 assert response is not None, f"Failed on test case: {test_case}"
 
         finally:
@@ -246,9 +239,7 @@ class TestStdioCommunication:
             test_data = "\x00\x01\x02\x03"  # Null bytes
 
             # JSON encoding should handle this
-            response = await client.send_request(
-                "ping", {"data": test_data}, request_id=1
-            )
+            response = await client.send_request("ping", {"data": test_data}, request_id=1)
 
             # Should either succeed or fail gracefully
             assert response is not None
@@ -285,6 +276,7 @@ class TestStdioCommunication:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestStdioErrorHandling:
     """Tests for stdio communication error scenarios."""
 
@@ -374,9 +366,7 @@ class TestStdioErrorHandling:
             large_data = "x" * (1024 * 1024)
 
             try:
-                response = await client.send_request(
-                    "ping", {"data": large_data}, request_id=1
-                )
+                response = await client.send_request("ping", {"data": large_data}, request_id=1)
 
                 # Should either handle or reject gracefully
                 if response is not None:

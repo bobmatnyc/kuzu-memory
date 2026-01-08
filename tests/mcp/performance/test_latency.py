@@ -25,6 +25,7 @@ LATENCY_THRESHOLDS = {
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestConnectionLatency:
     """Test connection establishment latency."""
 
@@ -95,6 +96,7 @@ class TestConnectionLatency:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestToolCallLatency:
     """Test tool execution latency."""
 
@@ -161,7 +163,9 @@ class TestToolCallLatency:
             args = (
                 {"query": "test", "limit": 5}
                 if tool_name == "recall"
-                else {"limit": 10} if tool_name == "recent" else {}
+                else {"limit": 10}
+                if tool_name == "recent"
+                else {}
             )
 
             start = time.perf_counter()
@@ -176,17 +180,14 @@ class TestToolCallLatency:
             status = (
                 "✓"
                 if latency < LATENCY_THRESHOLDS["tool_call"]["target"]
-                else (
-                    "⚠"
-                    if latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
-                    else "✗"
-                )
+                else ("⚠" if latency < LATENCY_THRESHOLDS["tool_call"]["critical"] else "✗")
             )
             print(f"  {tool:15s}: {latency:6.2f}ms {status}")
 
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestRoundtripLatency:
     """Test message roundtrip latency."""
 
@@ -265,6 +266,7 @@ class TestRoundtripLatency:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestLatencyConsistency:
     """Test latency consistency over time."""
 

@@ -15,6 +15,7 @@ from tests.mcp.fixtures.mock_clients import MCPClientSimulator
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolNotFoundErrors:
     """Tests for tool not found error scenarios."""
 
@@ -84,6 +85,7 @@ class TestToolNotFoundErrors:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestInvalidParameterErrors:
     """Tests for invalid parameter error scenarios."""
 
@@ -170,6 +172,7 @@ class TestInvalidParameterErrors:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestToolExecutionFailures:
     """Tests for tool execution failure scenarios."""
 
@@ -236,6 +239,7 @@ class TestToolExecutionFailures:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestTimeoutScenarios:
     """Tests for timeout error scenarios."""
 
@@ -287,6 +291,7 @@ class TestTimeoutScenarios:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestErrorRecovery:
     """Tests for error recovery and continuation."""
 
@@ -364,6 +369,7 @@ class TestErrorRecovery:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestBatchErrorHandling:
     """Tests for error handling in batch requests."""
 
@@ -419,6 +425,7 @@ class TestBatchErrorHandling:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestNotificationErrors:
     """Tests for notification error handling."""
 
@@ -468,6 +475,7 @@ class TestNotificationErrors:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestErrorMessages:
     """Tests for error message quality and content."""
 

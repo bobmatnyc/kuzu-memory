@@ -24,6 +24,7 @@ REGRESSION_THRESHOLD = 0.20
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestPerformanceRegression:
     """Test for performance regressions."""
 
@@ -129,6 +130,7 @@ class TestPerformanceRegression:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestBaselineTracking:
     """Test baseline performance tracking."""
 
@@ -216,6 +218,7 @@ class TestBaselineTracking:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestPerformanceTrends:
     """Test performance trend analysis."""
 
@@ -282,6 +285,7 @@ class TestPerformanceTrends:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestRegressionReporting:
     """Test regression reporting and alerting."""
 
@@ -337,9 +341,7 @@ class TestRegressionReporting:
         results["roundtrip"] = {"degradation": 0.10, "status": "OK"}
 
         # Aggregate
-        num_regressions = sum(
-            1 for r in results.values() if r["status"] == "REGRESSION"
-        )
+        num_regressions = sum(1 for r in results.values() if r["status"] == "REGRESSION")
         max_degradation = max(r["degradation"] for r in results.values())
 
         print("\nRegression Summary:")
@@ -352,6 +354,7 @@ class TestRegressionReporting:
 
 @pytest.mark.performance
 @pytest.mark.benchmark
+@pytest.mark.flaky_process
 class TestContinuousMonitoring:
     """Test continuous performance monitoring."""
 
@@ -368,9 +371,7 @@ class TestContinuousMonitoring:
             await initialized_client.send_request("ping", {})
             latency = (time.perf_counter() - start) * 1000
 
-            results.append(
-                {"check": check, "latency": latency, "timestamp": time.time()}
-            )
+            results.append({"check": check, "latency": latency, "timestamp": time.time()})
 
             if check < num_checks - 1:
                 import asyncio
@@ -385,6 +386,4 @@ class TestContinuousMonitoring:
             print(f"  Check {r['check']}: {r['latency']:.2f}ms")
         print(f"  Average: {avg_latency:.2f}ms")
 
-        assert all(
-            r["latency"] < 100 for r in results
-        ), "Some checks exceeded threshold"
+        assert all(r["latency"] < 100 for r in results), "Some checks exceeded threshold"
