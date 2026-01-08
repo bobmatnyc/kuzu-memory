@@ -16,6 +16,33 @@ from tests.mcp.fixtures.mock_clients import (
 )
 
 
+async def wait_for_process_termination(
+    process: object | None, max_wait: float = 2.0, wait_interval: float = 0.1
+) -> bool:
+    """
+    Wait for a process to terminate with timeout.
+
+    Args:
+        process: Process object with poll() method
+        max_wait: Maximum wait time in seconds
+        wait_interval: Check interval in seconds
+
+    Returns:
+        True if process terminated, False if timeout
+    """
+    if process is None:
+        return True
+
+    elapsed = 0.0
+    while elapsed < max_wait:
+        if process.poll() is not None:
+            return True
+        await asyncio.sleep(wait_interval)
+        elapsed += wait_interval
+
+    return False
+
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestSessionLifecycle:
@@ -129,10 +156,10 @@ class TestSessionLifecycle:
 
             # Disconnect
             await client.disconnect()
-            await asyncio.sleep(0.3)
 
-            # Verify cleanup
-            assert client.process is None or client.process.poll() is not None
+            # Verify cleanup - wait for process termination
+            terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+            assert terminated, "Process did not terminate within 2s after disconnect"
 
         finally:
             if client.process and client.process.poll() is None:
@@ -410,11 +437,10 @@ class TestSessionCleanup:
             shutdown_response = await client.send_request("shutdown", {})
             assert shutdown_response is not None
 
-            await asyncio.sleep(0.5)
-
-            # Verify terminated
+            # Wait for process termination with timeout
             if client.process:
-                assert client.process.poll() is not None
+                terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+                assert terminated, "Process did not terminate within 2s after shutdown request"
 
         finally:
             if client.process and client.process.poll() is None:
@@ -435,10 +461,10 @@ class TestSessionCleanup:
 
             # Force disconnect
             await client.disconnect()
-            await asyncio.sleep(0.3)
 
-            # Verify cleanup
-            assert client.process is None or client.process.poll() is not None
+            # Verify cleanup - wait for process termination
+            terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+            assert terminated, "Process did not terminate within 2s after forced disconnect"
 
         finally:
             pass  # Already disconnected
@@ -488,11 +514,12 @@ class TestSessionCleanup:
             for client in clients:
                 await client.disconnect()
 
-            await asyncio.sleep(0.5)
-
-            # Verify all cleaned up
-            for client in clients:
-                assert client.process is None or client.process.poll() is not None
+            # Verify all cleaned up - wait for all processes to terminate
+            for i, client in enumerate(clients):
+                terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+                assert (
+                    terminated
+                ), f"Client {i} process did not terminate within 2s after disconnect"
 
         finally:
             # Extra cleanup
