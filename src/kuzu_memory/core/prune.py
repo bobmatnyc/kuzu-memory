@@ -322,7 +322,7 @@ class PercentagePruningStrategy(PruningStrategy):
             age_days = (datetime.now() - created_at).days
             return True, f"in oldest {self.percentage}% ({age_days} days old)"
 
-        return False, f"newer than cutoff"
+        return False, "newer than cutoff"
 
 
 # Protected memory sources that should never be pruned
