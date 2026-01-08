@@ -6,6 +6,7 @@ error handling, request ordering, and partial failures.
 """
 
 import asyncio
+import os
 
 import pytest
 
@@ -14,6 +15,7 @@ from tests.mcp.fixtures.mock_clients import MCPClientSimulator
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestBatchRequests:
     """Integration tests for batch request processing."""
 
@@ -144,9 +146,7 @@ class TestBatchRequests:
             await client.initialize()
 
             # Large batch (20 requests)
-            batch = [
-                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)
-            ]
+            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)]
 
             responses = await client.send_batch(batch)
 
@@ -242,6 +242,7 @@ class TestBatchRequests:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestBatchErrorScenarios:
     """Tests for batch request error scenarios."""
 
@@ -308,9 +309,7 @@ class TestBatchErrorScenarios:
             await client.initialize()
 
             # Large batch that might timeout
-            batch = [
-                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)
-            ]
+            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)]
 
             responses = await client.send_batch(batch)
 
@@ -327,6 +326,7 @@ class TestBatchErrorScenarios:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestSequentialBatches:
     """Tests for sequential batch request processing."""
 

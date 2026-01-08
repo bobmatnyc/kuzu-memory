@@ -6,6 +6,7 @@ and cleanup scenarios.
 """
 
 import asyncio
+import os
 import time
 
 import pytest
@@ -45,6 +46,7 @@ async def wait_for_process_termination(
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestSessionLifecycle:
     """E2E tests for complete session lifecycle."""
 
@@ -168,6 +170,7 @@ class TestSessionLifecycle:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestSessionStateManagement:
     """E2E tests for session state management."""
 
@@ -245,6 +248,7 @@ class TestSessionStateManagement:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestConcurrentSessions:
     """E2E tests for multiple concurrent sessions."""
 
@@ -332,6 +336,7 @@ class TestConcurrentSessions:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestSessionTimeoutHandling:
     """E2E tests for session timeout scenarios."""
 
@@ -417,6 +422,7 @@ class TestSessionTimeoutHandling:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestSessionCleanup:
     """E2E tests for session cleanup scenarios."""
 

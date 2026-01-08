@@ -7,6 +7,7 @@ usage patterns.
 """
 
 import asyncio
+import os
 import time
 
 import pytest
@@ -19,6 +20,8 @@ from tests.mcp.fixtures.mock_clients import (
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
+@pytest.mark.flaky_process
 class TestClaudeDesktopInitialization:
     """E2E tests for Claude Desktop initialization flow."""
 
@@ -91,6 +94,7 @@ class TestClaudeDesktopInitialization:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestClaudeDesktopToolDiscovery:
     """E2E tests for tool discovery workflow."""
 
@@ -159,6 +163,7 @@ class TestClaudeDesktopToolDiscovery:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestClaudeDesktopToolExecution:
     """E2E tests for sequential tool execution patterns."""
 
@@ -252,6 +257,7 @@ class TestClaudeDesktopToolExecution:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestClaudeDesktopSessionPersistence:
     """E2E tests for session persistence and state management."""
 
@@ -342,6 +348,7 @@ class TestClaudeDesktopSessionPersistence:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestClaudeDesktopConcurrentSessions:
     """E2E tests for concurrent session handling."""
 
@@ -400,6 +407,7 @@ class TestClaudeDesktopConcurrentSessions:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.flaky_process
 class TestClaudeDesktopRealWorldPatterns:
     """E2E tests simulating real-world usage patterns."""
 

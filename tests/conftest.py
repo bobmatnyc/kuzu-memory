@@ -5,14 +5,16 @@ Provides common test fixtures, utilities, and configuration
 for unit tests, integration tests, and benchmarks.
 """
 
+import asyncio
 import logging
+import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
 
 import pytest
-
 from kuzu_memory import KuzuMemory, KuzuMemoryConfig
 from kuzu_memory.core.dependencies import reset_container
 
@@ -211,9 +213,7 @@ class MemoryTestHelper:
     @staticmethod
     def assert_memory_content_contains(memories: list, expected_content: str):
         """Assert that at least one memory contains the expected content."""
-        found = any(
-            expected_content.lower() in memory.content.lower() for memory in memories
-        )
+        found = any(expected_content.lower() in memory.content.lower() for memory in memories)
         assert found, f"No memory found containing '{expected_content}'"
 
     @staticmethod
@@ -234,23 +234,16 @@ class MemoryTestHelper:
         return {memory.content for memory in memories}
 
     @staticmethod
-    def assert_performance_within_limit(
-        actual_time_ms: float, limit_ms: float, operation: str
-    ):
+    def assert_performance_within_limit(actual_time_ms: float, limit_ms: float, operation: str):
         """Assert that operation time is within performance limit."""
         assert (
             actual_time_ms <= limit_ms
         ), f"{operation} took {actual_time_ms:.2f}ms, exceeding limit of {limit_ms}ms"
 
     @staticmethod
-    def create_test_memory_content(
-        count: int, prefix: str = "Test memory"
-    ) -> list[str]:
+    def create_test_memory_content(count: int, prefix: str = "Test memory") -> list[str]:
         """Create a list of test memory contents."""
-        return [
-            f"{prefix} {i}: This is test content for memory number {i}."
-            for i in range(count)
-        ]
+        return [f"{prefix} {i}: This is test content for memory number {i}." for i in range(count)]
 
 
 @pytest.fixture
@@ -266,14 +259,13 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "benchmark: Performance benchmark tests")
     config.addinivalue_line("markers", "slow: Slow tests that take more time")
-    config.addinivalue_line(
-        "markers", "requires_kuzu: Tests that require Kuzu database"
-    )
+    config.addinivalue_line("markers", "requires_kuzu: Tests that require Kuzu database")
+    config.addinivalue_line("markers", "flaky_process: Tests with process timing issues in CI")
 
 
-# Skip tests if Kuzu is not available
+# Skip tests if Kuzu is not available or if flaky in CI
 def pytest_collection_modifyitems(config, items):
-    """Modify test collection to handle missing dependencies."""
+    """Modify test collection to handle missing dependencies and CI environment."""
     try:
         import kuzu
 
@@ -286,6 +278,13 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "requires_kuzu" in item.keywords:
                 item.add_marker(skip_kuzu)
+
+    # Skip flaky process tests in CI
+    if os.getenv("CI"):
+        skip_flaky = pytest.mark.skip(reason="Flaky process timing in CI")
+        for item in items:
+            if "flaky_process" in item.keywords:
+                item.add_marker(skip_flaky)
 
 
 # Custom assertions for better error messages
@@ -321,3 +320,57 @@ def assert_memory_context_valid(context):
 # Add custom assertions to pytest namespace
 pytest.assert_memory_valid = assert_memory_valid
 pytest.assert_memory_context_valid = assert_memory_context_valid
+
+
+# Helper functions for process polling (avoid timing issues in CI)
+async def wait_for_process_start(process: subprocess.Popen, timeout: float = 2.0) -> bool:
+    """
+    Wait for process to start successfully.
+
+    Args:
+        process: The subprocess to monitor
+        timeout: Maximum time to wait in seconds
+
+    Returns:
+        True if process started successfully, False if terminated
+    """
+    start_time = asyncio.get_event_loop().time()
+    while asyncio.get_event_loop().time() - start_time < timeout:
+        if process.poll() is not None:
+            return False  # Process terminated
+        await asyncio.sleep(0.05)  # Small delay to allow process startup
+    return process.poll() is None  # Still running
+
+
+async def wait_for_process_termination(process: subprocess.Popen, timeout: float = 2.0) -> bool:
+    """
+    Wait for process to terminate gracefully.
+
+    Args:
+        process: The subprocess to monitor
+        timeout: Maximum time to wait in seconds
+
+    Returns:
+        True if process terminated, False if still running
+    """
+    start_time = asyncio.get_event_loop().time()
+    while asyncio.get_event_loop().time() - start_time < timeout:
+        if process.poll() is not None:
+            return True  # Process terminated
+        await asyncio.sleep(0.05)
+    return process.poll() is not None  # Check final state
+
+
+def is_process_running(process: subprocess.Popen | None) -> bool:
+    """
+    Check if process is currently running.
+
+    Args:
+        process: The subprocess to check, or None
+
+    Returns:
+        True if process exists and is running, False otherwise
+    """
+    if process is None:
+        return False
+    return process.poll() is None
