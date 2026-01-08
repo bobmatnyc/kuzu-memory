@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.mcp.testing.diagnostics import (
     DiagnosticReport,
     DiagnosticResult,

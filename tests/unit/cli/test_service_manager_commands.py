@@ -10,7 +10,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-
 from kuzu_memory.cli.commands import cli
 from kuzu_memory.cli.memory_commands import enhance, recall, recent
 from kuzu_memory.cli.status_commands import status
@@ -285,7 +284,7 @@ class TestServiceManagerCleanup:
 
         with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_enter = MagicMock(return_value=mock_memory_service)
-            mock_exit = MagicMock()
+            mock_exit = MagicMock(return_value=None)  # Return None to propagate exception
             mock_ctx.return_value.__enter__ = mock_enter
             mock_ctx.return_value.__exit__ = mock_exit
 

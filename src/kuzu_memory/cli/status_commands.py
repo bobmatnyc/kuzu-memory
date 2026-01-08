@@ -74,7 +74,7 @@ def status(
     """
     try:
         # Resolve project root and database path
-        project_root = ctx.obj.get("project_root") or find_project_root()
+        project_root = (ctx.obj and ctx.obj.get("project_root")) or find_project_root()
         db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
@@ -293,7 +293,7 @@ def status(
                                 rich_print(f"      Error: {check['error']}", style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Status check failed: {e}", style="red")
         sys.exit(1)

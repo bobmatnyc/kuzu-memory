@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.protocols.services import IConfigService
 from kuzu_memory.services.diagnostic_service import DiagnosticService
 

@@ -133,7 +133,7 @@ def store(
                 rich_print(f"   Session: {session_id}", style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Memory storage failed: {e}", style="red")
         sys.exit(1)
@@ -266,7 +266,7 @@ def learn(
                         rich_print(f"   Memory ID: {memory_id[:8]}...", style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         if not quiet:
             rich_print(f"❌ Learning failed: {e}", style="red")
@@ -341,7 +341,7 @@ def recall(
         db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
-        elif ctx.obj.get("project_root"):
+        elif ctx.obj and ctx.obj.get("project_root"):
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recall operation (performance optimization)
@@ -465,7 +465,7 @@ def recall(
                     rich_print(tip, style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Recall failed: {e}", style="red")
         sys.exit(1)
@@ -512,7 +512,7 @@ def enhance(
         db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
-        elif ctx.obj.get("project_root"):
+        elif ctx.obj and ctx.obj.get("project_root"):
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only enhance operation (performance optimization)
@@ -580,7 +580,7 @@ def enhance(
                 )
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Enhancement failed: {e}", style="red")
         sys.exit(1)
@@ -795,7 +795,7 @@ def prune(
                 rich_print("   Use --execute to perform pruning.", style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Prune operation failed: {e}", style="red")
         sys.exit(1)
@@ -842,7 +842,7 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | No
         db_path_obj: Path | None = None
         if db_path:
             db_path_obj = Path(db_path)
-        elif ctx.obj.get("project_root"):
+        elif ctx.obj and ctx.obj.get("project_root"):
             db_path_obj = get_project_db_path(ctx.obj["project_root"])
 
         # Disable git_sync for read-only recent operation (performance optimization)
@@ -924,7 +924,7 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | No
                     rich_print(tip, style="dim")
 
     except Exception as e:
-        if ctx.obj.get("debug"):
+        if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Failed to retrieve recent memories: {e}", style="red")
         sys.exit(1)
