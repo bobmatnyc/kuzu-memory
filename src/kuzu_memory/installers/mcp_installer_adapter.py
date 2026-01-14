@@ -12,7 +12,6 @@ existing installer architecture.
 from __future__ import annotations
 
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -21,17 +20,10 @@ from .base import BaseInstaller, InstallationResult, InstalledSystem
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# Dynamic Import Handling for Vendored Submodule
+# Dynamic Import Handling for py-mcp-installer Package
 # ============================================================================
 
-# Add vendor path to sys.path for submodule imports
-_vendor_path = (
-    Path(__file__).parent.parent.parent.parent / "vendor" / "py-mcp-installer-service" / "src"
-)
-if _vendor_path.exists() and str(_vendor_path) not in sys.path:
-    sys.path.insert(0, str(_vendor_path))
-
-# Try importing from vendored submodule
+# Try importing from py-mcp-installer package
 try:
     from py_mcp_installer import (
         DiagnosticReport,
@@ -48,9 +40,7 @@ try:
 
     HAS_MCP_INSTALLER = True
 except ImportError as e:
-    logger.warning(
-        f"py-mcp-installer-service not available: {e}. MCPInstallerAdapter will be disabled."
-    )
+    logger.warning(f"py-mcp-installer not available: {e}. MCPInstallerAdapter will be disabled.")
     HAS_MCP_INSTALLER = False
 
     # Define placeholder types to prevent NameError
@@ -147,16 +137,15 @@ class MCPInstallerAdapter(BaseInstaller):
         """
         if not HAS_MCP_INSTALLER:
             raise RuntimeError(
-                "py-mcp-installer-service is not available. "
-                "Please ensure the vendor submodule is initialized: "
-                "git submodule update --init --recursive"
+                "py-mcp-installer is not available. "
+                "Please install it: pip install py-mcp-installer>=0.1.5"
             )
 
         super().__init__(project_root)
 
         # Convert string platform to enum if needed
-        # Note: Platform enum inherits from str, so check type explicitly
-        if platform is not None and type(platform) is str:
+        # Note: Platform enum inherits from str, so check it's not already a Platform
+        if platform is not None and not isinstance(platform, Platform):
             platform_enum = REVERSE_PLATFORM_MAP.get(platform)
             if platform_enum is None:
                 raise ValueError(

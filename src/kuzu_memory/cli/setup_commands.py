@@ -21,16 +21,16 @@ from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
 
-# Import SelfUpdater from vendored py-mcp-installer-service
+# Import SelfUpdater from py-mcp-installer package
 try:
     from py_mcp_installer.self_updater import InstallMethod, SelfUpdater
+
+    HAS_SELF_UPDATER = True
 except ImportError:
-    # Fallback to vendored version if not installed
-    vendor_path = (
-        Path(__file__).parent.parent.parent.parent / "vendor" / "py-mcp-installer-service" / "src"
-    )
-    sys.path.insert(0, str(vendor_path))
-    from py_mcp_installer.self_updater import InstallMethod, SelfUpdater
+    # Gracefully handle missing dependency (for older installations during upgrade)
+    HAS_SELF_UPDATER = False
+    InstallMethod = None  # type: ignore
+    SelfUpdater = None  # type: ignore
 
 
 def _check_and_upgrade_if_needed() -> bool:
@@ -43,6 +43,10 @@ def _check_and_upgrade_if_needed() -> bool:
         True if upgraded successfully, False otherwise (including no update available)
     """
     try:
+        # Skip if py-mcp-installer is not available
+        if not HAS_SELF_UPDATER:
+            return False
+
         # DEFENSIVE: Prevent infinite upgrade loops
         # If we've already attempted an upgrade in this session, skip
         if os.environ.get("KUZU_MEMORY_UPGRADE_ATTEMPTED") == "1":

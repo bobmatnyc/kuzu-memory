@@ -872,6 +872,7 @@ dependencies = [
     { name = "mcp" },
     { name = "packaging" },
     { name = "psutil" },
+    { name = "py-mcp-installer" },
     { name = "pydantic" },
     { name = "python-dateutil" },
     { name = "pyyaml" },
@@ -930,6 +931,7 @@ requires-dist = [
     { name = "packaging", specifier = ">=20.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0" },
     { name = "psutil", specifier = ">=5.9.0" },
+    { name = "py-mcp-installer", specifier = ">=0.1.5" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0" },
@@ -1528,6 +1530,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
+]
+
+[[package]]
+name = "py-mcp-installer"
+version = "0.1.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "tomli-w" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/e1/5119ec535c45b83e19afb08beffae09bd87d18c6ba9db4b267b716681886/py_mcp_installer-0.1.5.tar.gz", hash = "sha256:c17957d502f5e69f61d550724b2c24ce2625e1c8f82c4add1862c85dfa330d7d", size = 59313, upload-time = "2025-12-18T01:44:06.541Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/aa/195f53def7550f229fdfc667e9d43f488fa3b25a3e9da8c38f245da7fbd5/py_mcp_installer-0.1.5-py3-none-any.whl", hash = "sha256:12b50c2772fd399759c6a5c704b29cefffe39c51ef22d3eb51497a2c81785f2d", size = 61355, upload-time = "2025-12-18T01:44:05.321Z" },
 ]
 
 [[package]]

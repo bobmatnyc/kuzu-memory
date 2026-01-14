@@ -37,6 +37,7 @@ dependencies = [
     "mcp>=1.0.0",           # Model Context Protocol SDK for MCP server integration
     "packaging>=20.0",      # Version comparison for update checker
     "tomli-w>=1.0.0",       # TOML writing support (tomllib is read-only)
+    "py-mcp-installer>=0.1.5",  # Universal MCP server installer for AI coding tools
 ]
 
 [project.optional-dependencies]
