@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kuzu-memory"
-version = "1.6.14"
+version = "1.6.15"
 description = "Lightweight, embedded graph-based memory system for AI applications"
 readme = "README.md"
 license = {text = "MIT"}
@@ -273,3 +273,8 @@ showcontent = true
 directory = "misc"
 name = "Miscellaneous"
 showcontent = false
+
+[dependency-groups]
+dev = [
+    "types-pyyaml>=6.0.12.20250915",
+]
