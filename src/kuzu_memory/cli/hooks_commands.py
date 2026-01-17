@@ -6,6 +6,7 @@ Provides unified hooks installation commands for Claude Code and Auggie.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -18,6 +19,20 @@ from ..utils.project_setup import find_project_root
 from .enums import HookSystem
 
 console = Console()
+
+
+def _exit_hook_with_json(continue_execution: bool = True) -> None:
+    """
+    Exit hook with valid JSON output for Claude Code hooks API.
+
+    Claude Code requires hooks to output JSON to stdout when exiting with code 0.
+    This ensures proper communication with the hooks system.
+
+    Args:
+        continue_execution: Whether Claude Code should continue execution (default: True)
+    """
+    print(json.dumps({"continue": continue_execution}))
+    sys.exit(0)
 
 
 @click.group(name="hooks")
@@ -174,9 +189,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
                     sys.exit(1)
                 project_root = found_root
             except Exception:
-                console.print(
-                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
-                )
+                console.print("[red]❌ Could not find project root. Use --project to specify.[/red]")
                 sys.exit(1)
 
         # Check if installer exists
@@ -309,10 +322,8 @@ def hooks_enhance() -> None:
 
     This command is designed to be called by Claude Code hooks, not directly by users.
     """
-    import json
     import logging
     import os
-    import sys
     from pathlib import Path
 
     from ..core.memory import KuzuMemory
@@ -338,13 +349,13 @@ def hooks_enhance() -> None:
             logger.debug(f"Input keys: {list(input_data.keys())}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Extract and validate prompt
         prompt = input_data.get("prompt", "")
         if not prompt or not isinstance(prompt, str) or len(prompt.strip()) == 0:
             logger.info("No valid prompt found in input")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Limit prompt size
         max_prompt_length = 100000
@@ -357,13 +368,13 @@ def hooks_enhance() -> None:
             project_root = find_project_root()
             if project_root is None:
                 logger.info("Project root not found, skipping enhancement")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():
                 logger.info("Project not initialized, skipping enhancement")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             # Initialize memory and enhance prompt
             memory = KuzuMemory(db_path=db_path)
@@ -388,15 +399,16 @@ def hooks_enhance() -> None:
 
         except Exception as e:
             logger.error(f"Error enhancing prompt: {e}")
+            _exit_hook_with_json()
 
-        sys.exit(0)
+        _exit_hook_with_json()
 
     except KeyboardInterrupt:
         logger.info("Hook interrupted by user")
-        sys.exit(0)
+        _exit_hook_with_json()
     except Exception as e:
         logger.error(f"Unhandled exception: {e}", exc_info=True)
-        sys.exit(0)
+        _exit_hook_with_json()
 
 
 @hooks_group.command(name="session-start")
@@ -409,10 +421,8 @@ def hooks_session_start() -> None:
 
     This command is designed to be called by Claude Code hooks, not directly by users.
     """
-    import json
     import logging
     import os
-    import sys
     from pathlib import Path
 
     from ..core.memory import KuzuMemory
@@ -438,24 +448,26 @@ def hooks_session_start() -> None:
             logger.debug(f"Input keys: {list(input_data.keys())}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Find project root and initialize memory
         try:
             project_root = find_project_root()
             if project_root is None:
                 logger.info("Project root not found, skipping session start")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():
                 logger.info("Project not initialized, skipping session start")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             # Store session start memory
             memory = KuzuMemory(db_path=db_path)
 
+            # Type narrowing: we've already checked project_root is not None
+            assert project_root is not None
             project_name = project_root.name
             memory.remember(
                 content=f"Session started in {project_name}",
@@ -468,19 +480,20 @@ def hooks_session_start() -> None:
 
         except Exception as e:
             logger.error(f"Error storing session start memory: {e}")
+            _exit_hook_with_json()
 
         # Flush logging before exit
         logging.shutdown()
-        sys.exit(0)
+        _exit_hook_with_json()
 
     except KeyboardInterrupt:
         logger.info("Hook interrupted by user")
         logging.shutdown()
-        sys.exit(0)
+        _exit_hook_with_json()
     except Exception as e:
         logger.error(f"Unhandled exception: {e}", exc_info=True)
         logging.shutdown()
-        sys.exit(0)
+        _exit_hook_with_json()
 
 
 @hooks_group.command(name="learn")
@@ -494,10 +507,8 @@ def hooks_learn() -> None:
     This command is designed to be called by Claude Code hooks, not directly by users.
     """
     import hashlib
-    import json
     import logging
     import os
-    import sys
     import time
     from pathlib import Path
 
@@ -615,13 +626,13 @@ def hooks_learn() -> None:
             logger.info(f"Hook event: {hook_event}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Get transcript path
         transcript_path = input_data.get("transcript_path", "")
         if not transcript_path:
             logger.info("No transcript path provided")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Find the transcript file
         transcript_file = Path(transcript_path)
@@ -634,21 +645,24 @@ def hooks_learn() -> None:
                     logger.info(f"Using most recent transcript: {transcript_file}")
                 else:
                     logger.warning("No transcript files found")
-                    sys.exit(0)
+                    _exit_hook_with_json()
             else:
                 logger.warning("Transcript directory does not exist")
-                sys.exit(0)
+                _exit_hook_with_json()
 
         # Extract last assistant message
         assistant_text = find_last_assistant_message(transcript_file)
         if not assistant_text:
             logger.info("No assistant message to store")
-            sys.exit(0)
+            _exit_hook_with_json()
+
+        # Type narrowing: we've already checked assistant_text is not None
+        assert assistant_text is not None
 
         # Validate text length
         if len(assistant_text) < 10:
             logger.info("Assistant message too short to store")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         max_text_length = 1000000
         if len(assistant_text) > max_text_length:
@@ -658,20 +672,20 @@ def hooks_learn() -> None:
         # Check for duplicates
         if is_duplicate(assistant_text):
             logger.info("Skipping duplicate memory")
-            sys.exit(0)
+            _exit_hook_with_json()
 
         # Store the memory
         try:
             project_root = find_project_root()
             if project_root is None:
                 logger.info("Project root not found, skipping learning")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             db_path = get_project_db_path(project_root)
 
             if not db_path.exists():
                 logger.info("Project not initialized, skipping learning")
-                sys.exit(0)
+                _exit_hook_with_json()
 
             memory = KuzuMemory(db_path=db_path)
 
@@ -686,15 +700,16 @@ def hooks_learn() -> None:
 
         except Exception as e:
             logger.error(f"Error storing memory: {e}")
+            _exit_hook_with_json()
 
-        sys.exit(0)
+        _exit_hook_with_json()
 
     except KeyboardInterrupt:
         logger.info("Hook interrupted by user")
-        sys.exit(0)
+        _exit_hook_with_json()
     except Exception as e:
         logger.error(f"Unhandled exception: {e}", exc_info=True)
-        sys.exit(0)
+        _exit_hook_with_json()
 
 
 __all__ = ["hooks_group"]
