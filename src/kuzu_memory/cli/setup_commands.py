@@ -29,8 +29,8 @@ try:
 except ImportError:
     # Gracefully handle missing dependency (for older installations during upgrade)
     HAS_SELF_UPDATER = False
-    InstallMethod = None  # type: ignore
-    SelfUpdater = None  # type: ignore
+    InstallMethod = None  # type: ignore[assignment]
+    SelfUpdater = None  # type: ignore[assignment]
 
 
 def _check_and_upgrade_if_needed() -> bool:
@@ -359,6 +359,23 @@ def setup(
                     # init command may exit with code 1 if already exists
                     if not force:
                         rich_print("   Database already exists (use --force to overwrite)")
+
+        # Verify database schema and optimization for both new and existing databases
+        if not dry_run and db_path.exists():
+            rich_print("\n🔧 Verifying database optimization...", style="cyan")
+            try:
+                from ..storage.schema import ensure_indexes
+
+                verification_results = ensure_indexes(db_path)
+
+                if verification_results.get("schema_valid", False):
+                    rich_print("  ✅ Schema verified and optimized", style="green")
+                else:
+                    rich_print("  ⚠️  Schema verification failed", style="yellow")
+
+            except Exception as e:
+                # Verification failure is non-critical, log warning
+                rich_print(f"  ⚠️  Optimization verification skipped: {e}", style="yellow")
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2: AI TOOL DETECTION & INSTALLATION

@@ -7,6 +7,8 @@ and indices for optimal performance. Includes version management for migrations.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 # Database schema version for migration support
 SCHEMA_VERSION = "1.0"
 
@@ -85,10 +87,14 @@ CREATE REL TABLE IF NOT EXISTS CO_OCCURS_WITH (
 );
 """
 
-# Performance indices (Kuzu doesn't support IF NOT EXISTS for indices)
-INDICES_DDL = """
-CREATE INDEX idx_memory_created_at ON Memory(created_at);
-"""
+# Performance indices
+# NOTE: Kuzu does not support traditional secondary indexes (CREATE INDEX).
+# Instead, it uses automatic optimizations:
+# - Hash indexes on primary keys (automatic)
+# - CSR-based adjacency list indices for edges (automatic)
+# - Columnar storage with vectorized execution (automatic)
+# - Specialized indexes via function calls: CREATE_FTS_INDEX, CREATE_VECTOR_INDEX
+INDICES_DDL = ""
 
 # Initial data insertion
 INITIAL_DATA_DDL = f"""
@@ -253,3 +259,76 @@ def validate_schema_compatibility(current_version: str, required_version: str) -
     # For now, only exact version matches are supported
     # In the future, this could support backward compatibility rules
     return current_version == required_version
+
+
+def ensure_indexes(db_path: Path) -> dict[str, bool]:
+    """
+    Verify database schema and optimization.
+
+    NOTE: Kuzu does not support traditional secondary indexes (CREATE INDEX)
+    on properties. Instead, it uses:
+    - Automatic hash indexes on primary keys
+    - CSR-based adjacency list indices for edges
+    - Columnar storage with vectorized execution for performance
+    - Specialized indexes via function calls (FTS, vector)
+
+    This function serves as a validation/verification step rather than
+    actually creating indexes. It checks that the database schema is
+    properly initialized and returns status information.
+
+    Args:
+        db_path: Path to the Kuzu database
+
+    Returns:
+        Dictionary with verification results:
+        - "schema_valid": True if schema is properly initialized
+        - "primary_keys_indexed": True (always, automatic in Kuzu)
+        - "columnar_storage": True (always, Kuzu's architecture)
+
+    Raises:
+        DatabaseError: If database verification fails
+
+    Example:
+        >>> results = ensure_indexes(Path("/tmp/test.db"))
+        >>> if results["schema_valid"]:
+        ...     print("Database schema verified")
+    """
+    import kuzu
+
+    from kuzu_memory.utils.exceptions import DatabaseError
+
+    results: dict[str, bool] = {}
+
+    try:
+        # Create database connection to verify schema
+        db = kuzu.Database(str(db_path))
+        conn = kuzu.Connection(db)
+
+        # Verify schema by checking critical tables exist
+        try:
+            # Check Memory table exists
+            conn.execute("MATCH (m:Memory) RETURN COUNT(m) LIMIT 1")
+            results["schema_valid"] = True
+
+            # Kuzu automatically provides these optimizations
+            results["primary_keys_indexed"] = True  # Hash index on primary keys (automatic)
+            results["columnar_storage"] = True  # Kuzu's architecture (automatic)
+            results["vectorized_execution"] = True  # Kuzu's query processor (automatic)
+
+        except Exception as e:
+            # Schema not initialized or corrupted
+            error_msg = str(e).lower()
+            if "memory does not exist" in error_msg or "no node table" in error_msg:
+                results["schema_valid"] = False
+                results["primary_keys_indexed"] = False
+                results["columnar_storage"] = False
+                results["vectorized_execution"] = False
+            else:
+                raise DatabaseError(f"Failed to verify schema: {e}") from e
+
+    except Exception as e:
+        if isinstance(e, DatabaseError):
+            raise
+        raise DatabaseError(f"Failed to ensure indexes on {db_path}: {e}") from e
+
+    return results

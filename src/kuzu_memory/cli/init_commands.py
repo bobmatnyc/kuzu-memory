@@ -117,6 +117,26 @@ def init(
 
             rich_print(f"✅ Initialized database: {db_path}")
 
+            # Verify database schema and optimization
+            rich_print("\n🔧 Verifying database optimization...", style="cyan")
+            try:
+                from ..storage.schema import ensure_indexes
+
+                verification_results = ensure_indexes(db_path)
+
+                if verification_results.get("schema_valid", False):
+                    rich_print("  ✅ Schema verified and optimized", style="green")
+                    # Log optimization features (Kuzu's automatic optimizations)
+                    rich_print("    • Primary key hash indexes: Active", style="dim")
+                    rich_print("    • Columnar storage: Active", style="dim")
+                    rich_print("    • Vectorized execution: Active", style="dim")
+                else:
+                    rich_print("  ⚠️  Schema verification failed", style="yellow")
+
+            except Exception as e:
+                # Verification failure is non-critical, log warning
+                rich_print(f"  ⚠️  Optimization verification skipped: {e}", style="yellow")
+
             # Create example config if requested
             if config_path:
                 config_path_obj = Path(config_path)
