@@ -488,9 +488,21 @@ class DiagnosticService(BaseService):
             "recommendations": [],
         }
 
-        # Check git hooks
-        git_hook = root / ".git" / "hooks" / "post-commit"
-        if git_hook.exists():
+        # Check git hooks - search up tree like installation does
+        def find_git_hook(start_path: Path) -> Path | None:
+            """Search up directory tree for git post-commit hook."""
+            current = start_path
+            for _ in range(5):  # Match setup_commands.py search depth
+                hook_path = current / ".git" / "hooks" / "post-commit"
+                if hook_path.exists():
+                    return hook_path
+                if current == current.parent:
+                    break
+                current = current.parent
+            return None
+
+        git_hook = find_git_hook(root)
+        if git_hook:
             result["git_hooks"]["installed"] = True
             result["git_hooks"]["path"] = str(git_hook)
             result["git_hooks"]["executable"] = os.access(git_hook, os.X_OK)

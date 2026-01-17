@@ -1392,6 +1392,12 @@ exec {kuzu_cmd} "$@"
             # Validate hook events before writing
             self._validate_hook_events(existing_settings)
 
+            # Auto-fix invalid events during install (not just repair)
+            fixed_events, event_messages = self._migrate_legacy_events(existing_settings)
+            if fixed_events:
+                for msg in event_messages:
+                    logger.info(msg)
+
             # Write hooks configuration to settings.local.json
             # (MCP servers will be configured in ~/.claude.json separately)
             if not dry_run:
