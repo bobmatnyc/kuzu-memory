@@ -86,13 +86,19 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()  # type: ignore[no-untyped-call,misc]
+        @self.server.list_tools()  # type: ignore[untyped-decorator,no-untyped-call]
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
                 Tool(
                     name="kuzu_enhance",
-                    description="Enhance a prompt with project-specific context from KuzuMemory",
+                    description=(
+                        "RAG prompt augmentation: Enhance prompts with project-specific context "
+                        "from KuzuMemory using semantic search and vector similarity. Performs "
+                        "context injection by retrieving relevant project memories, patterns, and "
+                        "learnings to augment the input prompt. Use this for context-aware AI "
+                        "responses that understand project history and domain knowledge."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -102,7 +108,7 @@ class KuzuMemoryMCPServer:
                             },
                             "max_memories": {
                                 "type": "integer",
-                                "description": "Maximum number of memories to include",
+                                "description": "Maximum number of memories to include (default: 5)",
                                 "default": 5,
                             },
                         },
@@ -111,17 +117,27 @@ class KuzuMemoryMCPServer:
                 ),
                 Tool(
                     name="kuzu_learn",
-                    description="Store a learning or observation asynchronously (non-blocking)",
+                    description=(
+                        "ASYNC/BACKGROUND/NON-BLOCKING continuous learning: Store observations, "
+                        "insights, and learnings asynchronously during conversations without waiting "
+                        "for confirmation. Ideal for capturing context, patterns, and evolving "
+                        "understanding as they emerge. Returns immediately without blocking. "
+                        "\n\nWhen to use: Ongoing conversation learnings, observations, insights, "
+                        "context capture during development sessions. "
+                        "\n\nWhen NOT to use: Critical facts requiring immediate confirmation (use "
+                        "kuzu_remember instead for synchronous storage of important decisions, "
+                        "preferences, or facts that must be stored immediately)."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "content": {
                                 "type": "string",
-                                "description": "The content to learn and store",
+                                "description": "The content to learn and store asynchronously",
                             },
                             "source": {
                                 "type": "string",
-                                "description": "Source of the learning",
+                                "description": "Source of the learning (default: ai-conversation)",
                                 "default": "ai-conversation",
                             },
                         },
@@ -130,17 +146,25 @@ class KuzuMemoryMCPServer:
                 ),
                 Tool(
                     name="kuzu_recall",
-                    description="Query specific memories from the project",
+                    description=(
+                        "Semantic memory retrieval: Query project memories using vector search and "
+                        "similarity matching. Performs semantic search across stored learnings, "
+                        "patterns, decisions, and context to find relevant information based on "
+                        "meaning rather than exact keyword matches. Returns memories ranked by "
+                        "relevance score and temporal decay weighting. Use this to retrieve "
+                        "project-specific knowledge, past decisions, learned patterns, or context "
+                        "from previous conversations."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The query to search memories",
+                                "description": "Semantic query to search memories (meaning-based, not keyword matching)",
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": "Maximum number of results",
+                                "description": "Maximum number of results to return (default: 5, higher values return more memories)",
                                 "default": 5,
                             },
                         },
@@ -149,17 +173,27 @@ class KuzuMemoryMCPServer:
                 ),
                 Tool(
                     name="kuzu_remember",
-                    description="Store important project information",
+                    description=(
+                        "SYNC/IMMEDIATE/BLOCKING critical fact storage: Store important decisions, "
+                        "preferences, or facts that must be confirmed immediately. This operation "
+                        "waits for database confirmation before returning, ensuring the memory is "
+                        "durably persisted. Use for critical information that requires immediate "
+                        "storage verification. "
+                        "\n\nWhen to use: Important decisions, user preferences, project constraints, "
+                        "architectural choices, critical facts that need immediate confirmation. "
+                        "\n\nFor background learning during conversations: Use kuzu_learn instead "
+                        "(async, non-blocking, ideal for continuous context capture without waiting)."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "content": {
                                 "type": "string",
-                                "description": "The content to remember",
+                                "description": "The critical content to store immediately with confirmation",
                             },
                             "memory_type": {
                                 "type": "string",
-                                "description": "Type of memory",
+                                "description": "Type of memory: identity (project identity/context), preference (user preferences), decision (architectural/technical decisions), pattern (code patterns/conventions)",
                                 "enum": [
                                     "identity",
                                     "preference",
@@ -174,13 +208,24 @@ class KuzuMemoryMCPServer:
                 ),
                 Tool(
                     name="kuzu_stats",
-                    description="Get KuzuMemory statistics and status",
+                    description=(
+                        "Health check and diagnostics: Get KuzuMemory system statistics, health "
+                        "metrics, and monitoring data. Returns memory counts by type, database size, "
+                        "index health status, recent activity summary, and performance statistics. "
+                        "Use this for system health monitoring, troubleshooting, capacity planning, "
+                        "and understanding memory system usage patterns. "
+                        "\n\nMetrics returned: Total memory count, memory type distribution "
+                        "(identity/preference/decision/pattern), database storage size, recent "
+                        "activity timestamp, and optionally (with detailed=true): average recall "
+                        "time, cache hit rate, embedding generation performance, and query "
+                        "optimization statistics."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "detailed": {
                                 "type": "boolean",
-                                "description": "Show detailed statistics",
+                                "description": "Show detailed statistics including performance metrics, cache statistics, and query optimization data (default: false)",
                                 "default": False,
                             }
                         },
@@ -188,7 +233,7 @@ class KuzuMemoryMCPServer:
                 ),
             ]
 
-        @self.server.call_tool()  # type: ignore[misc]
+        @self.server.call_tool()  # type: ignore[untyped-decorator]
         async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
@@ -228,7 +273,7 @@ class KuzuMemoryMCPServer:
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()  # type: ignore[no-untyped-call,misc]
+        @self.server.list_resources()  # type: ignore[untyped-decorator,no-untyped-call]
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -240,7 +285,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()  # type: ignore[no-untyped-call,misc]
+        @self.server.list_resource_templates()  # type: ignore[untyped-decorator,no-untyped-call]
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [
