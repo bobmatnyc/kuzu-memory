@@ -65,7 +65,7 @@ class PerformanceMonitor(IPerformanceMonitor):
         # Performance thresholds
         self._thresholds = {
             "recall_time_ms": 100.0,  # <100ms recall target
-            "generation_time_ms": 200.0,  # <200ms generation target
+            "generation_time_ms": 1000.0,  # <1000ms generation target (increased for async ops)
             "db_query_time_ms": 50.0,  # <50ms database queries
             "cache_hit_rate": 0.8,  # >80% cache hit rate
             "error_rate": 0.01,  # <1% error rate

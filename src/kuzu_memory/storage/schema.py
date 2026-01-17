@@ -87,6 +87,7 @@ CREATE REL TABLE IF NOT EXISTS CO_OCCURS_WITH (
 
 # Performance indices (Kuzu doesn't support IF NOT EXISTS for indices)
 INDICES_DDL = """
+CREATE INDEX idx_memory_created_at ON Memory(created_at);
 """
 
 # Initial data insertion

@@ -30,7 +30,7 @@ class StorageConfig:
     auto_compact: bool = True
     backup_on_corruption: bool = True
     connection_pool_size: int = 5
-    query_timeout_ms: int = 5000
+    query_timeout_ms: int = 15000
     use_cli_adapter: bool = False  # Use Kuzu CLI adapter for better performance
     max_write_retries: int = (
         10  # Increased from 3 to handle higher concurrency (Kuzu single-write limitation)
