@@ -337,6 +337,7 @@ def hooks_enhance() -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.FileHandler(log_file)],
+        force=True,  # Override existing handlers (Python 3.8+)
     )
     logger = logging.getLogger(__name__)
 
@@ -436,6 +437,7 @@ def hooks_session_start() -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.FileHandler(log_file)],
+        force=True,  # Override existing handlers (Python 3.8+)
     )
     logger = logging.getLogger(__name__)
 
@@ -523,6 +525,7 @@ def hooks_learn() -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.FileHandler(log_file)],
+        force=True,  # Override existing handlers (Python 3.8+)
     )
     logger = logging.getLogger(__name__)
 
