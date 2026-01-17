@@ -5,7 +5,6 @@ Combines initialization and installation into a single intelligent command
 that auto-detects existing installations and updates them as needed.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -21,145 +20,20 @@ from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
 
-# Import SelfUpdater from py-mcp-installer package
-try:
-    from py_mcp_installer.self_updater import InstallMethod, SelfUpdater
 
-    HAS_SELF_UPDATER = True
-except ImportError:
-    # Gracefully handle missing dependency (for older installations during upgrade)
-    HAS_SELF_UPDATER = False
-    InstallMethod = None  # type: ignore[assignment]
-    SelfUpdater = None  # type: ignore[assignment]
-
-
-def _check_and_upgrade_if_needed() -> bool:
+def _show_version_info() -> None:
     """
-    Check for newer version and auto-upgrade if available using SelfUpdater.
+    Display current version and upgrade instructions.
 
-    Non-blocking: Returns False if check/upgrade fails, but doesn't raise.
-
-    Returns:
-        True if upgraded successfully, False otherwise (including no update available)
+    Provides manual upgrade commands for different installation methods.
     """
-    try:
-        # Skip if py-mcp-installer is not available
-        if not HAS_SELF_UPDATER:
-            return False
+    from ..__version__ import __version__
 
-        # DEFENSIVE: Prevent infinite upgrade loops
-        # If we've already attempted an upgrade in this session, skip
-        if os.environ.get("KUZU_MEMORY_UPGRADE_ATTEMPTED") == "1":
-            return False
-
-        from ..__version__ import __version__
-
-        # Create SelfUpdater instance
-        updater = SelfUpdater("kuzu-memory", current_version=__version__)
-
-        # Check for updates
-        result = updater.check_for_updates()
-
-        # No update available
-        if not result.update_available:
-            return False
-
-        # Determine version type (major/minor/patch)
-        current_parts = result.current_version.split(".")
-        latest_parts = result.latest_version.split(".")
-
-        version_type = "patch"
-        if len(current_parts) >= 1 and len(latest_parts) >= 1:
-            if current_parts[0] != latest_parts[0]:
-                version_type = "major"
-            elif len(current_parts) >= 2 and len(latest_parts) >= 2:
-                if current_parts[1] != latest_parts[1]:
-                    version_type = "minor"
-
-        version_type_emoji = {
-            "major": "🚀",
-            "minor": "✨",
-            "patch": "🔧",
-        }
-        emoji = version_type_emoji.get(version_type, "📦")
-
-        # Show update info
-        rich_print(
-            f"\n{emoji} Update available: {result.current_version} → {result.latest_version} ({version_type})",
-            style="cyan",
-        )
-        rich_print(f"   Installed via: {result.install_method.value}", style="dim")
-
-        # Ask user for confirmation before upgrading
-        if not click.confirm(
-            "   Upgrade now?",
-            default=True,
-        ):
-            rich_print("   Skipping upgrade - continuing with current version", style="dim")
-            return False
-
-        # Handle development mode separately
-        if result.install_method == InstallMethod.DEVELOPMENT:
-            rich_print(
-                "   Development mode detected. Please upgrade manually:",
-                style="yellow",
-            )
-            rich_print(f"   {result.upgrade_command}", style="dim")
-            return False
-
-        # Set environment variable to prevent infinite loops
-        os.environ["KUZU_MEMORY_UPGRADE_ATTEMPTED"] = "1"
-
-        # Show upgrade command
-        rich_print(f"   Running: {result.upgrade_command}", style="dim")
-
-        # Perform upgrade using SelfUpdater
-        success = updater.update(confirm=False)  # Already confirmed above
-
-        if success:
-            rich_print("   ✅ Successfully upgraded to latest version!", style="green")
-            rich_print(
-                "   🔄 Restarting setup with new version...\n",
-                style="dim",
-            )
-            return True
-        else:
-            # Upgrade failed - show warning but continue
-            rich_print(
-                "   ⚠️  Auto-upgrade failed. Continuing with current version.",
-                style="yellow",
-            )
-            rich_print(
-                f"   Try manually: {result.upgrade_command}",
-                style="dim",
-            )
-            return False
-
-    except Exception:
-        # Silently fail - don't block setup
-        return False
-
-
-def _restart_setup_after_upgrade(ctx: click.Context) -> None:
-    """
-    Re-execute setup command after successful upgrade.
-
-    Preserves all command-line flags from original invocation.
-    """
-    try:
-        # Get original command line arguments
-        args = sys.argv[1:]  # Skip script name
-
-        # Re-execute kuzu-memory with same arguments
-        os.execvp("kuzu-memory", ["kuzu-memory", *args])
-
-    except Exception as e:
-        # If re-execution fails, just continue with current version
-        rich_print(
-            f"⚠️  Could not restart setup: {e}",
-            style="yellow",
-        )
-        rich_print("   Continuing with newly installed version...\n", style="dim")
+    rich_print(f"\n📦 Current version: {__version__}", style="cyan")
+    rich_print("\n💡 To upgrade to the latest version:", style="dim")
+    rich_print("   pip install --upgrade kuzu-memory", style="dim")
+    rich_print("   # or with uv:", style="dim")
+    rich_print("   uv pip install --upgrade kuzu-memory", style="dim")
 
 
 @click.command()
@@ -199,11 +73,6 @@ def _restart_setup_after_upgrade(ctx: click.Context) -> None:
     is_flag=True,
     help="Skip git post-commit hooks installation (auto-installs when git repo detected)",
 )
-@click.option(
-    "--skip-version-check",
-    is_flag=True,
-    help="Skip automatic version check and upgrade",
-)
 @click.pass_context
 def setup(
     ctx: click.Context,
@@ -212,7 +81,6 @@ def setup(
     force: bool,
     dry_run: bool,
     skip_git_hooks: bool,
-    skip_version_check: bool,
 ) -> None:
     """
     🚀 Smart setup - Initialize and configure KuzuMemory (RECOMMENDED).
@@ -222,7 +90,6 @@ def setup(
 
     \b
     🎯 WHAT IT DOES:
-      0. Checks for updates and auto-upgrades (if newer version available)
       1. Detects project root automatically
       2. Initializes memory database (if needed)
       3. Auto-detects installed AI tools
@@ -239,9 +106,6 @@ def setup(
       # Setup without git hooks
       kuzu-memory setup --skip-git-hooks
 
-      # Setup without auto-upgrade check
-      kuzu-memory setup --skip-version-check
-
       # Setup for specific integration without git hooks
       kuzu-memory setup --integration claude-code --skip-git-hooks
 
@@ -257,8 +121,7 @@ def setup(
     \b
     💡 TIP:
       For most users, just run 'kuzu-memory setup' with no arguments.
-      It will auto-upgrade to the latest version, then install git hooks
-      and Claude Code hooks automatically.
+      It will install git hooks and Claude Code hooks automatically.
 
     \b
     ⚙️  ADVANCED USAGE:
@@ -266,33 +129,15 @@ def setup(
       • kuzu-memory init                # Just initialize
       • kuzu-memory install <tool>      # Just install integration
       • kuzu-memory git install-hooks   # Just install git hooks
-      • kuzu-memory update              # Just check/upgrade version
     """
     try:
         # ═══════════════════════════════════════════════════════════
-        # PHASE 0: VERSION CHECK & AUTO-UPGRADE
-        # ═══════════════════════════════════════════════════════════
-
-        # Check for updates and auto-upgrade if available (non-blocking)
-        if not dry_run and not skip_version_check:
-            upgraded = _check_and_upgrade_if_needed()
-
-            if upgraded:
-                # Successfully upgraded - restart setup with new version
-                _restart_setup_after_upgrade(ctx)
-                # If we reach here, restart failed - continue with new version
-                rich_print(
-                    "⚠️  Setup restart failed, but upgrade was successful.",
-                    style="yellow",
-                )
-                rich_print(
-                    "   You may want to run 'kuzu-memory setup' again to ensure latest features.\n",
-                    style="dim",
-                )
-
-        # ═══════════════════════════════════════════════════════════
         # PHASE 1: PROJECT DETECTION & INITIALIZATION
         # ═══════════════════════════════════════════════════════════
+
+        # Show version info if not in dry-run mode
+        if not dry_run:
+            _show_version_info()
 
         rich_panel(
             "Smart Setup - Automated KuzuMemory Configuration\n\n"
