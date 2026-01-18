@@ -16,8 +16,13 @@ from kuzu_memory.installers.registry import get_installer
 class TestAISystemDetection:
     """Test AI system auto-detection."""
 
-    def test_detect_no_systems(self, tmp_path):
+    def test_detect_no_systems(self, tmp_path, monkeypatch):
         """Test detection in empty project."""
+        # Mock home directory to avoid detecting global installations
+        fake_home = tmp_path / "fake_home"
+        fake_home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: fake_home)
+
         detector = AISystemDetector(tmp_path)
 
         systems = detector.detect_all()
