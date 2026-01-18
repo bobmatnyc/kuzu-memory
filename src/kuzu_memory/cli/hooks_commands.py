@@ -199,11 +199,15 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
             try:
                 found_root = find_project_root()
                 if found_root is None:
-                    console.print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                    console.print(
+                        "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                    )
                     sys.exit(1)
                 project_root = found_root
             except Exception:
-                console.print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                console.print(
+                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                )
                 sys.exit(1)
 
         # Check if installer exists
