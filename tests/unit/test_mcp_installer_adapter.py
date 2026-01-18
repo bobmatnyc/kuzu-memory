@@ -68,15 +68,41 @@ class TestMCPInstallerAdapter:
         """Test adapter initialization with forced platform."""
         from py_mcp_installer import Platform
 
-        adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CURSOR)
+        mock_info = Mock()
+        mock_info.platform = Platform.CURSOR
+        mock_info.config_path = Path.cwd() / ".cursor" / "mcp.json"
+        mock_info.cli_available = True
+        mock_info.confidence = 1.0
 
-        assert adapter.ai_system_name == "cursor"
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_info
+
+            adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CURSOR)
+
+            assert adapter.ai_system_name == "cursor"
 
     def test_initialization_string_platform(self, project_root: Path) -> None:
         """Test adapter initialization with string platform name."""
-        adapter = MCPInstallerAdapter(project_root=project_root, platform="cursor")
+        from py_mcp_installer import Platform
 
-        assert adapter.ai_system_name == "cursor"
+        mock_info = Mock()
+        mock_info.platform = Platform.CURSOR
+        mock_info.config_path = Path.cwd() / ".cursor" / "mcp.json"
+        mock_info.cli_available = True
+        mock_info.confidence = 1.0
+
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_info
+
+            adapter = MCPInstallerAdapter(project_root=project_root, platform="cursor")
+
+            assert adapter.ai_system_name == "cursor"
 
     def test_initialization_invalid_platform(self, project_root: Path) -> None:
         """Test adapter initialization with invalid platform string."""
