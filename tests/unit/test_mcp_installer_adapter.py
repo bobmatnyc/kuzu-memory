@@ -113,9 +113,21 @@ class TestMCPInstallerAdapter:
         """Test ai_system_name property."""
         from py_mcp_installer import Platform
 
-        adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CLAUDE_CODE)
+        mock_info = Mock()
+        mock_info.platform = Platform.CLAUDE_CODE
+        mock_info.config_path = Path.home() / ".config" / "claude" / "mcp.json"
+        mock_info.cli_available = True
+        mock_info.confidence = 1.0
 
-        assert adapter.ai_system_name == "claude-code"
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_info
+
+            adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CLAUDE_CODE)
+
+            assert adapter.ai_system_name == "claude-code"
 
     def test_required_files_with_config_path(
         self, project_root: Path, mock_platform_info: Mock
