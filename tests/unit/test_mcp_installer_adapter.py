@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from kuzu_memory.installers.mcp_installer_adapter import (
     HAS_MCP_INSTALLER,
     MCPInstallerAdapter,
@@ -49,13 +50,19 @@ class TestMCPInstallerAdapter:
         mock.uninstall_server = Mock()
         return mock
 
-    def test_initialization_auto_detect(self, project_root: Path) -> None:
+    def test_initialization_auto_detect(self, project_root: Path, mock_platform_info: Mock) -> None:
         """Test adapter initialization with auto-detection."""
-        adapter = MCPInstallerAdapter(project_root=project_root)
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_platform_info
 
-        assert adapter.project_root == project_root
-        assert adapter.ai_system_name is not None
-        assert isinstance(adapter.installer, object)
+            adapter = MCPInstallerAdapter(project_root=project_root)
+
+            assert adapter.project_root == project_root
+            assert adapter.ai_system_name is not None
+            assert isinstance(adapter.installer, object)
 
     def test_initialization_forced_platform(self, project_root: Path) -> None:
         """Test adapter initialization with forced platform."""
@@ -100,13 +107,19 @@ class TestMCPInstallerAdapter:
             assert len(files) > 0
             assert isinstance(files[0], str)
 
-    def test_description(self, project_root: Path) -> None:
+    def test_description(self, project_root: Path, mock_platform_info: Mock) -> None:
         """Test description property."""
-        adapter = MCPInstallerAdapter(project_root=project_root)
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_platform_info
 
-        description = adapter.description
-        assert "py-mcp-installer-service" in description
-        assert adapter.ai_system_name in description
+            adapter = MCPInstallerAdapter(project_root=project_root)
+
+            description = adapter.description
+            assert "py-mcp-installer-service" in description
+            assert adapter.ai_system_name in description
 
     def test_install_success(self, project_root: Path) -> None:
         """Test successful installation."""
@@ -314,10 +327,25 @@ class TestConvenienceFunctions:
     @pytest.mark.skipif(not HAS_MCP_INSTALLER, reason="py-mcp-installer-service not available")
     def test_create_mcp_installer_adapter(self, tmp_path: Path) -> None:
         """Test factory function."""
-        adapter = create_mcp_installer_adapter(project_root=tmp_path)
+        from py_mcp_installer import Platform, Scope
 
-        assert isinstance(adapter, MCPInstallerAdapter)
-        assert adapter.project_root == tmp_path
+        mock_info = Mock()
+        mock_info.platform = Platform.CLAUDE_CODE
+        mock_info.confidence = 1.0
+        mock_info.config_path = Path.home() / ".config" / "claude" / "mcp.json"
+        mock_info.cli_available = True
+        mock_info.scope_support = Scope.BOTH
+
+        with patch(
+            "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
+        ) as mock_installer_class:
+            mock_installer = mock_installer_class.return_value
+            mock_installer.platform_info = mock_info
+
+            adapter = create_mcp_installer_adapter(project_root=tmp_path)
+
+            assert isinstance(adapter, MCPInstallerAdapter)
+            assert adapter.project_root == tmp_path
 
     def test_is_mcp_installer_available(self) -> None:
         """Test availability check function."""
