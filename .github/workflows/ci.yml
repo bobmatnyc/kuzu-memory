@@ -100,7 +100,8 @@ jobs:
 
       - name: Check package
         run: |
-          uv pip install dist/*.whl
+          uv sync --all-extras
+          uv pip install --force-reinstall dist/*.whl
           uv run kuzu-memory --version
 
       - name: Upload artifacts
