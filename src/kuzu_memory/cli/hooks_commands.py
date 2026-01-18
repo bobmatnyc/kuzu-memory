@@ -22,6 +22,73 @@ from .enums import HookSystem
 console = Console()
 
 
+def _find_last_assistant_message(transcript_file: Path) -> str | None:
+    """
+    Find the last assistant message in the transcript.
+
+    Extracts the last assistant message from a Claude Code transcript file,
+    normalizing line endings to prevent CR character leakage (Fix #12).
+
+    Args:
+        transcript_file: Path to the transcript JSONL file
+
+    Returns:
+        The text of the last assistant message, or None if not found
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        with open(transcript_file, encoding="utf-8") as f:
+            lines = f.readlines()
+
+        if not lines:
+            return None
+
+        # Search backwards for assistant messages
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                entry = json.loads(line)
+                message = entry.get("message", {})
+
+                if not isinstance(message, dict) or message.get("role") != "assistant":
+                    continue
+
+                content = message.get("content", [])
+                if not isinstance(content, list):
+                    continue
+
+                # Extract text from content items
+                text_parts = [
+                    c.get("text", "")
+                    for c in content
+                    if isinstance(c, dict) and c.get("type") == "text"
+                ]
+
+                if text_parts:
+                    text = " ".join(text_parts).strip()
+                    # Normalize line endings to prevent CR leakage (Fix #12)
+                    text = text.replace("\r\n", "\n").replace("\r", "\n")
+                    if text:
+                        logger.info(f"Found assistant message ({len(text)} chars)")
+                        return text
+
+            except json.JSONDecodeError:
+                continue
+
+        logger.info("No assistant messages found in transcript")
+        return None
+
+    except Exception as e:
+        logger.error(f"Error reading transcript: {e}")
+        return None
+
+
 def _exit_hook_with_json(
     continue_execution: bool = True,
     context: str | None = None,
@@ -205,9 +272,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
                     sys.exit(1)
                 project_root = found_root
             except Exception:
-                console.print(
-                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
-                )
+                console.print("[red]❌ Could not find project root. Use --project to specify.[/red]")
                 sys.exit(1)
 
         # Check if installer exists
@@ -588,55 +653,6 @@ def hooks_learn() -> None:
             logger.error(f"Error checking for duplicates: {e}")
             return False
 
-    def find_last_assistant_message(transcript_file: Path) -> str | None:
-        """Find the last assistant message in the transcript."""
-        try:
-            with open(transcript_file, encoding="utf-8") as f:
-                lines = f.readlines()
-
-            if not lines:
-                return None
-
-            # Search backwards for assistant messages
-            for line in reversed(lines):
-                line = line.strip()
-                if not line:
-                    continue
-
-                try:
-                    entry = json.loads(line)
-                    message = entry.get("message", {})
-
-                    if not isinstance(message, dict) or message.get("role") != "assistant":
-                        continue
-
-                    content = message.get("content", [])
-                    if not isinstance(content, list):
-                        continue
-
-                    # Extract text from content items
-                    text_parts = [
-                        c.get("text", "")
-                        for c in content
-                        if isinstance(c, dict) and c.get("type") == "text"
-                    ]
-
-                    if text_parts:
-                        text = " ".join(text_parts).strip()
-                        if text:
-                            logger.info(f"Found assistant message ({len(text)} chars)")
-                            return text
-
-                except json.JSONDecodeError:
-                    continue
-
-            logger.info("No assistant messages found in transcript")
-            return None
-
-        except Exception as e:
-            logger.error(f"Error reading transcript: {e}")
-            return None
-
     try:
         logger.info("=== hooks learn called ===")
 
@@ -672,7 +688,7 @@ def hooks_learn() -> None:
                 _exit_hook_with_json()
 
         # Extract last assistant message
-        assistant_text = find_last_assistant_message(transcript_file)
+        assistant_text = _find_last_assistant_message(transcript_file)
         if not assistant_text:
             logger.info("No assistant message to store")
             _exit_hook_with_json()
