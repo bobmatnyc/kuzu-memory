@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -21,17 +22,32 @@ from .enums import HookSystem
 console = Console()
 
 
-def _exit_hook_with_json(continue_execution: bool = True) -> None:
+def _exit_hook_with_json(
+    continue_execution: bool = True,
+    context: str | None = None,
+    hook_event: str = "UserPromptSubmit",
+) -> None:
     """
     Exit hook with valid JSON output for Claude Code hooks API.
 
     Claude Code requires hooks to output JSON to stdout when exiting with code 0.
     This ensures proper communication with the hooks system.
 
+    Uses hookSpecificOutput.additionalContext API for silent context injection
+    when context is provided - the context is injected without being displayed to users.
+
     Args:
         continue_execution: Whether Claude Code should continue execution (default: True)
+        context: Optional context to inject silently (not displayed to users)
+        hook_event: The hook event name for hookSpecificOutput (default: "UserPromptSubmit")
     """
-    print(json.dumps({"continue": continue_execution}))
+    output: dict[str, Any] = {"continue": continue_execution}
+    if context:
+        output["hookSpecificOutput"] = {
+            "hookEventName": hook_event,
+            "additionalContext": context,
+        }
+    print(json.dumps(output))
     sys.exit(0)
 
 
@@ -392,17 +408,17 @@ def hooks_enhance() -> None:
 
                 enhancement = "\n".join(enhancement_parts)
                 logger.info(f"Enhancement generated ({len(enhancement)} chars)")
-                print(enhancement)
+                # Use hookSpecificOutput for silent context injection
+                memory.close()
+                _exit_hook_with_json(context=enhancement)
             else:
                 logger.info("No relevant memories found")
-
-            memory.close()
+                memory.close()
+                _exit_hook_with_json()
 
         except Exception as e:
             logger.error(f"Error enhancing prompt: {e}")
             _exit_hook_with_json()
-
-        _exit_hook_with_json()
 
     except KeyboardInterrupt:
         logger.info("Hook interrupted by user")
