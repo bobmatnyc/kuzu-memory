@@ -200,6 +200,32 @@ class TestMemory:
         assert len(memory.entities) == 3
         assert set(memory.entities) == {"entity1", "entity2", "entity3"}
 
+    def test_content_normalizes_carriage_returns(self):
+        """Test that CR characters are normalized to prevent REPL leakage (Fix #12)."""
+        # Test Windows-style line endings (CRLF)
+        memory_crlf = Memory(content="Line 1\r\nLine 2\r\nLine 3")
+        assert "\r" not in memory_crlf.content
+        assert memory_crlf.content == "Line 1\nLine 2\nLine 3"
+
+        # Test old Mac-style line endings (CR only)
+        memory_cr = Memory(content="Line 1\rLine 2\rLine 3")
+        assert "\r" not in memory_cr.content
+        assert memory_cr.content == "Line 1\nLine 2\nLine 3"
+
+        # Test mixed line endings
+        memory_mixed = Memory(content="Line 1\r\nLine 2\rLine 3\nLine 4")
+        assert "\r" not in memory_mixed.content
+        assert memory_mixed.content == "Line 1\nLine 2\nLine 3\nLine 4"
+
+        # Test content with no CR characters (should be unchanged)
+        memory_unix = Memory(content="Line 1\nLine 2\nLine 3")
+        assert memory_unix.content == "Line 1\nLine 2\nLine 3"
+
+        # Test single CR at end (should be removed after normalization and strip)
+        memory_trailing = Memory(content="Content with trailing CR\r")
+        assert "\r" not in memory_trailing.content
+        assert memory_trailing.content == "Content with trailing CR"
+
 
 class TestMemoryContext:
     """Test cases for MemoryContext model."""

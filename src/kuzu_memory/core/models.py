@@ -158,7 +158,9 @@ class Memory(BaseModel):
             raise ValueError("Content cannot be empty")
         if len(v) > 100000:  # 100KB limit
             raise ValueError("Content exceeds maximum length")
-        return v.strip()
+        # Normalize line endings to prevent CR leakage (defense in depth)
+        normalized = v.replace("\r\n", "\n").replace("\r", "\n")
+        return normalized.strip()
 
     @field_validator("entities")
     @classmethod
