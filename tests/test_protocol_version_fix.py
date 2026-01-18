@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory.mcp.run_server import MCPProtocolHandler
 from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
 
@@ -72,9 +71,9 @@ async def test_protocol_version_default():
 
     assert response is not None, "Response should not be None"
     # Code explicitly defaults to 2025-06-18 when no version specified (line 62)
-    assert response["result"]["protocolVersion"] == "2025-06-18", (
-        "Should default to 2025-06-18 for backward compatibility"
-    )
+    assert (
+        response["result"]["protocolVersion"] == "2025-06-18"
+    ), "Should default to 2025-06-18 for backward compatibility"
 
 
 @pytest.mark.asyncio
@@ -95,9 +94,9 @@ async def test_protocol_version_unsupported():
 
     assert response is not None, "Response should not be None"
     # Should fallback to latest supported version (2025-11-25)
-    assert response["result"]["protocolVersion"] == "2025-11-25", (
-        "Should fallback to latest supported version"
-    )
+    assert (
+        response["result"]["protocolVersion"] == "2025-11-25"
+    ), "Should fallback to latest supported version"
 
 
 @pytest.mark.asyncio
@@ -116,9 +115,9 @@ async def test_full_handshake_with_claude_code_version():
 
     init_response = await handler.handle_request(init_request)
 
-    assert init_response["result"]["protocolVersion"] == "2025-06-18", (
-        "Initialization should succeed"
-    )
+    assert (
+        init_response["result"]["protocolVersion"] == "2025-06-18"
+    ), "Initialization should succeed"
 
     # Step 2: List tools (should work after initialization)
     tools_request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
@@ -131,6 +130,12 @@ async def test_full_handshake_with_claude_code_version():
 
     # Verify expected tools are present
     tool_names = [tool["name"] for tool in tools_response["result"]["tools"]]
-    expected_tools = ["kuzu_enhance", "kuzu_learn", "kuzu_recall", "kuzu_remember", "kuzu_stats"]
+    expected_tools = [
+        "kuzu_enhance",
+        "kuzu_learn",
+        "kuzu_recall",
+        "kuzu_remember",
+        "kuzu_stats",
+    ]
     for expected_tool in expected_tools:
         assert expected_tool in tool_names, f"Should have {expected_tool} tool available"

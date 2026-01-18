@@ -424,7 +424,8 @@ class TestClaudeDesktopRealWorldPatterns:
             # Pattern: enhance prompt → execute → learn from result
             # 1. Enhance coding prompt
             enhance = await client.call_tool(
-                "kuzu_enhance", {"prompt": "Help me write a Python function", "max_memories": 5}
+                "kuzu_enhance",
+                {"prompt": "Help me write a Python function", "max_memories": 5},
             )
             assert enhance is not None
 
@@ -510,9 +511,9 @@ class TestClaudeDesktopRealWorldPatterns:
                     elapsed += wait_interval
 
                 # Verify clean shutdown
-                assert client.process.poll() is not None, (
-                    f"Process did not terminate within {max_wait}s after shutdown request"
-                )
+                assert (
+                    client.process.poll() is not None
+                ), f"Process did not terminate within {max_wait}s after shutdown request"
 
         finally:
             # Cleanup
