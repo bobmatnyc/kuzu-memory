@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.6.20] - 2026-01-17
+
+### Fixed
+- Make UserPromptSubmit hook silent using hookSpecificOutput API (fixes #10)
+
 ## [1.6.14] - 2026-01-07
 
 ### Changed
@@ -1017,7 +1022,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.14...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.20...HEAD
+[1.6.20]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.14...v1.6.20
 [1.6.14]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.13...v1.6.14
 [1.6.13]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.12...v1.6.13
 [1.6.12]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.11...v1.6.12
