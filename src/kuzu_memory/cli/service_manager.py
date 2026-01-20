@@ -83,7 +83,9 @@ class ServiceManager:
             db_path = get_project_db_path()
 
         # Create and initialize service
-        service = MemoryService(db_path=db_path, enable_git_sync=enable_git_sync, config=config)
+        service = MemoryService(
+            db_path=db_path, enable_git_sync=enable_git_sync, config=config
+        )
         service.initialize()
 
         try:
@@ -128,9 +130,7 @@ class ServiceManager:
         Performance: O(1) initialization, cleanup time varies with resources held
         """
         from kuzu_memory.services import ConfigService, GitSyncService
-        from kuzu_memory.services.config_service import (
-            ConfigService as ConcreteConfigService,
-        )
+        from kuzu_memory.services.config_service import ConfigService as ConcreteConfigService
         from kuzu_memory.utils.project_setup import find_project_root
 
         # Create config service if not provided
@@ -200,9 +200,7 @@ class ServiceManager:
         Performance: O(1) initialization, cleanup time varies with resources held
         """
         from kuzu_memory.services import ConfigService, DiagnosticService
-        from kuzu_memory.services.config_service import (
-            ConfigService as ConcreteConfigService,
-        )
+        from kuzu_memory.services.config_service import ConfigService as ConcreteConfigService
         from kuzu_memory.utils.project_setup import find_project_root
 
         # Create config service if not provided
@@ -219,9 +217,7 @@ class ServiceManager:
         # Create and initialize diagnostic service
         # DiagnosticService expects concrete MemoryService type
         # We cast the protocol interface to concrete type - safe as ServiceManager creates concrete types
-        from kuzu_memory.services.memory_service import (
-            MemoryService as ConcreteMemoryService,
-        )
+        from kuzu_memory.services.memory_service import MemoryService as ConcreteMemoryService
 
         concrete_memory: ConcreteMemoryService | None = None
         if memory_service is not None:

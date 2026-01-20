@@ -271,7 +271,10 @@ class TestProjectRootLogging:
         with caplog.at_level(logging.DEBUG, logger="kuzu_memory.utils.project_setup"):
             find_project_root(work_dir, _home_dir=fake_home)
 
-        assert "Reached home directory" in caplog.text or "Using current directory" in caplog.text
+        assert (
+            "Reached home directory" in caplog.text
+            or "Using current directory" in caplog.text
+        )
 
     def test_logs_no_project_root_found(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture

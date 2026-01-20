@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.installers.mcp_installer_adapter import (
     HAS_MCP_INSTALLER,
     MCPInstallerAdapter,
@@ -19,7 +18,9 @@ from kuzu_memory.installers.mcp_installer_adapter import (
 )
 
 
-@pytest.mark.skipif(not HAS_MCP_INSTALLER, reason="py-mcp-installer-service not available")
+@pytest.mark.skipif(
+    not HAS_MCP_INSTALLER, reason="py-mcp-installer-service not available"
+)
 class TestMCPInstallerAdapter:
     """Test suite for MCPInstallerAdapter."""
 
@@ -50,7 +51,9 @@ class TestMCPInstallerAdapter:
         mock.uninstall_server = Mock()
         return mock
 
-    def test_initialization_auto_detect(self, project_root: Path, mock_platform_info: Mock) -> None:
+    def test_initialization_auto_detect(
+        self, project_root: Path, mock_platform_info: Mock
+    ) -> None:
         """Test adapter initialization with auto-detection."""
         with patch(
             "kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"
@@ -80,7 +83,9 @@ class TestMCPInstallerAdapter:
             mock_installer = mock_installer_class.return_value
             mock_installer.platform_info = mock_info
 
-            adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CURSOR)
+            adapter = MCPInstallerAdapter(
+                project_root=project_root, platform=Platform.CURSOR
+            )
 
             assert adapter.ai_system_name == "cursor"
 
@@ -125,7 +130,9 @@ class TestMCPInstallerAdapter:
             mock_installer = mock_installer_class.return_value
             mock_installer.platform_info = mock_info
 
-            adapter = MCPInstallerAdapter(project_root=project_root, platform=Platform.CLAUDE_CODE)
+            adapter = MCPInstallerAdapter(
+                project_root=project_root, platform=Platform.CLAUDE_CODE
+            )
 
             assert adapter.ai_system_name == "claude-code"
 
@@ -280,7 +287,9 @@ class TestMCPInstallerAdapter:
             # Set up platform info properly
             mock_platform_info = Mock()
             mock_platform_info.platform = Platform.CLAUDE_CODE
-            mock_platform_info.config_path = project_root / ".config" / "claude" / "mcp.json"
+            mock_platform_info.config_path = (
+                project_root / ".config" / "claude" / "mcp.json"
+            )
             mock_platform_info.cli_available = True
             mock_platform_info.confidence = 1.0
 
@@ -315,7 +324,9 @@ class TestMCPInstallerAdapter:
 
         with (
             patch("kuzu_memory.installers.mcp_installer_adapter.MCPInstaller"),
-            patch("kuzu_memory.installers.mcp_installer_adapter.MCPDoctor") as mock_doctor_class,
+            patch(
+                "kuzu_memory.installers.mcp_installer_adapter.MCPDoctor"
+            ) as mock_doctor_class,
         ):
             mock_doctor = mock_doctor_class.return_value
             mock_doctor.diagnose.return_value = mock_report
@@ -362,7 +373,9 @@ class TestMCPInstallerAdapter:
 class TestConvenienceFunctions:
     """Test convenience factory functions."""
 
-    @pytest.mark.skipif(not HAS_MCP_INSTALLER, reason="py-mcp-installer-service not available")
+    @pytest.mark.skipif(
+        not HAS_MCP_INSTALLER, reason="py-mcp-installer-service not available"
+    )
     def test_create_mcp_installer_adapter(self, tmp_path: Path) -> None:
         """Test factory function."""
         from py_mcp_installer import Platform, Scope
@@ -396,13 +409,19 @@ class TestConvenienceFunctions:
 class TestMCPInstallerNotAvailable:
     """Test behavior when py-mcp-installer-service is not available."""
 
-    @pytest.mark.skipif(HAS_MCP_INSTALLER, reason="py-mcp-installer-service is available")
+    @pytest.mark.skipif(
+        HAS_MCP_INSTALLER, reason="py-mcp-installer-service is available"
+    )
     def test_initialization_without_submodule(self, tmp_path: Path) -> None:
         """Test initialization fails gracefully without submodule."""
-        with pytest.raises(RuntimeError, match="py-mcp-installer-service is not available"):
+        with pytest.raises(
+            RuntimeError, match="py-mcp-installer-service is not available"
+        ):
             MCPInstallerAdapter(project_root=tmp_path)
 
-    @pytest.mark.skipif(HAS_MCP_INSTALLER, reason="py-mcp-installer-service is available")
+    @pytest.mark.skipif(
+        HAS_MCP_INSTALLER, reason="py-mcp-installer-service is available"
+    )
     def test_is_available_returns_false(self) -> None:
         """Test is_available returns False when submodule missing."""
         assert is_mcp_installer_available() is False

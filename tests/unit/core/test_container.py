@@ -168,7 +168,9 @@ def test_dependency_with_default_parameter():
     """Test dependency injection with default parameter values."""
     container = DependencyContainer()
     container.register_service(ITestService, TestServiceImpl, singleton=True)
-    container.register_service(ServiceWithDefaultParam, ServiceWithDefaultParam, singleton=False)
+    container.register_service(
+        ServiceWithDefaultParam, ServiceWithDefaultParam, singleton=False
+    )
 
     service = container.resolve(ServiceWithDefaultParam)
 
@@ -390,7 +392,9 @@ def test_dependency_injection_with_no_annotations():
             self.value = value
 
     container = DependencyContainer()
-    container.register_service(ServiceWithDefaults, ServiceWithDefaults, singleton=False)
+    container.register_service(
+        ServiceWithDefaults, ServiceWithDefaults, singleton=False
+    )
 
     service = container.resolve(ServiceWithDefaults)
     assert service.value == "default"

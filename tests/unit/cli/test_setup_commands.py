@@ -85,7 +85,9 @@ class TestDetectGitRepository:
         git_dir.mkdir()
 
         # Call from 6th level (should NOT find .git)
-        deepest = tmp_path / "level0" / "level1" / "level2" / "level3" / "level4" / "level5"
+        deepest = (
+            tmp_path / "level0" / "level1" / "level2" / "level3" / "level4" / "level5"
+        )
         result = _detect_git_repository(deepest)
 
         # Assert returns False (exceeded 5 levels search depth)
@@ -167,7 +169,9 @@ class TestFindGitDirectory:
         git_dir.mkdir()
 
         # Call from 6th level
-        deepest = tmp_path / "level0" / "level1" / "level2" / "level3" / "level4" / "level5"
+        deepest = (
+            tmp_path / "level0" / "level1" / "level2" / "level3" / "level4" / "level5"
+        )
         result = _find_git_directory(deepest)
 
         # Assert returns None (exceeded search depth)
@@ -216,7 +220,8 @@ class TestInstallGitHooks:
             assert result is False
             # Assert warning message displayed
             assert any(
-                "Git hooks installation failed" in str(call) for call in mock_print.call_args_list
+                "Git hooks installation failed" in str(call)
+                for call in mock_print.call_args_list
             )
 
     def test_install_git_hooks_handles_exception(self, tmp_path):
@@ -230,7 +235,9 @@ class TestInstallGitHooks:
             # Assert returns False on exception
             assert result is False
             # Assert warning message displayed
-            assert any("Git hooks warning" in str(call) for call in mock_print.call_args_list)
+            assert any(
+                "Git hooks warning" in str(call) for call in mock_print.call_args_list
+            )
 
     def test_install_git_hooks_system_exit_zero_returns_false(self, tmp_path):
         """Test git hooks installation with SystemExit(0) still returns False."""
@@ -259,11 +266,19 @@ class TestSetupCommandGitHooksIntegration:
         with (
             patch("kuzu_memory.cli.setup_commands.find_project_root") as mock_root,
             patch("kuzu_memory.cli.setup_commands.get_project_db_path") as mock_db_path,
-            patch("kuzu_memory.cli.setup_commands.get_project_memories_dir") as mock_mem,
-            patch("kuzu_memory.cli.setup_commands._detect_installed_systems") as mock_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands.get_project_memories_dir"
+            ) as mock_mem,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_installed_systems"
+            ) as mock_detect,
             patch("kuzu_memory.cli.setup_commands.init") as mock_init,
-            patch("kuzu_memory.cli.setup_commands._detect_git_repository") as mock_git_detect,
-            patch("kuzu_memory.cli.setup_commands._install_git_hooks") as mock_install_hooks,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_git_repository"
+            ) as mock_git_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._install_git_hooks"
+            ) as mock_install_hooks,
             patch("kuzu_memory.cli.setup_commands.rich_panel"),
             patch("kuzu_memory.cli.setup_commands.rich_print"),
         ):
@@ -309,7 +324,9 @@ class TestSetupCommandGitHooksIntegration:
         mock_setup_dependencies["install_hooks"].assert_called_once()
         assert result.exit_code == 0
 
-    def test_setup_without_git_hooks_skips_installation(self, runner, mock_setup_dependencies):
+    def test_setup_without_git_hooks_skips_installation(
+        self, runner, mock_setup_dependencies
+    ):
         """Test setup with --skip-git-hooks flag skips git hooks installation."""
         # Configure mocks
         mock_setup_dependencies["db"].exists.return_value = True
@@ -325,7 +342,9 @@ class TestSetupCommandGitHooksIntegration:
         mock_setup_dependencies["install_hooks"].assert_not_called()
         assert result.exit_code == 0
 
-    def test_setup_with_git_hooks_no_git_repo_warns(self, runner, mock_setup_dependencies):
+    def test_setup_with_git_hooks_no_git_repo_warns(
+        self, runner, mock_setup_dependencies
+    ):
         """Test setup warns if no git repo detected."""
         # Configure mocks - no git repo detected
         mock_setup_dependencies["git_detect"].return_value = False
@@ -347,7 +366,9 @@ class TestSetupCommandGitHooksIntegration:
             mock_setup_dependencies["install_hooks"].assert_not_called()
             assert result.exit_code == 0
 
-    def test_setup_with_git_hooks_continues_on_failure(self, runner, mock_setup_dependencies):
+    def test_setup_with_git_hooks_continues_on_failure(
+        self, runner, mock_setup_dependencies
+    ):
         """Test setup continues if git hooks installation fails."""
         # Configure mocks - git hooks installation fails
         mock_setup_dependencies["git_detect"].return_value = True
@@ -368,7 +389,9 @@ class TestSetupCommandGitHooksIntegration:
         # Check that hooks were attempted but failed
         mock_setup_dependencies["install_hooks"].assert_called_once()
 
-    def test_setup_with_git_hooks_force_reinstall(self, runner, mock_setup_dependencies):
+    def test_setup_with_git_hooks_force_reinstall(
+        self, runner, mock_setup_dependencies
+    ):
         """Test setup --force passes force flag to git hooks."""
         # Configure mocks
         mock_setup_dependencies["git_detect"].return_value = True
@@ -403,10 +426,18 @@ class TestSetupDryRunWithGitHooks:
         with (
             patch("kuzu_memory.cli.setup_commands.find_project_root") as mock_root,
             patch("kuzu_memory.cli.setup_commands.get_project_db_path") as mock_db_path,
-            patch("kuzu_memory.cli.setup_commands.get_project_memories_dir") as mock_mem,
-            patch("kuzu_memory.cli.setup_commands._detect_installed_systems") as mock_detect,
-            patch("kuzu_memory.cli.setup_commands._detect_git_repository") as mock_git_detect,
-            patch("kuzu_memory.cli.setup_commands._install_git_hooks") as mock_install_hooks,
+            patch(
+                "kuzu_memory.cli.setup_commands.get_project_memories_dir"
+            ) as mock_mem,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_installed_systems"
+            ) as mock_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_git_repository"
+            ) as mock_git_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._install_git_hooks"
+            ) as mock_install_hooks,
             patch("kuzu_memory.cli.setup_commands.rich_panel"),
             patch("kuzu_memory.cli.setup_commands.rich_print") as mock_print,
         ):
@@ -450,16 +481,21 @@ class TestSetupDryRunWithGitHooks:
 
         # Assert preview message shown
         print_calls = [
-            str(call) for call in mock_setup_dry_run_dependencies["print"].call_args_list
+            str(call)
+            for call in mock_setup_dry_run_dependencies["print"].call_args_list
         ]
-        assert any("DRY RUN" in call or "dry run" in call.lower() for call in print_calls)
+        assert any(
+            "DRY RUN" in call or "dry run" in call.lower() for call in print_calls
+        )
         assert any("git hooks" in call.lower() for call in print_calls)
 
         # Assert no actual installation occurred
         mock_setup_dry_run_dependencies["install_hooks"].assert_not_called()
         assert result.exit_code == 0
 
-    def test_setup_dry_run_shows_git_hooks_preview(self, runner, mock_setup_dry_run_dependencies):
+    def test_setup_dry_run_shows_git_hooks_preview(
+        self, runner, mock_setup_dry_run_dependencies
+    ):
         """Test dry-run shows what git hooks would be installed."""
         mock_setup_dry_run_dependencies["git_detect"].return_value = True
         mock_setup_dry_run_dependencies["db"].exists.return_value = False
@@ -512,9 +548,15 @@ class TestSetupGitHooksEdgeCases:
         with (
             patch("kuzu_memory.cli.setup_commands.find_project_root") as mock_root,
             patch("kuzu_memory.cli.setup_commands.get_project_db_path") as mock_db_path,
-            patch("kuzu_memory.cli.setup_commands.get_project_memories_dir") as mock_mem,
-            patch("kuzu_memory.cli.setup_commands._detect_installed_systems") as mock_detect,
-            patch("kuzu_memory.cli.setup_commands._detect_git_repository") as mock_git_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands.get_project_memories_dir"
+            ) as mock_mem,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_installed_systems"
+            ) as mock_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_git_repository"
+            ) as mock_git_detect,
             patch("kuzu_memory.cli.setup_commands.rich_panel"),
             patch("kuzu_memory.cli.setup_commands.rich_print"),
         ):
@@ -548,9 +590,15 @@ class TestSetupGitHooksEdgeCases:
         with (
             patch("kuzu_memory.cli.setup_commands.find_project_root") as mock_root,
             patch("kuzu_memory.cli.setup_commands.get_project_db_path") as mock_db_path,
-            patch("kuzu_memory.cli.setup_commands.get_project_memories_dir") as mock_mem,
-            patch("kuzu_memory.cli.setup_commands._detect_installed_systems") as mock_detect,
-            patch("kuzu_memory.cli.setup_commands._detect_git_repository") as mock_git_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands.get_project_memories_dir"
+            ) as mock_mem,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_installed_systems"
+            ) as mock_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_git_repository"
+            ) as mock_git_detect,
             patch("kuzu_memory.cli.setup_commands._install_git_hooks") as mock_install,
             patch("kuzu_memory.cli.setup_commands.rich_panel") as mock_panel,
             patch("kuzu_memory.cli.setup_commands.rich_print"),
@@ -579,7 +627,10 @@ class TestSetupGitHooksEdgeCases:
             completion_message = panel_calls[-1] if panel_calls else ""
 
             # Should show installed status
-            assert "Git Hooks" in completion_message or "git hooks" in completion_message.lower()
+            assert (
+                "Git Hooks" in completion_message
+                or "git hooks" in completion_message.lower()
+            )
             assert result.exit_code == 0
 
     def test_setup_suggests_manual_git_hooks_when_not_installed(self, runner):
@@ -587,9 +638,15 @@ class TestSetupGitHooksEdgeCases:
         with (
             patch("kuzu_memory.cli.setup_commands.find_project_root") as mock_root,
             patch("kuzu_memory.cli.setup_commands.get_project_db_path") as mock_db_path,
-            patch("kuzu_memory.cli.setup_commands.get_project_memories_dir") as mock_mem,
-            patch("kuzu_memory.cli.setup_commands._detect_installed_systems") as mock_detect,
-            patch("kuzu_memory.cli.setup_commands._detect_git_repository") as mock_git_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands.get_project_memories_dir"
+            ) as mock_mem,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_installed_systems"
+            ) as mock_detect,
+            patch(
+                "kuzu_memory.cli.setup_commands._detect_git_repository"
+            ) as mock_git_detect,
             patch("kuzu_memory.cli.setup_commands.rich_panel") as mock_panel,
             patch("kuzu_memory.cli.setup_commands.rich_print"),
         ):

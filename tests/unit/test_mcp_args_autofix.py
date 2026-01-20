@@ -25,7 +25,9 @@ class TestMCPArgsAutoFixFunction:
     def test_fixes_broken_mcp_serve_args(self):
         """Test fixing broken ['mcp', 'serve'] args."""
         config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         fixed, fixes = fix_broken_mcp_args(config)
@@ -56,7 +58,9 @@ class TestMCPArgsAutoFixFunction:
 
     def test_preserves_correct_args(self):
         """Test that correct ['mcp'] args are not modified."""
-        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}}
+        config = {
+            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
+        }
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -116,7 +120,9 @@ class TestMCPArgsAutoFixFunction:
         fixed, fixes = fix_broken_mcp_args(config)
 
         assert len(fixes) == 1
-        assert fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert fixed["projects"]["/path/to/project"]["mcpServers"]["kuzu-memory"][
+            "args"
+        ] == ["mcp"]
 
     def test_handles_empty_config(self):
         """Test handling empty configuration."""
@@ -153,7 +159,9 @@ class TestCursorAutoFix:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(config_path, "w") as f:
@@ -268,7 +276,9 @@ class TestVSCodeAutoFix:
 
         # Create VS Code format with broken args
         broken_config = {
-            "servers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "servers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(config_path, "w") as f:
@@ -304,7 +314,9 @@ class TestWindsurfAutoFix:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(config_path, "w") as f:
@@ -339,7 +351,9 @@ class TestAuggieAutoFix:
 
         # Create broken config
         broken_config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}}
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            }
         }
 
         with open(config_path, "w") as f:
@@ -372,7 +386,9 @@ class TestEdgeCases:
 
     def test_single_arg_list(self):
         """Test handling single-element args list."""
-        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}}
+        config = {
+            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
+        }
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -390,7 +406,11 @@ class TestEdgeCases:
 
     def test_non_list_args(self):
         """Test handling non-list args value."""
-        config = {"mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": "not a list"}}}
+        config = {
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": "not a list"}
+            }
+        }
 
         fixed, fixes = fix_broken_mcp_args(config)
 
@@ -409,10 +429,14 @@ class TestEdgeCases:
     def test_nested_projects_with_mixed_configs(self):
         """Test fixing nested project configs with mix of broken and correct."""
         config = {
-            "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}},
+            "mcpServers": {
+                "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp", "serve"]}
+            },
             "projects": {
                 "/project1": {
-                    "mcpServers": {"kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}}
+                    "mcpServers": {
+                        "kuzu-memory": {"command": "kuzu-memory", "args": ["mcp"]}
+                    }
                 },
                 "/project2": {
                     "mcpServers": {
@@ -429,7 +453,9 @@ class TestEdgeCases:
 
         assert len(fixes) == 2  # Root and project2
         assert fixed["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
-        assert fixed["projects"]["/project1"]["mcpServers"]["kuzu-memory"]["args"] == ["mcp"]
+        assert fixed["projects"]["/project1"]["mcpServers"]["kuzu-memory"]["args"] == [
+            "mcp"
+        ]
         assert fixed["projects"]["/project2"]["mcpServers"]["kuzu-memory"]["args"] == [
             "mcp",
             "--debug",

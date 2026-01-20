@@ -110,8 +110,12 @@ class Memory(BaseModel):
     )
 
     # Core content
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique memory identifier")
-    content: str = Field(..., min_length=1, max_length=100_000, description="Memory content text")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique memory identifier"
+    )
+    content: str = Field(
+        ..., min_length=1, max_length=100_000, description="Memory content text"
+    )
     content_hash: str = Field(default="", description="SHA256 hash for deduplication")
 
     # Temporal information
@@ -121,25 +125,37 @@ class Memory(BaseModel):
     valid_from: datetime | None = Field(
         default_factory=datetime.now, description="When memory becomes valid"
     )
-    valid_to: datetime | None = Field(None, description="When memory expires (None = never)")
+    valid_to: datetime | None = Field(
+        None, description="When memory expires (None = never)"
+    )
     accessed_at: datetime | None = Field(
         default_factory=datetime.now, description="Last access time"
     )
     access_count: int = Field(default=0, ge=0, description="Number of times accessed")
 
     # Classification
-    memory_type: MemoryType = Field(default=MemoryType.EPISODIC, description="Type of memory")
-    importance: float = Field(default=0.5, ge=0.0, le=1.0, description="Importance score (0-1)")
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score (0-1)")
+    memory_type: MemoryType = Field(
+        default=MemoryType.EPISODIC, description="Type of memory"
+    )
+    importance: float = Field(
+        default=0.5, ge=0.0, le=1.0, description="Importance score (0-1)"
+    )
+    confidence: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Confidence score (0-1)"
+    )
 
     # Source tracking
     source_type: str = Field(default="conversation", description="Source of the memory")
-    agent_id: str = Field(default="default", description="Agent that created the memory")
+    agent_id: str = Field(
+        default="default", description="Agent that created the memory"
+    )
     user_id: str | None = Field(None, description="Associated user ID")
     session_id: str | None = Field(None, description="Associated session ID")
 
     # Metadata and relationships
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
     entities: list[str | dict[str, Any]] = Field(
         default_factory=list, description="Extracted entities"
     )
@@ -164,7 +180,9 @@ class Memory(BaseModel):
 
     @field_validator("entities")
     @classmethod
-    def validate_entities(cls, v: list[str | dict[str, Any]]) -> list[str | dict[str, Any]]:
+    def validate_entities(
+        cls, v: list[str | dict[str, Any]]
+    ) -> list[str | dict[str, Any]]:
         """Validate entity list."""
         if not isinstance(v, list):
             raise ValueError("Entities must be a list")
@@ -209,7 +227,9 @@ class Memory(BaseModel):
         if content and not values.get("content_hash"):
             # Normalize content for hashing (lowercase, stripped)
             normalized = content.lower().strip()
-            values["content_hash"] = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+            values["content_hash"] = hashlib.sha256(
+                normalized.encode("utf-8")
+            ).hexdigest()
 
         return values
 
@@ -311,14 +331,20 @@ class MemoryContext(BaseModel):
     # Core content
     original_prompt: str = Field(..., description="Original user prompt")
     enhanced_prompt: str = Field(..., description="Prompt enhanced with memory context")
-    memories: list[Memory] = Field(default_factory=list, description="Retrieved memories")
+    memories: list[Memory] = Field(
+        default_factory=list, description="Retrieved memories"
+    )
 
     # Metadata
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall confidence score")
+    confidence: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Overall confidence score"
+    )
     token_count: int = Field(
         default=0, ge=0, description="Estimated token count of enhanced prompt"
     )
-    strategy_used: str = Field(default="auto", description="Recall strategy that was used")
+    strategy_used: str = Field(
+        default="auto", description="Recall strategy that was used"
+    )
     recall_time_ms: float = Field(
         default=0.0, ge=0.0, description="Time taken for recall in milliseconds"
     )
@@ -327,7 +353,9 @@ class MemoryContext(BaseModel):
     total_memories_found: int = Field(
         default=0, ge=0, description="Total memories found before filtering"
     )
-    memories_filtered: int = Field(default=0, ge=0, description="Number of memories filtered out")
+    memories_filtered: int = Field(
+        default=0, ge=0, description="Number of memories filtered out"
+    )
 
     @field_validator("memories")
     @classmethod
@@ -413,11 +441,17 @@ class MemoryContext(BaseModel):
         # Count by type
         type_counts: dict[str, int] = {}
         for mem in self.memories:
-            type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
+            type_counts[mem.memory_type.value] = (
+                type_counts.get(mem.memory_type.value, 0) + 1
+            )
 
         # Calculate averages
-        avg_importance = sum(mem.importance for mem in self.memories) / len(self.memories)
-        avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
+        avg_importance = sum(mem.importance for mem in self.memories) / len(
+            self.memories
+        )
+        avg_confidence = sum(mem.confidence for mem in self.memories) / len(
+            self.memories
+        )
 
         # Collect unique entities
         all_entities: set[str] = set()
@@ -451,7 +485,9 @@ class ExtractedMemory(BaseModel):
     entities: list[str | dict[str, Any]] = Field(
         default_factory=list, description="Extracted entities"
     )
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Extraction metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Extraction metadata"
+    )
 
     @field_validator("content")
     @classmethod

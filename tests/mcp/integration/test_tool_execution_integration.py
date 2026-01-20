@@ -82,7 +82,9 @@ class TestToolExecution:
             await client.initialize()
 
             # Call recall tool
-            response = await client.call_tool("kuzu_recall", {"query": "test query", "limit": 5})
+            response = await client.call_tool(
+                "kuzu_recall", {"query": "test query", "limit": 5}
+            )
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -105,7 +107,9 @@ class TestToolExecution:
             await client.initialize()
 
             # Call remember tool
-            response = await client.call_tool("kuzu_remember", {"content": "Test memory"})
+            response = await client.call_tool(
+                "kuzu_remember", {"content": "Test memory"}
+            )
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -250,7 +254,9 @@ class TestToolDiscovery:
                 ]
 
                 for tool in expected_tools:
-                    assert tool in tool_names, f"Missing tool: {tool}, found: {tool_names}"
+                    assert (
+                        tool in tool_names
+                    ), f"Missing tool: {tool}, found: {tool_names}"
 
         finally:
             await client.disconnect()

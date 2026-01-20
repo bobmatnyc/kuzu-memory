@@ -101,7 +101,9 @@ class TestConnectionIntegration:
 
             # Process should have terminated
             if client.process:
-                assert client.process.poll() is not None, "Server did not shut down gracefully"
+                assert (
+                    client.process.poll() is not None
+                ), "Server did not shut down gracefully"
 
         finally:
             # Ensure cleanup
@@ -149,7 +151,9 @@ class TestConnectionIntegration:
                 await asyncio.sleep(0.2)  # Brief pause between cycles
 
         # At least 2 out of 3 should succeed (allowing for flakiness)
-        assert successful_cycles >= 2, f"Only {successful_cycles}/{num_cycles} succeeded"
+        assert (
+            successful_cycles >= 2
+        ), f"Only {successful_cycles}/{num_cycles} succeeded"
 
     async def test_connection_with_immediate_request(self, project_root):
         """Test sending request immediately after connection."""
@@ -180,7 +184,9 @@ class TestConnectionIntegration:
             for i in range(5):
                 response = await client.send_request("ping", {}, request_id=i + 1)
                 assert response is not None, f"Request {i + 1} failed"
-                assert response.get("id") == i + 1, f"Response ID mismatch for request {i + 1}"
+                assert (
+                    response.get("id") == i + 1
+                ), f"Response ID mismatch for request {i + 1}"
 
         finally:
             await client.disconnect()
@@ -289,7 +295,9 @@ class TestConnectionIntegration:
                 duration = time.time() - start
 
                 assert response is not None, f"Request failed with timeout={timeout}"
-                assert duration < timeout, f"Request exceeded timeout: {duration}s > {timeout}s"
+                assert (
+                    duration < timeout
+                ), f"Request exceeded timeout: {duration}s > {timeout}s"
 
             finally:
                 await client.disconnect()

@@ -36,6 +36,12 @@ def git() -> None:
     help="Only sync new commits since last sync",
 )
 @click.option(
+    "--max-commits",
+    type=int,
+    default=None,
+    help="Maximum number of commits to sync (for bounded iteration)",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     help="Preview what would be synced without storing",
@@ -55,6 +61,7 @@ def sync(
     ctx: click.Context,
     initial: bool,
     incremental: bool,
+    max_commits: int | None,
     dry_run: bool,
     quiet: bool,
     project_root: str | None,
@@ -71,7 +78,9 @@ def sync(
     try:
         # Convert project_root to Path if provided
         project_root_path = (
-            Path(project_root) if project_root else ctx.obj.get("project_root", Path.cwd())
+            Path(project_root)
+            if project_root
+            else ctx.obj.get("project_root", Path.cwd())
         )
         db_path = get_project_db_path(project_root_path)
         config_loader = get_config_loader()
@@ -115,11 +124,23 @@ def sync(
                     # Perform sync
                     if not quiet:
                         if dry_run:
-                            rich_print("[cyan]Dry run:[/cyan] Previewing commits to sync...")
+                            rich_print(
+                                "[cyan]Dry run:[/cyan] Previewing commits to sync..."
+                            )
                         else:
-                            rich_print(f"[cyan]Syncing git commits ({mode} mode)...[/cyan]")
+                            rich_print(
+                                f"[cyan]Syncing git commits ({mode} mode)...[/cyan]"
+                            )
 
-                    result = sync_manager.sync(mode=mode, dry_run=dry_run)
+                    # Use sync_incremental if incremental mode with max_commits
+                    if mode == "incremental" and max_commits is not None:
+                        result = sync_manager.sync_incremental(
+                            max_age_days=7,
+                            max_commits=max_commits,
+                            dry_run=dry_run,
+                        )
+                    else:
+                        result = sync_manager.sync(mode=mode, dry_run=dry_run)
 
                 if not result["success"]:
                     rich_print(
@@ -157,12 +178,12 @@ def sync(
 
                         # Show skipped count if any duplicates were found
                         if result.get("commits_skipped", 0) > 0:
-                            status_msg += (
-                                f"Commits skipped (duplicates): {result['commits_skipped']}\n"
-                            )
+                            status_msg += f"Commits skipped (duplicates): {result['commits_skipped']}\n"
 
                         if result.get("last_sync_timestamp"):
-                            status_msg += f"Last sync: {result['last_sync_timestamp']}\n"
+                            status_msg += (
+                                f"Last sync: {result['last_sync_timestamp']}\n"
+                            )
                         if result.get("last_commit_sha"):
                             status_msg += f"Last commit: {result['last_commit_sha']}\n"
 

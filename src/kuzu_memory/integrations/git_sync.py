@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -380,7 +380,10 @@ class GitSyncManager:
         return memory
 
     def get_significant_commits(
-        self, since: datetime | None = None, branch_name: str | None = None
+        self,
+        since: datetime | None = None,
+        branch_name: str | None = None,
+        max_commits: int | None = None,
     ) -> list[Any]:
         """
         Get significant commits from repository.
@@ -388,6 +391,7 @@ class GitSyncManager:
         Args:
             since: Only get commits after this timestamp
             branch_name: Specific branch to scan (default: all included branches)
+            max_commits: Maximum number of commits to return (for bounded iteration)
 
         Returns:
             List of significant git commit objects
@@ -402,7 +406,9 @@ class GitSyncManager:
 
             # Get branches to scan
             if branch_name:
-                branches = [b for b in self._repo.branches if str(b.name) == branch_name]
+                branches = [
+                    b for b in self._repo.branches if str(b.name) == branch_name
+                ]
             else:
                 branches = self._filter_branches(list(self._repo.branches))
 
@@ -413,16 +419,29 @@ class GitSyncManager:
 
             for branch in branches:
                 try:
+                    # Use bounded iteration to prevent blocking on large repos
+                    # If since is provided, use it to filter commits
+                    # If max_commits is provided, use it to limit iteration
+                    iter_params = {}
+                    if since:
+                        iter_params["since"] = since
+                    if max_commits:
+                        # Set max_count higher than max_commits to account for filtering
+                        iter_params["max_count"] = max_commits * 3
+
                     # Get commits from this branch (iter_commits returns newest first)
-                    # Reverse to process oldest first for stable chronological ordering
-                    commits = list(reversed(list(self._repo.iter_commits(branch))))
+                    # IMPORTANT: Only iterate what we need to avoid blocking
+                    commits_iter = self._repo.iter_commits(branch, **iter_params)
+
+                    # Collect commits into list (bounded by max_count)
+                    commits = list(reversed(list(commits_iter)))
 
                     for commit in commits:
                         # Skip if already processed
                         if commit.hexsha in seen_shas:
                             continue
 
-                        # Check timestamp filter
+                        # Check timestamp filter (redundant if since is in iter_params, but safe)
                         commit_time = commit.committed_datetime.replace(tzinfo=None)
                         if since and commit_time <= since:
                             continue
@@ -432,9 +451,20 @@ class GitSyncManager:
                             significant_commits.append(commit)
                             seen_shas.add(commit.hexsha)
 
+                        # Early exit if we've hit max_commits limit
+                        if max_commits and len(significant_commits) >= max_commits:
+                            logger.info(
+                                f"Reached max_commits limit ({max_commits}), stopping iteration"
+                            )
+                            break
+
                 except git.GitCommandError as e:
                     logger.warning(f"Error reading branch {branch.name}: {e}")
                     continue
+
+                # Early exit outer loop if we've hit max_commits
+                if max_commits and len(significant_commits) >= max_commits:
+                    break
 
             # Sort by timestamp (oldest first)
             significant_commits.sort(key=lambda c: c.committed_datetime)
@@ -504,18 +534,125 @@ class GitSyncManager:
                 # Store using batch_store_memories API (stores a list of Memory objects)
                 stored_ids = self.memory_store.batch_store_memories([memory])
                 if stored_ids:
-                    logger.debug(f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}")
+                    logger.debug(
+                        f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}"
+                    )
                     # Memory was stored, return it with the ID
                     memory.id = stored_ids[0]
                     return memory
                 else:
-                    logger.warning(f"No ID returned when storing commit {commit.hexsha[:8]}")
+                    logger.warning(
+                        f"No ID returned when storing commit {commit.hexsha[:8]}"
+                    )
                     return None
             except Exception as e:
                 logger.error(f"Failed to store memory: {e}")
                 raise GitSyncError(f"Failed to store memory: {e}")
 
         return memory
+
+    def sync_incremental(
+        self, max_age_days: int = 7, max_commits: int = 100, dry_run: bool = False
+    ) -> dict[str, Any]:
+        """
+        Perform smart incremental sync with bounded iteration.
+
+        Only syncs commits since last sync OR last N days, whichever is fewer commits.
+        Uses bounded iteration to prevent blocking on large repositories.
+
+        Args:
+            max_age_days: Maximum age of commits to sync (default: 7 days)
+            max_commits: Maximum number of commits to sync (default: 100)
+            dry_run: If True, don't actually store memories
+
+        Returns:
+            Sync statistics dictionary
+        """
+        if not self.is_available():
+            return {
+                "success": False,
+                "error": "Git sync not available",
+                "commits_synced": 0,
+            }
+
+        # Determine sync window: since last sync OR max_age_days, whichever is more recent
+        since = None
+        if self.config.last_sync_timestamp:
+            last_sync = datetime.fromisoformat(self.config.last_sync_timestamp).replace(
+                tzinfo=None
+            )
+            max_age_cutoff = datetime.now() - timedelta(days=max_age_days)
+
+            # Use the more recent of the two (smaller time window)
+            since = max(last_sync, max_age_cutoff)
+            logger.info(
+                f"Incremental sync since {since} (last_sync or {max_age_days} days)"
+            )
+        else:
+            # No previous sync, use max_age_days
+            since = datetime.now() - timedelta(days=max_age_days)
+            logger.info(f"No previous sync, syncing last {max_age_days} days")
+
+        # Get significant commits with bounded iteration
+        commits = self.get_significant_commits(since=since, max_commits=max_commits)
+
+        if dry_run:
+            return {
+                "success": True,
+                "dry_run": True,
+                "commits_found": len(commits),
+                "commits_synced": 0,
+                "since": since.isoformat() if since else None,
+                "commits": [
+                    {
+                        "sha": c.hexsha[:8],
+                        "message": c.message.strip()[:80],
+                        "timestamp": c.committed_datetime.isoformat(),
+                    }
+                    for c in commits[:10]  # Preview first 10
+                ],
+            }
+
+        # Store commits as memories
+        synced_count = 0
+        skipped_count = 0
+        last_commit_sha = None
+        last_timestamp = None
+
+        for commit in commits:
+            try:
+                result = self.store_commit_as_memory(commit)
+                if result is not None:
+                    synced_count += 1
+                else:
+                    skipped_count += 1
+
+                # Always track last processed commit, even if duplicate
+                last_commit_sha = commit.hexsha
+                last_timestamp = commit.committed_datetime
+
+            except Exception as e:
+                logger.error(f"Failed to sync commit {commit.hexsha[:8]}: {e}")
+                # Continue with other commits
+
+        # Update sync state
+        if last_timestamp:
+            self.config.last_sync_timestamp = last_timestamp.isoformat()
+            if last_commit_sha:
+                self.config.last_commit_sha = last_commit_sha
+
+        return {
+            "success": True,
+            "mode": "incremental",
+            "commits_found": len(commits),
+            "commits_synced": synced_count,
+            "commits_skipped": skipped_count,
+            "since": since.isoformat() if since else None,
+            "last_sync_timestamp": self.config.last_sync_timestamp,
+            "last_commit_sha": (
+                self.config.last_commit_sha[:8] if self.config.last_commit_sha else None
+            ),
+        }
 
     def sync(self, mode: str = "auto", dry_run: bool = False) -> dict[str, Any]:
         """
@@ -537,9 +674,15 @@ class GitSyncManager:
 
         # Determine sync timestamp
         since = None
-        if mode == "incremental" or (mode == "auto" and self.config.last_sync_timestamp):
+        max_commits = None
+
+        if mode == "incremental" or (
+            mode == "auto" and self.config.last_sync_timestamp
+        ):
             if self.config.last_sync_timestamp:
-                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(tzinfo=None)
+                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(
+                    tzinfo=None
+                )
                 logger.info(f"Incremental sync since {since}")
             else:
                 logger.info("No previous sync, performing initial sync")
@@ -547,7 +690,7 @@ class GitSyncManager:
             logger.info("Performing initial/full sync")
 
         # Get significant commits
-        commits = self.get_significant_commits(since=since)
+        commits = self.get_significant_commits(since=since, max_commits=max_commits)
 
         if dry_run:
             return {

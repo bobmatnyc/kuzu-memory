@@ -103,7 +103,9 @@ class TestCognitiveTypesMigration:
 
         # Check migration
         assert memory.memory_type == MemoryType.EPISODIC
-        assert memory.importance == MemoryType.get_default_importance(MemoryType.EPISODIC)
+        assert memory.importance == MemoryType.get_default_importance(
+            MemoryType.EPISODIC
+        )
 
     def test_migrate_memory_updates_retention(self, migration):
         """Test that migration updates retention periods."""

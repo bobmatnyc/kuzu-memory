@@ -16,7 +16,11 @@ import pytest
 @pytest.fixture
 def installer_script():
     """Get path to installer script."""
-    return Path(__file__).parent.parent.parent / "scripts" / "install-claude-desktop-home.py"
+    return (
+        Path(__file__).parent.parent.parent
+        / "scripts"
+        / "install-claude-desktop-home.py"
+    )
 
 
 @pytest.fixture
@@ -345,7 +349,9 @@ class TestHomeInstallerIntegration:
         assert "Would" in output or "dry run" in output.lower()
 
         # Should mention key components
-        assert any(keyword in output.lower() for keyword in ["launcher", "config", "directory"])
+        assert any(
+            keyword in output.lower() for keyword in ["launcher", "config", "directory"]
+        )
 
     def test_uninstall_nonexistent(self, installer_script):
         """Test uninstalling when nothing is installed."""

@@ -387,11 +387,15 @@ class TestActivityAwareIntegrationScenarios:
         ]
 
         # Calculate scores without activity-aware (old behavior)
-        scores_absolute = [engine.calculate_temporal_score(m, current_time) for m in memories]
+        scores_absolute = [
+            engine.calculate_temporal_score(m, current_time) for m in memories
+        ]
 
         # Calculate scores with activity-aware (new behavior)
         scores_aware = [
-            engine.calculate_temporal_score(m, current_time, project_last_activity=last_activity)
+            engine.calculate_temporal_score(
+                m, current_time, project_last_activity=last_activity
+            )
             for m in memories
         ]
 

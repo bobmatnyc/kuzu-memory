@@ -52,7 +52,9 @@ class TestCompleteWorkflows:
             "retention": {"enable_auto_cleanup": True, "max_total_memories": 10000},
         }
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_complete_user_onboarding_workflow(self, temp_db_path, e2e_config):
         """Test complete user onboarding and profile building workflow."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -122,7 +124,9 @@ class TestCompleteWorkflows:
             ]
 
             for query in profile_queries:
-                context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=5)
+                context = memory.attach_memories(
+                    prompt=query, user_id=user_id, max_memories=5
+                )
 
                 # Should find relevant memories
                 assert len(context.memories) > 0
@@ -135,16 +139,23 @@ class TestCompleteWorkflows:
                 elif "language" in query.lower():
                     assert "python" in enhanced_lower or "react" in enhanced_lower
                 elif "project" in query.lower():
-                    assert "customeranalytics" in enhanced_lower or "microservice" in enhanced_lower
+                    assert (
+                        "customeranalytics" in enhanced_lower
+                        or "microservice" in enhanced_lower
+                    )
 
             # Step 5: Verify memory persistence
             (len(profile_memory_ids) + len(project_memory_ids) + len(work_memory_ids))
             stats = memory.get_statistics()
 
             assert stats["performance_stats"]["generate_memories_calls"] >= 3
-            assert stats["performance_stats"]["attach_memories_calls"] >= len(profile_queries)
+            assert stats["performance_stats"]["attach_memories_calls"] >= len(
+                profile_queries
+            )
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_collaborative_project_workflow(self, temp_db_path, e2e_config):
         """Test collaborative project workflow with multiple users."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -204,7 +215,9 @@ class TestCompleteWorkflows:
             ]
 
             for user_id, query in team_queries:
-                context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=8)
+                context = memory.attach_memories(
+                    prompt=query, user_id=user_id, max_memories=8
+                )
 
                 # Should find relevant cross-team information
                 assert len(context.memories) > 0
@@ -212,15 +225,22 @@ class TestCompleteWorkflows:
                 # Verify cross-team knowledge
                 enhanced_lower = context.enhanced_prompt.lower()
                 if "team members" in query.lower():
-                    assert any(name in enhanced_lower for name in ["sarah", "mike", "lisa"])
+                    assert any(
+                        name in enhanced_lower for name in ["sarah", "mike", "lisa"]
+                    )
                 elif "backend" in query.lower():
                     assert any(
-                        tech in enhanced_lower for tech in ["fastapi", "postgresql", "kafka"]
+                        tech in enhanced_lower
+                        for tech in ["fastapi", "postgresql", "kafka"]
                     )
                 elif "frontend" in query.lower():
-                    assert any(tech in enhanced_lower for tech in ["react", "typescript"])
+                    assert any(
+                        tech in enhanced_lower for tech in ["react", "typescript"]
+                    )
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_memory_evolution_and_updates_workflow(self, temp_db_path, e2e_config):
         """Test workflow with memory updates, corrections, and evolution."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -282,7 +302,9 @@ class TestCompleteWorkflows:
             ]
 
             for query in evolution_queries:
-                context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=6)
+                context = memory.attach_memories(
+                    prompt=query, user_id=user_id, max_memories=6
+                )
 
                 assert len(context.memories) > 0
                 enhanced_lower = context.enhanced_prompt.lower()
@@ -296,9 +318,13 @@ class TestCompleteWorkflows:
                 elif "database" in query.lower():
                     assert "mongodb" in enhanced_lower
                 elif "languages" in query.lower():
-                    assert any(lang in enhanced_lower for lang in ["go", "rust", "python"])
+                    assert any(
+                        lang in enhanced_lower for lang in ["go", "rust", "python"]
+                    )
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_performance_under_load_workflow(self, temp_db_path, e2e_config):
         """Test system performance under realistic load."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -348,7 +374,9 @@ class TestCompleteWorkflows:
             for i, query in enumerate(performance_queries):
                 # Test recall performance
                 start_time = time.time()
-                context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=5)
+                context = memory.attach_memories(
+                    prompt=query, user_id=user_id, max_memories=5
+                )
                 recall_time = (time.time() - start_time) * 1000
                 recall_times.append(recall_time)
 
@@ -356,7 +384,9 @@ class TestCompleteWorkflows:
                 assert context.recall_time_ms > 0
 
                 # Test generation performance
-                new_content = f"Additional insight {i}: {query} - This is new information."
+                new_content = (
+                    f"Additional insight {i}: {query} - This is new information."
+                )
                 start_time = time.time()
                 memory_ids = memory.generate_memories(
                     content=new_content, user_id=user_id, source="performance_test"
@@ -378,16 +408,22 @@ class TestCompleteWorkflows:
             print(f"Max generation time: {max_generation_time:.2f}ms")
 
             # Performance assertions (relaxed for E2E)
-            assert avg_recall_time < 50.0, f"Average recall time too high: {avg_recall_time:.2f}ms"
-            assert avg_generation_time < 100.0, (
-                f"Average generation time too high: {avg_generation_time:.2f}ms"
-            )
-            assert max_recall_time < 200.0, f"Max recall time too high: {max_recall_time:.2f}ms"
-            assert max_generation_time < 400.0, (
-                f"Max generation time too high: {max_generation_time:.2f}ms"
-            )
+            assert (
+                avg_recall_time < 50.0
+            ), f"Average recall time too high: {avg_recall_time:.2f}ms"
+            assert (
+                avg_generation_time < 100.0
+            ), f"Average generation time too high: {avg_generation_time:.2f}ms"
+            assert (
+                max_recall_time < 200.0
+            ), f"Max recall time too high: {max_recall_time:.2f}ms"
+            assert (
+                max_generation_time < 400.0
+            ), f"Max generation time too high: {max_generation_time:.2f}ms"
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_data_persistence_and_recovery_workflow(self, temp_db_path, e2e_config):
         """Test data persistence and recovery across sessions."""
         user_id = "persistence-user"
@@ -419,7 +455,9 @@ class TestCompleteWorkflows:
         # Session 2: Add more data and verify persistence
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory2:
             # Verify previous data is still accessible
-            context = memory2.attach_memories("What's my name and profession?", user_id=user_id)
+            context = memory2.attach_memories(
+                "What's my name and profession?", user_id=user_id
+            )
 
             assert len(context.memories) > 0
             assert "emma watson" in context.enhanced_prompt.lower()
@@ -448,7 +486,9 @@ class TestCompleteWorkflows:
             ]
 
             for query in comprehensive_queries:
-                context = memory3.attach_memories(prompt=query, user_id=user_id, max_memories=8)
+                context = memory3.attach_memories(
+                    prompt=query, user_id=user_id, max_memories=8
+                )
 
                 assert len(context.memories) > 0
                 assert context.confidence > 0.3
@@ -457,7 +497,9 @@ class TestCompleteWorkflows:
             stats = memory3.get_statistics()
             assert stats["performance_stats"]["generate_memories_calls"] >= 2
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_multi_strategy_recall_workflow(self, temp_db_path, e2e_config):
         """Test workflow using different recall strategies."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -526,7 +568,9 @@ class TestCompleteWorkflows:
             # Should have some variation in results
             assert len(set(memory_counts)) > 1 or len(set(confidences)) > 1
 
-    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    @pytest.mark.skip(
+        reason="Entity extraction patterns need tuning for test content alignment"
+    )
     def test_error_recovery_workflow(self, temp_db_path, e2e_config):
         """Test error handling and recovery in realistic scenarios."""
         with KuzuMemory(db_path=temp_db_path, config=e2e_config) as memory:
@@ -547,13 +591,19 @@ class TestCompleteWorkflows:
 
             # 3. Very long content handling
             very_long_content = "This is a very long memory. " * 1000
-            long_memory_ids = memory.generate_memories(very_long_content, user_id=user_id)
+            long_memory_ids = memory.generate_memories(
+                very_long_content, user_id=user_id
+            )
             # Should handle gracefully (may truncate or process in chunks)
             assert isinstance(long_memory_ids, list)
 
             # 4. Special characters and encoding
-            special_content = "I work with UTF-8: café, naïve, résumé, 中文, 日本語, العربية"
-            special_memory_ids = memory.generate_memories(special_content, user_id=user_id)
+            special_content = (
+                "I work with UTF-8: café, naïve, résumé, 中文, 日本語, العربية"
+            )
+            special_memory_ids = memory.generate_memories(
+                special_content, user_id=user_id
+            )
             assert len(special_memory_ids) >= 0  # Should not crash
 
             # 5. Malformed input recovery
@@ -565,7 +615,9 @@ class TestCompleteWorkflows:
 
             for malformed_content in malformed_inputs:
                 try:
-                    memory_ids = memory.generate_memories(malformed_content, user_id=user_id)
+                    memory_ids = memory.generate_memories(
+                        malformed_content, user_id=user_id
+                    )
                     assert isinstance(memory_ids, list)
                 except Exception as e:
                     # Should be a handled exception, not a crash
@@ -573,7 +625,9 @@ class TestCompleteWorkflows:
 
             # 6. System should remain functional after errors
             normal_content = "After handling errors, the system should work normally."
-            normal_memory_ids = memory.generate_memories(normal_content, user_id=user_id)
+            normal_memory_ids = memory.generate_memories(
+                normal_content, user_id=user_id
+            )
             assert len(normal_memory_ids) > 0
 
             context = memory.attach_memories("Is the system working?", user_id=user_id)
