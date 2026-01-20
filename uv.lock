@@ -863,7 +863,7 @@ wheels = [
 
 [[package]]
 name = "kuzu-memory"
-version = "1.6.25"
+version = "1.6.27"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
