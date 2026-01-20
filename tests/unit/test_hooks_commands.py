@@ -1,13 +1,14 @@
 """
-Unit tests for hooks commands, specifically testing CR character normalization.
+Unit tests for hooks commands.
 
-Tests the find_last_assistant_message() function to ensure carriage return
-characters from transcript files don't leak into the REPL (Fix #12).
+Tests CR character normalization (Fix #12) and async/sync learn modes (Fix #15).
 """
 
 import json
+import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -153,7 +154,12 @@ class TestFindLastAssistantMessage:
 
         # Create multiple messages, last one should be returned
         messages = [
-            {"message": {"role": "user", "content": [{"type": "text", "text": "User message"}]}},
+            {
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "User message"}],
+                }
+            },
             {
                 "message": {
                     "role": "assistant",
@@ -202,8 +208,18 @@ class TestFindLastAssistantMessage:
 
         # Only user messages
         messages = [
-            {"message": {"role": "user", "content": [{"type": "text", "text": "User message 1"}]}},
-            {"message": {"role": "user", "content": [{"type": "text", "text": "User message 2"}]}},
+            {
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "User message 1"}],
+                }
+            },
+            {
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "User message 2"}],
+                }
+            },
         ]
 
         with open(transcript_file, "w", encoding="utf-8") as f:
@@ -240,3 +256,46 @@ class TestFindLastAssistantMessage:
         assert result is not None
         assert "\r" not in result
         assert result == "Valid message\nwith CR"
+
+
+class TestHooksLearnAsync:
+    """Test cases for async/sync learn modes (Fix #15)."""
+
+    def test_kuzu_memory_auto_sync_parameter(self, tmp_path: Path):
+        """Test that KuzuMemory accepts auto_sync parameter (Fix #15)."""
+        # This is a direct test of the KuzuMemory class to verify
+        # the auto_sync parameter is accepted and stored correctly.
+        from kuzu_memory.core.memory import KuzuMemory
+
+        db_path = tmp_path / "test.db"
+
+        # Test with auto_sync=False (used in hooks for faster startup)
+        memory = KuzuMemory(db_path=db_path, auto_sync=False, enable_git_sync=False)
+
+        # Verify the attribute is set correctly
+        assert hasattr(memory, "_auto_sync")
+        assert memory._auto_sync is False
+
+        memory.close()
+
+        # Test with auto_sync=True (default behavior)
+        memory = KuzuMemory(db_path=db_path, auto_sync=True, enable_git_sync=False)
+
+        assert hasattr(memory, "_auto_sync")
+        assert memory._auto_sync is True
+
+        memory.close()
+
+    def test_hooks_learn_has_sync_flag(self):
+        """Test that hooks learn command has --sync flag option."""
+        # Verify the command structure includes the --sync flag
+        from click.testing import CliRunner
+
+        from kuzu_memory.cli.hooks_commands import hooks_group
+
+        runner = CliRunner()
+        result = runner.invoke(hooks_group, ["learn", "--help"])
+
+        # Should show the --sync option in help
+        assert "--sync" in result.output
+        assert "Run synchronously" in result.output or "blocking" in result.output

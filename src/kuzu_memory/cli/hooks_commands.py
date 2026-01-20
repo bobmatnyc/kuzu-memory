@@ -6,8 +6,10 @@ Provides unified hooks installation commands for Claude Code and Auggie.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -272,7 +274,9 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
                     sys.exit(1)
                 project_root = found_root
             except Exception:
-                console.print("[red]❌ Could not find project root. Use --project to specify.[/red]")
+                console.print(
+                    "[red]❌ Could not find project root. Use --project to specify.[/red]"
+                )
                 sys.exit(1)
 
         # Check if installer exists
@@ -460,8 +464,8 @@ def hooks_enhance() -> None:
                 logger.info("Project not initialized, skipping enhancement")
                 _exit_hook_with_json()
 
-            # Initialize memory and enhance prompt
-            memory = KuzuMemory(db_path=db_path)
+            # Initialize memory with auto_sync=False for faster hook execution
+            memory = KuzuMemory(db_path=db_path, auto_sync=False)
 
             # Get relevant memories using attach_memories API
             memory_context = memory.attach_memories(prompt, max_memories=5)
@@ -548,8 +552,8 @@ def hooks_session_start() -> None:
                 logger.info("Project not initialized, skipping session start")
                 _exit_hook_with_json()
 
-            # Store session start memory
-            memory = KuzuMemory(db_path=db_path)
+            # Store session start memory with auto_sync=False for faster hook execution
+            memory = KuzuMemory(db_path=db_path, auto_sync=False)
 
             # Type narrowing: we've already checked project_root is not None
             assert project_root is not None
@@ -582,23 +586,19 @@ def hooks_session_start() -> None:
 
 
 @hooks_group.command(name="learn")
-def hooks_learn() -> None:
+@click.option("--sync", "sync_mode", is_flag=True, help="Run synchronously (blocking)")
+def hooks_learn(sync_mode: bool) -> None:
     """
     Learn from conversations (for Claude Code hooks).
 
-    Reads JSON from stdin per Claude Code hooks API, extracts the last assistant
-    message from the transcript, and stores it as a memory.
+    By default, runs asynchronously (fire-and-forget) for fast hook execution.
+    Use --sync to run synchronously (blocking) for debugging.
 
     This command is designed to be called by Claude Code hooks, not directly by users.
     """
-    import hashlib
     import logging
     import os
-    import time
     from pathlib import Path
-
-    from ..core.memory import KuzuMemory
-    from ..utils.project_setup import find_project_root, get_project_db_path
 
     # Configure minimal logging for hook execution
     log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
@@ -611,6 +611,68 @@ def hooks_learn() -> None:
         force=True,  # Override existing handlers (Python 3.8+)
     )
     logger = logging.getLogger(__name__)
+
+    # If --sync flag is used, run in synchronous mode
+    if sync_mode:
+        _learn_sync(logger, log_dir)
+    else:
+        # Default: Async fire-and-forget mode
+        _learn_async(logger)
+
+
+def _learn_async(logger: Any) -> None:
+    """
+    Fire-and-forget async learn using subprocess.
+
+    Spawns a detached subprocess to process the learning task
+    and returns immediately with success status.
+    """
+    import subprocess
+
+    try:
+        # Read stdin to get the input data
+        input_data = json.load(sys.stdin)
+
+        # Serialize input data to pass to subprocess
+        input_json = json.dumps(input_data)
+
+        # Build command to call ourselves with --sync flag
+        cmd = [sys.executable, "-m", "kuzu_memory.cli", "hooks", "learn", "--sync"]
+
+        # Fire and forget - spawn detached subprocess
+        process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # Detach from parent
+        )
+
+        # Send input data to subprocess and close stdin
+        if process.stdin:
+            process.stdin.write(input_json.encode("utf-8"))
+            process.stdin.close()
+
+        logger.info("Learning task queued asynchronously")
+
+        # Return immediately with queued status
+        _exit_hook_with_json()
+
+    except Exception as e:
+        logger.error(f"Error in async learn: {e}")
+        _exit_hook_with_json()
+
+
+def _learn_sync(logger: Any, log_dir: Path) -> None:
+    """
+    Synchronous learn - blocking operation that processes the memory immediately.
+
+    This is called by the async mode subprocess or when --sync flag is used.
+    """
+    from pathlib import Path
+
+    from ..core.memory import KuzuMemory
+    from ..utils.project_setup import find_project_root, get_project_db_path
 
     # Deduplication cache
     cache_file = log_dir / ".kuzu_learn_cache.json"
@@ -654,7 +716,7 @@ def hooks_learn() -> None:
             return False
 
     try:
-        logger.info("=== hooks learn called ===")
+        logger.info("=== hooks learn (sync mode) called ===")
 
         # Read JSON from stdin (Claude Code hooks API)
         try:
@@ -711,7 +773,7 @@ def hooks_learn() -> None:
             logger.info("Skipping duplicate memory")
             _exit_hook_with_json()
 
-        # Store the memory
+        # Store the memory with auto_sync=False to skip init sync
         try:
             project_root = find_project_root()
             if project_root is None:
@@ -724,7 +786,8 @@ def hooks_learn() -> None:
                 logger.info("Project not initialized, skipping learning")
                 _exit_hook_with_json()
 
-            memory = KuzuMemory(db_path=db_path)
+            # Disable auto-sync on init for faster startup
+            memory = KuzuMemory(db_path=db_path, auto_sync=False)
 
             memory.remember(
                 content=assistant_text,

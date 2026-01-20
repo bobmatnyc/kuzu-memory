@@ -157,6 +157,7 @@ class KuzuMemory:
     project_root: Path
     _user_id: str | None
     _enable_git_sync: bool
+    _auto_sync: bool
     _initialized_at: datetime
     _performance_stats: dict[str, Any]
 
@@ -166,6 +167,7 @@ class KuzuMemory:
         config: dict[str, Any] | KuzuMemoryConfig | None = None,
         container: DependencyContainer | None = None,
         enable_git_sync: bool = True,
+        auto_sync: bool = True,
     ) -> None:
         """
         Initialize KuzuMemory.
@@ -176,6 +178,8 @@ class KuzuMemory:
             container: Optional dependency container for testing/customization
             enable_git_sync: Enable git sync initialization (default: True).
                             Set to False for read-only operations to improve performance.
+            auto_sync: Enable automatic git sync on init (default: True).
+                      Set to False to skip initial sync for faster startup (e.g., hooks).
 
         Raises:
             ConfigurationError: If configuration is invalid
@@ -208,8 +212,9 @@ class KuzuMemory:
             # Set up dependency container
             self.container = container or get_container()
 
-            # Store git sync preference
+            # Store git sync preferences
             self._enable_git_sync = enable_git_sync
+            self._auto_sync = auto_sync
 
             # Initialize components
             self._initialize_components()
@@ -279,8 +284,11 @@ class KuzuMemory:
             # Initialize git sync components only if enabled
             if self._enable_git_sync:
                 self._initialize_git_sync()
-                # Run initial auto-sync if enabled (periodic check)
-                self._auto_git_sync("init")
+                # Run initial auto-sync only if auto_sync is enabled
+                if self._auto_sync:
+                    self._auto_git_sync("init")
+                else:
+                    logger.debug("Auto-sync on init disabled for faster startup")
             else:
                 # Set auto_git_sync to None when disabled
                 self.auto_git_sync = None
