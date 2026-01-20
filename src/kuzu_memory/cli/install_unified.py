@@ -209,7 +209,8 @@ def install_command(
             root = Path(project_root).resolve()
         else:
             try:
-                root = find_project_root()
+                found_root = find_project_root()
+                root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 root = Path.cwd()
 
@@ -352,7 +353,8 @@ def uninstall_command(
             root = Path(project_root).resolve()
         else:
             try:
-                root = find_project_root()
+                found_root = find_project_root()
+                root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 root = Path.cwd()
 
@@ -381,7 +383,8 @@ def uninstall_command(
             sys.exit(0)
 
         # Perform uninstallation
-        result = installer.uninstall(verbose=verbose)
+        # Note: verbose flag is handled by the installer internally
+        result = installer.uninstall()
 
         # Show results
         if result.success:
@@ -451,7 +454,8 @@ def repair_command(
             root = Path(project_root).resolve()
         else:
             try:
-                root = find_project_root()
+                found_root = find_project_root()
+                root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 root = Path.cwd()
 

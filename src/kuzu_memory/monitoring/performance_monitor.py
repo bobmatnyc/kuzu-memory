@@ -230,7 +230,7 @@ class PerformanceMonitor(IPerformanceMonitor):
         cutoff_time = datetime.now() - period
         metrics = await self.get_metrics(start_time=cutoff_time)
 
-        summary = {
+        summary: dict[str, Any] = {
             "period_hours": period.total_seconds() / 3600,
             "metrics": {},
             "system_health": {},

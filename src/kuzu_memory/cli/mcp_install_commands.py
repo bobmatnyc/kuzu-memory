@@ -79,7 +79,8 @@ def mcp_status(
             project_root = Path(project)
         else:
             try:
-                project_root = find_project_root()
+                found_root = find_project_root()
+                project_root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 project_root = Path.cwd()
 
@@ -183,7 +184,8 @@ def install_mcp(
             project_root = Path(project)
         else:
             try:
-                project_root = find_project_root()
+                found_root = find_project_root()
+                project_root = found_root if found_root is not None else Path.cwd()
             except Exception:
                 project_root = Path.cwd()
 

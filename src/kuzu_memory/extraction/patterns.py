@@ -550,8 +550,8 @@ class PatternExtractor:
         if not memories:
             return []
 
-        unique_memories = []
-        seen_content = {}  # Map from normalized content to memory index
+        unique_memories: list[ExtractedMemory] = []
+        seen_content: dict[str, int] = {}  # Map from normalized content to memory index
 
         for _i, memory in enumerate(memories):
             # Normalize content for comparison
@@ -732,7 +732,7 @@ class PatternExtractor:
                 self._extraction_stats["memory_types_extracted"].get(memory_type, 0) + 1
             )
 
-    def get_pattern_statistics(self) -> dict[str, any]:
+    def get_pattern_statistics(self) -> dict[str, Any]:
         """Get pattern extraction statistics."""
         total_patterns = sum(len(group) for group, _ in self.compiled_patterns)
 
@@ -751,7 +751,7 @@ class PatternExtractor:
             )[:10],
         }
 
-    def test_pattern(self, pattern: str, test_text: str) -> list[dict[str, any]]:
+    def test_pattern(self, pattern: str, test_text: str) -> list[dict[str, Any]]:
         """
         Test a specific pattern against text (useful for debugging).
 

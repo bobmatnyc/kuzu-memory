@@ -70,7 +70,7 @@ class GitSyncManager:
 
             # Check if path is a git repository
             try:
-                self._repo = git.Repo(  # type: ignore[assignment]  # GitPython stubs incomplete for Repo type
+                self._repo = git.Repo(  # GitPython stubs incomplete for Repo type
                     self.repo_path, search_parent_directories=True
                 )
                 return True
@@ -357,6 +357,8 @@ class GitSyncManager:
             memory_type=MemoryType.EPISODIC,
             source_type="git_sync",
             user_id=user_id,  # Tag with commit author/committer
+            session_id=None,
+            valid_to=None,
             metadata={
                 "commit_sha": commit.hexsha,
                 "commit_author": f"{commit.author.name} <{commit.author.email}>",
@@ -422,7 +424,7 @@ class GitSyncManager:
                     # Use bounded iteration to prevent blocking on large repos
                     # If since is provided, use it to filter commits
                     # If max_commits is provided, use it to limit iteration
-                    iter_params = {}
+                    iter_params: dict[str, Any] = {}
                     if since:
                         iter_params["since"] = since
                     if max_commits:

@@ -276,9 +276,6 @@ class QueryBuilder:
                     extraction_method = entity.get(
                         "extraction_method", DEFAULT_EXTRACTION_METHOD
                     )
-                else:
-                    logger.warning(f"Skipping invalid entity format: {type(entity)}")
-                    continue
 
                 if not entity_name:
                     logger.warning("Skipping entity with empty name")
@@ -378,7 +375,7 @@ class QueryBuilder:
 
             # Add expiration filter
             conditions.append("(m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))")
-            params["now"] = datetime.now().isoformat()  # type: ignore[assignment]  # Kuzu accepts ISO string for timestamps
+            params["now"] = datetime.now().isoformat()  # Kuzu accepts ISO string for timestamps
 
             # Construct query
             where_clause = " AND ".join(conditions) if conditions else "1=1"

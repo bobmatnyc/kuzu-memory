@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Try importing from py-mcp-installer package
 try:
-    from py_mcp_installer import (
+    from py_mcp_installer import (  # type: ignore[import-not-found]
         DiagnosticReport,
         InspectionReport,
         InstallMethod,

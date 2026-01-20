@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from ..core.config import KuzuMemoryConfig
 from .exceptions import ConfigurationError

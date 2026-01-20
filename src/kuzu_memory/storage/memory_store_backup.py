@@ -8,7 +8,7 @@ robust error handling and performance optimization.
 import hashlib
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from ..core.config import KuzuMemoryConfig
 from ..core.models import ExtractedMemory, Memory
@@ -211,14 +211,14 @@ class MemoryStore:
             return []
 
     def _enhance_memories_with_entities(
-        self, memories: list[ExtractedMemory], entities: list[str]
+        self, memories: list[ExtractedMemory], entities: list[Entity]
     ) -> None:
         """Enhance extracted memories with relevant entities."""
         if not entities:
             return
 
         # Create a map of entity positions
-        entity_map = {}
+        entity_map: dict[int, Entity] = {}
         for entity in entities:
             for pos in range(entity.start_pos, entity.end_pos + 1):
                 entity_map[pos] = entity
@@ -504,8 +504,6 @@ class MemoryStore:
                     if not isinstance(entity_name, str):
                         continue  # Skip malformed entity
                     normalized_name = entity_name.lower().strip()
-                else:
-                    continue  # Skip unknown entity type
 
                 # Check if entity exists
                 check_query = (
@@ -610,7 +608,7 @@ class MemoryStore:
                 if self.cache:
                     self.cache.clear_all()
 
-            return cleaned_count
+            return int(cleaned_count)
 
         except Exception as e:
             logger.error(f"Failed to cleanup expired memories: {e}")
@@ -628,7 +626,7 @@ class MemoryStore:
             List of recent memories
         """
         try:
-            return self.db_adapter.get_recent_memories(limit=limit, **filters)
+            return cast(list[Memory], self.db_adapter.get_recent_memories(limit=limit, **filters))
         except Exception as e:
             logger.error(f"Failed to get recent memories: {e}")
             return []
@@ -644,7 +642,7 @@ class MemoryStore:
             Memory object or None if not found
         """
         try:
-            return self.db_adapter.get_memory_by_id(memory_id)
+            return cast(Memory | None, self.db_adapter.get_memory_by_id(memory_id))
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}")
             return None

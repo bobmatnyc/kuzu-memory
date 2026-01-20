@@ -47,22 +47,22 @@ except ImportError as e:
     _IMPORT_ERROR = e
 
     # Define placeholder classes to prevent import errors
-    class KuzuMemory:
+    class KuzuMemory:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             raise ImportError(
                 f"KuzuMemory core components not available: {_IMPORT_ERROR}"
             )
 
-    class Memory:
+    class Memory:  # type: ignore[no-redef]
         pass
 
-    class MemoryContext:
+    class MemoryContext:  # type: ignore[no-redef]
         pass
 
-    class MemoryType:
+    class MemoryType:  # type: ignore[no-redef]
         pass
 
-    class KuzuMemoryConfig:
+    class KuzuMemoryConfig:  # type: ignore[no-redef]
         pass
 
 

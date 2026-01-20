@@ -155,7 +155,7 @@ class AsyncMemoryCLI:
             return result
 
         except Exception as e:
-            result: dict[str, Any] = {
+            error_result: dict[str, Any] = {
                 "task_id": None,
                 "status": "failed",
                 "error": str(e),
@@ -165,7 +165,7 @@ class AsyncMemoryCLI:
             if not quiet:
                 print(f"❌ Learning failed: {e}")
 
-            return result
+            return error_result
 
     def store_async(
         self,
@@ -209,7 +209,7 @@ class AsyncMemoryCLI:
             return result
 
         except Exception as e:
-            result: dict[str, Any] = {
+            error_result: dict[str, Any] = {
                 "task_id": None,
                 "status": "failed",
                 "error": str(e),
@@ -219,7 +219,7 @@ class AsyncMemoryCLI:
             if not quiet:
                 print(f"❌ Storage failed: {e}")
 
-            return result
+            return error_result
 
     def get_task_status(self, task_id: str) -> dict[str, Any]:
         """

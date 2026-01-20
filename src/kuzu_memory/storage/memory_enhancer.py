@@ -521,9 +521,6 @@ class MemoryEnhancer:
                 existing_memory.content = extracted_memory.content
 
             # Merge metadata
-            if existing_memory.metadata is None:
-                existing_memory.metadata = {}
-
             existing_memory.metadata.update(
                 {
                     "updated_at": datetime.now(),

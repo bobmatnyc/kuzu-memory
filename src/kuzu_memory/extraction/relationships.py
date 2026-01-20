@@ -208,12 +208,14 @@ class RelationshipDetector:
             overlap_ratio = len(overlap) / len(new_entities.union(existing_entities))
 
             if overlap_ratio > 0.3:  # Significant entity overlap
+                # Convert entities to strings for context (handles both str and dict types)
+                overlap_str = ', '.join(str(e) if isinstance(e, dict) else e for e in overlap)
                 relationship = Relationship(
                     source_id=new_memory.id,
                     target_id=existing_memory.id,
                     relationship_type="related_to",
                     confidence=min(0.9, overlap_ratio * 2),  # Scale confidence
-                    context=f"Shared entities: {', '.join(overlap)}",
+                    context=f"Shared entities: {overlap_str}",
                 )
                 relationships.append(relationship)
 
@@ -346,7 +348,7 @@ class RelationshipDetector:
                 self._detection_stats["relationship_types"].get(rel_type, 0) + 1
             )
 
-    def get_relationship_statistics(self) -> dict[str, any]:
+    def get_relationship_statistics(self) -> dict[str, Any]:
         """Get relationship detection statistics."""
         return {
             "total_patterns": len(self.compiled_memory_patterns)

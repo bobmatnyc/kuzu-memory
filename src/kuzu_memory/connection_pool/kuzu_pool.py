@@ -94,7 +94,7 @@ class KuzuConnectionPool(IConnectionPool):
 
         async with self._lock:
             if self._initialized:
-                return
+                return  # type: ignore[unreachable]  # Double-check pattern for thread safety
 
             logger.info(
                 f"Initializing Kuzu connection pool: {self.min_connections}-{self.max_connections} connections"
@@ -354,7 +354,7 @@ class KuzuConnectionPool(IConnectionPool):
                 await asyncio.sleep(self.health_check_interval.total_seconds())
 
                 if self._closing:
-                    break
+                    break  # type: ignore[unreachable]  # Check after sleep for clean shutdown
 
                 # Perform health check
                 health_result = await self.health_check()

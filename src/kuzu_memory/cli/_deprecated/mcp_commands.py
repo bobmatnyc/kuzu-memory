@@ -82,7 +82,7 @@ def serve(
         from kuzu_memory.mcp.run_server import main
 
         # Run the async main function
-        asyncio.run(main())  # type: ignore[no-untyped-call]  # MCP server main lacks type annotations
+        asyncio.run(main())  # MCP server main lacks type annotations
 
     except KeyboardInterrupt:
         print("\n🛑 MCP server stopped", file=sys.stderr)

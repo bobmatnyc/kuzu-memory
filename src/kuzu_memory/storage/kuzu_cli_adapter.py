@@ -236,7 +236,8 @@ class KuzuCLIAdapter:
         try:
             if format_type == "json":
                 # Parse JSON output
-                return json.loads(output)
+                from typing import cast
+                return cast(list[dict[str, Any]], json.loads(output))
             elif format_type == "jsonlines":
                 # Parse JSONLINES output
                 results = []

@@ -11,7 +11,7 @@ import logging
 import math
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from ..core.models import Memory, MemoryType
 
@@ -150,13 +150,6 @@ class TemporalDecayEngine:
             memory.memory_type, self.type_decay_params[MemoryType.PROCEDURAL]
         )
 
-        # Calculate age (handle None created_at gracefully)
-        if memory.created_at is None:
-            logger.warning(
-                f"Memory {memory.id} has None created_at, using current time"
-            )
-            memory.created_at = current_time
-
         # Activity-aware age calculation
         # For memories created BEFORE last activity: use relative time
         # For memories created AFTER last activity: use absolute time (normal)
@@ -199,12 +192,12 @@ class TemporalDecayEngine:
             decay_score *= 1 + (recent_boost - 1) * boost_factor
 
         # Apply bounds
-        min_score = params.get(
+        min_score = float(params.get(
             "minimum_score", self.decay_config["minimum_decay_score"]
-        )
-        max_score = params.get(
+        ))
+        max_score = float(params.get(
             "maximum_score", self.decay_config["maximum_decay_score"]
-        )
+        ))
 
         return max(min_score, min(max_score, decay_score))
 
@@ -300,7 +293,7 @@ class TemporalDecayEngine:
             and memory.created_at < project_last_activity
         )
 
-        if activity_aware_mode:
+        if activity_aware_mode and project_last_activity is not None:
             # Calculate relative age (to last activity)
             relative_age = project_last_activity - memory.created_at
             age_days = relative_age.total_seconds() / (24 * 3600)
@@ -327,9 +320,9 @@ class TemporalDecayEngine:
             "activity_aware_mode": activity_aware_mode,
             "age_days": round(age_days, 2),
             "age_hours": round(age_hours, 2),
-            "decay_function": params.get(
+            "decay_function": cast(DecayFunction, params.get(
                 "decay_function", DecayFunction.EXPONENTIAL
-            ).value,
+            )).value,
             "half_life_days": params.get("half_life_days", 30),
             "base_decay_score": round(base_score, 4),
             "final_temporal_score": round(final_score, 4),
@@ -395,7 +388,7 @@ class TemporalDecayEngine:
         temporal_score = self.calculate_temporal_score(
             memory, current_time, project_last_activity
         )
-        base_weight = self.decay_config["base_weight"]
+        base_weight = float(self.decay_config["base_weight"])
 
         return base_weight * temporal_score
 

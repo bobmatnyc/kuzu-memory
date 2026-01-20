@@ -14,18 +14,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from nltk.stem import PorterStemmer
-    from sklearn.pipeline import Pipeline
+    from nltk.stem import PorterStemmer  # type: ignore[import-not-found]
+    from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
 
 try:
-    import nltk
-    from nltk.chunk import ne_chunk
+    import nltk  # type: ignore[import-not-found]
+    from nltk.chunk import ne_chunk  # type: ignore[import-not-found]
     from nltk.stem import PorterStemmer
-    from nltk.tag import pos_tag
-    from nltk.tokenize import word_tokenize
-    from nltk.tree import Tree
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.naive_bayes import MultinomialNB
+    from nltk.tag import pos_tag  # type: ignore[import-not-found]
+    from nltk.tokenize import word_tokenize  # type: ignore[import-not-found]
+    from nltk.tree import Tree  # type: ignore[import-not-found]
+    from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
+    from sklearn.naive_bayes import MultinomialNB  # type: ignore[import-untyped]
     from sklearn.pipeline import Pipeline
 
     NLTK_AVAILABLE = True
@@ -164,12 +164,12 @@ class MemoryClassifier:
                                 word_tokenize("test")
                             elif data_item == "stopwords":
                                 # Test stopwords
-                                from nltk.corpus import stopwords as sw
+                                from nltk.corpus import stopwords as sw  # type: ignore[import-not-found]
 
                                 sw.words("english")
                             elif data_item == "vader_lexicon":
                                 # Test VADER sentiment
-                                from nltk.sentiment.vader import (
+                                from nltk.sentiment.vader import (  # type: ignore[import-not-found]
                                     SentimentIntensityAnalyzer,
                                 )
 
@@ -635,7 +635,7 @@ class MemoryClassifier:
             ]
 
             # Count frequencies (stem words if stemmer available)
-            word_freq = {}
+            word_freq: dict[str, int] = {}
             for word in important_words:
                 # Use stemmed version for frequency counting if stemmer available
                 key = self.stemmer.stem(word) if self.stemmer else word
@@ -808,7 +808,7 @@ class MemoryClassifier:
         results = []
 
         # Prepare for batch ML classification if available
-        ml_predictions = None
+        ml_predictions: list[dict[str, Any]] | None = None
         if self.classifier and NLTK_AVAILABLE and len(contents) > 1:
             try:
                 # Batch predict with ML classifier

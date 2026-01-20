@@ -12,6 +12,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from .. import KuzuMemory
 from ..integrations.auggie import AuggieIntegration
@@ -26,6 +27,10 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
             enhancement = auggie.enhance_prompt(
                 prompt=args.prompt, user_id=args.user_id, context={"source": "cli"}
             )
+
+            if enhancement is None:
+                print("❌ Enhancement failed")
+                return 1
 
             print("🚀 Prompt Enhancement Results:")
             print("=" * 50)
@@ -68,25 +73,29 @@ def cmd_learn_response(args: argparse.Namespace) -> int:
         with KuzuMemory(db_path=args.db_path) as memory:
             auggie = AuggieIntegration(memory)
 
-            learning_result = auggie.learn_from_interaction(
-                prompt=args.prompt,
-                ai_response=args.response,
-                user_feedback=args.feedback,
-                user_id=args.user_id,
-            )
+            conversation_data = {
+                "prompt": args.prompt,
+                "response": args.response,
+                "feedback": args.feedback,
+                "user_id": args.user_id,
+            }
+            learning_result = auggie.learn_from_conversation(conversation_data)
 
             print("🧠 Learning Results:")
             print("=" * 30)
-            print(f"Quality Score: {learning_result.get('quality_score', 0):.2f}")
-            print(
-                f"Memories Created: {len(learning_result.get('extracted_memories', []))}"
-            )
+            if learning_result:
+                print(f"Quality Score: {learning_result.get('quality_score', 0):.2f}")
+                print(
+                    f"Memories Created: {len(learning_result.get('extracted_memories', []))}"
+                )
 
-            if "corrections" in learning_result:
-                corrections = learning_result["corrections"]
-                print(f"Corrections Found: {len(corrections)}")
-                for correction in corrections:
-                    print(f"  - {correction['correction']}")
+                if "corrections" in learning_result:
+                    corrections = learning_result["corrections"]
+                    print(f"Corrections Found: {len(corrections)}")
+                    for correction in corrections:
+                        print(f"  - {correction['correction']}")
+            else:
+                print("❌ Learning failed")
 
             if args.verbose:
                 print("\n📊 Full Learning Data:")
@@ -111,7 +120,7 @@ def cmd_list_rules(args: argparse.Namespace) -> int:
             print("=" * 50)
 
             # Group by rule type
-            by_type = {}
+            by_type: dict[str, list[Any]] = {}
             for rule in rules.values():
                 rule_type = rule.rule_type.value
                 if rule_type not in by_type:
@@ -151,29 +160,18 @@ def cmd_create_rule(args: argparse.Namespace) -> int:
     """Create a new custom rule."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
-            auggie = AuggieIntegration(memory)
+            _ = AuggieIntegration(memory)  # Future: use for create_custom_rule
 
             # Parse conditions and actions from JSON
-            conditions = json.loads(args.conditions) if args.conditions else {}
-            actions = json.loads(args.actions) if args.actions else {}
+            _ = json.loads(args.conditions) if args.conditions else {}  # Future use
+            _ = json.loads(args.actions) if args.actions else {}  # Future use
 
-            rule_id = auggie.create_custom_rule(
-                name=args.name,
-                description=args.description,
-                rule_type=args.rule_type,
-                conditions=conditions,
-                actions=actions,
-                priority=args.priority,
-            )
-
-            if rule_id:
-                print(f"✅ Created rule: {args.name}")
-                print(f"   ID: {rule_id}")
-                print(f"   Type: {args.rule_type}")
-                print(f"   Priority: {args.priority}")
-            else:
-                print("❌ Failed to create rule")
-                return 1
+            # TODO: create_custom_rule method not yet implemented in AuggieIntegration
+            print("❌ Custom rule creation not yet implemented")
+            print(f"   Planned rule: {args.name}")
+            print(f"   Type: {args.rule_type}")
+            print(f"   Priority: {args.priority}")
+            return 1
 
     except json.JSONDecodeError as e:
         print(f"❌ Invalid JSON in conditions or actions: {e}")
@@ -182,17 +180,16 @@ def cmd_create_rule(args: argparse.Namespace) -> int:
         print(f"❌ Error creating rule: {e}")
         return 1
 
-    return 0
-
 
 def cmd_export_rules(args: argparse.Namespace) -> int:
     """Export rules to a JSON file."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
-            auggie = AuggieIntegration(memory)
+            _ = AuggieIntegration(memory)  # Future: use for export_rules
 
-            auggie.export_rules(args.output_file)
-            print(f"✅ Rules exported to: {args.output_file}")
+            # TODO: export_rules method not yet implemented in AuggieIntegration
+            print("❌ Rule export not yet implemented")
+            print(f"   Planned output: {args.output_file}")
 
     except Exception as e:
         print(f"❌ Error exporting rules: {e}")
@@ -205,15 +202,11 @@ def cmd_import_rules(args: argparse.Namespace) -> int:
     """Import rules from a JSON file."""
     try:
         with KuzuMemory(db_path=args.db_path) as memory:
-            auggie = AuggieIntegration(memory)
+            _ = AuggieIntegration(memory)  # Future: use for import_rules
 
-            initial_count = len(auggie.rule_engine.rules)
-            auggie.import_rules(args.input_file)
-            final_count = len(auggie.rule_engine.rules)
-
-            imported_count = final_count - initial_count
-            print(f"✅ Imported {imported_count} rules from: {args.input_file}")
-            print(f"   Total rules now: {final_count}")
+            # TODO: import_rules method not yet implemented in AuggieIntegration
+            print("❌ Rule import not yet implemented")
+            print(f"   Planned input: {args.input_file}")
 
     except Exception as e:
         print(f"❌ Error importing rules: {e}")
@@ -228,7 +221,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
         with KuzuMemory(db_path=args.db_path) as memory:
             auggie = AuggieIntegration(memory)
 
-            stats = auggie.get_integration_statistics()
+            stats = auggie.get_integration_stats()
 
             print("📊 Auggie Integration Statistics:")
             print("=" * 40)
@@ -313,24 +306,32 @@ def cmd_test_integration(args: argparse.Namespace) -> int:
 
             for prompt in test_prompts:
                 enhancement = auggie.enhance_prompt(prompt, user_id)
+                if enhancement is None:
+                    print(f"\n  Prompt: {prompt}")
+                    print("  ❌ Enhancement failed")
+                    continue
                 print(f"\n  Prompt: {prompt}")
                 print(f"  Enhanced: {len(enhancement['enhanced_prompt'])} chars")
                 print(f"  Context: {enhancement['context_summary']}")
 
             # Test learning
             print("\n🧠 Testing response learning...")
-            learning_result = auggie.learn_from_interaction(
-                prompt="What framework should I use?",
-                ai_response="I recommend Django for Python web development.",
-                user_feedback="Actually, I prefer FastAPI as I mentioned before.",
-                user_id=user_id,
-            )
+            conversation_data = {
+                "prompt": "What framework should I use?",
+                "response": "I recommend Django for Python web development.",
+                "feedback": "Actually, I prefer FastAPI as I mentioned before.",
+                "user_id": user_id,
+            }
+            learning_result = auggie.learn_from_conversation(conversation_data)
 
-            print(f"  Quality Score: {learning_result.get('quality_score', 0):.2f}")
-            print(f"  Corrections: {len(learning_result.get('corrections', []))}")
+            if learning_result:
+                print(f"  Quality Score: {learning_result.get('quality_score', 0):.2f}")
+                print(f"  Corrections: {len(learning_result.get('corrections', []))}")
+            else:
+                print("  ❌ Learning failed")
 
             # Show final stats
-            stats = auggie.get_integration_statistics()
+            stats = auggie.get_integration_stats()
             print("\n📊 Final Statistics:")
             print(f"  Prompts Enhanced: {stats['integration']['prompts_enhanced']}")
             print(f"  Responses Learned: {stats['integration']['responses_learned']}")
@@ -430,8 +431,10 @@ def main() -> int:
         parser.print_help()
         return 1
 
-    return args.func(args)
+    result: int = args.func(args)
+    return result
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)

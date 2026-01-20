@@ -65,7 +65,7 @@ class RecallCoordinator:
         )
 
         # Statistics
-        self._coordinator_stats = {
+        self._coordinator_stats: dict[str, Any] = {
             "total_recalls": 0,
             "cache_hits": 0,
             "cache_misses": 0,

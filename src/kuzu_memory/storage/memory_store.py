@@ -152,6 +152,7 @@ class MemoryStore:
                             session_id=base_memory_data["session_id"],
                             agent_id=base_memory_data["agent_id"],
                             confidence=extracted_memory.confidence,
+                            valid_to=None,
                             metadata={
                                 **cast(dict[str, Any], base_memory_data["metadata"]),
                                 "pattern_used": extracted_memory.pattern_used,
@@ -261,7 +262,7 @@ class MemoryStore:
                 cache_key = f"recent:{limit}:{hash(str(sorted(filters.items())))}"
                 self.cache.put(cache_key, memories)
 
-            return memories
+            return cast(list[Memory], memories)
 
         except Exception as e:
             logger.error(f"Error getting recent memories: {e}")
@@ -291,7 +292,7 @@ class MemoryStore:
             if self.cache and memory:
                 self.cache.put(f"memory:{memory_id}", memory)
 
-            return memory
+            return cast(Memory | None, memory)
 
         except Exception as e:
             logger.error(f"Error getting memory by ID: {e}")
@@ -328,7 +329,7 @@ class MemoryStore:
         """
         try:
             stats = self.query_builder.get_memory_statistics()
-            return stats.get("memory_by_type", {})
+            return cast(dict[str, int], stats.get("memory_by_type", {}))
 
         except Exception as e:
             logger.error(f"Error getting memory type statistics: {e}")
@@ -343,7 +344,7 @@ class MemoryStore:
         """
         try:
             stats = self.query_builder.get_memory_statistics()
-            return stats.get("memory_by_source", {})
+            return cast(dict[str, int], stats.get("memory_by_source", {}))
 
         except Exception as e:
             logger.error(f"Error getting source statistics: {e}")
@@ -676,7 +677,7 @@ class MemoryStore:
                 self.cache.put(cache_key, memories)
 
             logger.debug(f"Found {len(memories)} memories for user {user_id}")
-            return memories
+            return cast(list[Memory], memories)
 
         except Exception as e:
             logger.error(f"Error getting memories by user: {e}")
@@ -715,7 +716,7 @@ class MemoryStore:
                 self.cache.put("all_users", users)
 
             logger.debug(f"Found {len(users)} unique users")
-            return users
+            return cast(list[str], users)
 
         except Exception as e:
             logger.error(f"Error getting users: {e}")

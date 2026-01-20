@@ -155,7 +155,7 @@ class MemoryCache(ICache):
         await self._query_cache.clear()
         invalidated = query_stats.get("size", 0)
 
-        return invalidated
+        return int(invalidated)
 
     async def get_cached_memory_ids(self) -> set[str]:
         """Get all currently cached memory IDs."""

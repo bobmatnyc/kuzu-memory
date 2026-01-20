@@ -135,29 +135,9 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
-
-# Per-module overrides for modules with known type issues
-# These will be fixed incrementally in future releases
-[[tool.mypy.overrides]]
-module = [
-    "kuzu_memory",
-    "kuzu_memory.cli.*",
-    "kuzu_memory.nlp.*",
-    "kuzu_memory.storage.*",
-    "kuzu_memory.integrations.*",
-    "kuzu_memory.caching.*",
-    "kuzu_memory.monitoring.*",
-    "kuzu_memory.mcp.*",
-    "kuzu_memory.recall.*",
-    "kuzu_memory.extraction.*",
-    "kuzu_memory.migrations.*",
-    "kuzu_memory.connection_pool.*",
-    "kuzu_memory.core.*",
-    "kuzu_memory.installers.*",
-    "kuzu_memory.utils.*",
-    "kuzu_memory.async_memory.*",
+exclude = [
+    "src/kuzu_memory/cli/_deprecated/.*\\.py$",
 ]
-ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

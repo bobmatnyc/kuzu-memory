@@ -180,7 +180,7 @@ class MemoryRanker:
             scores[component] * self.weights[component] for component in scores
         )
 
-        return min(final_score, 1.0)  # Cap at 1.0
+        return float(min(final_score, 1.0))  # Cap at 1.0
 
     def _calculate_content_similarity(
         self, memory: Memory, query_lower: str, query_words: set[str]

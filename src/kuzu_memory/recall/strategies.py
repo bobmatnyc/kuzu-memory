@@ -279,7 +279,7 @@ class KeywordRecallStrategy(RecallStrategy):
         ]
 
         # Count word frequency
-        word_counts = defaultdict(int)
+        word_counts: dict[str, int] = defaultdict(int)
         for word in keywords:
             word_counts[word] += 1
 

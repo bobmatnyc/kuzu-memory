@@ -82,7 +82,7 @@ class KuzuConnection(IConnection):
             # Run connection creation in thread pool to avoid blocking
             loop = asyncio.get_running_loop()
 
-            def _create_connection() -> None:
+            def _create_connection() -> kuzu.Connection:
                 # Create connection using shared Database instance
                 conn = kuzu.Connection(db)
                 return conn
@@ -130,7 +130,7 @@ class KuzuConnection(IConnection):
             # Create new shared database instance
             loop = asyncio.get_running_loop()
 
-            def _create_database() -> None:
+            def _create_database() -> kuzu.Database:
                 # Note: Kuzu uses max_num_threads parameter name
                 return kuzu.Database(
                     self.database_path, max_num_threads=self.num_threads
@@ -182,7 +182,7 @@ class KuzuConnection(IConnection):
                     # Execute query in thread pool
                     loop = asyncio.get_running_loop()
 
-                    def _execute_query() -> None:
+                    def _execute_query() -> Any:
                         if params:
                             # Kuzu doesn't support parameterized queries yet
                             # In practice, you'd need to format the query safely
