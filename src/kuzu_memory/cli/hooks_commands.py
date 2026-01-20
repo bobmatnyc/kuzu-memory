@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -400,56 +399,46 @@ def list_hooks() -> None:
     console.print("\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n")
 
 
-def _get_memories_with_timeout(
-    db_path: Path, prompt: str, timeout: float = 2.0, strategy: str = "keyword"
+def _get_memories_with_lock(
+    db_path: Path, prompt: str, strategy: str = "keyword"
 ) -> tuple[list[Any] | None, str | None]:
     """
-    Get memories with timeout to prevent blocking when database is locked.
+    Get memories with fail-fast locking to prevent blocking when database is locked.
 
-    Uses threading to implement timeout since signal.SIGALRM doesn't work on all platforms.
-    If the database is locked by another process (e.g., MCP server), this will timeout
-    gracefully instead of blocking indefinitely.
+    Uses file-based locking to detect if another process has the database open.
+    If locked, returns immediately instead of blocking indefinitely.
 
     Args:
         db_path: Path to the KuzuMemory database
         prompt: Prompt text to enhance with memories
-        timeout: Maximum time to wait in seconds (default: 2.0)
         strategy: Recall strategy to use (default: "keyword" for speed)
                  Options: "keyword" (fastest, graph-only), "entity", "temporal", "auto" (slowest)
 
     Returns:
         Tuple of (memories, error_message):
         - (list of memories, None) if successful
-        - (None, "timeout") if operation timed out
+        - (None, "locked") if database is locked by another process
         - (None, error_message) if an error occurred
     """
     from ..core.memory import KuzuMemory
+    from ..utils.file_lock import DatabaseBusyError, try_lock_database
 
-    result: dict[str, Any] = {"memories": None, "error": None}
-
-    def _fetch() -> None:
-        """Thread worker that fetches memories."""
-        try:
+    try:
+        # Try to acquire lock with 0 timeout (fail immediately if locked)
+        with try_lock_database(db_path, timeout=0.0):
             memory = KuzuMemory(db_path=db_path, auto_sync=False)
             # Use specified strategy (default: keyword for fast graph-only search)
             memory_context = memory.attach_memories(prompt, max_memories=5, strategy=strategy)
-            result["memories"] = memory_context.memories
+            memories = memory_context.memories
             memory.close()
-        except Exception as e:
-            result["error"] = str(e)
+            return memories, None
 
-    thread = threading.Thread(target=_fetch, daemon=True)
-    thread.start()
-    thread.join(timeout=timeout)
-
-    if thread.is_alive():
-        # Thread still running after timeout = operation timed out
-        return None, "timeout"
-
-    if result["error"]:
-        return None, result["error"]
-
-    return result["memories"], None
+    except DatabaseBusyError:
+        # Database is locked by another process
+        return None, "locked"
+    except Exception as e:
+        # Other error
+        return None, str(e)
 
 
 @hooks_group.command(name="enhance")
@@ -516,15 +505,13 @@ def hooks_enhance() -> None:
                 logger.info("Project not initialized, skipping enhancement")
                 _exit_hook_with_json()
 
-            # Get memories with timeout to prevent blocking if database is locked
-            # (e.g., by MCP server or another process)
+            # Get memories with fail-fast lock check to prevent blocking
+            # if database is locked (e.g., by MCP server or another session)
             # Use "keyword" strategy for fast graph-only search (no vector/embedding computation)
-            memories, error = _get_memories_with_timeout(
-                db_path, prompt, timeout=2.0, strategy="keyword"
-            )
+            memories, error = _get_memories_with_lock(db_path, prompt, strategy="keyword")
 
-            if error == "timeout":
-                logger.warning("Database busy, skipping enhancement (2s timeout)")
+            if error == "locked":
+                logger.info("Database busy (another session), skipping enhancement")
                 _exit_hook_with_json()
             elif error:
                 logger.error(f"Error getting memories: {error}")
@@ -608,21 +595,30 @@ def hooks_session_start() -> None:
                 logger.info("Project not initialized, skipping session start")
                 _exit_hook_with_json()
 
-            # Session start is the right place to sync once per session
-            # Other hooks (learn, enhance) skip sync since they're called frequently
-            memory = KuzuMemory(db_path=db_path, auto_sync=True)
+            # Try to acquire lock with 0 timeout (fail immediately if locked)
+            from ..utils.file_lock import DatabaseBusyError, try_lock_database
 
-            # Type narrowing: we've already checked project_root is not None
-            assert project_root is not None
-            project_name = project_root.name
-            memory.remember(
-                content=f"Session started in {project_name}",
-                source="claude-code-session",
-                metadata={"agent_id": "session-tracker", "event_type": "session_start"},
-            )
+            try:
+                with try_lock_database(db_path, timeout=0.0):
+                    # Session start is the right place to sync once per session
+                    # Other hooks (learn, enhance) skip sync since they're called frequently
+                    memory = KuzuMemory(db_path=db_path, auto_sync=True)
 
-            logger.info(f"Session start memory stored for project: {project_name}")
-            memory.close()
+                    # Type narrowing: we've already checked project_root is not None
+                    assert project_root is not None
+                    project_name = project_root.name
+                    memory.remember(
+                        content=f"Session started in {project_name}",
+                        source="claude-code-session",
+                        metadata={"agent_id": "session-tracker", "event_type": "session_start"},
+                    )
+
+                    logger.info(f"Session start memory stored for project: {project_name}")
+                    memory.close()
+
+            except DatabaseBusyError:
+                logger.info("Database busy (another session), skipping session start")
+                _exit_hook_with_json()
 
         except Exception as e:
             logger.error(f"Error storing session start memory: {e}")
@@ -843,17 +839,26 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
                 logger.info("Project not initialized, skipping learning")
                 _exit_hook_with_json()
 
-            # Disable auto-sync on init for faster startup
-            memory = KuzuMemory(db_path=db_path, auto_sync=False)
+            # Try to acquire lock with 0 timeout (fail immediately if locked)
+            from ..utils.file_lock import DatabaseBusyError, try_lock_database
 
-            memory.remember(
-                content=assistant_text,
-                source="claude-code-hook",
-                metadata={"agent_id": "assistant"},
-            )
+            try:
+                with try_lock_database(db_path, timeout=0.0):
+                    # Disable auto-sync on init for faster startup
+                    memory = KuzuMemory(db_path=db_path, auto_sync=False)
 
-            logger.info("Memory stored successfully")
-            memory.close()
+                    memory.remember(
+                        content=assistant_text,
+                        source="claude-code-hook",
+                        metadata={"agent_id": "assistant"},
+                    )
+
+                    logger.info("Memory stored successfully")
+                    memory.close()
+
+            except DatabaseBusyError:
+                logger.info("Database busy (another session), skipping learn")
+                _exit_hook_with_json()
 
         except Exception as e:
             logger.error(f"Error storing memory: {e}")

@@ -24,6 +24,7 @@ from .exceptions import (
     RecallError,
     ValidationError,
 )
+from .file_lock import DatabaseBusyError, try_lock_database
 from .performance import PerformanceMonitor, get_performance_monitor, performance_timer
 from .validation import (
     sanitize_for_database,
@@ -41,6 +42,7 @@ __all__ = [
     "ConfigLoader",
     "ConfigurationError",
     "CorruptedDatabaseError",
+    "DatabaseBusyError",
     "DatabaseError",
     "DatabaseLockError",
     "DatabaseVersionError",
@@ -63,6 +65,7 @@ __all__ = [
     "raise_if_invalid_path",
     "raise_if_performance_exceeded",
     "sanitize_for_database",
+    "try_lock_database",
     "validate_confidence_score",
     "validate_config_dict",
     "validate_database_path",
