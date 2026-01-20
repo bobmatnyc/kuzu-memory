@@ -104,7 +104,7 @@ success "Environment validation passed"
 info "Step 2/8: Bumping version ($VERSION_TYPE)..."
 
 OLD_VERSION=$(cat VERSION)
-./scripts/manage_version.py bump "$VERSION_TYPE"
+./scripts/manage_version.py bump --type "$VERSION_TYPE" --no-tag
 NEW_VERSION=$(cat VERSION)
 
 if [[ "$OLD_VERSION" == "$NEW_VERSION" ]]; then
@@ -120,8 +120,6 @@ ROLLBACK_NEEDED=false
 rollback_version() {
     if [[ "$ROLLBACK_NEEDED" == "true" ]]; then
         warn "Rolling back version bump..."
-        echo "$OLD_VERSION" > VERSION
-        ./scripts/manage_version.py sync
         git restore VERSION pyproject.toml uv.lock src/kuzu_memory/__version__.py CHANGELOG.md
         warn "Version rolled back to $OLD_VERSION"
     fi
