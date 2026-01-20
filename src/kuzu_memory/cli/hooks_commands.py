@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -225,9 +226,7 @@ def hooks_status(project: str | None, verbose: bool) -> None:
 @click.option("--dry-run", is_flag=True, help="Preview changes without applying")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-def install_hooks(
-    system: str, dry_run: bool, verbose: bool, project: str | None
-) -> None:
+def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None) -> None:
     """
     Install hooks for specified system.
 
@@ -260,9 +259,7 @@ def install_hooks(
     console.print(
         "\n[blue]Note:[/blue] 'kuzu-memory install <platform>' is now the recommended command."
     )
-    console.print(
-        "   It automatically installs the right components for each platform.\n"
-    )
+    console.print("   It automatically installs the right components for each platform.\n")
 
     try:
         # Determine project root
@@ -298,16 +295,12 @@ def install_hooks(
             sys.exit(1)
 
         # Show installation info
-        console.print(
-            f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]"
-        )
+        console.print(f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]")
         console.print(f"📁 Project: {project_root}")
         console.print(f"📋 Description: {installer.description}")
 
         if dry_run:
-            console.print(
-                "\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]"
-            )
+            console.print("\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
 
         console.print()
 
@@ -346,16 +339,12 @@ def install_hooks(
             console.print("\n[green]🎯 Next Steps:[/green]")
             if system == "claude-code":
                 console.print("1. Reload Claude Code window or restart")
-                console.print(
-                    "2. Hooks will auto-enhance prompts and learn from responses"
-                )
+                console.print("2. Hooks will auto-enhance prompts and learn from responses")
                 console.print("3. Check .claude/settings.local.json for configuration")
             elif system == "auggie":
                 console.print("1. Open or reload your Auggie workspace")
                 console.print("2. Rules will be active for enhanced context")
-                console.print(
-                    "3. Check AGENTS.md and .augment/rules/ for configuration"
-                )
+                console.print("3. Check AGENTS.md and .augment/rules/ for configuration")
 
         else:
             console.print(f"\n[red]❌ {result.message}[/red]")
@@ -408,9 +397,59 @@ def list_hooks() -> None:
 
     console.print(table)
 
-    console.print(
-        "\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n"
-    )
+    console.print("\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n")
+
+
+def _get_memories_with_timeout(
+    db_path: Path, prompt: str, timeout: float = 2.0, strategy: str = "keyword"
+) -> tuple[list[Any] | None, str | None]:
+    """
+    Get memories with timeout to prevent blocking when database is locked.
+
+    Uses threading to implement timeout since signal.SIGALRM doesn't work on all platforms.
+    If the database is locked by another process (e.g., MCP server), this will timeout
+    gracefully instead of blocking indefinitely.
+
+    Args:
+        db_path: Path to the KuzuMemory database
+        prompt: Prompt text to enhance with memories
+        timeout: Maximum time to wait in seconds (default: 2.0)
+        strategy: Recall strategy to use (default: "keyword" for speed)
+                 Options: "keyword" (fastest, graph-only), "entity", "temporal", "auto" (slowest)
+
+    Returns:
+        Tuple of (memories, error_message):
+        - (list of memories, None) if successful
+        - (None, "timeout") if operation timed out
+        - (None, error_message) if an error occurred
+    """
+    from ..core.memory import KuzuMemory
+
+    result: dict[str, Any] = {"memories": None, "error": None}
+
+    def _fetch() -> None:
+        """Thread worker that fetches memories."""
+        try:
+            memory = KuzuMemory(db_path=db_path, auto_sync=False)
+            # Use specified strategy (default: keyword for fast graph-only search)
+            memory_context = memory.attach_memories(prompt, max_memories=5, strategy=strategy)
+            result["memories"] = memory_context.memories
+            memory.close()
+        except Exception as e:
+            result["error"] = str(e)
+
+    thread = threading.Thread(target=_fetch, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout)
+
+    if thread.is_alive():
+        # Thread still running after timeout = operation timed out
+        return None, "timeout"
+
+    if result["error"]:
+        return None, result["error"]
+
+    return result["memories"], None
 
 
 @hooks_group.command(name="enhance")
@@ -427,7 +466,6 @@ def hooks_enhance() -> None:
     import os
     from pathlib import Path
 
-    from ..core.memory import KuzuMemory
     from ..utils.project_setup import find_project_root, get_project_db_path
 
     # Configure minimal logging for hook execution
@@ -462,9 +500,7 @@ def hooks_enhance() -> None:
         # Limit prompt size
         max_prompt_length = 100000
         if len(prompt) > max_prompt_length:
-            logger.warning(
-                f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars"
-            )
+            logger.warning(f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars")
             prompt = prompt[:max_prompt_length]
 
         # Find project root and initialize memory
@@ -480,14 +516,20 @@ def hooks_enhance() -> None:
                 logger.info("Project not initialized, skipping enhancement")
                 _exit_hook_with_json()
 
-            # Initialize memory with auto_sync=False for faster hook execution
-            memory = KuzuMemory(db_path=db_path, auto_sync=False)
+            # Get memories with timeout to prevent blocking if database is locked
+            # (e.g., by MCP server or another process)
+            # Use "keyword" strategy for fast graph-only search (no vector/embedding computation)
+            memories, error = _get_memories_with_timeout(
+                db_path, prompt, timeout=2.0, strategy="keyword"
+            )
 
-            # Get relevant memories using attach_memories API
-            memory_context = memory.attach_memories(prompt, max_memories=5)
-            memories = memory_context.memories
-
-            if memories:
+            if error == "timeout":
+                logger.warning("Database busy, skipping enhancement (2s timeout)")
+                _exit_hook_with_json()
+            elif error:
+                logger.error(f"Error getting memories: {error}")
+                _exit_hook_with_json()
+            elif memories:
                 # Format as context
                 enhancement_parts = ["# Relevant Project Context"]
                 for mem in memories:
@@ -496,11 +538,9 @@ def hooks_enhance() -> None:
                 enhancement = "\n".join(enhancement_parts)
                 logger.info(f"Enhancement generated ({len(enhancement)} chars)")
                 # Use hookSpecificOutput for silent context injection
-                memory.close()
                 _exit_hook_with_json(context=enhancement)
             else:
                 logger.info("No relevant memories found")
-                memory.close()
                 _exit_hook_with_json()
 
         except Exception as e:
@@ -782,9 +822,7 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
 
         max_text_length = 1000000
         if len(assistant_text) > max_text_length:
-            logger.warning(
-                f"Truncating from {len(assistant_text)} to {max_text_length} chars"
-            )
+            logger.warning(f"Truncating from {len(assistant_text)} to {max_text_length} chars")
             assistant_text = assistant_text[:max_text_length]
 
         # Check for duplicates
