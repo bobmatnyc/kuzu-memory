@@ -31,9 +31,13 @@ help:
 	@echo "  make quality    Run ALL quality checks"
 	@echo ""
 	@echo "🚀 BUILD & DEPLOY:"
-	@echo "  make build      Build package for distribution"
-	@echo "  make publish    Publish to PyPI"
-	@echo "  make clean      Clean build artifacts"
+	@echo "  make build           Build package for distribution"
+	@echo "  make publish-patch   Publish patch release (automated)"
+	@echo "  make publish-minor   Publish minor release (automated)"
+	@echo "  make publish-major   Publish major release (automated)"
+	@echo "  make publish-no-test Publish patch release (skip tests)"
+	@echo "  make publish         Publish to PyPI (legacy manual method)"
+	@echo "  make clean           Clean build artifacts"
 	@echo ""
 	@echo "🏷️  VERSION MANAGEMENT:"
 	@echo "  make version-patch   Bump patch version (1.0.1 -> 1.0.2)"
@@ -194,8 +198,31 @@ build: quality
 	uv build
 	@echo "✅ Package built successfully"
 
+# Publishing targets (NEW - Automated release workflow)
+publish-patch:
+	@echo "🚀 Publishing patch release..."
+	./scripts/publish.sh patch
+	@echo "✅ Patch release complete"
+
+publish-minor:
+	@echo "🚀 Publishing minor release..."
+	./scripts/publish.sh minor
+	@echo "✅ Minor release complete"
+
+publish-major:
+	@echo "🚀 Publishing major release..."
+	./scripts/publish.sh major
+	@echo "✅ Major release complete"
+
+publish-no-test:
+	@echo "🚀 Publishing patch release (skipping tests)..."
+	./scripts/publish.sh patch --no-test
+	@echo "✅ Patch release complete (tests skipped)"
+
+# Legacy publish target (kept for backward compatibility)
 publish: build
-	@echo "📤 Publishing to PyPI..."
+	@echo "📤 Publishing to PyPI (legacy method)..."
+	@echo "⚠️  Consider using: make publish-patch|minor|major"
 	@if [ ! -f .env.local ]; then \
 		echo "❌ Error: .env.local not found"; \
 		echo "Create .env.local with: UV_PUBLISH_TOKEN=<your-token>"; \
