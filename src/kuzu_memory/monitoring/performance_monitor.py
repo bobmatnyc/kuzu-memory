@@ -132,7 +132,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                 )
 
     @asynccontextmanager
-    async def time_async_operation(
+    async def time_async_operation(  # type: ignore[override]
         self, name: str, tags: dict[str, str] | None = None
     ) -> AsyncIterator[None]:
         """Time an async operation using context manager."""
@@ -176,7 +176,7 @@ class PerformanceMonitor(IPerformanceMonitor):
                     async with self.time_async_operation(metric_name, tags):
                         return await func(*args, **kwargs)
 
-                return async_wrapper
+                return async_wrapper  # type: ignore[return-value]
             else:
 
                 @functools.wraps(func)

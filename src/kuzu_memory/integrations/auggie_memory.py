@@ -617,6 +617,9 @@ class MemorySynchronizer:
                         content=memory_content,
                         source_type="auggie_learning",
                         memory_type=MemoryType.PROCEDURAL,
+                        valid_to=None,
+                        user_id=None,
+                        session_id=None,
                         metadata={
                             "pattern_id": pattern.pattern_id,
                             "confidence": pattern.confidence,

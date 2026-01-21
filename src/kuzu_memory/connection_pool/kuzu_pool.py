@@ -146,7 +146,7 @@ class KuzuConnectionPool(IConnectionPool):
             logger.error(f"Failed to destroy connection: {e}")
 
     @asynccontextmanager
-    async def get_connection(self) -> AsyncIterator[KuzuConnection]:
+    async def get_connection(self) -> AsyncIterator[KuzuConnection]:  # type: ignore[override]
         """
         Get a connection from the pool.
 

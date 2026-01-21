@@ -192,12 +192,13 @@ class TemporalDecayEngine:
             decay_score *= 1 + (recent_boost - 1) * boost_factor
 
         # Apply bounds
-        min_score = float(params.get(
-            "minimum_score", self.decay_config["minimum_decay_score"]
-        ))
-        max_score = float(params.get(
-            "maximum_score", self.decay_config["maximum_decay_score"]
-        ))
+        from typing import cast
+
+        min_val = params.get("minimum_score", self.decay_config["minimum_decay_score"])
+        min_score = float(cast(float, min_val) if min_val is not None else 0.0)
+
+        max_val = params.get("maximum_score", self.decay_config["maximum_decay_score"])
+        max_score = float(cast(float, max_val) if max_val is not None else 1.0)
 
         return max(min_score, min(max_score, decay_score))
 

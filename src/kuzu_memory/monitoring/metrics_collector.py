@@ -352,7 +352,19 @@ class MetricsCollector:
                 "performance_summary": await self.get_performance_summary(),
             }
 
-        # Export in requested format
-        return await self.performance_monitor.export_metrics(
-            format_type, data=all_metrics
-        )
+        # Export in requested format (note: export_metrics doesn't support custom data)
+        # For now, return JSON formatted metrics
+        import json
+
+        if format_type == "json":
+            return json.dumps(all_metrics, indent=2, default=str)
+        elif format_type == "csv":
+            # Simple CSV format for metrics
+            lines = ["metric,value"]
+            for category, metrics in all_metrics.items():
+                if isinstance(metrics, dict):
+                    for key, value in metrics.items():
+                        lines.append(f"{category}.{key},{value}")
+            return "\n".join(lines)
+        else:
+            return json.dumps(all_metrics, indent=2, default=str)

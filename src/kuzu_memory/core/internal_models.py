@@ -386,5 +386,5 @@ def internal_to_pydantic_memory(internal_memory: InternalMemory) -> Any:
         user_id=internal_memory.user_id,
         session_id=internal_memory.session_id,
         metadata=internal_memory.metadata.copy(),
-        entities=list(internal_memory.entities),  # type: ignore[arg-type]
+        entities=list(internal_memory.entities),
     )

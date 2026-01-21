@@ -249,20 +249,22 @@ class MemoryStore:
         try:
             # Check cache first
             if self.cache:
+                from typing import cast
+
                 cache_key = f"recent:{limit}:{hash(str(sorted(filters.items())))}"
                 cached_result = self.cache.get(cache_key)
                 if cached_result is not None:
-                    return cached_result
+                    return cast(list[Memory], cached_result)
 
             # Query database
-            memories = self.query_builder.get_recent_memories(limit, **filters)
+            memories: list[Memory] = self.query_builder.get_recent_memories(limit, **filters)
 
             # Cache result
             if self.cache and memories:
                 cache_key = f"recent:{limit}:{hash(str(sorted(filters.items())))}"
                 self.cache.put(cache_key, memories)
 
-            return cast(list[Memory], memories)
+            return memories
 
         except Exception as e:
             logger.error(f"Error getting recent memories: {e}")
@@ -281,18 +283,20 @@ class MemoryStore:
         try:
             # Check cache first
             if self.cache:
+                from typing import cast
+
                 cached_result = self.cache.get(f"memory:{memory_id}")
                 if cached_result is not None:
-                    return cached_result
+                    return cast(Memory, cached_result)
 
             # Query database
-            memory = self.query_builder.get_memory_by_id(memory_id)
+            memory: Memory | None = self.query_builder.get_memory_by_id(memory_id)
 
             # Cache result
             if self.cache and memory:
                 self.cache.put(f"memory:{memory_id}", memory)
 
-            return cast(Memory | None, memory)
+            return memory
 
         except Exception as e:
             logger.error(f"Error getting memory by ID: {e}")
@@ -648,7 +652,7 @@ class MemoryStore:
             # Check cache first
             if self.cache:
                 cache_key = f"user_memories:{user_id}:{limit}"
-                cached_result = self.cache.get(cache_key)
+                cached_result: list[Memory] | None = self.cache.get(cache_key)
                 if cached_result is not None:
                     return cached_result
 
@@ -677,7 +681,7 @@ class MemoryStore:
                 self.cache.put(cache_key, memories)
 
             logger.debug(f"Found {len(memories)} memories for user {user_id}")
-            return cast(list[Memory], memories)
+            return memories
 
         except Exception as e:
             logger.error(f"Error getting memories by user: {e}")
@@ -693,7 +697,7 @@ class MemoryStore:
         try:
             # Check cache first
             if self.cache:
-                cached_result = self.cache.get("all_users")
+                cached_result: list[str] | None = self.cache.get("all_users")
                 if cached_result is not None:
                     return cached_result
 

@@ -102,7 +102,8 @@ class EmbeddingsCache(ICache):
 
         embedding_data = await self._embedding_cache.get(content_key)
         if embedding_data and isinstance(embedding_data, EmbeddingData):
-            return embedding_data.embedding.copy()
+            result: np.ndarray = embedding_data.embedding.copy()
+            return result
 
         return None
 
@@ -110,7 +111,8 @@ class EmbeddingsCache(ICache):
         """Get embedding by cache key."""
         embedding_data = await self._embedding_cache.get(content_key)
         if embedding_data and isinstance(embedding_data, EmbeddingData):
-            return embedding_data.embedding.copy()
+            result: np.ndarray = embedding_data.embedding.copy()
+            return result
         return None
 
     async def cache_similarity_result(
@@ -169,7 +171,8 @@ class EmbeddingsCache(ICache):
 
         result = await self._similarity_cache.get(similarity_key)
         if result and isinstance(result, SimilarityResult):
-            return result.similarities.copy()
+            similarities: list[float] = result.similarities.copy()
+            return similarities
 
         return None
 

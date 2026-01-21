@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import psutil
+    import psutil  # type: ignore[import-untyped]
 except ImportError:
     psutil = None  # Optional dependency  # type: ignore[assignment]  # Intentional None assignment for optional dependency
 

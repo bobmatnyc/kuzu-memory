@@ -87,7 +87,7 @@ def time_async(
                         f"(threshold: {threshold_ms}ms)"
                     )
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -166,7 +166,7 @@ def time_sync(
                         f"(threshold: {threshold_ms}ms)"
                     )
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 

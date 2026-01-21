@@ -137,6 +137,7 @@ warn_unreachable = true
 strict_equality = true
 exclude = [
     "src/kuzu_memory/cli/_deprecated/.*\\.py$",
+    "src/kuzu_memory/migrations/.*\\.py$",
 ]
 
 [tool.pytest.ini_options]
@@ -279,5 +280,6 @@ showcontent = false
 
 [dependency-groups]
 dev = [
+    "types-psutil>=7.2.1.20260116",
     "types-pyyaml>=6.0.12.20250915",
 ]

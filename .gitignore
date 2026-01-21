@@ -322,3 +322,5 @@ TEST_REPORT_MCP_ARGS_AUTOFIX.md
 .claude/
 .mcp.json
 .claude/
+# Mock files created by tests
+*MagicMock*

@@ -633,7 +633,8 @@ class MCPConnectionTester:
                 if decoded:
                     try:
                         # Parse JSON
-                        return json.loads(decoded)
+                        result: dict[str, Any] = json.loads(decoded)
+                        return result
                     except json.JSONDecodeError as e:
                         # If JSON parsing fails and we have retries left, retry
                         if attempt < max_retries - 1:

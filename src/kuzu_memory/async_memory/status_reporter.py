@@ -242,9 +242,10 @@ class MemoryStatusReporter:
         now = datetime.now()
 
         # Generate summary report every minute
+        last_report = self.stats["last_report_time"]
         if (
-            not self.stats["last_report_time"]
-            or (now - self.stats["last_report_time"]).total_seconds() > 60
+            not last_report
+            or (isinstance(last_report, datetime) and (now - last_report).total_seconds() > 60)
         ):
             queue_stats = self.queue_manager.get_queue_stats()
             learning_stats = self.background_learner.get_learning_stats()
@@ -308,7 +309,9 @@ class MemoryStatusReporter:
         # Add to reports list
         with self.lock:
             self.reports.append(report)
-            self.stats["reports_generated"] += 1
+            current_count = self.stats["reports_generated"]
+            if isinstance(current_count, int):
+                self.stats["reports_generated"] = current_count + 1
 
         # Call callbacks
         for callback in self.callbacks[level]:

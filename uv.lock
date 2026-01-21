@@ -918,6 +918,7 @@ test = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "types-psutil" },
     { name = "types-pyyaml" },
 ]
 
@@ -965,7 +966,10 @@ requires-dist = [
 provides-extras = ["nlp", "ner", "dev", "test"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "types-pyyaml", specifier = ">=6.0.12.20250915" }]
+dev = [
+    { name = "types-psutil", specifier = ">=7.2.1.20260116" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
+]
 
 [[package]]
 name = "librt"
@@ -2739,6 +2743,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3f/3d/6a4ec47010e8de34dade20c8e7bce90502b173f62a6b41619523a3fcf562/typer_slim-0.20.1.tar.gz", hash = "sha256:bb9e4f7e6dc31551c8a201383df322b81b0ce37239a5ead302598a2ebb6f7c9c", size = 106113, upload-time = "2025-12-19T16:48:54.206Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/f9/a273c8b57c69ac1b90509ebda204972265fdc978fbbecc25980786f8c038/typer_slim-0.20.1-py3-none-any.whl", hash = "sha256:8e89c5dbaffe87a4f86f4c7a9e2f7059b5b68c66f558f298969d42ce34f10122", size = 47440, upload-time = "2025-12-19T16:48:52.678Z" },
+]
+
+[[package]]
+name = "types-psutil"
+version = "7.2.1.20260116"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/a2/45fcde3f2a8b734a30903c14ecb719a3e95a6e1ae88e3d83f4e70640b768/types_psutil-7.2.1.20260116.tar.gz", hash = "sha256:4661be5d5d7acd5d8afb02a92d05160a6cbb2ce74723245b51f7ba7dfdb9f981", size = 26121, upload-time = "2026-01-16T03:21:38.544Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/ad/0d2989c97204133e924fe594b042f229a51c42c2fef262d7f8bbb8b1d140/types_psutil-7.2.1.20260116-py3-none-any.whl", hash = "sha256:f516d2a71b28a4fd290f065cb30d7e7141ee605899aa592d8d4b80e45c9849be", size = 32822, upload-time = "2026-01-16T03:21:37.656Z" },
 ]
 
 [[package]]

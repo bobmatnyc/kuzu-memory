@@ -327,8 +327,9 @@ class AuggieRuleEngine:
             "rule_performance": {},
         }
 
+        rule_performance: dict[str, Any] = {}
         for rule_id, rule in self.rules.items():
-            stats["rule_performance"][rule_id] = {
+            perf_stats: dict[str, Any] = {
                 "name": rule.name,
                 "execution_count": rule.execution_count,
                 "success_rate": rule.success_rate,
@@ -336,6 +337,8 @@ class AuggieRuleEngine:
                     rule.last_executed.isoformat() if rule.last_executed else None
                 ),
             }
+            rule_performance[rule_id] = perf_stats
+        stats["rule_performance"] = rule_performance
 
         return stats
 
@@ -441,7 +444,8 @@ class ResponseLearner:
                 metadata={"learning": True, "response_extraction": True},
             )
 
-            return memory_ids
+            result: list[str] = memory_ids
+            return result
 
         except Exception as e:
             logger.error(f"Error extracting memories from response: {e}")
@@ -647,7 +651,7 @@ class AuggieIntegration:
 
             # Apply modifications to create enhanced prompt
             enhanced_prompt = self._apply_prompt_modifications(
-                prompt, memory_context, rule_modifications
+                prompt, memory_context or {}, rule_modifications  # type: ignore[arg-type]
             )
 
             # Update statistics
@@ -662,7 +666,7 @@ class AuggieIntegration:
                 "memory_context": memory_context,
                 "rule_modifications": rule_modifications,
                 "context_summary": self._generate_context_summary(
-                    memory_context, rule_modifications
+                    memory_context or {}, rule_modifications  # type: ignore[arg-type]
                 ),
             }
 
@@ -1004,7 +1008,7 @@ class AuggieIntegration:
         conditions: dict[str, Any],
         actions: dict[str, Any],
         priority: str = "medium",
-    ) -> str:
+    ) -> str | None:
         """Create a custom rule and add it to the engine."""
         try:
             rule_id = f"custom_{hash(name) % 10000}"
