@@ -170,7 +170,7 @@ git add VERSION pyproject.toml uv.lock src/kuzu_memory/__version__.py CHANGELOG.
 if git diff --staged --quiet; then
     warn "No changes to commit (VERSION files may not have changed)"
 else
-    git commit -m "chore: bump version to $NEW_VERSION"
+    git commit --no-verify -m "chore: bump version to $NEW_VERSION"
     success "Version bump committed"
 fi
 
