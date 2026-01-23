@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kuzu-memory"
-version = "1.6.28"
+version = "1.6.29"
 description = "Lightweight, embedded graph-based memory system for AI applications"
 readme = "README.md"
 license = {text = "MIT"}
@@ -139,6 +139,10 @@ exclude = [
     "src/kuzu_memory/cli/_deprecated/.*\\.py$",
     "src/kuzu_memory/migrations/.*\\.py$",
 ]
+
+[[tool.mypy.overrides]]
+module = "kuzu_memory.mcp.testing.health_checker"
+warn_unreachable = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

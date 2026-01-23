@@ -22,12 +22,7 @@ try:
     from mcp.server import NotificationOptions, Server
     from mcp.server.models import InitializationOptions
     from mcp.server.stdio import stdio_server
-    from mcp.types import (
-        Resource,
-        ResourceTemplate,
-        TextContent,
-        Tool,
-    )
+    from mcp.types import Resource, ResourceTemplate, TextContent, Tool
 
     MCP_AVAILABLE = True
 except ImportError:
@@ -86,7 +81,7 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()  # type: ignore[misc]
+        @self.server.list_tools()  # type: ignore[untyped-decorator]
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
@@ -233,10 +228,8 @@ class KuzuMemoryMCPServer:
                 ),
             ]
 
-        @self.server.call_tool()  # type: ignore[misc]
-        async def handle_call_tool(
-            name: str, arguments: dict[str, Any]
-        ) -> list[TextContent]:
+        @self.server.call_tool()  # type: ignore[untyped-decorator]
+        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
@@ -269,15 +262,13 @@ class KuzuMemoryMCPServer:
                 )
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
-                result = await self._stats(
-                    bool(detailed) if detailed is not None else False
-                )
+                result = await self._stats(bool(detailed) if detailed is not None else False)
             else:
                 result = f"Unknown tool: {name}"
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()  # type: ignore[misc]
+        @self.server.list_resources()  # type: ignore[untyped-decorator]
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -289,7 +280,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()  # type: ignore[misc]
+        @self.server.list_resource_templates()  # type: ignore[untyped-decorator]
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [
@@ -322,9 +313,7 @@ class KuzuMemoryMCPServer:
                     stderr=asyncio.subprocess.PIPE,
                     cwd=self.project_root,
                 )
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=10.0
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
 
                 if process.returncode == 0:
                     return stdout.decode().strip()
@@ -449,9 +438,7 @@ class KuzuMemoryMCPServer:
 
         # Use stdio_server async context manager for proper stream handling
         async with stdio_server() as (read_stream, write_stream):
-            logger.info(
-                f"KuzuMemory MCP Server running for project: {self.project_root}"
-            )
+            logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
 
             try:
                 # Run the MCP server with proper streams
