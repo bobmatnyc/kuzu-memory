@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory.migrations import (
     CleanupMigration,
     ConfigMigration,
@@ -246,7 +245,7 @@ def test_migration_history_tracking(tmp_path: Path):
     manager.register(TestMigration)
 
     # Run migration
-    results = manager.run_migrations("1.0.0")
+    manager.run_migrations("1.0.0")
 
     # Check history
     history = manager.get_history(1)

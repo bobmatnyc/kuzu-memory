@@ -24,7 +24,7 @@ def migrations_status(verbose: bool) -> None:
 
     manager = get_migration_manager()
 
-    rich_print(f"[bold]Migration Status[/bold]")
+    rich_print("[bold]Migration Status[/bold]")
     rich_print(f"Current version: [cyan]{__version__}[/cyan]")
     rich_print(f"Last migrated: [cyan]{manager.state.last_version}[/cyan]")
     rich_print("")
@@ -46,9 +46,7 @@ def migrations_status(verbose: bool) -> None:
             for h in history:
                 status = "[green]✓[/green]" if h.success else "[red]✗[/red]"
                 timestamp = h.timestamp[:10]  # Just the date
-                rich_print(
-                    f"  {status} {h.name} [{h.migration_type}] ({timestamp})"
-                )
+                rich_print(f"  {status} {h.name} [{h.migration_type}] ({timestamp})")
                 if h.changes:
                     for change in h.changes[:3]:  # Show first 3 changes
                         rich_print(f"      - {change}")
@@ -126,9 +124,7 @@ def migrations_history(limit: int, migration_type: str | None) -> None:
     for h in history:
         status = "[green]✓[/green]" if h.success else "[red]✗[/red]"
         timestamp = h.timestamp.split("T")[0]  # Just the date
-        rich_print(
-            f"{status} [cyan]{h.name}[/cyan] [{h.migration_type}] - {timestamp}"
-        )
+        rich_print(f"{status} [cyan]{h.name}[/cyan] [{h.migration_type}] - {timestamp}")
         rich_print(f"    {h.message}")
 
         if h.changes:

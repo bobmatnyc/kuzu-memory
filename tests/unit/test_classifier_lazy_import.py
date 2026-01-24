@@ -53,7 +53,7 @@ def test_module_level_import_is_fast() -> None:
     start = time.perf_counter()
 
     # This is how memory_enhancer imports it
-    from kuzu_memory.nlp.classifier import MemoryClassifier  # noqa: F401
+    from kuzu_memory.nlp.classifier import MemoryClassifier
 
     elapsed_ms = (time.perf_counter() - start) * 1000
 

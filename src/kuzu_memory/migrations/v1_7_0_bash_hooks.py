@@ -53,7 +53,6 @@ class BashHooksMigration(HooksMigration):
     def migrate(self) -> MigrationResult:
         """Replace Python hooks with bash hooks in Claude settings."""
         changes: list[str] = []
-        warnings: list[str] = []
 
         for settings_path in self._get_settings_paths():
             if settings_path.exists():
@@ -121,12 +120,8 @@ class BashHooksMigration(HooksMigration):
                     #     changes.append(f"Migrated enhance hook in {settings_path.name}")
 
                     elif "kuzu-memory hooks session-start" in cmd:
-                        hook["command"] = self._get_bash_hook_path(
-                            "session_start_hook.sh"
-                        )
-                        changes.append(
-                            f"Migrated session-start hook in {settings_path.name}"
-                        )
+                        hook["command"] = self._get_bash_hook_path("session_start_hook.sh")
+                        changes.append(f"Migrated session-start hook in {settings_path.name}")
                         logger.info(f"Migrated session-start hook in {settings_path}")
 
             if changes:

@@ -7,7 +7,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Type
 
 from packaging import version
 
@@ -245,9 +244,7 @@ class MigrationManager:
                 )
                 continue
 
-            logger.info(
-                f"Running migration: {migration.name} - {migration.description()}"
-            )
+            logger.info(f"Running migration: {migration.name} - {migration.description()}")
 
             try:
                 result = migration.migrate()
@@ -266,9 +263,7 @@ class MigrationManager:
                 results.append(result)
 
                 if not result.success:
-                    logger.warning(
-                        f"Migration {migration.name} failed: {result.message}"
-                    )
+                    logger.warning(f"Migration {migration.name} failed: {result.message}")
                     # Attempt rollback
                     if migration.rollback():
                         logger.info(f"Rollback successful for {migration.name}")

@@ -19,7 +19,6 @@ import importlib
 import logging
 import pkgutil
 from pathlib import Path
-from typing import Type
 
 from .base import (
     CleanupMigration,
@@ -35,7 +34,7 @@ from .manager import MigrationHistory, MigrationManager, MigrationState
 logger = logging.getLogger(__name__)
 
 
-def discover_migrations() -> list[Type[Migration]]:
+def discover_migrations() -> list[type[Migration]]:
     """
     Auto-discover all migration classes in this package.
 
@@ -60,9 +59,7 @@ def discover_migrations() -> list[Type[Migration]]:
     for module_info in pkgutil.iter_modules([str(package_dir)]):
         if module_info.name.startswith("v"):  # Migration modules start with version
             try:
-                module = importlib.import_module(
-                    f".{module_info.name}", package=__package__
-                )
+                module = importlib.import_module(f".{module_info.name}", package=__package__)
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
                     if (
@@ -98,16 +95,16 @@ def get_migration_manager(project_root: Path | None = None) -> MigrationManager:
 
 
 __all__ = [
-    "Migration",
-    "MigrationType",
-    "MigrationResult",
-    "ConfigMigration",
-    "SchemaMigration",
-    "HooksMigration",
     "CleanupMigration",
-    "MigrationManager",
-    "MigrationState",
+    "ConfigMigration",
+    "HooksMigration",
+    "Migration",
     "MigrationHistory",
+    "MigrationManager",
+    "MigrationResult",
+    "MigrationState",
+    "MigrationType",
+    "SchemaMigration",
     "discover_migrations",
     "get_migration_manager",
 ]
