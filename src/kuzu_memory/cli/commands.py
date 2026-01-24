@@ -18,7 +18,7 @@ from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
-# Import top-level command groups (10 total now with setup)
+# Import top-level command groups (11 total with migrations)
 from .cli_utils import rich_panel, rich_print, rich_table
 from .doctor_commands import doctor
 from .enums import OutputFormat
@@ -34,6 +34,7 @@ from .install_unified import (
 )
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
+from .migrations_commands import migrations_group
 from .setup_commands import setup
 from .status_commands import status
 from .update_commands import update
@@ -86,6 +87,35 @@ def _silent_repair_mcp_configs() -> None:
     except Exception as e:
         # Silent failure - don't block other commands
         logger.debug(f"Auto-repair skipped: {e}")
+
+
+def _check_migrations() -> None:
+    """
+    Check and run version migrations on startup.
+
+    This runs automatically on CLI invocation to ensure hooks and configurations
+    are updated when kuzu-memory is upgraded to a new version.
+
+    Uses auto-discovery to find all available migrations.
+    """
+    try:
+        from ..__version__ import __version__
+        from ..migrations import get_migration_manager
+
+        # Get manager with auto-discovered migrations
+        manager = get_migration_manager()
+
+        results = manager.run_migrations(__version__)
+        if results:
+            for result in results:
+                if result.success:
+                    logger.info(f"✓ {result.message}")
+                else:
+                    logger.warning(f"✗ {result.message}")
+
+    except Exception as e:
+        # Silent failure - don't block other commands
+        logger.debug(f"Migration check skipped: {e}")
 
 
 @click.group(invoke_without_command=True)
@@ -161,6 +191,7 @@ def cli(
     skip_repair_commands = {None, "help", "--help", "--version"}
     if ctx.invoked_subcommand not in skip_repair_commands:
         _silent_repair_mcp_configs()
+        _check_migrations()
 
     # Initialize context object
     ctx.ensure_object(dict)
@@ -658,6 +689,7 @@ cli.add_command(
     mcp_server
 )  # 12. MCP server (stdio mode) - replaces deprecated mcp install group
 cli.add_command(update)  # 13. Check for and install updates from PyPI
+cli.add_command(migrations_group, name="migrations")  # 14. Migration management
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead
