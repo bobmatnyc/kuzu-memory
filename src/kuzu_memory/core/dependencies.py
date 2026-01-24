@@ -40,9 +40,7 @@ class MemoryStoreProtocol(Protocol):
         ...
 
     @abstractmethod
-    def _store_memory_in_database(
-        self, memory: Memory, is_update: bool = False
-    ) -> None:
+    def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
         """Store a memory in the database (internal method)."""
         ...
 

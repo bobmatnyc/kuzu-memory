@@ -22,6 +22,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, call, mock_open, patch
 
 import pytest
+
 from kuzu_memory.installers.base import InstallationResult, InstalledSystem
 from kuzu_memory.services.installer_service import InstallerService
 
@@ -130,9 +131,7 @@ class TestInstallerServiceDiscovery:
         assert names == ["test-integration", "another-integration"]
         mock_registry.get_installer_names.assert_called_once()
 
-    def test_list_all_installers_returns_metadata(
-        self, installer_service, mock_registry
-    ):
+    def test_list_all_installers_returns_metadata(self, installer_service, mock_registry):
         """Test list_all_installers returns installer metadata."""
         with patch.object(installer_service, "_registry", mock_registry):
             installers = installer_service.list_all_installers()
@@ -163,18 +162,14 @@ class TestInstallerServiceInstall:
         mock_installer.install.return_value = success_result
 
         with patch.object(installer_service, "_registry", mock_registry):
-            result = installer_service.install(
-                "test-integration", force=True, verbose=True
-            )
+            result = installer_service.install("test-integration", force=True, verbose=True)
 
         assert result is True
         mock_config_service.get_project_root.assert_called()
         mock_registry.get_installer.assert_called_once_with(
             "test-integration", Path("/test/project")
         )
-        mock_installer.install.assert_called_once_with(
-            force=True, dry_run=False, verbose=True
-        )
+        mock_installer.install.assert_called_once_with(force=True, dry_run=False, verbose=True)
 
     def test_install_failure(self, installer_service, mock_registry, mock_installer):
         """Test failed installation."""
@@ -204,9 +199,7 @@ class TestInstallerServiceInstall:
 
         assert result is False
 
-    def test_install_with_exception(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_install_with_exception(self, installer_service, mock_registry, mock_installer):
         """Test installation handles exceptions gracefully."""
         mock_installer.install.side_effect = Exception("Installation error")
 
@@ -215,9 +208,7 @@ class TestInstallerServiceInstall:
 
         assert result is False
 
-    def test_install_with_dry_run(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_install_with_dry_run(self, installer_service, mock_registry, mock_installer):
         """Test installation with dry_run flag."""
         success_result = InstallationResult(
             success=True,
@@ -234,13 +225,9 @@ class TestInstallerServiceInstall:
             result = installer_service.install("test-integration", dry_run=True)
 
         assert result is True
-        mock_installer.install.assert_called_once_with(
-            force=False, dry_run=True, verbose=False
-        )
+        mock_installer.install.assert_called_once_with(force=False, dry_run=True, verbose=False)
 
-    def test_install_with_kwargs(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_install_with_kwargs(self, installer_service, mock_registry, mock_installer):
         """Test installation with additional kwargs."""
         success_result = InstallationResult(
             success=True,
@@ -317,9 +304,7 @@ class TestInstallerServiceUninstall:
 
         assert result is False
 
-    def test_uninstall_with_exception(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_uninstall_with_exception(self, installer_service, mock_registry, mock_installer):
         """Test uninstallation handles exceptions gracefully."""
         mock_installer.uninstall.side_effect = Exception("Uninstallation error")
 
@@ -328,9 +313,7 @@ class TestInstallerServiceUninstall:
 
         assert result is False
 
-    def test_uninstall_with_kwargs(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_uninstall_with_kwargs(self, installer_service, mock_registry, mock_installer):
         """Test uninstallation with additional kwargs."""
         success_result = InstallationResult(
             success=True,
@@ -377,9 +360,7 @@ class TestInstallerServiceHealthCheck:
         assert health["details"]["health_status"] == "healthy"
         assert health["details"]["has_mcp"] is True
 
-    def test_check_health_needs_repair(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_check_health_needs_repair(self, installer_service, mock_registry, mock_installer):
         """Test health check for installation needing repair."""
         detected = InstalledSystem(
             name="test-integration",
@@ -401,9 +382,7 @@ class TestInstallerServiceHealthCheck:
         assert health["details"]["health_status"] == "needs_repair"
         assert health["details"]["files_missing"] == 1
 
-    def test_check_health_not_installed(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_check_health_not_installed(self, installer_service, mock_registry, mock_installer):
         """Test health check for not installed integration."""
         detected = InstalledSystem(
             name="test-integration",
@@ -434,9 +413,7 @@ class TestInstallerServiceHealthCheck:
         assert health["healthy"] is False
         assert "Unknown integration" in health["details"]["error"]
 
-    def test_check_health_with_exception(
-        self, installer_service, mock_registry, mock_installer
-    ):
+    def test_check_health_with_exception(self, installer_service, mock_registry, mock_installer):
         """Test health check handles exceptions gracefully."""
         mock_installer.detect_installation.side_effect = Exception("Detection error")
 
@@ -475,9 +452,7 @@ class TestInstallerServiceMCPRepair:
 
     @patch("kuzu_memory.services.installer_service.load_json_config")
     @patch("kuzu_memory.services.installer_service.fix_broken_mcp_args")
-    def test_repair_mcp_config_no_fixes_needed(
-        self, mock_fix_args, mock_load, installer_service
-    ):
+    def test_repair_mcp_config_no_fixes_needed(self, mock_fix_args, mock_load, installer_service):
         """Test MCP config repair when no fixes needed."""
         config = {"mcpServers": {"server1": {"args": ["correct"]}}}
         mock_load.return_value = config
@@ -524,9 +499,7 @@ class TestInstallerServiceUtilityMethods:
             "test-integration", Path("/test/project")
         )
 
-    def test_get_installer_instance_unknown_integration(
-        self, installer_service, mock_registry
-    ):
+    def test_get_installer_instance_unknown_integration(self, installer_service, mock_registry):
         """Test get_installer_instance returns None for unknown integration."""
         mock_registry.get_installer.return_value = None
 

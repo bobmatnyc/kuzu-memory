@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.migrations import MigrationManager
 from kuzu_memory.migrations.v1_7_0_bash_hooks import BashHooksMigration
 
@@ -118,9 +119,9 @@ def test_bash_hook_script_exists():
         if script_path.exists():
             import stat
 
-            assert (
-                script_path.stat().st_mode & stat.S_IXUSR
-            ), f"Script not executable: {script_path}"
+            assert script_path.stat().st_mode & stat.S_IXUSR, (
+                f"Script not executable: {script_path}"
+            )
 
 
 def test_bash_hook_script_syntax():

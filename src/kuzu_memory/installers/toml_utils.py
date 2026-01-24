@@ -20,9 +20,7 @@ except ImportError:
 try:
     import tomli_w
 except ImportError:
-    raise ImportError(
-        "tomli_w is required for TOML writing. Install with: pip install tomli-w"
-    )
+    raise ImportError("tomli_w is required for TOML writing. Install with: pip install tomli-w")
 
 logger = logging.getLogger(__name__)
 

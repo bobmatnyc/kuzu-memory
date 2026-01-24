@@ -9,6 +9,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from kuzu_memory.core.models import ExtractedMemory, MemoryType
 from kuzu_memory.nlp.classifier import (
     ClassificationResult,

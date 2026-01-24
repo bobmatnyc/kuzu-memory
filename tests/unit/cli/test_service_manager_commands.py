@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
+
 from kuzu_memory.cli.commands import cli
 from kuzu_memory.cli.memory_commands import enhance, recall, recent
 from kuzu_memory.cli.status_commands import status
@@ -59,26 +60,18 @@ class TestRecallCommand:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
-            with patch(
-                "kuzu_memory.cli.memory_commands.get_project_db_path"
-            ) as mock_db:
+            with patch("kuzu_memory.cli.memory_commands.get_project_db_path") as mock_db:
                 mock_db.return_value = Path("/tmp/test.db")
 
-                result = runner.invoke(
-                    recall, ["test query", "--format", "simple"], obj={}
-                )
+                result = runner.invoke(recall, ["test query", "--format", "simple"], obj={})
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
-                mock_memory_service.attach_memories.assert_called_once()
-                assert (
-                    "test query" in mock_memory_service.attach_memories.call_args[0][0]
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
                 )
+                mock_memory_service.attach_memories.assert_called_once()
+                assert "test query" in mock_memory_service.attach_memories.call_args[0][0]
 
     def test_recall_no_memories_found(self, runner, mock_memory_service):
         """Test recall command when no memories found."""
@@ -87,9 +80,7 @@ class TestRecallCommand:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recall, ["test query"])
@@ -104,9 +95,7 @@ class TestRecallCommand:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(
@@ -132,9 +121,7 @@ class TestEnhanceCommand:
 
     def test_enhance_with_service_manager(self, runner, mock_memory_service):
         """Test enhance command uses ServiceManager correctly."""
-        test_memory = Memory(
-            id="test-id", content="Test context", memory_type=MemoryType.SEMANTIC
-        )
+        test_memory = Memory(id="test-id", content="Test context", memory_type=MemoryType.SEMANTIC)
         mock_context = MemoryContext(
             original_prompt="test prompt",
             enhanced_prompt="test prompt with context",
@@ -143,9 +130,7 @@ class TestEnhanceCommand:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(enhance, ["test prompt", "--format", "plain"])
@@ -155,9 +140,7 @@ class TestEnhanceCommand:
 
     def test_enhance_json_output(self, runner, mock_memory_service):
         """Test enhance command with JSON output format."""
-        test_memory = Memory(
-            id="test-id", content="Test context", memory_type=MemoryType.SEMANTIC
-        )
+        test_memory = Memory(id="test-id", content="Test context", memory_type=MemoryType.SEMANTIC)
         mock_context = MemoryContext(
             original_prompt="test",
             enhanced_prompt="test enhanced",
@@ -166,9 +149,7 @@ class TestEnhanceCommand:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(enhance, ["test prompt", "--format", "json"])
@@ -184,16 +165,12 @@ class TestRecentCommand:
     def test_recent_with_service_manager(self, runner, mock_memory_service):
         """Test recent command uses ServiceManager correctly."""
         test_memories = [
-            Memory(
-                id=f"test-{i}", content=f"Memory {i}", memory_type=MemoryType.SEMANTIC
-            )
+            Memory(id=f"test-{i}", content=f"Memory {i}", memory_type=MemoryType.SEMANTIC)
             for i in range(5)
         ]
         mock_memory_service.get_recent_memories.return_value = test_memories
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recent, ["--limit", "5", "--format", "list"])
@@ -205,9 +182,7 @@ class TestRecentCommand:
         """Test recent command when no memories exist."""
         mock_memory_service.get_recent_memories.return_value = []
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recent, [])
@@ -217,14 +192,10 @@ class TestRecentCommand:
 
     def test_recent_json_output(self, runner, mock_memory_service):
         """Test recent command with JSON output."""
-        test_memories = [
-            Memory(id="test-1", content="Memory 1", memory_type=MemoryType.SEMANTIC)
-        ]
+        test_memories = [Memory(id="test-1", content="Memory 1", memory_type=MemoryType.SEMANTIC)]
         mock_memory_service.get_recent_memories.return_value = test_memories
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recent, ["--format", "json"])
@@ -244,13 +215,9 @@ class TestStatusCommand:
             Memory(id="test", content="Test", memory_type=MemoryType.SEMANTIC)
         ]
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
-            with patch(
-                "kuzu_memory.cli.status_commands.get_project_db_path"
-            ) as mock_db_path:
+            with patch("kuzu_memory.cli.status_commands.get_project_db_path") as mock_db_path:
                 # Mock database path exists
                 mock_path = MagicMock(spec=Path)
                 mock_path.exists.return_value = True
@@ -263,9 +230,7 @@ class TestStatusCommand:
 
     def test_status_project_not_initialized(self, runner):
         """Test status command when project not initialized."""
-        with patch(
-            "kuzu_memory.cli.status_commands.get_project_db_path"
-        ) as mock_db_path:
+        with patch("kuzu_memory.cli.status_commands.get_project_db_path") as mock_db_path:
             mock_path = MagicMock(spec=Path)
             mock_path.exists.return_value = False
             mock_db_path.return_value = mock_path
@@ -280,13 +245,9 @@ class TestStatusCommand:
         mock_memory_service.get_memory_count.return_value = 50
         mock_memory_service.get_recent_memories.return_value = []
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
-            with patch(
-                "kuzu_memory.cli.status_commands.get_project_db_path"
-            ) as mock_db_path:
+            with patch("kuzu_memory.cli.status_commands.get_project_db_path") as mock_db_path:
                 mock_path = MagicMock(spec=Path)
                 mock_path.exists.return_value = True
                 mock_db_path.return_value = mock_path
@@ -305,9 +266,7 @@ class TestServiceManagerCleanup:
         """Test service cleanup is called on successful execution."""
         mock_memory_service.get_recent_memories.return_value = []
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_enter = MagicMock(return_value=mock_memory_service)
             mock_exit = MagicMock()
             mock_ctx.return_value.__enter__ = mock_enter
@@ -324,13 +283,9 @@ class TestServiceManagerCleanup:
         """Test service cleanup is called even on errors."""
         mock_memory_service.get_recent_memories.side_effect = Exception("Test error")
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_enter = MagicMock(return_value=mock_memory_service)
-            mock_exit = MagicMock(
-                return_value=None
-            )  # Return None to propagate exception
+            mock_exit = MagicMock(return_value=None)  # Return None to propagate exception
             mock_ctx.return_value.__enter__ = mock_enter
             mock_ctx.return_value.__exit__ = mock_exit
 
@@ -351,9 +306,7 @@ class TestCustomDbPath:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recall, ["test", "--db-path", "/custom/path/db"])
@@ -370,9 +323,7 @@ class TestCustomDbPath:
         )
         mock_memory_service.attach_memories.return_value = mock_context
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(enhance, ["test", "--db-path", "/custom/path/db"])
@@ -385,9 +336,7 @@ class TestCustomDbPath:
         """Test recent with custom database path."""
         mock_memory_service.get_recent_memories.return_value = []
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(recent, ["--db-path", "/custom/path/db"])
@@ -401,9 +350,7 @@ class TestCustomDbPath:
         mock_memory_service.get_memory_count.return_value = 0
         mock_memory_service.get_recent_memories.return_value = []
 
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
             with patch("kuzu_memory.cli.status_commands.Path") as mock_path_class:
                 mock_path = MagicMock()

@@ -88,9 +88,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def set_multi(
-        self, items: dict[str, Any], ttl: timedelta | None = None
-    ) -> None:
+    async def set_multi(self, items: dict[str, Any], ttl: timedelta | None = None) -> None:
         """
         Store multiple values in cache.
 

@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from kuzu_memory.cli.hooks_commands import (
     _cache_project_root,
     _get_cached_project_root,

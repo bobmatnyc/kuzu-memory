@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
+
 from kuzu_memory.cli.git_commands import sync
 from kuzu_memory.cli.init_commands import init
 from kuzu_memory.cli.memory_commands import prune, store
@@ -84,9 +85,7 @@ class TestStoreCommand:
 
     def test_store_with_service_manager(self, runner, mock_memory_service):
         """Test store command uses MemoryService correctly."""
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(
@@ -95,9 +94,7 @@ class TestStoreCommand:
                 obj={},
             )
 
-            assert (
-                result.exit_code == 0
-            ), f"Output: {result.output}\nException: {result.exception}"
+            assert result.exit_code == 0, f"Output: {result.output}\nException: {result.exception}"
             assert "Stored memory" in result.output
             # Memory ID is truncated to first 8 chars + "..." in CLI output
             assert "test-mem..." in result.output
@@ -105,9 +102,7 @@ class TestStoreCommand:
 
     def test_store_with_metadata(self, runner, mock_memory_service):
         """Test store command with JSON metadata."""
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(
@@ -133,9 +128,7 @@ class TestStoreCommand:
 
     def test_store_with_invalid_metadata(self, runner, mock_memory_service):
         """Test store command with invalid JSON metadata."""
-        with patch(
-            "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-        ) as mock_ctx:
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
 
             result = runner.invoke(
@@ -159,9 +152,7 @@ class TestInitCommand:
             patch("kuzu_memory.services.SetupService") as MockSetup,
             patch("kuzu_memory.cli.init_commands.find_project_root") as mock_find,
             patch("kuzu_memory.cli.init_commands.get_project_db_path") as mock_db_path,
-            patch(
-                "kuzu_memory.cli.init_commands.get_project_memories_dir"
-            ) as mock_mem_dir,
+            patch("kuzu_memory.cli.init_commands.get_project_memories_dir") as mock_mem_dir,
             patch(
                 "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
             ) as mock_memory_ctx,
@@ -188,12 +179,9 @@ class TestInitCommand:
 
             result = runner.invoke(init, [], obj={})
 
+            assert result.exit_code == 0, f"Output: {result.output}\nException: {result.exception}"
             assert (
-                result.exit_code == 0
-            ), f"Output: {result.output}\nException: {result.exception}"
-            assert (
-                "Initialization Complete" in result.output
-                or "initialized" in result.output.lower()
+                "Initialization Complete" in result.output or "initialized" in result.output.lower()
             )
 
             # Verify services were created and initialized
@@ -207,9 +195,7 @@ class TestInitCommand:
         with (
             patch("kuzu_memory.cli.init_commands.find_project_root") as mock_find,
             patch("kuzu_memory.cli.init_commands.get_project_db_path") as mock_db_path,
-            patch(
-                "kuzu_memory.cli.init_commands.get_project_memories_dir"
-            ) as mock_mem_dir,
+            patch("kuzu_memory.cli.init_commands.get_project_memories_dir") as mock_mem_dir,
         ):
             mock_find.return_value = Path("/tmp/test-project")
 
@@ -233,9 +219,7 @@ class TestPruneCommand:
         """Test prune command in dry-run mode."""
         # Mock MemoryPruner and its analyze method
         with (
-            patch(
-                "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-            ) as mock_ctx,
+            patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx,
             patch("kuzu_memory.core.prune.MemoryPruner") as MockPruner,
         ):
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
@@ -257,9 +241,7 @@ class TestPruneCommand:
 
             result = runner.invoke(prune, ["--strategy", "safe"], obj={})
 
-            assert (
-                result.exit_code == 0
-            ), f"Output: {result.output}\nException: {result.exception}"
+            assert result.exit_code == 0, f"Output: {result.output}\nException: {result.exception}"
             assert "DRY-RUN" in result.output or "dry run" in result.output.lower()
             assert "100" in result.output  # memories to prune
 
@@ -269,9 +251,7 @@ class TestPruneCommand:
     def test_prune_uses_kuzu_memory_property(self, runner, mock_memory_service):
         """Test prune command accesses kuzu_memory property correctly."""
         with (
-            patch(
-                "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
-            ) as mock_ctx,
+            patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx,
             patch("kuzu_memory.core.prune.MemoryPruner") as MockPruner,
         ):
             mock_ctx.return_value.__enter__.return_value = mock_memory_service
@@ -300,9 +280,7 @@ class TestPruneCommand:
 class TestGitSyncCommand:
     """Test git sync command migration to GitSyncService."""
 
-    def test_sync_with_git_sync_service(
-        self, runner, mock_git_sync_service, mock_config_service
-    ):
+    def test_sync_with_git_sync_service(self, runner, mock_git_sync_service, mock_config_service):
         """Test git sync command uses GitSyncService correctly."""
         with (
             patch("kuzu_memory.services.ConfigService") as MockConfig,
@@ -329,12 +307,8 @@ class TestGitSyncCommand:
 
             result = runner.invoke(sync, [], obj={"project_root": Path.cwd()})
 
-            assert (
-                result.exit_code == 0
-            ), f"Output: {result.output}\nException: {result.exception}"
-            assert (
-                "Sync Complete" in result.output or "commits" in result.output.lower()
-            )
+            assert result.exit_code == 0, f"Output: {result.output}\nException: {result.exception}"
+            assert "Sync Complete" in result.output or "commits" in result.output.lower()
 
             # Verify GitSyncService methods were called
             mock_git_sync_service.is_available.assert_called_once()

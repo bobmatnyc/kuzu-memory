@@ -57,9 +57,9 @@ class TestMemoryPerConnection:
         print(f"  Connected: {connected_memory:.2f}MB")
         print(f"  Per Connection: {memory_per_connection:.2f}MB")
 
-        assert (
-            memory_per_connection < MEMORY_THRESHOLDS["per_connection"]["critical"]
-        ), f"Memory per connection {memory_per_connection:.2f}MB exceeds critical"
+        assert memory_per_connection < MEMORY_THRESHOLDS["per_connection"]["critical"], (
+            f"Memory per connection {memory_per_connection:.2f}MB exceeds critical"
+        )
 
     @pytest.mark.asyncio
     async def test_multiple_connections_memory(self, project_root):
@@ -93,9 +93,9 @@ class TestMemoryPerConnection:
         print(f"  Total increase: {memory_increase:.2f}MB")
         print(f"  Avg per connection: {avg_per_connection:.2f}MB")
 
-        assert (
-            avg_per_connection < MEMORY_THRESHOLDS["per_connection"]["critical"]
-        ), f"Avg memory per connection {avg_per_connection:.2f}MB exceeds critical"
+        assert avg_per_connection < MEMORY_THRESHOLDS["per_connection"]["critical"], (
+            f"Avg memory per connection {avg_per_connection:.2f}MB exceeds critical"
+        )
 
 
 @pytest.mark.performance
@@ -132,9 +132,9 @@ class TestMemoryGrowth:
         print(f"  Growth: {memory_growth:.2f}MB")
         print(f"  Growth rate: {growth_rate:.4f}MB per 100 ops")
 
-        assert (
-            growth_rate < MEMORY_THRESHOLDS["growth_rate"]["critical"]
-        ), f"Memory growth rate {growth_rate:.4f}MB/100ops exceeds critical"
+        assert growth_rate < MEMORY_THRESHOLDS["growth_rate"]["critical"], (
+            f"Memory growth rate {growth_rate:.4f}MB/100ops exceeds critical"
+        )
 
     @pytest.mark.asyncio
     async def test_memory_growth_with_tool_calls(self, initialized_client):
@@ -149,7 +149,9 @@ class TestMemoryGrowth:
             args = (
                 {"query": "test", "limit": 5}
                 if tool == "recall"
-                else {"limit": 10} if tool == "recent" else {}
+                else {"limit": 10}
+                if tool == "recent"
+                else {}
             )
             await initialized_client.call_tool(tool, args)
 
@@ -164,9 +166,9 @@ class TestMemoryGrowth:
         print(f"  Growth: {memory_growth:.2f}MB")
         print(f"  Growth rate: {growth_rate:.4f}MB per 100 ops")
 
-        assert (
-            growth_rate < MEMORY_THRESHOLDS["growth_rate"]["critical"]
-        ), f"Tool call growth rate {growth_rate:.4f}MB/100ops exceeds critical"
+        assert growth_rate < MEMORY_THRESHOLDS["growth_rate"]["critical"], (
+            f"Tool call growth rate {growth_rate:.4f}MB/100ops exceeds critical"
+        )
 
 
 @pytest.mark.performance
@@ -240,9 +242,9 @@ class TestMemoryLeaks:
         print(f"  Last cycle delta: {last_cycle_delta:.4f}MB")
 
         # Later cycles should not grow significantly more than first
-        assert (
-            last_cycle_delta < first_cycle_delta * 2
-        ), "Memory growth increasing per cycle (potential leak)"
+        assert last_cycle_delta < first_cycle_delta * 2, (
+            "Memory growth increasing per cycle (potential leak)"
+        )
 
 
 @pytest.mark.performance
@@ -275,9 +277,9 @@ class TestPeakMemoryUsage:
         print(f"  Final: {final_memory:.2f}MB")
         print(f"  Peak increase: {peak_increase:.2f}MB")
 
-        assert (
-            peak_increase < MEMORY_THRESHOLDS["peak"]["critical"]
-        ), f"Peak memory increase {peak_increase:.2f}MB exceeds critical"
+        assert peak_increase < MEMORY_THRESHOLDS["peak"]["critical"], (
+            f"Peak memory increase {peak_increase:.2f}MB exceeds critical"
+        )
 
     @pytest.mark.asyncio
     async def test_peak_memory_concurrent(self, multiple_clients):
@@ -300,9 +302,9 @@ class TestPeakMemoryUsage:
         print(f"  Peak increase: {peak_increase:.2f}MB")
         print(f"  Clients: {len(multiple_clients)}")
 
-        assert (
-            peak_increase < MEMORY_THRESHOLDS["peak"]["critical"]
-        ), f"Peak memory {peak_increase:.2f}MB exceeds critical"
+        assert peak_increase < MEMORY_THRESHOLDS["peak"]["critical"], (
+            f"Peak memory {peak_increase:.2f}MB exceeds critical"
+        )
 
 
 @pytest.mark.performance
@@ -345,12 +347,8 @@ class TestMemoryByToolType:
 
         print("\nMemory Usage by Tool Type:")
         for tool, mem in tool_memory.items():
-            print(
-                f"  {tool:15s}: {mem['total']:6.2f}MB total, {mem['per_op'] * 1000:6.2f}KB/op"
-            )
+            print(f"  {tool:15s}: {mem['total']:6.2f}MB total, {mem['per_op'] * 1000:6.2f}KB/op")
 
         # Each tool should have reasonable memory usage
         for tool, mem in tool_memory.items():
-            assert (
-                mem["per_op"] < 0.1
-            ), f"{tool} uses {mem['per_op']:.4f}MB per operation"
+            assert mem["per_op"] < 0.1, f"{tool} uses {mem['per_op']:.4f}MB per operation"

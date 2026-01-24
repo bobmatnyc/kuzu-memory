@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from kuzu_memory import KuzuMemory
 from kuzu_memory.core.models import Memory, MemoryType
 
@@ -39,9 +40,7 @@ class TestDataIntegrityRegression:
                 "enable_entity_extraction": True,
                 "enable_pattern_compilation": True,
             },
-            "retention": {
-                "enable_auto_cleanup": False
-            },  # Disable cleanup for integrity tests
+            "retention": {"enable_auto_cleanup": False},  # Disable cleanup for integrity tests
         }
 
     @pytest.fixture
@@ -94,9 +93,7 @@ class TestDataIntegrityRegression:
             },
         ]
 
-    def test_memory_content_integrity(
-        self, temp_db_path, integrity_config, reference_dataset
-    ):
+    def test_memory_content_integrity(self, temp_db_path, integrity_config, reference_dataset):
         """Test that memory content is stored and retrieved without corruption."""
         with KuzuMemory(db_path=temp_db_path, config=integrity_config) as memory:
             stored_memory_ids = []
@@ -114,9 +111,7 @@ class TestDataIntegrityRegression:
                 stored_memory_ids.extend(memory_ids)
 
                 # Calculate content hash for integrity verification
-                content_hash = hashlib.sha256(
-                    data["content"].encode("utf-8")
-                ).hexdigest()
+                content_hash = hashlib.sha256(data["content"].encode("utf-8")).hexdigest()
                 content_hashes[data["content"]] = content_hash
 
             assert len(stored_memory_ids) > 0
@@ -176,9 +171,7 @@ class TestDataIntegrityRegression:
                 )
 
                 # Should find relevant memories with keywords that match extracted content
-                assert (
-                    len(context.memories) > 0
-                ), f"Failed to recall memories for query: {query}"
+                assert len(context.memories) > 0, f"Failed to recall memories for query: {query}"
 
                 # Verify content in enhanced prompt
                 assert len(context.enhanced_prompt) > len(context.original_prompt)
@@ -223,33 +216,23 @@ class TestDataIntegrityRegression:
             overall_total = 0
 
             for mem_type, stats in type_accuracy.items():
-                accuracy = (
-                    stats["correct"] / stats["total"] if stats["total"] > 0 else 0
-                )
+                accuracy = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
                 print(
                     f"  {mem_type.value:12}: {accuracy:.1%} ({stats['correct']}/{stats['total']})"
                 )
                 overall_correct += stats["correct"]
                 overall_total += stats["total"]
 
-            overall_accuracy = (
-                overall_correct / overall_total if overall_total > 0 else 0
-            )
-            print(
-                f"  {'Overall':12}: {overall_accuracy:.1%} ({overall_correct}/{overall_total})"
-            )
+            overall_accuracy = overall_correct / overall_total if overall_total > 0 else 0
+            print(f"  {'Overall':12}: {overall_accuracy:.1%} ({overall_correct}/{overall_total})")
 
             # Regression assertion - should maintain reasonable accuracy
-            assert (
-                overall_accuracy >= 0.6
-            ), f"Memory type classification accuracy regressed: {overall_accuracy:.1%}"
+            assert overall_accuracy >= 0.6, (
+                f"Memory type classification accuracy regressed: {overall_accuracy:.1%}"
+            )
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
-    def test_entity_extraction_integrity(
-        self, temp_db_path, integrity_config, reference_dataset
-    ):
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
+    def test_entity_extraction_integrity(self, temp_db_path, integrity_config, reference_dataset):
         """Test that entity extraction is consistent and accurate."""
         with KuzuMemory(db_path=temp_db_path, config=integrity_config) as memory:
             entity_accuracy = {}
@@ -275,14 +258,8 @@ class TestDataIntegrityRegression:
                 # Calculate entity extraction accuracy
                 if expected_entities:
                     intersection = expected_entities.intersection(found_entities)
-                    precision = (
-                        len(intersection) / len(found_entities) if found_entities else 0
-                    )
-                    recall = (
-                        len(intersection) / len(expected_entities)
-                        if expected_entities
-                        else 0
-                    )
+                    precision = len(intersection) / len(found_entities) if found_entities else 0
+                    recall = len(intersection) / len(expected_entities) if expected_entities else 0
                     f1_score = (
                         2 * (precision * recall) / (precision + recall)
                         if (precision + recall) > 0
@@ -299,15 +276,15 @@ class TestDataIntegrityRegression:
 
             # Analyze entity extraction performance
             if entity_accuracy:
-                avg_precision = sum(
-                    stats["precision"] for stats in entity_accuracy.values()
-                ) / len(entity_accuracy)
-                avg_recall = sum(
-                    stats["recall"] for stats in entity_accuracy.values()
-                ) / len(entity_accuracy)
-                avg_f1 = sum(
-                    stats["f1_score"] for stats in entity_accuracy.values()
-                ) / len(entity_accuracy)
+                avg_precision = sum(stats["precision"] for stats in entity_accuracy.values()) / len(
+                    entity_accuracy
+                )
+                avg_recall = sum(stats["recall"] for stats in entity_accuracy.values()) / len(
+                    entity_accuracy
+                )
+                avg_f1 = sum(stats["f1_score"] for stats in entity_accuracy.values()) / len(
+                    entity_accuracy
+                )
 
                 print("\nEntity Extraction Integrity:")
                 print(f"  Average Precision: {avg_precision:.2f}")
@@ -315,12 +292,10 @@ class TestDataIntegrityRegression:
                 print(f"  Average F1-Score: {avg_f1:.2f}")
 
                 # Regression assertions
-                assert (
-                    avg_precision >= 0.5
-                ), f"Entity extraction precision regressed: {avg_precision:.2f}"
-                assert (
-                    avg_recall >= 0.4
-                ), f"Entity extraction recall regressed: {avg_recall:.2f}"
+                assert avg_precision >= 0.5, (
+                    f"Entity extraction precision regressed: {avg_precision:.2f}"
+                )
+                assert avg_recall >= 0.4, f"Entity extraction recall regressed: {avg_recall:.2f}"
 
     def test_deduplication_integrity(self, temp_db_path, integrity_config):
         """Test that deduplication works correctly and consistently."""
@@ -349,9 +324,9 @@ class TestDataIntegrityRegression:
                     unique_contents.add(retrieved_memory.content)
 
             # Should have deduplicated exact matches
-            assert (
-                len(unique_contents) <= 2
-            ), f"Exact deduplication failed: {len(unique_contents)} unique contents"
+            assert len(unique_contents) <= 2, (
+                f"Exact deduplication failed: {len(unique_contents)} unique contents"
+            )
 
             # Test near duplicates
             near_duplicates = [
@@ -380,18 +355,14 @@ class TestDataIntegrityRegression:
 
             print("\nDeduplication Integrity:")
             print(f"  Exact duplicates: {len(unique_contents)} unique from 5 identical")
-            print(
-                f"  Near duplicates: {len(near_unique_contents)} unique from 4 similar"
-            )
+            print(f"  Near duplicates: {len(near_unique_contents)} unique from 4 similar")
 
             # Should handle near-duplicates reasonably
-            assert len(near_unique_contents) <= len(
-                near_duplicates
-            ), "Near-duplicate handling failed"
+            assert len(near_unique_contents) <= len(near_duplicates), (
+                "Near-duplicate handling failed"
+            )
 
-    def test_recall_consistency_integrity(
-        self, temp_db_path, integrity_config, reference_dataset
-    ):
+    def test_recall_consistency_integrity(self, temp_db_path, integrity_config, reference_dataset):
         """Test that recall results are consistent across multiple calls."""
         with KuzuMemory(db_path=temp_db_path, config=integrity_config) as memory:
             # Store reference data
@@ -417,9 +388,7 @@ class TestDataIntegrityRegression:
                 # Perform same query multiple times
                 results = []
                 for _ in range(5):
-                    context = memory.attach_memories(
-                        prompt=query, user_id=user_id, max_memories=10
-                    )
+                    context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=10)
 
                     # Create result signature
                     memory_ids = [mem.id for mem in context.memories]
@@ -449,9 +418,7 @@ class TestDataIntegrityRegression:
                 1 for result in consistency_results.values() if result["consistent"]
             )
             total_queries = len(consistency_results)
-            consistency_rate = (
-                consistent_queries / total_queries if total_queries > 0 else 0
-            )
+            consistency_rate = consistent_queries / total_queries if total_queries > 0 else 0
 
             print("\nRecall Consistency Integrity:")
             print(
@@ -463,13 +430,9 @@ class TestDataIntegrityRegression:
                 print(f"  {status} {query[:40]}...")
 
             # Regression assertion
-            assert (
-                consistency_rate >= 0.8
-            ), f"Recall consistency regressed: {consistency_rate:.1%}"
+            assert consistency_rate >= 0.8, f"Recall consistency regressed: {consistency_rate:.1%}"
 
-    def test_data_persistence_integrity(
-        self, temp_db_path, integrity_config, reference_dataset
-    ):
+    def test_data_persistence_integrity(self, temp_db_path, integrity_config, reference_dataset):
         """Test that data persists correctly across sessions."""
         stored_data = {}
 
@@ -504,10 +467,7 @@ class TestDataIntegrityRegression:
 
                     # Verify content integrity - extracted memory should be non-empty
                     # and may be a substring or extracted portion of original
-                    if (
-                        not retrieved_memory.content
-                        or len(retrieved_memory.content.strip()) == 0
-                    ):
+                    if not retrieved_memory.content or len(retrieved_memory.content.strip()) == 0:
                         persistence_integrity = False
                         print(f"Content integrity lost for memory {memory_id}")
 
@@ -536,9 +496,7 @@ class TestDataIntegrityRegression:
             )
             assert persistence_integrity, "Data persistence integrity check failed"
 
-    @pytest.mark.skip(
-        reason="Entity extraction patterns need tuning for test content alignment"
-    )
+    @pytest.mark.skip(reason="Entity extraction patterns need tuning for test content alignment")
     def test_concurrent_access_integrity(self, temp_db_path, integrity_config):
         """Test data integrity under concurrent access."""
         import queue
@@ -549,9 +507,7 @@ class TestDataIntegrityRegression:
 
         def worker(worker_id):
             try:
-                with KuzuMemory(
-                    db_path=temp_db_path, config=integrity_config
-                ) as memory:
+                with KuzuMemory(db_path=temp_db_path, config=integrity_config) as memory:
                     user_id = f"concurrent-user-{worker_id}"
 
                     # Store some data
@@ -614,10 +570,10 @@ class TestDataIntegrityRegression:
         successful_workers = len(results)
         successful_recalls = sum(1 for r in results if r["recall_success"])
 
-        assert (
-            successful_workers == num_workers
-        ), f"Not all workers completed successfully: {successful_workers}/{num_workers}"
+        assert successful_workers == num_workers, (
+            f"Not all workers completed successfully: {successful_workers}/{num_workers}"
+        )
         assert len(errors) == 0, f"Concurrent access errors occurred: {errors}"
-        assert (
-            successful_recalls >= num_workers * 0.8
-        ), f"Recall success rate too low: {successful_recalls}/{num_workers}"
+        assert successful_recalls >= num_workers * 0.8, (
+            f"Recall success rate too low: {successful_recalls}/{num_workers}"
+        )

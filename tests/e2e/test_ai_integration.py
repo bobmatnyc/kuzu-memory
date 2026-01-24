@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from kuzu_memory import KuzuMemory
 
 
@@ -158,22 +159,14 @@ class TestAIIntegration:
             enhanced_lower = enhanced.lower()
             if "background" in query.lower():
                 assert any(
-                    term in enhanced_lower
-                    for term in ["sarah", "chen", "senior", "engineer"]
+                    term in enhanced_lower for term in ["sarah", "chen", "senior", "engineer"]
                 )
             elif "languages" in query.lower():
-                assert any(
-                    term in enhanced_lower for term in ["python", "react", "postgresql"]
-                )
+                assert any(term in enhanced_lower for term in ["python", "react", "postgresql"])
             elif "project" in query.lower():
-                assert any(
-                    term in enhanced_lower
-                    for term in ["analytics", "platform", "kafka"]
-                )
+                assert any(term in enhanced_lower for term in ["analytics", "platform", "kafka"])
             elif "practices" in query.lower():
-                assert any(
-                    term in enhanced_lower for term in ["test-driven", "code reviews"]
-                )
+                assert any(term in enhanced_lower for term in ["test-driven", "code reviews"])
             elif "role" in query.lower():
                 assert any(term in enhanced_lower for term in ["mentor", "interviews"])
 
@@ -215,9 +208,9 @@ class TestAIIntegration:
         ]
         found_terms = [term for term in learned_terms if term in enhanced_tech_lower]
 
-        assert (
-            len(found_terms) > 0
-        ), f"No newly learned content found in enhancement: {enhanced_tech}"
+        assert len(found_terms) > 0, (
+            f"No newly learned content found in enhancement: {enhanced_tech}"
+        )
 
     def test_ai_conversation_workflow(self, temp_db_path, ai_config_path):
         """Test complete AI conversation workflow with memory integration."""
@@ -265,7 +258,9 @@ class TestAIIntegration:
             ai_response = f"AI Response to: {user_input} (enhanced with {context_count} memories, confidence: {confidence:.2f})"
 
             # Step 3: Store learning from conversation (async)
-            learning_content = f"User asked: {user_input}. AI responded with information about the topic."
+            learning_content = (
+                f"User asked: {user_input}. AI responded with information about the topic."
+            )
 
             learn_result = subprocess.run(
                 [
@@ -294,9 +289,7 @@ class TestAIIntegration:
                 "ai_response": ai_response,
                 "context_count": context_count,
                 "confidence": confidence,
-                "learning_success": (
-                    learn_result.returncode == 0 if learn_result else False
-                ),
+                "learning_success": (learn_result.returncode == 0 if learn_result else False),
             }
 
         # Simulate a conversation sequence
@@ -342,14 +335,12 @@ class TestAIIntegration:
         print("\nConversation Analysis:")
         print(f"  Earlier half context: {earlier_half_context}")
         print(f"  Later half context: {later_half_context}")
-        print(
-            f"  Learning success rate: {sum(learning_successes) / len(learning_successes):.1%}"
-        )
+        print(f"  Learning success rate: {sum(learning_successes) / len(learning_successes):.1%}")
 
         # Memory should accumulate over the conversation
-        assert (
-            later_half_context >= earlier_half_context
-        ), "Context should improve over conversation"
+        assert later_half_context >= earlier_half_context, (
+            "Context should improve over conversation"
+        )
 
         # Most learning attempts should succeed
         learning_rate = sum(learning_successes) / len(learning_successes)
@@ -358,9 +349,7 @@ class TestAIIntegration:
     def test_error_handling_in_ai_integration(self, temp_db_path, ai_config_path):
         """Test error handling in AI integration scenarios."""
 
-        def robust_enhance_with_memory(
-            prompt: str, user_id: str = "error-test-user"
-        ) -> str:
+        def robust_enhance_with_memory(prompt: str, user_id: str = "error-test-user") -> str:
             """Robust enhancement function with proper error handling."""
             if not prompt or not prompt.strip():
                 return "Please provide a valid question or prompt."
@@ -483,29 +472,25 @@ class TestAIIntegration:
         print(f"  Learning success rate: {learning_success_rate:.1%}")
 
         # System should handle errors gracefully
-        assert (
-            enhancement_success_rate > 0.8
-        ), f"Enhancement error handling {enhancement_success_rate:.1%} insufficient"
+        assert enhancement_success_rate > 0.8, (
+            f"Enhancement error handling {enhancement_success_rate:.1%} insufficient"
+        )
         # Learning can be more permissive since it's fire-and-forget
-        assert (
-            learning_success_rate > 0.5
-        ), f"Learning error handling {learning_success_rate:.1%} insufficient"
+        assert learning_success_rate > 0.5, (
+            f"Learning error handling {learning_success_rate:.1%} insufficient"
+        )
 
         # Test system recovery after errors
         normal_query = "What's a normal query after error conditions?"
         recovery_enhanced = robust_enhance_with_memory(normal_query)
-        assert len(recovery_enhanced) > len(
-            normal_query
-        ), "System should recover after error conditions"
-
-        recovery_learn = robust_learn_async(
-            "System recovery test: normal operation after errors."
+        assert len(recovery_enhanced) > len(normal_query), (
+            "System should recover after error conditions"
         )
+
+        recovery_learn = robust_learn_async("System recovery test: normal operation after errors.")
         print(f"Recovery learning: {'Success' if recovery_learn else 'Failed'}")
 
-    def test_performance_monitoring_in_ai_integration(
-        self, temp_db_path, ai_config_path
-    ):
+    def test_performance_monitoring_in_ai_integration(self, temp_db_path, ai_config_path):
         """Test performance monitoring capabilities in AI integration."""
         # Populate with test data
         with KuzuMemory(db_path=temp_db_path) as memory:
@@ -599,9 +584,7 @@ class TestAIIntegration:
         failed_results = [r for r in performance_results if not r["success"]]
 
         success_rate = len(successful_results) / len(performance_results)
-        assert (
-            success_rate > 0.95
-        ), f"Performance test success rate {success_rate:.1%} too low"
+        assert success_rate > 0.95, f"Performance test success rate {success_rate:.1%} too low"
 
         if successful_results:
             total_times = [r["total_time_ms"] for r in successful_results]
@@ -623,18 +606,12 @@ class TestAIIntegration:
             print(f"  Average memories per query: {avg_memory_count:.1f}")
 
             # Validate performance targets
-            assert (
-                avg_total_time < 200.0
-            ), f"Average total time {avg_total_time:.2f}ms too high"
-            assert (
-                avg_recall_time < 100.0
-            ), f"Average recall time {avg_recall_time:.2f}ms exceeds target"
-            assert (
-                max_recall_time < 150.0
-            ), f"Max recall time {max_recall_time:.2f}ms too high"
-            assert (
-                avg_memory_count > 1.0
-            ), f"Average memory count {avg_memory_count:.1f} too low"
+            assert avg_total_time < 200.0, f"Average total time {avg_total_time:.2f}ms too high"
+            assert avg_recall_time < 100.0, (
+                f"Average recall time {avg_recall_time:.2f}ms exceeds target"
+            )
+            assert max_recall_time < 150.0, f"Max recall time {max_recall_time:.2f}ms too high"
+            assert avg_memory_count > 1.0, f"Average memory count {avg_memory_count:.1f} too low"
 
         if failed_results:
             print(f"\nFailed operations: {len(failed_results)}")
@@ -692,7 +669,9 @@ class TestAIIntegration:
                     enhance_success = enhance_result.returncode == 0
 
                     # Learn operation (async)
-                    learn_content = f"Worker {worker_id} operation {op_id}: Processed query about test data."
+                    learn_content = (
+                        f"Worker {worker_id} operation {op_id}: Processed query about test data."
+                    )
                     learn_result = subprocess.run(
                         [
                             sys.executable,
@@ -778,12 +757,12 @@ class TestAIIntegration:
         print(f"  Enhance success rate: {enhance_success_rate:.1%}")
         print(f"  Learn success rate: {learn_success_rate:.1%}")
 
-        assert (
-            enhance_success_rate > 0.90
-        ), f"Concurrent enhance success rate {enhance_success_rate:.1%} too low"
-        assert (
-            learn_success_rate > 0.75
-        ), f"Concurrent learn success rate {learn_success_rate:.1%} too low"
+        assert enhance_success_rate > 0.90, (
+            f"Concurrent enhance success rate {enhance_success_rate:.1%} too low"
+        )
+        assert learn_success_rate > 0.75, (
+            f"Concurrent learn success rate {learn_success_rate:.1%} too low"
+        )
 
         if successful_enhances:
             enhance_times = [r["enhance_time_ms"] for r in successful_enhances]
@@ -794,12 +773,12 @@ class TestAIIntegration:
             print(f"  Max enhance time: {max_enhance_time:.2f}ms")
 
             # Performance should remain reasonable under concurrent load
-            assert (
-                avg_enhance_time < 300.0
-            ), f"Concurrent enhance time {avg_enhance_time:.2f}ms too high"
-            assert (
-                max_enhance_time < 1000.0
-            ), f"Max concurrent enhance time {max_enhance_time:.2f}ms too high"
+            assert avg_enhance_time < 300.0, (
+                f"Concurrent enhance time {avg_enhance_time:.2f}ms too high"
+            )
+            assert max_enhance_time < 1000.0, (
+                f"Max concurrent enhance time {max_enhance_time:.2f}ms too high"
+            )
 
         # Verify user isolation in concurrent scenarios
         user_results = {}

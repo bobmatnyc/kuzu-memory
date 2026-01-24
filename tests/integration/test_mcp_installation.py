@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.installers.detection import AISystemDetector, detect_ai_systems
 from kuzu_memory.installers.registry import get_installer
 

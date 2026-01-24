@@ -121,9 +121,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # limit should be integer, not string
-            response = await client.call_tool(
-                "kuzu_recall", {"query": "test", "limit": "five"}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "test", "limit": "five"})
 
             assert response is not None
             # Should handle type error gracefully
@@ -143,9 +141,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # Negative limit
-            response = await client.call_tool(
-                "kuzu_recall", {"query": "test", "limit": -5}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "test", "limit": -5})
 
             assert response is not None
             # Should handle gracefully
@@ -165,9 +161,7 @@ class TestInvalidParameterErrors:
             await client.initialize()
 
             # Null query
-            response = await client.call_tool(
-                "kuzu_recall", {"query": None, "limit": 5}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": None, "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response
@@ -213,9 +207,7 @@ class TestToolExecutionFailures:
             await client.initialize()
 
             # Special characters in query
-            response = await client.call_tool(
-                "kuzu_recall", {"query": "!@#$%^&*()", "limit": 5}
-            )
+            response = await client.call_tool("kuzu_recall", {"query": "!@#$%^&*()", "limit": 5})
 
             assert response is not None
             assert "result" in response or "error" in response

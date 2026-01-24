@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from kuzu_memory.services.setup_service import SetupService
 
 # ============================================================================
@@ -120,9 +121,7 @@ def test_find_project_root_delegation():
 def test_get_project_db_path_delegation(service, mock_config_service):
     """Test that get_project_db_path delegates to project_setup utility."""
     with patch("kuzu_memory.services.setup_service.project_setup") as mock_ps:
-        mock_ps.get_project_db_path.return_value = Path(
-            "/fake/project/kuzu-memories/memories.db"
-        )
+        mock_ps.get_project_db_path.return_value = Path("/fake/project/kuzu-memories/memories.db")
 
         service.initialize()
         result = service.get_project_db_path()
@@ -147,9 +146,7 @@ def test_path_utilities_work_without_init():
 def test_get_project_db_path_with_custom_root(service, mock_config_service):
     """Test get_project_db_path with custom project root."""
     with patch("kuzu_memory.services.setup_service.project_setup") as mock_ps:
-        mock_ps.get_project_db_path.return_value = Path(
-            "/custom/project/kuzu-memories/memories.db"
-        )
+        mock_ps.get_project_db_path.return_value = Path("/custom/project/kuzu-memories/memories.db")
 
         service.initialize()
         result = service.get_project_db_path(Path("/custom/project"))
@@ -238,9 +235,7 @@ def test_initialize_project_idempotency(service, mock_config_service):
 def test_initialize_project_error_handling(service, mock_config_service):
     """Test initialize_project handles errors gracefully."""
     with patch("kuzu_memory.services.setup_service.project_setup") as mock_ps:
-        mock_ps.create_project_memories_structure.side_effect = Exception(
-            "Permission denied"
-        )
+        mock_ps.create_project_memories_structure.side_effect = Exception("Permission denied")
 
         service.initialize()
         result = service.initialize_project()

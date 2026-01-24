@@ -408,9 +408,7 @@ class GitSyncManager:
 
             # Get branches to scan
             if branch_name:
-                branches = [
-                    b for b in self._repo.branches if str(b.name) == branch_name
-                ]
+                branches = [b for b in self._repo.branches if str(b.name) == branch_name]
             else:
                 branches = self._filter_branches(list(self._repo.branches))
 
@@ -536,16 +534,12 @@ class GitSyncManager:
                 # Store using batch_store_memories API (stores a list of Memory objects)
                 stored_ids = self.memory_store.batch_store_memories([memory])
                 if stored_ids:
-                    logger.debug(
-                        f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}"
-                    )
+                    logger.debug(f"Stored commit {commit.hexsha[:8]} as memory {stored_ids[0][:8]}")
                     # Memory was stored, return it with the ID
                     memory.id = stored_ids[0]
                     return memory
                 else:
-                    logger.warning(
-                        f"No ID returned when storing commit {commit.hexsha[:8]}"
-                    )
+                    logger.warning(f"No ID returned when storing commit {commit.hexsha[:8]}")
                     return None
             except Exception as e:
                 logger.error(f"Failed to store memory: {e}")
@@ -580,16 +574,12 @@ class GitSyncManager:
         # Determine sync window: since last sync OR max_age_days, whichever is more recent
         since = None
         if self.config.last_sync_timestamp:
-            last_sync = datetime.fromisoformat(self.config.last_sync_timestamp).replace(
-                tzinfo=None
-            )
+            last_sync = datetime.fromisoformat(self.config.last_sync_timestamp).replace(tzinfo=None)
             max_age_cutoff = datetime.now() - timedelta(days=max_age_days)
 
             # Use the more recent of the two (smaller time window)
             since = max(last_sync, max_age_cutoff)
-            logger.info(
-                f"Incremental sync since {since} (last_sync or {max_age_days} days)"
-            )
+            logger.info(f"Incremental sync since {since} (last_sync or {max_age_days} days)")
         else:
             # No previous sync, use max_age_days
             since = datetime.now() - timedelta(days=max_age_days)
@@ -678,13 +668,9 @@ class GitSyncManager:
         since = None
         max_commits = None
 
-        if mode == "incremental" or (
-            mode == "auto" and self.config.last_sync_timestamp
-        ):
+        if mode == "incremental" or (mode == "auto" and self.config.last_sync_timestamp):
             if self.config.last_sync_timestamp:
-                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(
-                    tzinfo=None
-                )
+                since = datetime.fromisoformat(self.config.last_sync_timestamp).replace(tzinfo=None)
                 logger.info(f"Incremental sync since {since}")
             else:
                 logger.info("No previous sync, performing initial sync")
