@@ -93,7 +93,8 @@ where = ["src"]
 [tool.setuptools.package-data]
 kuzu_memory = [
     "installers/templates/**/*.py",
-    "installers/templates/**/*.sh"
+    "installers/templates/**/*.sh",
+    "hooks/bash/*.sh"
 ]
 
 [tool.black]

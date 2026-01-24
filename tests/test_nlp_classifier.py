@@ -38,7 +38,7 @@ class TestMemoryClassifier:
     @pytest.fixture
     def classifier(self):
         """Create a test classifier instance."""
-        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", True):
+        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=True):
             # Mock NLTK functions if not available
             if not HAS_NLTK:
                 # Mock the NLTK functions used by the classifier
@@ -126,7 +126,7 @@ class TestMemoryClassifier:
 
     def test_classifier_initialization_without_nltk(self):
         """Test classifier initialization when NLTK is not available."""
-        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
+        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
             classifier = MemoryClassifier()
             assert not classifier.initialized
             assert classifier.classifier is None
@@ -233,7 +233,7 @@ class TestMemoryClassifier:
 
     def test_extract_entities_without_nltk(self):
         """Test entity extraction fallback when NLTK is not available."""
-        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
+        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
             classifier = MemoryClassifier()
             content = "Python and JavaScript are programming languages"
             result = classifier.extract_entities(content)
@@ -325,7 +325,7 @@ class TestMemoryClassifier:
 
     def test_sentiment_without_analyzer(self):
         """Test sentiment analysis fallback when VADER is not available."""
-        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
+        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
             classifier = MemoryClassifier()
             result = classifier.analyze_sentiment("Amazing work!")
 
@@ -595,7 +595,7 @@ class TestIntegrationWithMemoryEnhancer:
             sys.modules["nltk.tree"] = MagicMock()
 
         with patch("kuzu_memory.storage.memory_enhancer.NLP_AVAILABLE", True):
-            with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", True):
+            with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=True):
                 enhancer = MemoryEnhancer(config)
                 # Mock the classifier
                 enhancer.nlp_classifier = Mock(spec=MemoryClassifier)

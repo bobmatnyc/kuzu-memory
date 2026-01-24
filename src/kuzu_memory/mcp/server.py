@@ -60,6 +60,7 @@ class KuzuMemoryMCPServer:
 
         self.project_root = project_root or self._find_project_root()
         self.server = Server("kuzu-memory")
+        self.queue_processor: Any = None  # Initialized in run()
         self._setup_handlers()
 
     def _find_project_root(self) -> Path:
@@ -425,7 +426,12 @@ class KuzuMemoryMCPServer:
             return result
 
     async def run(self) -> None:
-        """Run the MCP server."""
+        """Run the MCP server with queue processor."""
+        # Initialize queue processor for bash hooks
+        from .queue_processor import HookQueueProcessor
+
+        self.queue_processor = HookQueueProcessor()
+
         # Use stdin/stdout for MCP communication
         init_options = InitializationOptions(
             server_name="kuzu-memory",
@@ -440,6 +446,9 @@ class KuzuMemoryMCPServer:
         async with stdio_server() as (read_stream, write_stream):
             logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
 
+            # Start queue processor in background
+            await self.queue_processor.start()
+
             try:
                 # Run the MCP server with proper streams
                 await self.server.run(
@@ -452,6 +461,10 @@ class KuzuMemoryMCPServer:
                 logger.info("Server context manager cleanup")
                 # Allow proper cleanup without ignoring GeneratorExit
                 raise
+            finally:
+                # Stop queue processor on shutdown
+                if self.queue_processor:
+                    await self.queue_processor.stop()
 
 
 async def main() -> None:
