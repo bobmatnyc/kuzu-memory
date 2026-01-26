@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.migrations import MigrationManager
 from kuzu_memory.migrations.v1_6_33_async_hooks import AsyncHooksMigration
 
