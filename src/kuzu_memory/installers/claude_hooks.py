@@ -482,9 +482,10 @@ class ClaudeHooksInstaller(BaseInstaller):
         """
         Create Claude Code hooks configuration (for settings.local.json) using CLI entry points.
 
-        Configures two hooks:
-        - UserPromptSubmit: Enhances prompts with project context
-        - PostToolUse: Learns from conversations asynchronously
+        Configures hooks with async support:
+        - SessionStart: Background initialization (async)
+        - UserPromptSubmit: Enhances prompts with project context (synchronous - must complete before submission)
+        - PostToolUse: Learns from conversations asynchronously (async - non-blocking)
 
         Uses absolute path to the kuzu-memory executable to avoid PATH resolution issues.
 
@@ -513,6 +514,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                             {
                                 "type": "command",
                                 "command": f"{kuzu_memory_path} hooks session-start",
+                                "async": True,  # Background initialization
                             }
                         ],
                     }
@@ -524,6 +526,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                             {
                                 "type": "command",
                                 "command": f"{kuzu_memory_path} hooks enhance",
+                                # Synchronous - must enhance prompt before submission
                             }
                         ],
                     }
@@ -535,6 +538,7 @@ class ClaudeHooksInstaller(BaseInstaller):
                             {
                                 "type": "command",
                                 "command": f"{kuzu_memory_path} hooks learn",
+                                "async": True,  # Non-blocking learning
                             }
                         ],
                     }
