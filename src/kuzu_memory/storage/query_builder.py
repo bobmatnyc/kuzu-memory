@@ -469,7 +469,7 @@ class QueryBuilder:
 
             # Execute cleanup query
             results = self.db_adapter.execute_query(query, params)
-            deleted_count = results[0]["deleted_count"] if results else 0
+            deleted_count: int = int(results[0]["deleted_count"]) if results else 0
 
             # Update performance stats
             execution_time = (datetime.now() - start_time).total_seconds()

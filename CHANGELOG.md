@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.6.33] - 2026-01-25
+
+### Added
+- Async hook support for Claude Code integration to prevent timeout issues
+  - SessionStart hook now runs asynchronously (background initialization)
+  - PostToolUse (learn) hook now runs asynchronously (non-blocking learning)
+  - UserPromptSubmit (enhance) hook remains synchronous (required for prompt enhancement)
+- Automatic migration for existing installations to add async flags to hooks
+
+### Fixed
+- Hook timeout issues in Claude Code caused by synchronous execution blocking the UI
+- Performance bottlenecks in SessionStart and PostToolUse hooks now run in background
+
 ## [1.6.32] - 2026-01-23
 
 ### Changed
@@ -1082,7 +1095,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.32...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.33...HEAD
+[1.6.33]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.32...v1.6.33
 [1.6.32]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.31...v1.6.32
 [1.6.31]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.30...v1.6.31
 [1.6.30]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.29...v1.6.30

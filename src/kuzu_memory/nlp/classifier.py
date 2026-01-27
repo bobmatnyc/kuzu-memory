@@ -14,18 +14,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from nltk.stem import PorterStemmer  # type: ignore[import-untyped]
-    from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
+    from nltk.stem import PorterStemmer
+    from sklearn.pipeline import Pipeline
 
 try:
-    import nltk  # type: ignore[import-untyped]
-    from nltk.chunk import ne_chunk  # type: ignore[import-untyped]
+    import nltk
+    from nltk.chunk import ne_chunk
     from nltk.stem import PorterStemmer
-    from nltk.tag import pos_tag  # type: ignore[import-untyped]
-    from nltk.tokenize import word_tokenize  # type: ignore[import-untyped]
-    from nltk.tree import Tree  # type: ignore[import-untyped]
-    from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
-    from sklearn.naive_bayes import MultinomialNB  # type: ignore[import-untyped]
+    from nltk.tag import pos_tag
+    from nltk.tokenize import word_tokenize
+    from nltk.tree import Tree
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.naive_bayes import MultinomialNB
     from sklearn.pipeline import Pipeline
 
     NLTK_AVAILABLE = True
@@ -164,14 +164,12 @@ class MemoryClassifier:
                                 word_tokenize("test")
                             elif data_item == "stopwords":
                                 # Test stopwords
-                                from nltk.corpus import (
-                                    stopwords as sw,  # type: ignore[import-untyped]
-                                )
+                                from nltk.corpus import stopwords as sw
 
                                 sw.words("english")
                             elif data_item == "vader_lexicon":
                                 # Test VADER sentiment
-                                from nltk.sentiment.vader import (  # type: ignore[import-untyped]
+                                from nltk.sentiment.vader import (
                                     SentimentIntensityAnalyzer,
                                 )
 
