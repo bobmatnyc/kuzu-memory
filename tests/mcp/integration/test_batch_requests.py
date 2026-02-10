@@ -158,20 +158,41 @@ class TestBatchRequests:
             await client.disconnect()
 
     async def test_empty_batch_request(self, project_root):
-        """Test handling of empty batch."""
+        """Test handling of empty batch.
+
+        According to JSON-RPC 2.0 spec section 6 (Batch), an rpc call with an empty
+        Array is invalid and the server should respond with a single Response object
+        with error code -32600 (Invalid Request).
+        """
         client = MCPClientSimulator(project_root=project_root, timeout=5.0)
 
         try:
             connected = await client.connect()
             assert connected
 
-            # Empty batch
+            # Empty batch - invalid per JSON-RPC 2.0 spec
             batch = []
 
             responses = await client.send_batch(batch)
 
-            # Should handle gracefully (empty response or error)
-            assert responses is not None
+            # Per JSON-RPC 2.0, server must respond to empty batch with error
+            assert responses is not None, "Server should respond to empty batch with error"
+
+            # Should be a list with one error response
+            assert isinstance(responses, list), f"Expected list response, got {type(responses)}"
+            assert len(responses) == 1, f"Expected 1 error response, got {len(responses)}"
+
+            # Verify it's an error response with proper structure
+            error_response = responses[0]
+            assert "jsonrpc" in error_response, "Response should have jsonrpc field"
+            assert error_response["jsonrpc"] == "2.0", "Should be JSON-RPC 2.0"
+            assert "id" in error_response, "Response should have id field"
+            assert error_response["id"] is None, "Invalid request should have id=null"
+            assert "error" in error_response, "Response should contain error field"
+            assert error_response["error"]["code"] == -32600, (
+                f"Expected error code -32600 (Invalid Request), "
+                f"got {error_response['error']['code']}"
+            )
 
         finally:
             await client.disconnect()

@@ -340,6 +340,32 @@ class JSONRPCProtocol:
             logger.error(f"Error writing message: {e}")
             raise
 
+    def write_batch_response(self, responses: list[dict[str, Any]]) -> None:
+        """
+        Write a JSON-RPC batch response to stdout.
+
+        Per JSON-RPC 2.0 spec, batch responses are sent as a single JSON array.
+
+        Args:
+            responses: List of response messages to send as batch
+        """
+        try:
+            json_str = json.dumps(responses, separators=(",", ":"))
+            self.writer.write(json_str + "\n")
+            self.writer.flush()
+
+            # Verify write succeeded
+            if self.writer.closed:
+                logger.error("Cannot write - stdout is closed")
+                raise RuntimeError("stdout closed")
+
+        except BrokenPipeError:
+            logger.error("Broken pipe - client disconnected")
+            self.running = False
+        except Exception as e:
+            logger.error(f"Error writing batch response: {e}")
+            raise
+
     async def send_notification(self, method: str, params: dict[str, Any] | None = None) -> None:
         """
         Send a JSON-RPC notification.
@@ -385,6 +411,10 @@ class BatchRequestHandler:
         """
         Process a batch of JSON-RPC requests.
 
+        Per JSON-RPC 2.0 spec section 6 (Batch):
+        - An empty Array is an invalid request
+        - Server should respond with a single Response object
+
         Args:
             messages: List of request messages
             handler_func: Async function to handle individual requests
@@ -392,6 +422,21 @@ class BatchRequestHandler:
         Returns:
             List of responses (excluding notification responses)
         """
+        # Handle empty batch - invalid per JSON-RPC 2.0 spec
+        # Per spec section 6, empty array should return single error response with id=null
+        if not messages:
+            error = JSONRPCError(
+                JSONRPCErrorCode.INVALID_REQUEST,
+                "Invalid Request: batch array cannot be empty",
+            )
+            return [
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": error.to_dict(),
+                }
+            ]
+
         responses = []
 
         for message in messages:

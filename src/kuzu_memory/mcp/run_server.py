@@ -475,10 +475,8 @@ class MCPProtocolHandler:
                         message, self.handle_request
                     )
                     if responses:
-                        # Batch responses are a list, but write_message expects dict
-                        # Write each response individually
-                        for response in responses:
-                            self.protocol.write_message(response)
+                        # Per JSON-RPC 2.0 spec, send batch responses as single JSON array
+                        self.protocol.write_batch_response(responses)
                 else:
                     # Type narrowing: if not a batch, message is a dict
                     assert isinstance(message, dict)

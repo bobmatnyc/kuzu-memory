@@ -313,21 +313,39 @@ class MCPClientSimulator:
             requests: List of request dictionaries
 
         Returns:
-            List of responses
+            List of responses or None on error
         """
         if not self.process:
             raise RuntimeError("Not connected to server")
 
         try:
+            # Handle empty batch - per JSON-RPC 2.0, empty array is invalid
+            if not requests:
+                # Send empty batch and expect error response
+                batch_str = json.dumps(requests) + "\n"
+                self.process.stdin.write(batch_str)
+                self.process.stdin.flush()
+
+                # Use base timeout (not scaled) for empty batch
+                response_line = await asyncio.wait_for(
+                    asyncio.to_thread(self.process.stdout.readline),
+                    timeout=self.timeout,
+                )
+
+                if not response_line:
+                    return []  # Empty batch gets empty response
+
+                return json.loads(response_line.strip())
+
             # Send batch as JSON array
             batch_str = json.dumps(requests) + "\n"
             self.process.stdin.write(batch_str)
             self.process.stdin.flush()
 
-            # Read batch response
+            # Read batch response with scaled timeout
             response_line = await asyncio.wait_for(
                 asyncio.to_thread(self.process.stdout.readline),
-                timeout=self.timeout * len(requests),  # Scale timeout
+                timeout=self.timeout * len(requests),
             )
 
             if not response_line:
