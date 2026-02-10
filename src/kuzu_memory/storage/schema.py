@@ -85,6 +85,27 @@ CREATE REL TABLE IF NOT EXISTS CO_OCCURS_WITH (
     co_occurrence_count INT32 DEFAULT 1,
     last_co_occurrence TIMESTAMP
 );
+
+CREATE REL TABLE IF NOT EXISTS CONSOLIDATED_INTO (
+    FROM Memory TO Memory,
+    consolidation_date TIMESTAMP,
+    cluster_id STRING,
+    similarity_score FLOAT
+);
+
+CREATE NODE TABLE IF NOT EXISTS ArchivedMemory (
+    id STRING PRIMARY KEY,
+    original_id STRING,
+    content STRING,
+    memory_type STRING,
+    source_type STRING,
+    importance FLOAT,
+    created_at TIMESTAMP,
+    archived_at TIMESTAMP,
+    prune_score FLOAT,
+    prune_reason STRING,
+    expires_at TIMESTAMP
+);
 """
 
 # Performance indices

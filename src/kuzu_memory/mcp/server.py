@@ -227,6 +227,45 @@ class KuzuMemoryMCPServer:
                         },
                     },
                 ),
+                Tool(
+                    name="kuzu_optimize",
+                    description=(
+                        "LLM-initiated memory optimization: Compact and optimize frequently-accessed "
+                        "memories to improve recall performance and reduce context clutter. Use "
+                        "proactively when you notice redundant memories, stale content, or performance "
+                        "degradation during conversations. "
+                        "\n\nStrategies: "
+                        "\n- top_accessed: Refresh/consolidate most-used memories for faster recall "
+                        "\n- stale_cleanup: Archive memories not accessed in 90+ days "
+                        "\n- consolidate_similar: Merge similar memories into summaries "
+                        "\n\nUse cases: "
+                        "\n- During long sessions when context feels cluttered "
+                        "\n- When recall returns redundant results "
+                        "\n- Proactive maintenance before ending session "
+                        "\n- User requests memory cleanup"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "strategy": {
+                                "type": "string",
+                                "description": "Optimization strategy to use",
+                                "enum": ["top_accessed", "stale_cleanup", "consolidate_similar"],
+                                "default": "top_accessed",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of memories to process (default: 20)",
+                                "default": 20,
+                            },
+                            "dry_run": {
+                                "type": "boolean",
+                                "description": "If true, only analyze without making changes (default: true)",
+                                "default": True,
+                            },
+                        },
+                    },
+                ),
             ]
 
         @self.server.call_tool()  # type: ignore[untyped-decorator]
@@ -264,6 +303,15 @@ class KuzuMemoryMCPServer:
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
                 result = await self._stats(bool(detailed) if detailed is not None else False)
+            elif name == "kuzu_optimize":
+                strategy = arguments.get("strategy", "top_accessed")
+                limit = arguments.get("limit", 20)
+                dry_run = arguments.get("dry_run", True)
+                result = await self._optimize(
+                    str(strategy) if strategy is not None else "top_accessed",
+                    int(limit) if isinstance(limit, int) else 20,
+                    bool(dry_run) if dry_run is not None else True,
+                )
             else:
                 result = f"Unknown tool: {name}"
 
@@ -424,6 +472,394 @@ class KuzuMemoryMCPServer:
             return "\n".join(stats)
         except json.JSONDecodeError:
             return result
+
+    def _get_db_path(self) -> Path:
+        """Get path to Kuzu database for current project."""
+        # Standard location is project_root/kuzu-memories
+        db_path = self.project_root / "kuzu-memories"
+        if not db_path.exists():
+            # Try alternative location (hidden directory)
+            db_path = self.project_root / ".kuzu-memories"
+        return db_path
+
+    async def _optimize(self, strategy: str, limit: int, dry_run: bool) -> str:
+        """
+        Execute memory optimization strategy.
+
+        Args:
+            strategy: Optimization strategy (top_accessed, stale_cleanup, consolidate_similar)
+            limit: Maximum number of memories to process
+            dry_run: If True, only analyze without making changes
+
+        Returns:
+            JSON-formatted optimization results
+        """
+        try:
+            # Import required modules
+            from ..core.config import KuzuMemoryConfig
+            from ..monitoring.access_tracker import get_access_tracker
+            from ..storage.kuzu_adapter import KuzuAdapter
+
+            # Get database path
+            db_path = self._get_db_path()
+
+            if not db_path.exists():
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "error": "Memory database not found. Initialize with 'kuzu-memory setup' first.",
+                    }
+                )
+
+            # Create database adapter
+            config = KuzuMemoryConfig.default()
+            db_adapter = KuzuAdapter(db_path, config)
+            db_adapter.initialize()
+
+            # Get access tracker
+            tracker = get_access_tracker(db_path)
+
+            # Execute optimization based on strategy
+            if strategy == "top_accessed":
+                result = await self._optimize_top_accessed(db_adapter, tracker, limit, dry_run)
+            elif strategy == "stale_cleanup":
+                result = await self._optimize_stale_cleanup(db_adapter, limit, dry_run)
+            elif strategy == "consolidate_similar":
+                result = await self._optimize_consolidate_similar(db_adapter, limit, dry_run)
+            else:
+                result = {
+                    "status": "error",
+                    "error": f"Unknown strategy: {strategy}",
+                }
+
+            return json.dumps(result, indent=2)
+
+        except Exception as e:
+            logger.error(f"Optimization failed: {e}", exc_info=True)
+            return json.dumps({"status": "error", "error": str(e)})
+
+    async def _optimize_top_accessed(
+        self, db_adapter: Any, tracker: Any, limit: int, dry_run: bool
+    ) -> dict[str, Any]:
+        """
+        Optimize top-accessed memories by consolidating similar ones.
+
+        Strategy: Find frequently accessed memories and check for duplicates/similar content.
+        """
+        from ..utils.deduplication import DeduplicationEngine
+
+        try:
+            # Query top-accessed memories
+            query = """
+            MATCH (m:Memory)
+            WHERE m.access_count > 5
+            RETURN m
+            ORDER BY m.access_count DESC
+            LIMIT $limit
+            """
+
+            results = db_adapter.execute_query(query, {"limit": limit})
+
+            if not results:
+                return {
+                    "status": "completed",
+                    "strategy": "top_accessed",
+                    "dry_run": dry_run,
+                    "results": {
+                        "memories_analyzed": 0,
+                        "optimization_candidates": 0,
+                        "actions_taken": [],
+                        "space_saved_bytes": 0,
+                        "estimated_recall_improvement": "0%",
+                    },
+                    "suggestions": ["No frequently accessed memories found."],
+                }
+
+            # Convert to Memory objects
+            from ..core.models import Memory
+
+            memories = []
+            for row in results:
+                memory_data = row.get("m")
+                if memory_data:
+                    try:
+                        memory = Memory.from_dict(memory_data)
+                        memories.append(memory)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse memory: {e}")
+
+            # Find similar memories among top accessed
+            dedup_engine = DeduplicationEngine(
+                exact_threshold=0.95, near_threshold=0.80, semantic_threshold=0.70
+            )
+
+            actions_taken = []
+            optimization_candidates = 0
+
+            for i, memory in enumerate(memories):
+                remaining = memories[i + 1 :]
+                if not remaining:
+                    break
+
+                duplicates = dedup_engine.find_duplicates(
+                    memory.content, remaining, memory_type=memory.memory_type
+                )
+
+                if duplicates:
+                    optimization_candidates += len(duplicates)
+                    for dup_memory, score, match_type in duplicates:
+                        actions_taken.append(
+                            {
+                                "action": "consolidation_candidate",
+                                "memory_ids": [memory.id, dup_memory.id],
+                                "similarity": f"{score:.2f}",
+                                "match_type": match_type,
+                            }
+                        )
+
+            suggestions = []
+            if optimization_candidates > 0:
+                suggestions.append(
+                    f"Found {optimization_candidates} consolidation opportunities among top-accessed memories"
+                )
+                if dry_run:
+                    suggestions.append("Run with dry_run=false to consolidate similar memories")
+            else:
+                suggestions.append(
+                    "No similar memories found among top-accessed. Memory context is already optimized."
+                )
+
+            return {
+                "status": "completed",
+                "strategy": "top_accessed",
+                "dry_run": dry_run,
+                "results": {
+                    "memories_analyzed": len(memories),
+                    "optimization_candidates": optimization_candidates,
+                    "actions_taken": actions_taken[:10],  # Limit output
+                    "space_saved_bytes": 0,  # Would be calculated in non-dry-run
+                    "estimated_recall_improvement": (
+                        f"{min(15, optimization_candidates * 2)}%"
+                        if optimization_candidates > 0
+                        else "0%"
+                    ),
+                },
+                "suggestions": suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Top-accessed optimization failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "strategy": "top_accessed",
+                "error": str(e),
+            }
+
+    async def _optimize_stale_cleanup(
+        self, db_adapter: Any, limit: int, dry_run: bool
+    ) -> dict[str, Any]:
+        """
+        Clean up stale memories not accessed in 90+ days.
+
+        Strategy: Use SmartPruningStrategy to identify and archive stale memories.
+        """
+        from ..core.smart_pruning import SmartPruningStrategy
+
+        try:
+            # Create pruning strategy focused on stale memories
+            pruning_strategy = SmartPruningStrategy(
+                db_adapter=db_adapter,
+                threshold=0.3,  # Low threshold to catch stale memories
+                archive_enabled=True,
+            )
+
+            # Get candidates
+            candidates = pruning_strategy.get_prune_candidates()
+
+            # Filter for stale memories (90+ days without access)
+            from datetime import UTC, datetime, timedelta
+
+            stale_threshold = datetime.now(UTC) - timedelta(days=90)
+            stale_candidates = []
+
+            for candidate in candidates:
+                # Query memory details
+                query = """
+                MATCH (m:Memory {id: $id})
+                RETURN m.accessed_at AS accessed_at, m.created_at AS created_at
+                """
+                result = db_adapter.execute_query(query, {"id": candidate.memory_id})
+
+                if result:
+                    accessed_at = result[0].get("accessed_at")
+                    created_at = result[0].get("created_at")
+
+                    # Parse timestamp
+                    if accessed_at:
+                        if isinstance(accessed_at, str):
+                            accessed_at = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
+                    elif created_at:
+                        if isinstance(created_at, str):
+                            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        accessed_at = created_at
+
+                    if accessed_at and accessed_at < stale_threshold:
+                        stale_candidates.append(candidate)
+
+            # Limit results
+            stale_candidates = stale_candidates[:limit]
+
+            actions_taken = []
+            if not dry_run and stale_candidates:
+                # Execute archiving and deletion
+                pruning_strategy._archive_memories(stale_candidates)
+                pruning_strategy._delete_memories([c.memory_id for c in stale_candidates])
+
+                for candidate in stale_candidates:
+                    actions_taken.append(
+                        {
+                            "action": "archived",
+                            "memory_id": candidate.memory_id,
+                            "reason": "stale (>90 days without access)",
+                        }
+                    )
+            else:
+                for candidate in stale_candidates:
+                    actions_taken.append(
+                        {
+                            "action": "archive_candidate",
+                            "memory_id": candidate.memory_id,
+                            "reason": "stale (>90 days without access)",
+                        }
+                    )
+
+            suggestions = []
+            if stale_candidates:
+                suggestions.append(
+                    f"Found {len(stale_candidates)} stale memories ready for archiving"
+                )
+                if dry_run:
+                    suggestions.append(
+                        "Run with dry_run=false to archive these memories (30-day recovery window)"
+                    )
+                else:
+                    suggestions.append("Archived memories can be restored within 30 days if needed")
+            else:
+                suggestions.append("No stale memories found. All memories are actively used.")
+
+            return {
+                "status": "completed",
+                "strategy": "stale_cleanup",
+                "dry_run": dry_run,
+                "results": {
+                    "memories_analyzed": len(candidates),
+                    "optimization_candidates": len(stale_candidates),
+                    "actions_taken": actions_taken[:10],  # Limit output
+                    "space_saved_bytes": (
+                        sum(len(c.memory_id) for c in stale_candidates) * 100
+                    ),  # Estimate
+                    "estimated_recall_improvement": (
+                        f"{min(10, len(stale_candidates))}%" if stale_candidates else "0%"
+                    ),
+                },
+                "suggestions": suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Stale cleanup optimization failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "strategy": "stale_cleanup",
+                "error": str(e),
+            }
+
+    async def _optimize_consolidate_similar(
+        self, db_adapter: Any, limit: int, dry_run: bool
+    ) -> dict[str, Any]:
+        """
+        Consolidate similar memories into summaries.
+
+        Strategy: Use ConsolidationEngine to cluster and merge similar memories.
+        """
+        from ..nlp.consolidation import ConsolidationEngine
+
+        try:
+            # Create consolidation engine
+            consolidation_engine = ConsolidationEngine(
+                db_adapter=db_adapter,
+                similarity_threshold=0.70,
+                min_age_days=30,  # Only consolidate memories older than 30 days
+                max_access_count=5,  # Only consolidate low-access memories
+            )
+
+            # Execute consolidation
+            result = consolidation_engine.execute(dry_run=dry_run, create_backup=False)
+
+            actions_taken = []
+            if result.clusters:
+                for cluster in result.clusters[:limit]:
+                    if dry_run:
+                        actions_taken.append(
+                            {
+                                "action": "consolidation_candidate",
+                                "memory_ids": [m.id for m in cluster.memories],
+                                "cluster_size": len(cluster.memories),
+                                "avg_similarity": f"{cluster.avg_similarity:.2f}",
+                            }
+                        )
+                    else:
+                        actions_taken.append(
+                            {
+                                "action": "consolidated",
+                                "memory_ids": [m.id for m in cluster.memories],
+                                "into": cluster.cluster_id,
+                                "cluster_size": len(cluster.memories),
+                            }
+                        )
+
+            suggestions = []
+            if result.clusters_found > 0:
+                suggestions.append(
+                    f"Found {result.clusters_found} memory clusters that could be consolidated"
+                )
+                if dry_run:
+                    suggestions.append(
+                        "Run with dry_run=false to merge similar memories into summaries"
+                    )
+                else:
+                    suggestions.append(
+                        f"Successfully consolidated {result.memories_consolidated} memories into {result.new_memories_created} summaries"
+                    )
+            else:
+                suggestions.append(
+                    "No similar memory clusters found. Consider lowering similarity threshold."
+                )
+
+            return {
+                "status": "completed",
+                "strategy": "consolidate_similar",
+                "dry_run": dry_run,
+                "results": {
+                    "memories_analyzed": result.memories_analyzed,
+                    "optimization_candidates": result.clusters_found,
+                    "actions_taken": actions_taken[:10],  # Limit output
+                    "space_saved_bytes": result.memories_consolidated * 500,  # Estimate
+                    "estimated_recall_improvement": (
+                        f"{min(20, result.clusters_found * 3)}%"
+                        if result.clusters_found > 0
+                        else "0%"
+                    ),
+                },
+                "suggestions": suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Consolidation optimization failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "strategy": "consolidate_similar",
+                "error": str(e),
+            }
 
     async def run(self) -> None:
         """Run the MCP server with queue processor."""

@@ -150,12 +150,38 @@ class PruneConfig:
     """Memory pruning configuration."""
 
     enabled: bool = True  # Enable pruning functionality
-    strategy: str = "safe"  # Default pruning strategy (safe, intelligent, aggressive)
+    strategy: str = "safe"  # Default pruning strategy (safe, intelligent, aggressive, smart)
     always_backup: bool = True  # Always create backup before pruning
     auto_trigger_db_size_mb: int = 2500  # Auto-trigger pruning at 2.5 GB
     auto_trigger_memory_count: int = 75000  # Auto-trigger pruning at 75k memories
     schedule: str = "weekly"  # Auto-prune schedule (never, weekly, monthly)
     last_prune_timestamp: str | None = None  # ISO8601 timestamp of last prune
+
+
+@dataclass
+class SmartPruneConfig:
+    """Configuration for smart pruning strategy."""
+
+    threshold: float = 0.3  # Score threshold (memories below = candidates)
+    weight_age: float = 0.35  # Weight for age factor
+    weight_size: float = 0.20  # Weight for size factor
+    weight_access: float = 0.30  # Weight for access patterns
+    weight_importance: float = 0.15  # Weight for importance score
+    min_age_days: int = 30  # Never prune memories younger than this
+    min_access_count: int = 10  # Never prune frequently accessed memories
+    min_importance: float = 0.8  # Never prune high-importance memories
+    archive_enabled: bool = True  # Archive memories before deletion
+    archive_recovery_days: int = 30  # Days to keep archives before purging
+
+
+@dataclass
+class AnalyticsConfig:
+    """Configuration for access analytics."""
+
+    enabled: bool = True  # Enable access tracking
+    batch_interval: float = 5.0  # Seconds between batch writes
+    batch_size: int = 100  # Events before forcing batch write
+    stale_threshold_days: int = 90  # Days without access = stale
 
 
 @dataclass
@@ -176,6 +202,8 @@ class KuzuMemoryConfig:
     retention: RetentionConfig = field(default_factory=RetentionConfig)
     git_sync: GitSyncConfig = field(default_factory=GitSyncConfig)
     prune: PruneConfig = field(default_factory=PruneConfig)
+    smart_prune: SmartPruneConfig = field(default_factory=SmartPruneConfig)
+    analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
 
     # Global settings
     version: str = "1.0"
@@ -259,6 +287,20 @@ class KuzuMemoryConfig:
                     if hasattr(prune_config, key):
                         setattr(prune_config, key, value)
 
+            smart_prune_config = SmartPruneConfig()
+            if "smart_prune" in validated_config:
+                smart_prune_data = validated_config["smart_prune"]
+                for key, value in smart_prune_data.items():
+                    if hasattr(smart_prune_config, key):
+                        setattr(smart_prune_config, key, value)
+
+            analytics_config = AnalyticsConfig()
+            if "analytics" in validated_config:
+                analytics_data = validated_config["analytics"]
+                for key, value in analytics_data.items():
+                    if hasattr(analytics_config, key):
+                        setattr(analytics_config, key, value)
+
             # Create main configuration
             return cls(
                 storage=storage_config,
@@ -269,6 +311,8 @@ class KuzuMemoryConfig:
                 retention=retention_config,
                 git_sync=git_sync_config,
                 prune=prune_config,
+                smart_prune=smart_prune_config,
+                analytics=analytics_config,
                 version=validated_config.get("version", "1.0"),
                 debug=validated_config.get("debug", False),
                 log_level=validated_config.get("log_level", "INFO"),
@@ -383,6 +427,24 @@ class KuzuMemoryConfig:
                 "auto_sync_on_learn": self.git_sync.auto_sync_on_learn,
                 "auto_sync_interval_hours": self.git_sync.auto_sync_interval_hours,
                 "auto_sync_max_commits": self.git_sync.auto_sync_max_commits,
+            },
+            "smart_prune": {
+                "threshold": self.smart_prune.threshold,
+                "weight_age": self.smart_prune.weight_age,
+                "weight_size": self.smart_prune.weight_size,
+                "weight_access": self.smart_prune.weight_access,
+                "weight_importance": self.smart_prune.weight_importance,
+                "min_age_days": self.smart_prune.min_age_days,
+                "min_access_count": self.smart_prune.min_access_count,
+                "min_importance": self.smart_prune.min_importance,
+                "archive_enabled": self.smart_prune.archive_enabled,
+                "archive_recovery_days": self.smart_prune.archive_recovery_days,
+            },
+            "analytics": {
+                "enabled": self.analytics.enabled,
+                "batch_interval": self.analytics.batch_interval,
+                "batch_size": self.analytics.batch_size,
+                "stale_threshold_days": self.analytics.stale_threshold_days,
             },
         }
 

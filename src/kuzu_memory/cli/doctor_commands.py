@@ -19,8 +19,10 @@ Related Phase: 5.3 (High-Risk Async Command Migrations)
 
 import asyncio
 import json
+import logging
 import sys
 import time
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -28,12 +30,157 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from ..core.config import KuzuMemoryConfig
 from ..mcp.testing.diagnostics import MCPDiagnostics
 from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
+from ..monitoring.access_tracker import get_access_tracker
+from ..storage.kuzu_adapter import KuzuAdapter
 from .async_utils import run_async
 from .cli_utils import rich_print
 from .enums import OutputFormat
 from .service_manager import ServiceManager
+
+logger = logging.getLogger(__name__)
+
+
+def _check_analytics_health(
+    db_path: Path, config: KuzuMemoryConfig, verbose: bool = False
+) -> dict[str, Any]:
+    """
+    Check analytics system health.
+
+    Args:
+        db_path: Path to database
+        config: KuzuMemory configuration
+        verbose: Include detailed information
+
+    Returns:
+        Dict with analytics health status
+    """
+    health_status = {
+        "enabled": config.analytics.enabled,
+        "worker_running": False,
+        "pending_events": 0,
+        "last_flush": None,
+        "stale_count": 0,
+        "stale_percentage": 0.0,
+        "total_memories": 0,
+        "total_accesses": 0,
+        "most_active_memory": None,
+        "average_access_count": 0.0,
+        "recommendations": [],
+        "status": "unknown",
+    }
+
+    try:
+        # Check if analytics is enabled in config
+        if not config.analytics.enabled:
+            health_status["status"] = "disabled"
+            health_status["recommendations"].append(
+                "Analytics is disabled. Enable with 'kuzu-memory config set analytics.enabled true'"
+            )
+            return health_status
+
+        # Get tracker statistics
+        tracker = get_access_tracker(db_path)
+        stats = tracker.get_stats()
+
+        health_status["worker_running"] = tracker._running
+        health_status["pending_events"] = stats["queue_size"]
+        health_status["last_flush"] = stats["last_batch_time"]
+
+        # Query database for stale memories and access patterns
+        adapter = KuzuAdapter(db_path, config)
+        adapter.initialize()
+
+        # Get total memory count
+        results = adapter.execute_query("MATCH (m:Memory) RETURN count(*) AS total")
+        health_status["total_memories"] = int(results[0]["total"]) if results else 0
+
+        # Calculate stale memories (using config threshold)
+        if health_status["total_memories"] > 0:
+            cutoff_date = (
+                datetime.now(UTC)
+                - timedelta(days=config.analytics.stale_threshold_days)
+            ).isoformat()
+
+            query = """
+                MATCH (m:Memory)
+                WHERE (m.accessed_at IS NULL OR m.accessed_at < $cutoff_date)
+                  AND m.created_at < $cutoff_date
+                RETURN count(*) AS stale_count
+            """
+            results = adapter.execute_query(query, {"cutoff_date": cutoff_date})
+            health_status["stale_count"] = int(results[0]["stale_count"]) if results else 0
+
+            health_status["stale_percentage"] = (
+                (health_status["stale_count"] / health_status["total_memories"]) * 100
+                if health_status["total_memories"] > 0
+                else 0.0
+            )
+
+        # Get access patterns
+        # Total accesses tracked
+        query = """
+            MATCH (m:Memory)
+            WHERE m.access_count IS NOT NULL AND m.access_count > 0
+            RETURN sum(m.access_count) AS total_accesses,
+                   avg(m.access_count) AS avg_access_count
+        """
+        results = adapter.execute_query(query)
+        if results:
+            health_status["total_accesses"] = int(results[0].get("total_accesses") or 0)
+            health_status["average_access_count"] = float(results[0].get("avg_access_count") or 0.0)
+
+        # Most active memory (if verbose)
+        if verbose:
+            query = """
+                MATCH (m:Memory)
+                WHERE m.access_count IS NOT NULL AND m.access_count > 0
+                RETURN m.id AS id,
+                       m.content AS content,
+                       m.access_count AS access_count
+                ORDER BY m.access_count DESC
+                LIMIT 1
+            """
+            results = adapter.execute_query(query)
+            if results:
+                row = results[0]
+                content = str(row["content"])[:100]
+                health_status["most_active_memory"] = {
+                    "id": str(row["id"]),
+                    "content": content,
+                    "access_count": int(row["access_count"]),
+                }
+
+        # Determine overall status and recommendations
+        if not health_status["worker_running"]:
+            health_status["status"] = "degraded"
+            health_status["recommendations"].append(
+                "⚠️ Worker thread not running. Restart the application."
+            )
+        elif health_status["stale_percentage"] > 50:
+            health_status["status"] = "warning"
+            health_status["recommendations"].append(
+                f"⚠️ {health_status['stale_percentage']:.0f}% of memories are stale. "
+                f"Consider running 'kuzu-memory memory prune --strategy safe'"
+            )
+        elif health_status["stale_percentage"] > 30:
+            health_status["status"] = "healthy"
+            health_status["recommendations"].append(
+                f"ℹ️ {health_status['stale_percentage']:.0f}% of memories are stale. "
+                "Monitor and consider pruning soon."
+            )
+        else:
+            health_status["status"] = "healthy"
+
+        return health_status
+
+    except Exception as e:
+        logger.error(f"Failed to check analytics health: {e}", exc_info=True)
+        health_status["status"] = "error"
+        health_status["recommendations"].append(f"❌ Error checking analytics: {e}")
+        return health_status
 
 
 @click.group(invoke_without_command=True)
@@ -56,6 +203,11 @@ from .service_manager import ServiceManager
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
+@click.option(
+    "--analytics/--no-analytics",
+    default=True,
+    help="Run analytics health checks (default: enabled)",
+)
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def doctor(
@@ -66,6 +218,7 @@ def doctor(
     format: str,
     hooks: bool,
     server_lifecycle: bool,
+    analytics: bool,
     project_root: str | None,
 ) -> None:
     """
@@ -115,6 +268,7 @@ def doctor(
             fix=fix,
             hooks=hooks,
             server_lifecycle=server_lifecycle,
+            analytics=analytics,
             project_root=project_root,
         )
 
@@ -139,6 +293,11 @@ def doctor(
     default=True,
     help="Run server lifecycle diagnostics (default: enabled)",
 )
+@click.option(
+    "--analytics/--no-analytics",
+    default=True,
+    help="Run analytics health checks (default: enabled)",
+)
 @click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def diagnose(
@@ -149,13 +308,14 @@ def diagnose(
     fix: bool,
     hooks: bool,
     server_lifecycle: bool,
+    analytics: bool,
     project_root: str | None,
 ) -> None:
     """
     Run full PROJECT diagnostic suite.
 
     Performs comprehensive checks on project-level configuration,
-    connection, tool discovery, performance, hooks, and server lifecycle.
+    connection, tool discovery, performance, hooks, analytics, and server lifecycle.
 
     Does NOT check user-level (Claude Desktop) configurations.
 
@@ -195,6 +355,19 @@ def diagnose(
                 # Hooks check failed - continue without hooks status
                 pass
 
+        # Add analytics health check if requested
+        analytics_health = None
+        if analytics:
+            try:
+                # Load config for analytics settings
+                config = KuzuMemoryConfig.default()
+                db_path = config_service.get_db_path()
+                analytics_health = _check_analytics_health(db_path, config, verbose=verbose)
+            except Exception as e:
+                logger.warning(f"Analytics health check failed: {e}")
+                # Continue without analytics health
+                pass
+
         config_service.cleanup()
 
         # Generate output based on format
@@ -202,6 +375,8 @@ def diagnose(
             report_dict = report.to_dict()
             if hooks_status:
                 report_dict["hooks_status"] = hooks_status
+            if analytics_health:
+                report_dict["analytics_health"] = analytics_health
             output_content = json.dumps(report_dict, indent=2)
         elif format == "html":
             output_content = diagnostics.generate_html_report(report)
@@ -246,6 +421,95 @@ def diagnose(
                 if hooks_status.get("recommendations"):
                     output_content += "\n\nRecommendations:"
                     for rec in hooks_status["recommendations"]:
+                        output_content += f"\n  • {rec}"
+
+                output_content += "\n" + "=" * 70
+
+            # Append analytics health to text report if available
+            if analytics_health:
+                output_content += "\n\n" + "=" * 70
+                output_content += "\nANALYTICS HEALTH"
+                output_content += "\n" + "-" * 70
+
+                # Status indicator
+                status = analytics_health["status"]
+                if status == "healthy":
+                    status_icon = "✅"
+                elif status == "warning":
+                    status_icon = "⚠️"
+                elif status == "degraded":
+                    status_icon = "⚠️"
+                elif status == "disabled":
+                    status_icon = "ℹ️"
+                else:
+                    status_icon = "❌"
+
+                output_content += f"\nStatus: {status_icon} {status.upper()}"
+
+                # Core metrics
+                if analytics_health["enabled"]:
+                    worker_status = (
+                        "✅ Running"
+                        if analytics_health["worker_running"]
+                        else "❌ Not running"
+                    )
+                    output_content += f"\nAccess Tracking: {worker_status}"
+                    output_content += f"\nPending Events: {analytics_health['pending_events']}"
+
+                    if analytics_health["last_flush"]:
+                        # Calculate time since last flush
+                        try:
+                            last_flush_dt = datetime.fromisoformat(
+                                analytics_health["last_flush"].replace("Z", "+00:00")
+                            )
+                            now = datetime.now(UTC)
+                            delta = now - last_flush_dt
+
+                            if delta.total_seconds() < 60:
+                                time_str = f"{int(delta.total_seconds())} seconds ago"
+                            elif delta.total_seconds() < 3600:
+                                time_str = f"{int(delta.total_seconds() / 60)} minutes ago"
+                            else:
+                                time_str = f"{int(delta.total_seconds() / 3600)} hours ago"
+                            output_content += f"\nLast Flush: {time_str}"
+                        except Exception:
+                            output_content += f"\nLast Flush: {analytics_health['last_flush']}"
+                    else:
+                        output_content += "\nLast Flush: Never"
+
+                    # Stale memories
+                    stale_pct = analytics_health["stale_percentage"]
+                    output_content += (
+                        f"\nStale Memories: {analytics_health['stale_count']}/"
+                        f"{analytics_health['total_memories']} ({stale_pct:.1f}%)"
+                    )
+                    if stale_pct > 30:
+                        output_content += " - ⚠️ High"
+                    elif stale_pct > 10:
+                        output_content += " - ℹ️ Moderate"
+                    else:
+                        output_content += " - ✅ OK"
+
+                    # Access patterns
+                    output_content += f"\nTotal Accesses Tracked: {analytics_health['total_accesses']:,}"
+                    if analytics_health["average_access_count"] > 0:
+                        output_content += (
+                            f"\nAverage Access Count: {analytics_health['average_access_count']:.1f}"
+                        )
+
+                    # Most active memory (verbose only)
+                    if verbose and analytics_health.get("most_active_memory"):
+                        most_active = analytics_health["most_active_memory"]
+                        output_content += f"\nMost Active Memory: {most_active['access_count']} accesses"
+                        output_content += f"\n  Content: {most_active['content']}"
+
+                else:
+                    output_content += "\nAccess Tracking: ℹ️ Disabled"
+
+                # Recommendations
+                if analytics_health.get("recommendations"):
+                    output_content += "\n\nRecommendations:"
+                    for rec in analytics_health["recommendations"]:
                         output_content += f"\n  • {rec}"
 
                 output_content += "\n" + "=" * 70

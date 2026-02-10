@@ -18,8 +18,11 @@ from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
 
-# Import top-level command groups (11 total with migrations)
+# Import top-level command groups (14 total with migrations, analytics, cleanup, and consolidate)
+from .analytics_commands import analytics
+from .cleanup_commands import cleanup
 from .cli_utils import rich_panel, rich_print, rich_table
+from .consolidate_commands import consolidate
 from .doctor_commands import doctor
 from .enums import OutputFormat
 from .git_commands import git
@@ -666,14 +669,17 @@ cli.add_command(repair_command)  # 5. Repair broken MCP configs
 
 # CORE FUNCTIONALITY
 cli.add_command(memory)  # 6. Memory operations (store, learn, recall, enhance, recent)
-cli.add_command(status)  # 7. System status and info
-cli.add_command(doctor)  # 8. Diagnostics and health checks
-cli.add_command(help_group, name="help")  # 9. Help and examples
-cli.add_command(git)  # 10. Git commit history synchronization
-cli.add_command(hooks_group, name="hooks")  # 11. Hook system integrations (DEPRECATED)
-cli.add_command(mcp_server)  # 12. MCP server (stdio mode) - replaces deprecated mcp install group
-cli.add_command(update)  # 13. Check for and install updates from PyPI
-cli.add_command(migrations_group, name="migrations")  # 14. Migration management
+cli.add_command(analytics)  # 7. Memory analytics (access tracking, stale memories)
+cli.add_command(cleanup)  # 8. Memory cleanup and maintenance (stale, duplicates, orphans)
+cli.add_command(consolidate)  # 9. Memory consolidation (cluster and merge similar memories)
+cli.add_command(status)  # 10. System status and info
+cli.add_command(doctor)  # 11. Diagnostics and health checks
+cli.add_command(help_group, name="help")  # 12. Help and examples
+cli.add_command(git)  # 13. Git commit history synchronization
+cli.add_command(hooks_group, name="hooks")  # 14. Hook system integrations (DEPRECATED)
+cli.add_command(mcp_server)  # 15. MCP server (stdio mode) - replaces deprecated mcp install group
+cli.add_command(update)  # 16. Check for and install updates from PyPI
+cli.add_command(migrations_group, name="migrations")  # 17. Migration management
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead

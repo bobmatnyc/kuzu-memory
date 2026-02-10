@@ -131,6 +131,13 @@ class RecallCoordinator:
             ranked_memories = self._rank_memories(memories, clean_prompt)
             final_memories = ranked_memories[:max_memories]
 
+            # Track memory access for analytics (zero-latency)
+            if final_memories and self.config.analytics.enabled:
+                from ..monitoring.access_tracker import get_access_tracker
+
+                tracker = get_access_tracker(self.db_adapter.db_path)
+                tracker.track_batch([m.id for m in final_memories], context="recall")
+
             # Calculate confidence score
             confidence = self._calculate_confidence(final_memories, clean_prompt)
 

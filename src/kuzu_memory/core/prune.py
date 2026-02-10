@@ -345,11 +345,20 @@ class MemoryPruner:
             memory: KuzuMemory instance to prune
         """
         self.memory = memory
+
+        # Import SmartPruningStrategy here to avoid circular imports
+        from .smart_pruning import SmartPruningStrategy
+
         self.strategies = {
             "safe": SafePruningStrategy(),
             "intelligent": IntelligentPruningStrategy(),
             "aggressive": AggressivePruningStrategy(),
             "percentage": PercentagePruningStrategy(percentage=30.0),
+            "smart": SmartPruningStrategy(
+                db_adapter=memory.memory_store.db_adapter,
+                threshold=0.3,
+                archive_enabled=True,
+            ),
         }
 
     def _is_protected(self, memory: dict[str, Any]) -> bool:

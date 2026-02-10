@@ -589,7 +589,7 @@ def enhance(
 @memory.command()
 @click.option(
     "--strategy",
-    type=click.Choice(["safe", "intelligent", "aggressive"]),
+    type=click.Choice(["safe", "intelligent", "aggressive", "smart"]),
     default="safe",
     help="Pruning strategy to use",
 )
@@ -599,6 +599,17 @@ def enhance(
     default=True,
     help="Create backup before pruning (default: yes)",
 )
+@click.option(
+    "--archive/--no-archive",
+    default=True,
+    help="Archive before delete (smart strategy only, default: yes)",
+)
+@click.option(
+    "--threshold",
+    type=float,
+    default=0.3,
+    help="Score threshold for smart strategy (0-1, default: 0.3)",
+)
 @click.option("--force", is_flag=True, help="Skip confirmation prompts")
 @click.option("--db-path", type=click.Path(), help="Database path (optional)")
 @click.pass_context
@@ -607,6 +618,8 @@ def prune(
     strategy: str,
     execute: bool,
     backup: bool,
+    archive: bool,
+    threshold: float,
     force: bool,
     db_path: str | None,
 ) -> None:
@@ -624,6 +637,9 @@ def prune(
                     Expected: ~15-20% reduction, low risk
       aggressive  - Drastic pruning for critically large databases
                     Expected: ~30-50% reduction, moderate risk
+      smart       - Multi-factor scoring with access analytics (NEW!)
+                    Uses age, size, access patterns, and importance
+                    Expected: ~20-40% reduction, intelligent decisions
 
     \b
     🛡️  PROTECTED MEMORIES (never pruned):
@@ -631,23 +647,27 @@ def prune(
       - cli memories
       - project-initialization memories
       - Important commits (feat, fix, perf, BREAKING in intelligent/aggressive)
+      - High importance (>=0.8), frequently accessed (>=10x), or recent (<30d) in smart
 
     \b
     🎮 EXAMPLES:
       # Dry-run with safe strategy (default)
       kuzu-memory memory prune
 
-      # Analyze with intelligent strategy
-      kuzu-memory memory prune --strategy intelligent
+      # Analyze with smart strategy
+      kuzu-memory memory prune --strategy smart
 
-      # Execute pruning with backup
-      kuzu-memory memory prune --strategy safe --execute
+      # Execute smart pruning with archive
+      kuzu-memory memory prune --strategy smart --execute
+
+      # Smart pruning with custom threshold
+      kuzu-memory memory prune --strategy smart --threshold 0.4 --execute
+
+      # Smart pruning without archive (not recommended)
+      kuzu-memory memory prune --strategy smart --execute --no-archive
 
       # Execute without backup (not recommended)
       kuzu-memory memory prune --execute --no-backup --force
-
-      # Aggressive pruning for large databases
-      kuzu-memory memory prune --strategy aggressive --execute
     """
     import time
     from pathlib import Path
@@ -665,6 +685,15 @@ def prune(
             # Use the kuzu_memory property exposed by MemoryService
             pruner = MemoryPruner(memory.kuzu_memory)
 
+            # For smart strategy, update configuration
+            if strategy == "smart":
+                from kuzu_memory.core.smart_pruning import SmartPruningStrategy
+                pruner.strategies["smart"] = SmartPruningStrategy(
+                    db_adapter=memory.kuzu_memory.memory_store.db_adapter,
+                    threshold=threshold,
+                    archive_enabled=archive,
+                )
+
             # Get current database stats
             total_memories = memory.get_memory_count()
             db_size = memory.get_database_size()
@@ -674,10 +703,74 @@ def prune(
                 f"   Database: {total_memories:,} memories, {db_size / (1024 * 1024):.1f} MB"
             )
             rich_print(f"   Strategy: {strategy}")
+            if strategy == "smart":
+                rich_print(f"   Threshold: {threshold}")
+                rich_print(f"   Archive: {'enabled' if archive else 'disabled'}")
             rich_print(f"   Mode: {'EXECUTE' if execute else 'DRY-RUN'}\n")
 
             # Analyze what would be pruned
             start_time = time.time()
+
+            # For smart strategy, use its own execute method
+            if strategy == "smart":
+                result = pruner.strategies["smart"].execute(
+                    dry_run=not execute,
+                    create_backup=backup,
+                )
+
+                # Convert SmartPruneResult to display format
+                analysis_time_ms = result.execution_time_ms
+
+                # Display smart pruning results
+                if result.score_breakdown:
+                    sb = result.score_breakdown
+                    rich_panel(
+                        f"Analysis Complete ({analysis_time_ms:.0f}ms)",
+                        title="📋 Smart Prune Report",
+                        style="green",
+                    )
+
+                    rich_print("\n🔍 Score Breakdown:", style="bold blue")
+                    rich_print(f"   Total memories: {sb['total_memories']:,}")
+                    rich_print(f"   Avg age score: {sb['avg_age_score']:.3f}")
+                    rich_print(f"   Avg size score: {sb['avg_size_score']:.3f}")
+                    rich_print(f"   Avg access score: {sb['avg_access_score']:.3f}")
+                    rich_print(f"   Avg importance score: {sb['avg_importance_score']:.3f}")
+
+                    rich_print("\n📊 Results:", style="bold blue")
+                    prune_pct = (result.candidates / sb['total_memories'] * 100) if sb['total_memories'] > 0 else 0
+                    rich_print(f"   Candidates: {result.candidates:,} ({prune_pct:.1f}%)", style="yellow")
+                    rich_print(f"   Protected: {result.protected:,}", style="cyan")
+
+                    if execute:
+                        rich_print(f"   Pruned: {result.pruned:,}", style="green")
+                        if archive:
+                            rich_print(f"   Archived: {result.archived:,}", style="blue")
+
+                        # Show final stats
+                        final_count = memory.get_memory_count()
+                        final_size = memory.get_database_size()
+                        actual_reduction = db_size - final_size
+                        actual_percentage = (actual_reduction / db_size * 100) if db_size > 0 else 0
+
+                        rich_print("\n📊 Final Database:", style="bold blue")
+                        rich_print(f"   Memories: {final_count:,} (was {total_memories:,})")
+                        rich_print(
+                            f"   Size: {final_size / (1024 * 1024):.1f} MB (was {db_size / (1024 * 1024):.1f} MB)"
+                        )
+                        rich_print(
+                            f"   Reduction: {actual_reduction / (1024 * 1024):.1f} MB ({actual_percentage:.1f}%)"
+                        )
+
+                        if result.backup_path:
+                            rich_print(f"\n💾 Backup: {result.backup_path}", style="dim")
+                    else:
+                        rich_print("\n⚠️  DRY RUN MODE - No changes made.", style="bold yellow")
+                        rich_print("   Use --execute to perform pruning.", style="dim")
+
+                    return
+
+            # Traditional strategy analysis
             stats = pruner.analyze(strategy)
             analysis_time_ms = (time.time() - start_time) * 1000
 
