@@ -11,9 +11,20 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Any
+from typing import Any, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+class TrackerStats(TypedDict):
+    """Type definition for tracker statistics dictionary."""
+
+    total_tracked: int
+    total_batches: int
+    total_writes: int
+    last_batch_time: str | None
+    queue_size: int
+
 
 # Global singleton tracker instances (one per database path)
 _trackers: dict[Path, "AccessTracker"] = {}
@@ -60,7 +71,7 @@ class AccessTracker:
         self._running = False
 
         # Statistics
-        self._stats = {
+        self._stats: TrackerStats = {
             "total_tracked": 0,
             "total_batches": 0,
             "total_writes": 0,
@@ -92,9 +103,7 @@ class AccessTracker:
             try:
                 # Check if we should flush based on time or size
                 current_time = time.time()
-                should_flush_time = (
-                    current_time - last_batch_time
-                ) >= self.batch_interval
+                should_flush_time = (current_time - last_batch_time) >= self.batch_interval
                 should_flush_size = len(pending_events) >= self.batch_size
 
                 if should_flush_time or should_flush_size:
@@ -179,8 +188,8 @@ class AccessTracker:
 
             # Update statistics
             with self._stats_lock:
-                self._stats["total_batches"] += 1
-                self._stats["total_writes"] += len(events)
+                self._stats["total_batches"] = self._stats["total_batches"] + 1
+                self._stats["total_writes"] = self._stats["total_writes"] + len(events)
                 self._stats["last_batch_time"] = datetime.now(UTC).isoformat()
 
             logger.debug(f"AccessTracker wrote batch of {len(events)} updates")
@@ -210,7 +219,7 @@ class AccessTracker:
 
         # Update statistics
         with self._stats_lock:
-            self._stats["total_tracked"] += 1
+            self._stats["total_tracked"] = self._stats["total_tracked"] + 1
             self._stats["queue_size"] = self._queue.qsize()
 
     def track_batch(self, memory_ids: list[str], context: str = "recall") -> None:
@@ -238,7 +247,7 @@ class AccessTracker:
 
         # Update statistics
         with self._stats_lock:
-            self._stats["total_tracked"] += len(memory_ids)
+            self._stats["total_tracked"] = self._stats["total_tracked"] + len(memory_ids)
             self._stats["queue_size"] = self._queue.qsize()
 
     def get_stats(self) -> dict[str, Any]:

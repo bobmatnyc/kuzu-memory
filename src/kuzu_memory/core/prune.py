@@ -349,7 +349,7 @@ class MemoryPruner:
         # Import SmartPruningStrategy here to avoid circular imports
         from .smart_pruning import SmartPruningStrategy
 
-        self.strategies = {
+        self.strategies: dict[str, Any] = {
             "safe": SafePruningStrategy(),
             "intelligent": IntelligentPruningStrategy(),
             "aggressive": AggressivePruningStrategy(),
@@ -382,9 +382,7 @@ class MemoryPruner:
             )
 
         strategy = self.strategies[strategy_name]
-        logger.info(
-            f"Analyzing memories with '{strategy_name}' strategy: {strategy.description}"
-        )
+        logger.info(f"Analyzing memories with '{strategy_name}' strategy: {strategy.description}")
 
         # Get all memories with metadata
         memories = self._get_all_memories_with_metadata()
@@ -522,9 +520,7 @@ class MemoryPruner:
                 )
 
             strategy = self.strategies[strategy_name]
-            logger.info(
-                f"Starting prune with '{strategy_name}' strategy (execute={execute})"
-            )
+            logger.info(f"Starting prune with '{strategy_name}' strategy (execute={execute})")
 
             # Create backup if requested and executing
             backup_path = None
@@ -655,18 +651,13 @@ class MemoryPruner:
             try:
                 self.memory.memory_store.db_adapter.execute_query(query, {"ids": batch})
                 total_deleted += len(batch)
-                logger.debug(
-                    f"Deleted batch of {len(batch)} memories ({total_deleted} total)"
-                )
+                logger.debug(f"Deleted batch of {len(batch)} memories ({total_deleted} total)")
             except Exception as e:
                 logger.error(f"Failed to delete batch: {e}")
                 # Continue with next batch
 
         # Clear cache after deletion
-        if (
-            hasattr(self.memory.memory_store, "cache")
-            and self.memory.memory_store.cache
-        ):
+        if hasattr(self.memory.memory_store, "cache") and self.memory.memory_store.cache:
             self.memory.memory_store.cache.clear()
 
         return total_deleted

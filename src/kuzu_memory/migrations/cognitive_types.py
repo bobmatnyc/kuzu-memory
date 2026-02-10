@@ -123,16 +123,12 @@ class CognitiveTypesMigration:
                 if not memory.metadata:
                     memory.metadata = {}
                 memory.metadata["migrated_from"] = (
-                    original_type.value
-                    if hasattr(original_type, "value")
-                    else str(original_type)
+                    original_type.value if hasattr(original_type, "value") else str(original_type)
                 )
                 memory.metadata["migrated_to"] = new_type.value
                 memory.metadata["migration_date"] = datetime.now().isoformat()
 
-                logger.debug(
-                    f"Migrated memory {memory.id} from {original_type} to {new_type}"
-                )
+                logger.debug(f"Migrated memory {memory.id} from {original_type} to {new_type}")
                 return memory
 
             # No migration needed
@@ -155,7 +151,7 @@ class CognitiveTypesMigration:
 
         try:
             # Get all memories
-            all_memories = self.memory_store.list_memories()
+            all_memories = self.memory_store.list_memories()  # type: ignore[attr-defined]
             self.migration_stats["total_memories"] = len(all_memories)
 
             logger.info(f"Starting migration of {len(all_memories)} memories")
@@ -175,7 +171,7 @@ class CognitiveTypesMigration:
                     self.migration_stats["type_counts"][type_name] += 1
 
                     # Update in store
-                    self.memory_store.update_memory(migrated_memory.id, migrated_memory)
+                    self.memory_store.update_memory(migrated_memory.id, migrated_memory)  # type: ignore[attr-defined]
                 else:
                     self.migration_stats["skipped"] += 1
 
@@ -197,7 +193,7 @@ class CognitiveTypesMigration:
             return False
 
         try:
-            all_memories = self.memory_store.list_memories()
+            all_memories = self.memory_store.list_memories()  # type: ignore[attr-defined]
             cognitive_types = {
                 MemoryType.EPISODIC,
                 MemoryType.SEMANTIC,
@@ -219,9 +215,7 @@ class CognitiveTypesMigration:
                     )
 
             if invalid_memories:
-                logger.warning(
-                    f"Found {len(invalid_memories)} memories with invalid types"
-                )
+                logger.warning(f"Found {len(invalid_memories)} memories with invalid types")
                 for mem in invalid_memories[:5]:  # Show first 5
                     logger.warning(f"  - Memory {mem['id']}: type={mem['type']}")
                 return False
@@ -244,7 +238,7 @@ class CognitiveTypesMigration:
             return False
 
         try:
-            all_memories = self.memory_store.list_memories()
+            all_memories = self.memory_store.list_memories()  # type: ignore[attr-defined]
             rollback_count = 0
 
             for memory in all_memories:
@@ -263,7 +257,7 @@ class CognitiveTypesMigration:
                     del memory.metadata["migrated_to"]
                     del memory.metadata["migration_date"]
 
-                    self.memory_store.update_memory(memory.id, memory)
+                    self.memory_store.update_memory(memory.id, memory)  # type: ignore[attr-defined]
                     rollback_count += 1
 
             logger.info(f"Rolled back {rollback_count} memories")

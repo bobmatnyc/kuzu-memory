@@ -11,12 +11,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import click
+from rich.table import Table
 
 from ..core.config import KuzuMemoryConfig
 from ..monitoring.access_tracker import get_access_tracker
 from ..storage.kuzu_adapter import KuzuAdapter
-from .cli_utils import rich_print, rich_table
-from .service_manager import ServiceManager
+from .cli_utils import console, rich_print
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +60,22 @@ def show(ctx: click.Context, db_path: str | None) -> None:
     """
     try:
         # Get database path
-        db_path_obj = Path(db_path) if db_path else ServiceManager._get_db_path(ctx)
+        db_path_obj: Path
+        if db_path:
+            db_path_obj = Path(db_path)
+        else:
+            # Get from context
+            if not ctx.obj or "db_path" not in ctx.obj:
+                rich_print("❌ No database path configured", style="red")
+                sys.exit(1)
+            db_path_obj = ctx.obj["db_path"]
 
         # Get tracker statistics
         tracker = get_access_tracker(db_path_obj)
         stats = tracker.get_stats()
 
         # Create statistics table
-        table = rich_table(title="📊 Access Tracking Statistics")
+        table = Table(title="📊 Access Tracking Statistics")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
 
@@ -84,7 +92,8 @@ def show(ctx: click.Context, db_path: str | None) -> None:
         else:
             table.add_row("Last Batch", "Never")
 
-        rich_print(table)
+        if console:
+            console.print(table)
 
         # Show efficiency metrics
         if stats["total_batches"] > 0:
@@ -125,11 +134,20 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
     """
     try:
         # Get database path
-        db_path_obj = Path(db_path) if db_path else ServiceManager._get_db_path(ctx)
+        db_path_obj: Path
+        if db_path:
+            db_path_obj = Path(db_path)
+        else:
+            # Get from context
+            if not ctx.obj or "db_path" not in ctx.obj:
+                rich_print("❌ No database path configured", style="red")
+                sys.exit(1)
+            db_path_obj = ctx.obj["db_path"]
 
         # Query top accessed memories
         config = KuzuMemoryConfig.default()
         adapter = KuzuAdapter(db_path_obj, config)
+        adapter.initialize()
 
         query = """
             MATCH (m:Memory)
@@ -143,12 +161,10 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
             LIMIT $limit
         """
 
-        with adapter.get_connection() as conn:
-            result = conn.execute(query, {"limit": limit})
-            rows = result.get_as_pl()
+        rows = adapter.execute_query(query, {"limit": limit})
 
         if len(rows) == 0:
-            rich_print("ℹ️  No accessed memories found", style="yellow")
+            rich_print("💡  No accessed memories found", style="yellow")
             rich_print(
                 "   Memories will appear here after recall operations track access",
                 style="dim",
@@ -156,7 +172,7 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
             return
 
         # Create results table
-        table = rich_table(title=f"🔝 Top {limit} Accessed Memories")
+        table = Table(title=f"🔝 Top {limit} Accessed Memories")
         table.add_column("Access Count", style="cyan", justify="right")
         table.add_column("Content", style="white", no_wrap=False, max_width=60)
         table.add_column("Last Accessed", style="dim")
@@ -171,9 +187,7 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
             accessed_at = row["accessed_at"]
             if accessed_at:
                 try:
-                    accessed_time = datetime.fromisoformat(
-                        accessed_at.replace("Z", "+00:00")
-                    )
+                    accessed_time = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
                     now = datetime.now(UTC)
                     delta = now - accessed_time
 
@@ -192,7 +206,8 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
 
             table.add_row(str(row["access_count"]), content, time_str)
 
-        rich_print(table)
+        if console:
+            console.print(table)
 
         # Summary statistics
         total_accesses = sum(row["access_count"] for row in rows)
@@ -240,7 +255,15 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
     """
     try:
         # Get database path
-        db_path_obj = Path(db_path) if db_path else ServiceManager._get_db_path(ctx)
+        db_path_obj: Path
+        if db_path:
+            db_path_obj = Path(db_path)
+        else:
+            # Get from context
+            if not ctx.obj or "db_path" not in ctx.obj:
+                rich_print("❌ No database path configured", style="red")
+                sys.exit(1)
+            db_path_obj = ctx.obj["db_path"]
 
         # Calculate cutoff date
         cutoff_date = datetime.now(UTC) - timedelta(days=days)
@@ -249,6 +272,7 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
         # Query stale memories
         config = KuzuMemoryConfig.default()
         adapter = KuzuAdapter(db_path_obj, config)
+        adapter.initialize()
 
         query = """
             MATCH (m:Memory)
@@ -263,9 +287,7 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
             LIMIT $limit
         """
 
-        with adapter.get_connection() as conn:
-            result = conn.execute(query, {"cutoff_date": cutoff_iso, "limit": limit})
-            rows = result.get_as_pl()
+        rows = adapter.execute_query(query, {"cutoff_date": cutoff_iso, "limit": limit})
 
         if len(rows) == 0:
             rich_print(
@@ -275,7 +297,7 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
             return
 
         # Create results table
-        table = rich_table(title=f"🗑️  Stale Memories (>{days} days)")
+        table = Table(title=f"🗑️  Stale Memories (>{days} days)")
         table.add_column("Created", style="dim")
         table.add_column("Content", style="white", no_wrap=False, max_width=60)
         table.add_column("Accesses", style="cyan", justify="right")
@@ -307,9 +329,7 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
             accessed_at = row["accessed_at"]
             if accessed_at:
                 try:
-                    accessed_time = datetime.fromisoformat(
-                        accessed_at.replace("Z", "+00:00")
-                    )
+                    accessed_time = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
                     now = datetime.now(UTC)
                     delta = now - accessed_time
 
@@ -326,7 +346,8 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
 
             table.add_row(created_str, content, str(row["access_count"]), accessed_str)
 
-        rich_print(table)
+        if console:
+            console.print(table)
 
         # Summary statistics
         rich_print(

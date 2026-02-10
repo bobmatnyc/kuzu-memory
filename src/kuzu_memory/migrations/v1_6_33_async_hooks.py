@@ -6,6 +6,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
+from typing import Any
 
 from .base import HooksMigration, MigrationResult
 
@@ -96,7 +97,7 @@ class AsyncHooksMigration(HooksMigration):
             self.project_root / ".claude" / "settings.local.json",
         ]
 
-    def _needs_async_flag(self, hook_list: list[dict], command_keyword: str) -> bool:
+    def _needs_async_flag(self, hook_list: list[dict[str, Any]], command_keyword: str) -> bool:
         """
         Check if a hook list contains kuzu-memory hooks without async flag.
 
@@ -109,12 +110,7 @@ class AsyncHooksMigration(HooksMigration):
         """
 
         for hook_entry in hook_list:
-            if not isinstance(hook_entry, dict):
-                continue
-
             nested_hooks = hook_entry.get("hooks", [])
-            if not isinstance(nested_hooks, list):
-                continue
 
             for hook in nested_hooks:
                 if not isinstance(hook, dict):
@@ -155,9 +151,7 @@ class AsyncHooksMigration(HooksMigration):
                         f"Enabled async on {count} SessionStart hook(s) in {settings_path.name}"
                     )
                     modified = True
-                    logger.info(
-                        f"Enabled async on {count} SessionStart hook(s) in {settings_path}"
-                    )
+                    logger.info(f"Enabled async on {count} SessionStart hook(s) in {settings_path}")
 
             # Migrate PostToolUse hooks
             if "PostToolUse" in hooks:
@@ -167,15 +161,11 @@ class AsyncHooksMigration(HooksMigration):
                         f"Enabled async on {count} PostToolUse hook(s) in {settings_path.name}"
                     )
                     modified = True
-                    logger.info(
-                        f"Enabled async on {count} PostToolUse hook(s) in {settings_path}"
-                    )
+                    logger.info(f"Enabled async on {count} PostToolUse hook(s) in {settings_path}")
 
             # Verify UserPromptSubmit remains synchronous
             if "UserPromptSubmit" in hooks:
-                sync_count = self._ensure_synchronous(
-                    hooks["UserPromptSubmit"], "enhance"
-                )
+                sync_count = self._ensure_synchronous(hooks["UserPromptSubmit"], "enhance")
                 if sync_count > 0:
                     warnings.append(
                         f"Removed async flag from {sync_count} UserPromptSubmit hook(s) "
@@ -204,7 +194,7 @@ class AsyncHooksMigration(HooksMigration):
 
         return None
 
-    def _add_async_flag(self, hook_list: list[dict], command_keyword: str) -> int:
+    def _add_async_flag(self, hook_list: list[dict[str, Any]], command_keyword: str) -> int:
         """
         Add async: true flag to kuzu-memory hooks.
 
@@ -218,12 +208,7 @@ class AsyncHooksMigration(HooksMigration):
         count = 0
 
         for hook_entry in hook_list:
-            if not isinstance(hook_entry, dict):
-                continue
-
             nested_hooks = hook_entry.get("hooks", [])
-            if not isinstance(nested_hooks, list):
-                continue
 
             for hook in nested_hooks:
                 if not isinstance(hook, dict):
@@ -238,7 +223,7 @@ class AsyncHooksMigration(HooksMigration):
 
         return count
 
-    def _ensure_synchronous(self, hook_list: list[dict], command_keyword: str) -> int:
+    def _ensure_synchronous(self, hook_list: list[dict[str, Any]], command_keyword: str) -> int:
         """
         Ensure hooks are synchronous (remove async flag if present).
 
@@ -252,12 +237,7 @@ class AsyncHooksMigration(HooksMigration):
         count = 0
 
         for hook_entry in hook_list:
-            if not isinstance(hook_entry, dict):
-                continue
-
             nested_hooks = hook_entry.get("hooks", [])
-            if not isinstance(nested_hooks, list):
-                continue
 
             for hook in nested_hooks:
                 if not isinstance(hook, dict):

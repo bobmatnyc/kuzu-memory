@@ -24,7 +24,7 @@ import sys
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import click
 from rich.console import Console
@@ -43,9 +43,26 @@ from .service_manager import ServiceManager
 logger = logging.getLogger(__name__)
 
 
+class AnalyticsHealthStatus(TypedDict):
+    """Type definition for analytics health status dictionary."""
+
+    enabled: bool
+    worker_running: bool
+    pending_events: int
+    last_flush: str | None
+    stale_count: int
+    stale_percentage: float
+    total_memories: int
+    total_accesses: int
+    most_active_memory: dict[str, Any] | None
+    average_access_count: float
+    recommendations: list[str]
+    status: str
+
+
 def _check_analytics_health(
     db_path: Path, config: KuzuMemoryConfig, verbose: bool = False
-) -> dict[str, Any]:
+) -> AnalyticsHealthStatus:
     """
     Check analytics system health.
 
@@ -57,7 +74,7 @@ def _check_analytics_health(
     Returns:
         Dict with analytics health status
     """
-    health_status = {
+    health_status: AnalyticsHealthStatus = {
         "enabled": config.analytics.enabled,
         "worker_running": False,
         "pending_events": 0,
@@ -100,8 +117,7 @@ def _check_analytics_health(
         # Calculate stale memories (using config threshold)
         if health_status["total_memories"] > 0:
             cutoff_date = (
-                datetime.now(UTC)
-                - timedelta(days=config.analytics.stale_threshold_days)
+                datetime.now(UTC) - timedelta(days=config.analytics.stale_threshold_days)
             ).isoformat()
 
             query = """
@@ -111,9 +127,7 @@ def _check_analytics_health(
                 RETURN count(*) AS stale_count
             """
             results = adapter.execute_query(query, {"cutoff_date": cutoff_date})
-            health_status["stale_count"] = (
-                int(results[0]["stale_count"]) if results else 0
-            )
+            health_status["stale_count"] = int(results[0]["stale_count"]) if results else 0
 
             health_status["stale_percentage"] = (
                 (health_status["stale_count"] / health_status["total_memories"]) * 100
@@ -132,9 +146,7 @@ def _check_analytics_health(
         results = adapter.execute_query(query)
         if results:
             health_status["total_accesses"] = int(results[0].get("total_accesses") or 0)
-            health_status["average_access_count"] = float(
-                results[0].get("avg_access_count") or 0.0
-            )
+            health_status["average_access_count"] = float(results[0].get("avg_access_count") or 0.0)
 
         # Most active memory (if verbose)
         if verbose:
@@ -172,7 +184,7 @@ def _check_analytics_health(
         elif health_status["stale_percentage"] > 30:
             health_status["status"] = "healthy"
             health_status["recommendations"].append(
-                f"ℹ️ {health_status['stale_percentage']:.0f}% of memories are stale. "
+                f"💡 {health_status['stale_percentage']:.0f}% of memories are stale. "
                 "Monitor and consider pruning soon."
             )
         else:
@@ -188,9 +200,7 @@ def _check_analytics_health(
 
 
 @click.group(invoke_without_command=True)
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save report to file")
 @click.option(
@@ -203,9 +213,7 @@ def _check_analytics_health(
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
@@ -216,9 +224,7 @@ def _check_analytics_health(
     default=True,
     help="Run analytics health checks (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def doctor(
     ctx: click.Context,
@@ -296,12 +302,8 @@ def doctor(
     default=OutputFormat.TEXT.value,
     help="Output format (default: text)",
 )
-@click.option(
-    "--fix", is_flag=True, help="Attempt to automatically fix detected issues"
-)
-@click.option(
-    "--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)"
-)
+@click.option("--fix", is_flag=True, help="Attempt to automatically fix detected issues")
+@click.option("--hooks/--no-hooks", default=True, help="Run hooks diagnostics (default: enabled)")
 @click.option(
     "--server-lifecycle/--no-server-lifecycle",
     default=True,
@@ -312,9 +314,7 @@ def doctor(
     default=True,
     help="Run analytics health checks (default: enabled)",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def diagnose(
     ctx: click.Context,
@@ -366,9 +366,7 @@ def diagnose(
         if hooks:
             try:
                 with ServiceManager.diagnostic_service(config_service) as diagnostic:
-                    hooks_status = run_async(
-                        diagnostic.check_hooks_status(project_path)
-                    )
+                    hooks_status = run_async(diagnostic.check_hooks_status(project_path))
             except Exception:
                 # Hooks check failed - continue without hooks status
                 pass
@@ -380,9 +378,7 @@ def diagnose(
                 # Load config for analytics settings
                 config = KuzuMemoryConfig.default()
                 db_path = config_service.get_db_path()
-                analytics_health = _check_analytics_health(
-                    db_path, config, verbose=verbose
-                )
+                analytics_health = _check_analytics_health(db_path, config, verbose=verbose)
             except Exception as e:
                 logger.warning(f"Analytics health check failed: {e}")
                 # Continue without analytics health
@@ -411,9 +407,7 @@ def diagnose(
 
                 # Git hooks
                 git_hooks = hooks_status["git_hooks"]
-                git_installed = (
-                    "✅ Installed" if git_hooks["installed"] else "❌ Not installed"
-                )
+                git_installed = "✅ Installed" if git_hooks["installed"] else "❌ Not installed"
                 output_content += f"\nGit Hooks: {git_installed}"
                 if git_hooks.get("path"):
                     output_content += f"\n  Path: {git_hooks['path']}"
@@ -422,9 +416,7 @@ def diagnose(
 
                 # Claude Code hooks
                 cc_hooks = hooks_status["claude_code_hooks"]
-                cc_installed = (
-                    "✅ Configured" if cc_hooks["installed"] else "❌ Not configured"
-                )
+                cc_installed = "✅ Configured" if cc_hooks["installed"] else "❌ Not configured"
                 output_content += f"\nClaude Code Hooks: {cc_installed}"
                 if cc_hooks.get("events"):
                     events_str = ", ".join(cc_hooks["events"])
@@ -464,7 +456,7 @@ def diagnose(
                 elif status == "degraded":
                     status_icon = "⚠️"
                 elif status == "disabled":
-                    status_icon = "ℹ️"
+                    status_icon = "💡"
                 else:
                     status_icon = "❌"
 
@@ -473,14 +465,10 @@ def diagnose(
                 # Core metrics
                 if analytics_health["enabled"]:
                     worker_status = (
-                        "✅ Running"
-                        if analytics_health["worker_running"]
-                        else "❌ Not running"
+                        "✅ Running" if analytics_health["worker_running"] else "❌ Not running"
                     )
                     output_content += f"\nAccess Tracking: {worker_status}"
-                    output_content += (
-                        f"\nPending Events: {analytics_health['pending_events']}"
-                    )
+                    output_content += f"\nPending Events: {analytics_health['pending_events']}"
 
                     if analytics_health["last_flush"]:
                         # Calculate time since last flush
@@ -494,18 +482,12 @@ def diagnose(
                             if delta.total_seconds() < 60:
                                 time_str = f"{int(delta.total_seconds())} seconds ago"
                             elif delta.total_seconds() < 3600:
-                                time_str = (
-                                    f"{int(delta.total_seconds() / 60)} minutes ago"
-                                )
+                                time_str = f"{int(delta.total_seconds() / 60)} minutes ago"
                             else:
-                                time_str = (
-                                    f"{int(delta.total_seconds() / 3600)} hours ago"
-                                )
+                                time_str = f"{int(delta.total_seconds() / 3600)} hours ago"
                             output_content += f"\nLast Flush: {time_str}"
                         except Exception:
-                            output_content += (
-                                f"\nLast Flush: {analytics_health['last_flush']}"
-                            )
+                            output_content += f"\nLast Flush: {analytics_health['last_flush']}"
                     else:
                         output_content += "\nLast Flush: Never"
 
@@ -518,23 +500,28 @@ def diagnose(
                     if stale_pct > 30:
                         output_content += " - ⚠️ High"
                     elif stale_pct > 10:
-                        output_content += " - ℹ️ Moderate"
+                        output_content += " - 💡 Moderate"
                     else:
                         output_content += " - ✅ OK"
 
                     # Access patterns
-                    output_content += f"\nTotal Accesses Tracked: {analytics_health['total_accesses']:,}"
+                    output_content += (
+                        f"\nTotal Accesses Tracked: {analytics_health['total_accesses']:,}"
+                    )
                     if analytics_health["average_access_count"] > 0:
                         output_content += f"\nAverage Access Count: {analytics_health['average_access_count']:.1f}"
 
                     # Most active memory (verbose only)
                     if verbose and analytics_health.get("most_active_memory"):
                         most_active = analytics_health["most_active_memory"]
-                        output_content += f"\nMost Active Memory: {most_active['access_count']} accesses"
-                        output_content += f"\n  Content: {most_active['content']}"
+                        if most_active is not None:
+                            output_content += (
+                                f"\nMost Active Memory: {most_active['access_count']} accesses"
+                            )
+                            output_content += f"\n  Content: {most_active['content']}"
 
                 else:
-                    output_content += "\nAccess Tracking: ℹ️ Disabled"
+                    output_content += "\nAccess Tracking: 💡 Disabled"
 
                 # Recommendations
                 if analytics_health.get("recommendations"):
@@ -563,15 +550,11 @@ def diagnose(
                 style="yellow",
             )
 
-            if click.confirm(
-                "Would you like to attempt automatic fixes?", default=True
-            ):
+            if click.confirm("Would you like to attempt automatic fixes?", default=True):
                 rich_print("\n🔧 Attempting automatic fixes...", style="blue")
 
                 # Re-run diagnostics with auto-fix enabled
-                fix_report = asyncio.run(
-                    diagnostics.run_full_diagnostics(auto_fix=True)
-                )
+                fix_report = asyncio.run(diagnostics.run_full_diagnostics(auto_fix=True))
 
                 # Show fix results
                 rich_print("\n📊 Fix Results:", style="blue")
@@ -599,9 +582,7 @@ def diagnose(
 
         # Exit with appropriate code
         if report.has_critical_errors:
-            rich_print(
-                "\n❌ Critical errors detected. See report for details.", style="red"
-            )
+            rich_print("\n❌ Critical errors detected. See report for details.", style="red")
             sys.exit(1)
         elif report.actionable_failures > 0:
             rich_print(
@@ -628,9 +609,7 @@ def diagnose(
 @click.option("--fix", is_flag=True, help="Auto-fix detected issues")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def mcp(
     ctx: click.Context,
@@ -701,18 +680,12 @@ def mcp(
                     elif status == "degraded":
                         rich_print("⚠️  MCP installation has issues", style="yellow")
                     elif status == "critical":
-                        rich_print(
-                            "❌ MCP installation has critical issues", style="red"
-                        )
+                        rich_print("❌ MCP installation has critical issues", style="red")
                     else:
-                        rich_print(
-                            f"Info: MCP installation status: {status}", style="blue"
-                        )
+                        rich_print(f"Info: MCP installation status: {status}", style="blue")
 
                     rich_print(f"   Platform: {platform}", style="dim")
-                    rich_print(
-                        f"   Checks: {checks_passed}/{checks_total} passed", style="dim"
-                    )
+                    rich_print(f"   Checks: {checks_passed}/{checks_total} passed", style="dim")
 
                 if issues:
                     rich_print("\n⚠️  Issues detected:", style="yellow")
@@ -735,9 +708,7 @@ def mcp(
                         adapter = MCPInstallerAdapter(project_root=project_path)
                         fixes = adapter.fix_issues(auto_fix=True)
                         if fixes:
-                            rich_print(
-                                f"\n✅ Applied {len(fixes)} fix(es):", style="green"
-                            )
+                            rich_print(f"\n✅ Applied {len(fixes)} fix(es):", style="green")
                             for fix_desc in fixes:
                                 rich_print(f"   • {fix_desc}", style="green")
                         else:
@@ -772,9 +743,7 @@ def mcp(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--output", "-o", type=click.Path(), help="Save results to JSON file")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def connection(
     ctx: click.Context, verbose: bool, output: str | None, project_root: str | None
@@ -818,9 +787,7 @@ def connection(
                 if connected:
                     rich_print("✅ Database connection is healthy", style="green")
                     rich_print(f"   Memories: {memory_count}", style="dim")
-                    rich_print(
-                        f"   Size: {db_size_bytes / (1024 * 1024):.2f} MB", style="dim"
-                    )
+                    rich_print(f"   Size: {db_size_bytes / (1024 * 1024):.2f} MB", style="dim")
                 else:
                     rich_print("❌ Database connection issues", style="red")
 
@@ -852,13 +819,9 @@ def connection(
 @doctor.command()
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed configuration")
 @click.option("--fix", is_flag=True, help="Attempt to install missing hooks")
-@click.option(
-    "--project-root", type=click.Path(exists=True, path_type=Path), help="Project root"
-)
+@click.option("--project-root", type=click.Path(exists=True, path_type=Path), help="Project root")
 @click.pass_context
-def hooks(
-    ctx: click.Context, verbose: bool, fix: bool, project_root: Path | None
-) -> None:
+def hooks(ctx: click.Context, verbose: bool, fix: bool, project_root: Path | None) -> None:
     """
     Check hooks installation status.
 
@@ -932,9 +895,7 @@ def hooks(
 
                 # Fix option
                 if fix and overall != "fully_configured":
-                    console.print(
-                        "\n[bold]🔧 Attempting to install missing hooks...[/bold]"
-                    )
+                    console.print("\n[bold]🔧 Attempting to install missing hooks...[/bold]")
 
                     # Install git hooks if missing
                     if not git_hooks["installed"]:
@@ -944,9 +905,7 @@ def hooks(
                             console.print("  Installing git hooks...")
                             ctx.invoke(git_install_hooks_cmd, force=False)
                         except Exception as e:
-                            console.print(
-                                f"  [yellow]⚠️  Git hooks install failed: {e}[/yellow]"
-                            )
+                            console.print(f"  [yellow]⚠️  Git hooks install failed: {e}[/yellow]")
 
                     # Install Claude Code hooks if missing
                     if not cc_hooks["installed"]:
@@ -990,18 +949,14 @@ def hooks(
 @doctor.command()
 @click.option("--detailed", is_flag=True, help="Show detailed component status")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
-@click.option(
-    "--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)"
-)
+@click.option("--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)")
 @click.option(
     "--interval",
     type=int,
     default=5,
     help="Check interval in seconds for continuous mode",
 )
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def health(
     ctx: click.Context,
@@ -1098,9 +1053,7 @@ def health(
                     console.print(f"  P50 Latency: {perf.latency_p50_ms:.2f}ms")
                     console.print(f"  P95 Latency: {perf.latency_p95_ms:.2f}ms")
                     console.print(f"  P99 Latency: {perf.latency_p99_ms:.2f}ms")
-                    console.print(
-                        f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s"
-                    )
+                    console.print(f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s")
                     console.print(f"  Error Rate: {perf.error_rate * 100:.2f}%")
 
                 # Resource metrics (if detailed)
@@ -1115,9 +1068,7 @@ def health(
                 # Summary
                 summary = result.health.to_dict()["summary"]
                 console.print("\n[bold]Component Summary[/bold]")
-                console.print(
-                    f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}"
-                )
+                console.print(f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}")
                 if summary["degraded"] > 0:
                     console.print(f"  [yellow]Degraded:[/yellow] {summary['degraded']}")
                 if summary["unhealthy"] > 0:
@@ -1164,21 +1115,15 @@ def health(
 
 
 @doctor.command()
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be done without doing it"
-)
+@click.option("--dry-run", is_flag=True, help="Show what would be done without doing it")
 @click.option(
     "--no-prune",
     is_flag=True,
     help="Skip automatic pruning even if thresholds exceeded",
 )
-@click.option(
-    "--no-timeout-adjust", is_flag=True, help="Skip automatic timeout adjustment"
-)
+@click.option("--no-timeout-adjust", is_flag=True, help="Skip automatic timeout adjustment")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
-@click.option(
-    "--project-root", type=click.Path(exists=True), help="Project root directory"
-)
+@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
 @click.pass_context
 def autotune(
     ctx: click.Context,
@@ -1231,9 +1176,7 @@ def autotune(
         db_path = get_project_db_path(project_path)
 
         if not db_path.exists():
-            rich_print(
-                "❌ Project not initialized. Run 'kuzu-memory init' first.", style="red"
-            )
+            rich_print("❌ Project not initialized. Run 'kuzu-memory init' first.", style="red")
             sys.exit(1)
 
         rich_print("🎛️ [bold cyan]Running Auto-Tune...[/bold cyan]\n")
@@ -1269,13 +1212,9 @@ def autotune(
 
                 if result.actions_taken:
                     action_label = "Actions (dry-run):" if dry_run else "Actions Taken:"
-                    rich_print(
-                        f"🔧 {action_label}", style="green" if not dry_run else "blue"
-                    )
+                    rich_print(f"🔧 {action_label}", style="green" if not dry_run else "blue")
                     for action in result.actions_taken:
-                        rich_print(
-                            f"   • {action}", style="green" if not dry_run else "blue"
-                        )
+                        rich_print(f"   • {action}", style="green" if not dry_run else "blue")
                     rich_print("")
 
                 if result.new_timeout_ms:
@@ -1291,9 +1230,7 @@ def autotune(
                     )
 
                 if not result.warnings and not result.actions_taken:
-                    rich_print(
-                        "✅ Database is healthy, no tuning needed.", style="green"
-                    )
+                    rich_print("✅ Database is healthy, no tuning needed.", style="green")
                 else:
                     rich_print("\n✅ Auto-tune complete.", style="green")
 

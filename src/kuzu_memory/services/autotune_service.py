@@ -9,7 +9,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from kuzu_memory.core.config import KuzuMemoryConfig
@@ -121,7 +121,7 @@ class AutoTuneService:
         optimal = self.BASE_TIMEOUT_MS + additional_timeout
         return min(optimal, self.MAX_TIMEOUT_MS)
 
-    def select_prune_strategy(self, memory_count: int) -> tuple[str, dict]:
+    def select_prune_strategy(self, memory_count: int) -> tuple[str, dict[str, Any]]:
         """
         Select appropriate pruning strategy based on database size.
 
@@ -169,9 +169,7 @@ class AutoTuneService:
         try:
             # Get current stats
             memory_count, db_size_mb = self.get_database_stats()
-            logger.info(
-                f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database"
-            )
+            logger.info(f"Auto-tune: {memory_count:,} memories, {db_size_mb:.1f} MB database")
 
             # Check for warnings
             if memory_count >= self.MEMORY_COUNT_WARN:
@@ -202,9 +200,7 @@ class AutoTuneService:
 
             # Auto-prune if needed
             if auto_prune and memory_count >= self.MEMORY_COUNT_PRUNE:
-                strategy_name, strategy_kwargs = self.select_prune_strategy(
-                    memory_count
-                )
+                strategy_name, strategy_kwargs = self.select_prune_strategy(memory_count)
 
                 if memory_count >= self.MEMORY_COUNT_EMERGENCY:
                     pct = strategy_kwargs.get("percentage", "N/A")
@@ -222,15 +218,11 @@ class AutoTuneService:
                     )
 
                 if not dry_run:
-                    pruned_count = self._execute_prune(
-                        strategy_name, strategy_kwargs, memory_count
-                    )
+                    pruned_count = self._execute_prune(strategy_name, strategy_kwargs, memory_count)
                     actions.append(f"Pruned {pruned_count:,} memories")
                 else:
                     # Estimate what would be pruned
-                    estimated = self._estimate_prune(
-                        strategy_name, strategy_kwargs, memory_count
-                    )
+                    estimated = self._estimate_prune(strategy_name, strategy_kwargs, memory_count)
                     actions.append(f"Would prune approximately {estimated:,} memories")
 
             execution_time_ms = (time.time() - start_time) * 1000
@@ -259,7 +251,7 @@ class AutoTuneService:
             )
 
     def _execute_prune(
-        self, strategy_name: str, strategy_kwargs: dict, current_count: int
+        self, strategy_name: str, strategy_kwargs: dict[str, Any], current_count: int
     ) -> int:
         """Execute pruning operation."""
         from kuzu_memory.core.prune import MemoryPruner, PercentagePruningStrategy
@@ -270,9 +262,7 @@ class AutoTuneService:
             # For percentage strategy, create a new instance with specified percentage
             if strategy_name == "percentage":
                 percentage = strategy_kwargs.get("percentage", 30.0)
-                pruner.strategies["percentage"] = PercentagePruningStrategy(
-                    percentage=percentage
-                )
+                pruner.strategies["percentage"] = PercentagePruningStrategy(percentage=percentage)
 
             result = pruner.prune(
                 strategy_name=strategy_name,
@@ -285,7 +275,7 @@ class AutoTuneService:
             return 0
 
     def _estimate_prune(
-        self, strategy_name: str, strategy_kwargs: dict, current_count: int
+        self, strategy_name: str, strategy_kwargs: dict[str, Any], current_count: int
     ) -> int:
         """Estimate how many memories would be pruned."""
         # For percentage strategy, use the percentage directly

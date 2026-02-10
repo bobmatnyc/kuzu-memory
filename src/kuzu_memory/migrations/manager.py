@@ -7,6 +7,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from packaging import version
 
@@ -35,7 +36,7 @@ class MigrationState:
     last_version: str = "0.0.0"
     history: list[MigrationHistory] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert to dictionary for JSON serialization.
 
@@ -59,7 +60,7 @@ class MigrationState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> MigrationState:
+    def from_dict(cls, data: dict[str, Any]) -> MigrationState:
         """
         Create from dictionary.
 
@@ -244,9 +245,7 @@ class MigrationManager:
                 )
                 continue
 
-            logger.info(
-                f"Running migration: {migration.name} - {migration.description()}"
-            )
+            logger.info(f"Running migration: {migration.name} - {migration.description()}")
 
             try:
                 result = migration.migrate()
@@ -265,9 +264,7 @@ class MigrationManager:
                 results.append(result)
 
                 if not result.success:
-                    logger.warning(
-                        f"Migration {migration.name} failed: {result.message}"
-                    )
+                    logger.warning(f"Migration {migration.name} failed: {result.message}")
                     # Attempt rollback
                     if migration.rollback():
                         logger.info(f"Rollback successful for {migration.name}")

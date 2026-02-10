@@ -6,7 +6,7 @@ Provides Rich-based formatting functions and fallbacks for terminal output.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 # Rich imports for beautiful CLI output
 try:
@@ -90,22 +90,17 @@ def rich_table(
 
         # Simple table formatting
         col_widths = [
-            max(len(str(row[i])) for row in [headers, *rows])
-            for i in range(len(headers))
+            max(len(str(row[i])) for row in [headers, *rows]) for i in range(len(headers))
         ]
 
         # Header
-        header_row = " | ".join(
-            headers[i].ljust(col_widths[i]) for i in range(len(headers))
-        )
+        header_row = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
         print(header_row)
         print("-" * len(header_row))
 
         # Rows
         for row in rows:
-            row_str = " | ".join(
-                str(row[i]).ljust(col_widths[i]) for i in range(len(row))
-            )
+            row_str = " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row)))
             print(row_str)
         return None
 
@@ -140,7 +135,7 @@ def rich_confirm(message: str, default: bool = True) -> bool:
         User's boolean response
     """
     if RICH_AVAILABLE and console:
-        return Confirm.ask(message, default=default, console=console)
+        return cast(bool, Confirm.ask(message, default=default, console=console))
     else:
         default_str = "Y/n" if default else "y/N"
         response = input(f"{message} [{default_str}]: ").strip().lower()
@@ -161,10 +156,10 @@ def rich_prompt(message: str, default: str | None = None) -> str:
     """
     if RICH_AVAILABLE and console:
         if default is not None:
-            return Prompt.ask(message, default=default, console=console)
+            return cast(str, Prompt.ask(message, default=default, console=console))
         else:
             result = Prompt.ask(message, console=console)
-            return result if result else ""
+            return cast(str, result) if result else ""
     else:
         default_str = f" [{default}]" if default else ""
         response = input(f"{message}{default_str}: ").strip()

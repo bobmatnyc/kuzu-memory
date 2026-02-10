@@ -129,9 +129,7 @@ class Migration(ABC):
             return data
         return {}
 
-    def write_json(
-        self, file_path: Path, data: dict[str, Any], backup: bool = True
-    ) -> None:
+    def write_json(self, file_path: Path, data: dict[str, Any], backup: bool = True) -> None:
         """
         Safely write a JSON file with optional backup.
 
@@ -233,10 +231,8 @@ class SchemaMigration(Migration):
             from ..core.memory import KuzuMemory
 
             db_path = self.project_root / ".kuzu_memory.db"
-            with KuzuMemory(
-                db_path=db_path, enable_git_sync=False, auto_sync=False
-            ) as memory:
-                memory.db_adapter.execute(query)
+            with KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False) as memory:
+                memory.db_adapter.execute_query(query, {})
             return True
         except Exception as e:
             logger.error(f"Schema migration failed: {e}")

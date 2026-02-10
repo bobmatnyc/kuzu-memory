@@ -9,16 +9,26 @@ import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TypedDict
 
 import click
 
 from ..core.config import KuzuMemoryConfig
+from ..models.memory import Memory
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.deduplication import DeduplicationEngine
 from .cli_utils import rich_panel, rich_print
 from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
+
+
+class ClusterSummary(TypedDict):
+    """Type definition for duplicate cluster summary."""
+
+    keeper: Memory
+    removed: list[Memory]
+    count: int
 
 
 @click.group()
@@ -303,11 +313,7 @@ def duplicates(
             # Find duplicates of this memory
             duplicates = dedup.find_duplicates(
                 mem.content,
-                [
-                    m
-                    for m in all_memories
-                    if m.id != mem.id and m.id not in processed_ids
-                ],
+                [m for m in all_memories if m.id != mem.id and m.id not in processed_ids],
             )
 
             if duplicates:
@@ -329,11 +335,9 @@ def duplicates(
 
         # Determine which memories to keep vs remove
         to_remove: list[str] = []
-        cluster_summaries = []
+        cluster_summaries: list[ClusterSummary] = []
 
-        with ServiceManager.memory_service(
-            db_path=db_path_obj, enable_git_sync=False
-        ) as _memory:
+        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as _memory:
             for cluster in duplicate_clusters:
                 # Get full memory objects for this cluster
                 cluster_memories = []
@@ -407,9 +411,7 @@ def duplicates(
                 rich_print(f"  ❌ Removing: {dup_content}", style="red")
 
         if len(cluster_summaries) > 5:
-            remaining_removed = sum(
-                summary["count"] for summary in cluster_summaries[5:]
-            )
+            remaining_removed = sum(summary["count"] for summary in cluster_summaries[5:])
             rich_print(
                 f"\n  ... and {len(cluster_summaries) - 5} more clusters ({remaining_removed} removals)",
                 style="dim",
@@ -558,9 +560,7 @@ def orphans(
             # Count BELONGS_TO_SESSION orphans
             result = conn.execute(session_query)
             rows = result.get_as_pl()
-            orphan_counts["BELONGS_TO_SESSION"] = (
-                rows[0]["count"] if len(rows) > 0 else 0
-            )
+            orphan_counts["BELONGS_TO_SESSION"] = rows[0]["count"] if len(rows) > 0 else 0
 
         total_orphans = sum(orphan_counts.values())
 
@@ -770,7 +770,7 @@ def all(
                 if memory_item.id in processed_ids:
                     continue
 
-                duplicates = dedup.find_duplicates(
+                found_duplicates = dedup.find_duplicates(
                     memory_item.content,
                     [
                         m
@@ -779,10 +779,10 @@ def all(
                     ],
                 )
 
-                if duplicates:
-                    duplicate_count += len(duplicates)
+                if found_duplicates:
+                    duplicate_count += len(found_duplicates)
                     processed_ids.add(memory_item.id)
-                    for dup_mem, _, _ in duplicates:
+                    for dup_mem, _, _ in found_duplicates:
                         processed_ids.add(dup_mem.id)
 
             stats["duplicates"] = duplicate_count
@@ -895,9 +895,7 @@ def all(
 
         # Execute duplicate cleanup
         rich_print("\n📝 Running duplicate cleanup...", style="blue")
-        ctx.invoke(
-            duplicates, threshold=threshold, dry_run=False, yes=True, db_path=db_path
-        )
+        ctx.invoke(duplicates, threshold=threshold, dry_run=False, yes=True, db_path=db_path)
 
         # Execute orphan cleanup
         rich_print("\n📝 Running orphan cleanup...", style="blue")
