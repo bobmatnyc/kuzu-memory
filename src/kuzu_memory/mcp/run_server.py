@@ -9,6 +9,7 @@ Implements JSON-RPC 2.0 protocol for communication with Claude Code.
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -25,8 +26,10 @@ from .protocol import (
 from .server import KuzuMemoryMCPServer as MCPServer
 
 # Set up logging
+# Use environment variable to control log level
+log_level = logging.DEBUG if os.environ.get("MCP_DEBUG") else logging.WARNING
 logging.basicConfig(
-    level=logging.WARNING,  # Only show warnings and errors
+    level=log_level,
     format="%(levelname)s: %(message)s",
     stream=sys.stderr,
 )
@@ -116,8 +119,9 @@ class MCPProtocolHandler:
 
             elif method == "shutdown":
                 # Shutdown the server
+                logger.info("Shutdown request received")
+                # Signal shutdown after response is sent
                 self.running = False
-                # Also signal the protocol to stop
                 self.protocol.running = False
                 return JSONRPCMessage.create_response(request_id, {})
 
@@ -468,8 +472,11 @@ class MCPProtocolHandler:
         while self.running:
             try:
                 # Read next message
+                logger.debug("Waiting for next message...")
                 message = await self.protocol.read_message()
+                logger.debug(f"Received message: {message}")
                 if message is None:
+                    logger.info("EOF received, shutting down")
                     break  # EOF
 
                 # Check for batch requests (message could be list or dict)
@@ -486,10 +493,23 @@ class MCPProtocolHandler:
                 else:
                     # Type narrowing: if not a batch, message is a dict
                     assert isinstance(message, dict)
+                    # Check if this is a shutdown request before processing
+                    is_shutdown = message.get("method") == "shutdown"
+
                     # Process single request
+                    logger.debug(f"Processing request: method={message.get('method')}, id={message.get('id')}")
                     response_or_none = await self.handle_request(message)
+                    logger.debug(f"Handler returned: {response_or_none is not None}")
                     if response_or_none is not None:
+                        logger.debug(f"Writing response for id={response_or_none.get('id')}")
                         self.protocol.write_message(response_or_none)
+                        logger.debug("Response written")
+
+                    # For shutdown, exit immediately after sending response
+                    if is_shutdown:
+                        logger.info("Shutdown response sent, exiting")
+                        # Don't wait for protocol cleanup - exit immediately
+                        sys.exit(0)
 
                     # Check if we should stop after processing
                     if not self.running:

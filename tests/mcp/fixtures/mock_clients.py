@@ -129,8 +129,10 @@ class MCPClientSimulator:
                 bufsize=1,  # Line buffered
             )
 
-            # Wait for process to start
-            await asyncio.sleep(0.1)
+            # Wait for process to start and protocol to initialize
+            # Need sufficient time for server startup to avoid race conditions with
+            # notifications sent immediately after connect (before initialize)
+            await asyncio.sleep(0.5)
 
             # Check if still running
             if self.process.poll() is not None:

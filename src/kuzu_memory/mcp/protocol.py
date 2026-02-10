@@ -234,7 +234,10 @@ class JSONRPCProtocol:
 
                 line = line.strip()
                 if line:  # Skip empty lines
+                    logger.debug(f"Reader thread got line: {line[:100]}")
                     self._message_queue.put(line)
+                else:
+                    logger.debug("Reader thread got empty line")
 
                 # Check if we should stop
                 if not self.running:

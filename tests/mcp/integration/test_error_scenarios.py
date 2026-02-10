@@ -465,6 +465,9 @@ class TestNotificationErrors:
             # Notification
             await client.send_notification("notifications/test", {})
 
+            # Give server time to process notification before next request
+            await asyncio.sleep(0.2)
+
             # Should still work
             response = await client.send_request("ping", {})
             assert response is not None
