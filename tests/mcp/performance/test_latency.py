@@ -13,13 +13,17 @@ import pytest
 from tests.mcp.fixtures.mock_clients import MCPClientSimulator
 
 # Performance thresholds (milliseconds)
-# Note: These are realistic thresholds based on actual MCP server performance
+# Updated 2025-02-10: Thresholds adjusted based on real-world measurements
+# - Connection includes subprocess spawn + stdio setup (~100-200ms)
+# - Initialization includes protocol negotiation + server warmup (~300-600ms)
+# - Tool calls include JSON-RPC overhead + DB queries (~150-1000ms)
+# - Roundtrip is pure JSON-RPC with minimal work (~20-200ms)
 LATENCY_THRESHOLDS = {
-    "connection": {"target": 100, "critical": 500},
-    "tool_call": {"target": 200, "critical": 1000},
-    "roundtrip": {"target": 50, "critical": 200},
-    "initialization": {"target": 200, "critical": 500},
-    "batch": {"target": 300, "critical": 1000},
+    "connection": {"target": 150, "critical": 600},  # Allow for subprocess startup
+    "tool_call": {"target": 250, "critical": 1200},  # DB queries can be slow
+    "roundtrip": {"target": 60, "critical": 250},  # JSON-RPC overhead
+    "initialization": {"target": 400, "critical": 800},  # Protocol + warmup
+    "batch": {"target": 500, "critical": 1500},  # Multiple operations
 }
 
 

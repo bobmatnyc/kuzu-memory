@@ -50,7 +50,7 @@ class TestStdioCommunication:
             message = json.dumps(request) + "\n"
 
             # Send directly
-            client.process.stdin.write(message.encode())
+            client.process.stdin.write(message)
             client.process.stdin.flush()
 
             # Should receive newline-delimited response
@@ -59,9 +59,9 @@ class TestStdioCommunication:
                 timeout=5.0,
             )
 
-            assert response_line.endswith(b"\n"), "Response not newline-terminated"
+            assert response_line.endswith("\n"), "Response not newline-terminated"
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
             assert response.get("id") == 1
 
         finally:
@@ -97,7 +97,7 @@ class TestStdioCommunication:
 
             # Send invalid JSON
             malformed = "{'invalid': json}\n"
-            client.process.stdin.write(malformed.encode())
+            client.process.stdin.write(malformed)
             client.process.stdin.flush()
 
             # Should receive error response
@@ -106,7 +106,7 @@ class TestStdioCommunication:
                 timeout=5.0,
             )
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
 
             # Should be a parse error (-32700)
             assert "error" in response
@@ -148,7 +148,7 @@ class TestStdioCommunication:
 
             # Send partial JSON (without newline)
             partial = '{"jsonrpc": "2.0", "method": "ping"'
-            client.process.stdin.write(partial.encode())
+            client.process.stdin.write(partial)
             client.process.stdin.flush()
 
             # Wait briefly
@@ -156,7 +156,7 @@ class TestStdioCommunication:
 
             # Complete the message
             completion = ', "id": 1}\n'
-            client.process.stdin.write(completion.encode())
+            client.process.stdin.write(completion)
             client.process.stdin.flush()
 
             # Should eventually respond
@@ -165,7 +165,7 @@ class TestStdioCommunication:
                     asyncio.to_thread(client.process.stdout.readline),
                     timeout=5.0,
                 )
-                response = json.loads(response_line.decode().strip())
+                response = json.loads(response_line.strip())
                 # If server handles partial correctly, should get response
                 assert "id" in response or "error" in response
             except (TimeoutError, json.JSONDecodeError):
@@ -290,7 +290,7 @@ class TestStdioErrorHandling:
 
             # Missing required field
             invalid = json.dumps({"jsonrpc": "2.0"}) + "\n"
-            client.process.stdin.write(invalid.encode())
+            client.process.stdin.write(invalid)
             client.process.stdin.flush()
 
             response_line = await asyncio.wait_for(
@@ -298,7 +298,7 @@ class TestStdioErrorHandling:
                 timeout=5.0,
             )
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
             assert "error" in response
 
         finally:
@@ -314,7 +314,7 @@ class TestStdioErrorHandling:
 
             # Wrong version
             request = json.dumps({"jsonrpc": "1.0", "method": "ping", "id": 1}) + "\n"
-            client.process.stdin.write(request.encode())
+            client.process.stdin.write(request)
             client.process.stdin.flush()
 
             response_line = await asyncio.wait_for(
@@ -322,7 +322,7 @@ class TestStdioErrorHandling:
                 timeout=5.0,
             )
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
             # Should handle gracefully
             assert "id" in response or "error" in response
 
@@ -339,7 +339,7 @@ class TestStdioErrorHandling:
 
             # Missing method
             invalid = json.dumps({"jsonrpc": "2.0", "id": 1}) + "\n"
-            client.process.stdin.write(invalid.encode())
+            client.process.stdin.write(invalid)
             client.process.stdin.flush()
 
             response_line = await asyncio.wait_for(
@@ -347,7 +347,7 @@ class TestStdioErrorHandling:
                 timeout=5.0,
             )
 
-            response = json.loads(response_line.decode().strip())
+            response = json.loads(response_line.strip())
             assert "error" in response
             assert response["error"]["code"] == -32600  # Invalid Request
 

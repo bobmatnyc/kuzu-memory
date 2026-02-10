@@ -63,10 +63,15 @@ class TestToolExecution:
             assert response is not None
             # Learn is async, should return success quickly
             if "result" in response:
-                assert (
-                    "success" in str(response["result"]).lower()
-                    or "queued" in str(response["result"]).lower()
-                )
+                # Response is in MCP format with content array
+                result = response["result"]
+                if isinstance(result, dict) and "content" in result:
+                    text_content = str(result["content"]).lower()
+                    assert (
+                        "learning" in text_content
+                        or "stored" in text_content
+                        or "queued" in text_content
+                    )
 
         finally:
             await client.disconnect()
@@ -446,7 +451,7 @@ class TestToolConcurrency:
             # Execute multiple tools
             responses = []
             for _i in range(5):
-                response = await client.call_tool("kuzu_stats", {"format": "json"})
+                response = await client.call_tool("kuzu_stats", {"detailed": False})
                 responses.append(response)
 
             # Most should succeed

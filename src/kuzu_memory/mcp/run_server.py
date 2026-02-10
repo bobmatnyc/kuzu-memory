@@ -46,7 +46,13 @@ class MCPProtocolHandler:
         """Handle a JSON-RPC request."""
         # Check for error from parsing
         if "error" in request and "method" not in request:
-            return JSONRPCMessage.create_response(request.get("id"), error=request["error"])
+            # Error dict is already formatted, so we return it directly as a response
+            error_dict = request["error"]
+            return {
+                "jsonrpc": "2.0",
+                "id": request.get("id"),
+                "error": error_dict,
+            }
 
         request_id = request.get("id")
         method = request.get("method", "")

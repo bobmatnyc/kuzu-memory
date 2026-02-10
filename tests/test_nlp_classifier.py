@@ -39,98 +39,105 @@ class TestMemoryClassifier:
     @pytest.fixture
     def classifier(self):
         """Create a test classifier instance."""
-        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=True):
-            # Mock NLTK functions if not available
-            if not HAS_NLTK:
-                # Mock the NLTK functions used by the classifier
-                import sys
-                from unittest.mock import MagicMock
+        # Mock NLTK functions if not available
+        if not HAS_NLTK:
+            # Mock the NLTK functions used by the classifier
+            import sys
+            from unittest.mock import MagicMock
 
-                mock_nltk = MagicMock()
-                mock_nltk.download = MagicMock(return_value=True)
-                mock_nltk.data.find = MagicMock(return_value="/fake/path")
+            mock_nltk = MagicMock()
+            mock_nltk.download = MagicMock(return_value=True)
+            mock_nltk.data.find = MagicMock(return_value="/fake/path")
 
-                # Add mocks to sys.modules before any imports
-                sys.modules["nltk"] = mock_nltk
-                sys.modules["nltk.tokenize"] = MagicMock()
-                sys.modules["nltk.corpus"] = MagicMock()
-                sys.modules["nltk.sentiment"] = MagicMock()
-                sys.modules["nltk.sentiment.vader"] = MagicMock()
-                sys.modules["nltk.chunk"] = MagicMock()
-                sys.modules["nltk.stem"] = MagicMock()
-                sys.modules["nltk.tag"] = MagicMock()
-                sys.modules["nltk.tree"] = MagicMock()
+            # Add mocks to sys.modules before any imports
+            sys.modules["nltk"] = mock_nltk
+            sys.modules["nltk.tokenize"] = MagicMock()
+            sys.modules["nltk.corpus"] = MagicMock()
+            sys.modules["nltk.sentiment"] = MagicMock()
+            sys.modules["nltk.sentiment.vader"] = MagicMock()
+            sys.modules["nltk.chunk"] = MagicMock()
+            sys.modules["nltk.stem"] = MagicMock()
+            sys.modules["nltk.tag"] = MagicMock()
+            sys.modules["nltk.tree"] = MagicMock()
 
-            # Create classifier without auto-downloading
-            classifier = MemoryClassifier(auto_download=False)
+        # Create classifier without auto-downloading
+        classifier = MemoryClassifier(auto_download=False)
 
-            # Mock the trained classifier
-            mock_pipeline = Mock()
-            mock_pipeline.predict_proba.return_value = [[0.8]]
-            mock_pipeline.classes_ = ["semantic"]
-            classifier.classifier = mock_pipeline
-            classifier.initialized = True
+        # Trigger lazy initialization
+        classifier._ensure_initialized()
 
-            # Mock sentiment analyzer to return realistic sentiment scores
-            def mock_sentiment(text):
-                """Mock sentiment analysis based on simple keyword matching."""
-                from kuzu_memory.nlp.classifier import SentimentResult
+        # Mock the trained classifier
+        mock_pipeline = Mock()
+        mock_pipeline.predict_proba.return_value = [[0.8]]
+        mock_pipeline.classes_ = ["semantic"]
+        classifier.classifier = mock_pipeline
+        classifier.initialized = True
 
-                text_lower = text.lower()
-                positive_words = [
-                    "love",
-                    "amazing",
-                    "fantastic",
-                    "wonderful",
-                    "great",
-                    "excellent",
-                ]
-                negative_words = ["terrible", "awful", "broken", "hate", "bad", "worst"]
+        # Mock sentiment analyzer to return realistic sentiment scores
+        def mock_sentiment(text):
+            """Mock sentiment analysis based on simple keyword matching."""
+            from kuzu_memory.nlp.classifier import SentimentResult
 
-                pos_count = sum(1 for word in positive_words if word in text_lower)
-                neg_count = sum(1 for word in negative_words if word in text_lower)
+            text_lower = text.lower()
+            positive_words = [
+                "love",
+                "amazing",
+                "fantastic",
+                "wonderful",
+                "great",
+                "excellent",
+            ]
+            negative_words = ["terrible", "awful", "broken", "hate", "bad", "worst"]
 
-                if pos_count > neg_count:
-                    return SentimentResult(
-                        positive=0.8,
-                        negative=0.1,
-                        neutral=0.1,
-                        compound=0.7,
-                        dominant="positive",
-                    )
-                elif neg_count > pos_count:
-                    return SentimentResult(
-                        positive=0.1,
-                        negative=0.8,
-                        neutral=0.1,
-                        compound=-0.7,
-                        dominant="negative",
-                    )
-                else:
-                    return SentimentResult(
-                        positive=0.1,
-                        negative=0.1,
-                        neutral=0.8,
-                        compound=0.0,
-                        dominant="neutral",
-                    )
+            pos_count = sum(1 for word in positive_words if word in text_lower)
+            neg_count = sum(1 for word in negative_words if word in text_lower)
 
-            classifier.analyze_sentiment = mock_sentiment
+            if pos_count > neg_count:
+                return SentimentResult(
+                    positive=0.8,
+                    negative=0.1,
+                    neutral=0.1,
+                    compound=0.7,
+                    dominant="positive",
+                )
+            elif neg_count > pos_count:
+                return SentimentResult(
+                    positive=0.1,
+                    negative=0.8,
+                    neutral=0.1,
+                    compound=-0.7,
+                    dominant="negative",
+                )
+            else:
+                return SentimentResult(
+                    positive=0.1,
+                    negative=0.1,
+                    neutral=0.8,
+                    compound=0.0,
+                    dominant="neutral",
+                )
 
-            yield classifier
+        classifier.analyze_sentiment = mock_sentiment
 
-            # Cleanup mock modules
-            if not HAS_NLTK:
-                for module in list(sys.modules.keys()):
-                    if module.startswith("nltk"):
-                        del sys.modules[module]
+        yield classifier
+
+        # Cleanup mock modules
+        if not HAS_NLTK:
+            for module in list(sys.modules.keys()):
+                if module.startswith("nltk"):
+                    del sys.modules[module]
 
     def test_classifier_initialization_without_nltk(self):
         """Test classifier initialization when NLTK is not available."""
-        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             assert not classifier.initialized
             assert classifier.classifier is None
+            # Trigger lazy initialization
+            result = classifier.classify("test content")
+            # Should still not be initialized since NLTK not available
+            assert not classifier.initialized
+            assert result.memory_type == MemoryType.EPISODIC
 
     def test_classify_empty_content(self, classifier):
         """Test classification of empty content."""
@@ -238,13 +245,14 @@ class TestMemoryClassifier:
 
     def test_extract_entities_without_nltk(self):
         """Test entity extraction fallback when NLTK is not available."""
-        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             content = "Python and JavaScript are programming languages"
             result = classifier.extract_entities(content)
 
             # Should still extract using regex patterns
             assert len(result.technologies) > 0
+            assert "Python" in result.technologies or "JavaScript" in result.technologies
 
     def test_calculate_importance(self, classifier):
         """Test importance score calculation."""
@@ -328,7 +336,7 @@ class TestMemoryClassifier:
 
     def test_sentiment_without_analyzer(self):
         """Test sentiment analysis fallback when VADER is not available."""
-        with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=False):
+        with patch("kuzu_memory.nlp.classifier.NLTK_AVAILABLE", False):
             classifier = MemoryClassifier()
             result = classifier.analyze_sentiment("Amazing work!")
 
@@ -588,22 +596,21 @@ class TestIntegrationWithMemoryEnhancer:
             sys.modules["nltk.tree"] = MagicMock()
 
         with patch("kuzu_memory.storage.memory_enhancer.NLP_AVAILABLE", True):
-            with patch("kuzu_memory.nlp.classifier._check_nltk_available", return_value=True):
-                enhancer = MemoryEnhancer(config)
-                # Mock the classifier
-                enhancer.nlp_classifier = Mock(spec=MemoryClassifier)
-                enhancer.nlp_classifier.classify = Mock(
-                    return_value=ClassificationResult(
-                        memory_type=MemoryType.PREFERENCE,
-                        confidence=0.85,
-                        keywords=["python", "backend"],
-                        entities=["Python"],
-                        intent="preference",
-                    )
+            enhancer = MemoryEnhancer(config)
+            # Mock the classifier
+            enhancer.nlp_classifier = Mock(spec=MemoryClassifier)
+            enhancer.nlp_classifier.classify = Mock(
+                return_value=ClassificationResult(
+                    memory_type=MemoryType.PREFERENCE,
+                    confidence=0.85,
+                    keywords=["python", "backend"],
+                    entities=["Python"],
+                    intent="preference",
                 )
-                enhancer.nlp_classifier.calculate_importance = Mock(return_value=0.8)
+            )
+            enhancer.nlp_classifier.calculate_importance = Mock(return_value=0.8)
 
-                yield enhancer
+            yield enhancer
 
         # Cleanup
         if not HAS_NLTK:

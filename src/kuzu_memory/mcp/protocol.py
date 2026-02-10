@@ -299,6 +299,14 @@ class JSONRPCProtocol:
                         return parsed
                     # For single requests, validate and return
                     return JSONRPCMessage.parse_request(line)
+                except json.JSONDecodeError as e:
+                    # JSON parsing failed - return parse error
+                    error = JSONRPCError(JSONRPCErrorCode.PARSE_ERROR, f"Parse error: {e!s}")
+                    return {
+                        "jsonrpc": "2.0",
+                        "error": error.to_dict(),
+                        "id": None,  # We don't know the ID yet
+                    }
                 except JSONRPCError as e:
                     # Return error as a special message
                     return {

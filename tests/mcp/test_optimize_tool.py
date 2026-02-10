@@ -242,19 +242,21 @@ class TestOptimizeIntegration:
     @pytest.mark.asyncio
     async def test_optimize_end_to_end(self, tmp_path: Path) -> None:
         """Test complete optimization flow with real components."""
-        # Create test database
-        db_path = tmp_path / "kuzu-memories"
-        db_path.mkdir(parents=True, exist_ok=True)
+        # MCP server expects database in standard location: project_root/kuzu-memories/
+        # But KuzuAdapter expects a database file path, not a directory
+        # So we use: project_root/kuzu-memories as the database file
+        db_dir = tmp_path / "kuzu-memories"
 
         # Initialize database with test data
+        # KuzuAdapter will create the database at the given path
         from kuzu_memory.core.config import KuzuMemoryConfig
         from kuzu_memory.storage.kuzu_adapter import KuzuAdapter
 
         config = KuzuMemoryConfig.default()
-        adapter = KuzuAdapter(db_path, config)
+        adapter = KuzuAdapter(db_dir, config)
         adapter.initialize()
 
-        # Create MCP server
+        # Create MCP server (it will find the database at project_root/kuzu-memories)
         server = KuzuMemoryMCPServer(project_root=tmp_path)
 
         # Test optimization (dry-run)

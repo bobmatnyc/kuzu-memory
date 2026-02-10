@@ -93,6 +93,8 @@ class MemoryClassifier:
     2. Entity extraction for contextual understanding
     3. Intent detection for action-oriented memories
     4. Machine learning classification with confidence scoring
+
+    Uses lazy initialization - NLTK components are loaded on first use.
     """
 
     # Type annotations for instance variables
@@ -104,16 +106,17 @@ class MemoryClassifier:
 
     def __init__(self, auto_download: bool = False) -> None:
         """
-        Initialize the memory classifier.
+        Initialize the memory classifier with lazy loading.
 
         Args:
-            auto_download: Whether to automatically download NLTK data
+            auto_download: Whether to automatically download NLTK data on first use
         """
         self.initialized = False
         self.classifier = None
         self.stemmer = None
         self.sentiment_analyzer = None
         self.stop_words = set()
+        self._auto_download = auto_download
 
         # Confidence thresholds
         self.PATTERN_CONFIDENCE_BOOST = 0.3
@@ -121,9 +124,19 @@ class MemoryClassifier:
         self.MIN_CONFIDENCE_THRESHOLD = 0.5
         self.SENTIMENT_IMPORTANCE_WEIGHT = 0.15  # How much sentiment affects importance
 
-        # Initialize NLTK components
+        # Lazy initialization flag
+        self._initialization_attempted = False
+
+    def _ensure_initialized(self) -> None:
+        """Ensure NLTK components are initialized (lazy loading)."""
+        if self._initialization_attempted:
+            return
+
+        self._initialization_attempted = True
+
+        # Initialize NLTK components if available
         if NLTK_AVAILABLE:
-            self._initialize_nltk(auto_download)
+            self._initialize_nltk(self._auto_download)
             self._train_classifier()
 
     def _initialize_nltk(self, auto_download: bool = False) -> None:
@@ -266,6 +279,9 @@ class MemoryClassifier:
         Returns:
             ClassificationResult with type, confidence, and metadata
         """
+        # Lazy initialization on first use
+        self._ensure_initialized()
+
         if not content or not content.strip():
             return ClassificationResult(
                 memory_type=MemoryType.EPISODIC,

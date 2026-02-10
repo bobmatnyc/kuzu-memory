@@ -603,3 +603,91 @@ class ConcurrentClientSimulator:
             "min_duration_ms": min(all_durations) if all_durations else 0,
             "max_duration_ms": max(all_durations) if all_durations else 0,
         }
+
+    async def simulate_load(
+        self,
+        operations: list[dict[str, Any]],
+        operations_per_client: int = 10,
+    ) -> dict[str, Any]:
+        """
+        Simulate realistic load with mixed operations across clients.
+
+        Args:
+            operations: List of operations to execute (method, params, is_tool)
+            operations_per_client: Number of operations each client should perform
+
+        Returns:
+            Load test results with latency distribution
+        """
+        import time
+
+        async def client_worker(client: MCPClientSimulator) -> dict[str, Any]:
+            """Execute operations for a single client."""
+            # Connect and initialize client
+            connected = await client.connect()
+            if not connected:
+                return {"latencies": [], "successes": 0}
+
+            await client.initialize()
+            latencies = []
+            successes = 0
+
+            try:
+                for _ in range(operations_per_client):
+                    for op in operations:
+                        method = op.get("method", "ping")
+                        params = op.get("params", {})
+                        is_tool = op.get("is_tool", False)
+
+                        start = time.perf_counter()
+                        try:
+                            if is_tool:
+                                # Normalize tool names: add kuzu_ prefix if missing
+                                tool_name = method if method.startswith("kuzu_") else f"kuzu_{method}"
+                                result = await client.call_tool(tool_name, params)
+                            else:
+                                result = await client.send_request(method, params)
+
+                            latency = (time.perf_counter() - start) * 1000
+                            latencies.append(latency)
+
+                            if result is not None:
+                                successes += 1
+                        except Exception as e:
+                            # Log errors for debugging but don't fail
+                            logger.debug(f"Operation {method} failed: {e}")
+            finally:
+                # Cleanup
+                await client.disconnect()
+
+            return {"latencies": latencies, "successes": successes}
+
+        # Run concurrent workers
+        results = await asyncio.gather(
+            *[client_worker(c) for c in self.clients], return_exceptions=True
+        )
+
+        # Aggregate results
+        all_latencies = []
+        total_successes = 0
+        total_ops = 0
+
+        for r in results:
+            if isinstance(r, dict):
+                all_latencies.extend(r["latencies"])
+                total_successes += r["successes"]
+                total_ops += len(r["latencies"])
+
+        client_avg_latencies = [
+            sum(r["latencies"]) / len(r["latencies"]) if r["latencies"] else 0
+            for r in results
+            if isinstance(r, dict) and r["latencies"]
+        ]
+
+        return {
+            "success_rate": total_successes / total_ops if total_ops > 0 else 0.0,
+            "throughput": total_ops / (max(all_latencies) / 1000) if all_latencies else 0.0,
+            "avg_latency": sum(all_latencies) / len(all_latencies) if all_latencies else 0.0,
+            "client_latencies": client_avg_latencies,
+            "total_operations": total_ops,
+        }
