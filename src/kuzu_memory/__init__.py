@@ -31,6 +31,7 @@ from .__version__ import DB_SCHEMA_VERSION, __version__, __version_info__
 
 # Import main classes for public API
 try:
+    from .client import KuzuMemoryClient, create_client
     from .core.config import KuzuMemoryConfig
     from .core.memory import KuzuMemory
     from .core.models import Memory, MemoryContext, MemoryType
@@ -51,6 +52,10 @@ except ImportError as e:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
 
+    class KuzuMemoryClient:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+
     class Memory:  # type: ignore[no-redef]
         pass
 
@@ -63,17 +68,26 @@ except ImportError as e:
     class KuzuMemoryConfig:  # type: ignore[no-redef]
         pass
 
+    async def create_client(  # type: ignore[misc]
+        project_root: str | Path,
+        db_path: str | Path | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+
 
 # Public API
 __all__ = [
     "DB_SCHEMA_VERSION",
     "KuzuMemory",
+    "KuzuMemoryClient",
     "KuzuMemoryConfig",
     "Memory",
     "MemoryContext",
     "MemoryType",
     "__version__",
     "__version_info__",
+    "create_client",
     "create_memory_instance",
     "get_database_path",
     "is_available",
