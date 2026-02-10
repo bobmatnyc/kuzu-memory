@@ -116,7 +116,9 @@ def create_subservient_config(
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, indent=2)
 
-        logger.info(f"Created subservient config at {config_path} (managed_by={managed_by})")
+        logger.info(
+            f"Created subservient config at {config_path} (managed_by={managed_by})"
+        )
         return config_path
 
     except Exception as e:

@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.integrations.git_sync import GitSyncManager
 
@@ -84,7 +83,9 @@ class TestIncrementalGitSync:
         # sync_incremental only syncs last 30 days, so commits_found should be <= 30
         # (since we created 150 commits, 1 per day going back)
 
-    def test_sync_incremental_uses_last_sync_timestamp(self, mock_git_sync, mock_repo, config):
+    def test_sync_incremental_uses_last_sync_timestamp(
+        self, mock_git_sync, mock_repo, config
+    ):
         """Test sync_incremental uses last_sync_timestamp if available."""
         # Set last sync timestamp to 5 days ago
         last_sync = datetime.now() - timedelta(days=5)
@@ -187,7 +188,9 @@ class TestIncrementalGitSync:
         # Should return at most 50 commits
         assert len(commits) <= 50
 
-    def test_sync_incremental_updates_sync_state(self, mock_git_sync, mock_repo, config):
+    def test_sync_incremental_updates_sync_state(
+        self, mock_git_sync, mock_repo, config
+    ):
         """Test sync_incremental updates last_sync_timestamp and last_commit_sha."""
         # Create mock commits
         mock_commits = []

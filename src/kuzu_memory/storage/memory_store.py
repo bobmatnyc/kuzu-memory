@@ -89,7 +89,9 @@ class MemoryStore:
             logger.debug(f"Generating memories from content: {len(content)} characters")
 
             # Extract memories using pattern matching
-            extracted_memories = self.memory_enhancer.extract_memories_from_content(content)
+            extracted_memories = self.memory_enhancer.extract_memories_from_content(
+                content
+            )
 
             if not extracted_memories:
                 logger.info("No memories extracted from content")
@@ -100,15 +102,19 @@ class MemoryStore:
 
             # Enhance memories with entity information
             if entities:
-                self.memory_enhancer.enhance_memories_with_entities(extracted_memories, entities)
+                self.memory_enhancer.enhance_memories_with_entities(
+                    extracted_memories, entities
+                )
 
             # Get existing memories for deduplication
-            existing_memories = self.query_builder.get_existing_memories_for_deduplication(
-                content=content,
-                source=source,
-                user_id=user_id,
-                session_id=session_id,
-                days_back=30,
+            existing_memories = (
+                self.query_builder.get_existing_memories_for_deduplication(
+                    content=content,
+                    source=source,
+                    user_id=user_id,
+                    session_id=session_id,
+                    days_back=30,
+                )
             )
 
             # Prepare base memory data
@@ -122,7 +128,9 @@ class MemoryStore:
 
             # Process and store each extracted memory
             stored_ids = []
-            memory_id_to_extracted = {}  # Map to track which memory ID corresponds to which extracted memory
+            memory_id_to_extracted = (
+                {}
+            )  # Map to track which memory ID corresponds to which extracted memory
 
             for extracted_memory in extracted_memories:
                 try:
@@ -153,7 +161,10 @@ class MemoryStore:
                         )
 
                         # Add entities if available
-                        if hasattr(extracted_memory, "entities") and extracted_memory.entities:
+                        if (
+                            hasattr(extracted_memory, "entities")
+                            and extracted_memory.entities
+                        ):
                             memory_to_store.entities = extracted_memory.entities
 
                         # Store in database
@@ -175,7 +186,9 @@ class MemoryStore:
             logger.error(f"Error generating memories: {e}")
             raise DatabaseError(f"Failed to generate memories: {e}")
 
-    def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
+    def _store_memory_in_database(
+        self, memory: Memory, is_update: bool = False
+    ) -> None:
         """
         Store or update a memory in the database using query builder.
 
@@ -244,7 +257,9 @@ class MemoryStore:
                     return cast(list[Memory], cached_result)
 
             # Query database
-            memories: list[Memory] = self.query_builder.get_recent_memories(limit, **filters)
+            memories: list[Memory] = self.query_builder.get_recent_memories(
+                limit, **filters
+            )
 
             # Cache result
             if self.cache and memories:
@@ -353,12 +368,16 @@ class MemoryStore:
         """
         try:
             # This would require a more complex query - simplified implementation
-            recent_count = self.query_builder.get_memory_statistics().get("recent_activity", 0)
+            recent_count = self.query_builder.get_memory_statistics().get(
+                "recent_activity", 0
+            )
 
             # Return simplified daily stats (could be enhanced with more detailed queries)
             today = datetime.now().date()
             return {
-                str(today - timedelta(days=i)): (recent_count // days if recent_count else 0)
+                str(today - timedelta(days=i)): (
+                    recent_count // days if recent_count else 0
+                )
                 for i in range(days)
             }
 
@@ -597,7 +616,9 @@ class MemoryStore:
 
             # Fetch missing memories from database
             if memories_to_fetch:
-                db_memories = self.query_builder.batch_get_memories_by_ids(memories_to_fetch)
+                db_memories = self.query_builder.batch_get_memories_by_ids(
+                    memories_to_fetch
+                )
 
                 # Cache the fetched memories
                 if self.cache:

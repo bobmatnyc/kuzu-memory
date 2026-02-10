@@ -171,7 +171,9 @@ def top_accessed(ctx: click.Context, limit: int, db_path: str | None) -> None:
             accessed_at = row["accessed_at"]
             if accessed_at:
                 try:
-                    accessed_time = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
+                    accessed_time = datetime.fromisoformat(
+                        accessed_at.replace("Z", "+00:00")
+                    )
                     now = datetime.now(UTC)
                     delta = now - accessed_time
 
@@ -305,7 +307,9 @@ def stale(ctx: click.Context, days: int, limit: int, db_path: str | None) -> Non
             accessed_at = row["accessed_at"]
             if accessed_at:
                 try:
-                    accessed_time = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
+                    accessed_time = datetime.fromisoformat(
+                        accessed_at.replace("Z", "+00:00")
+                    )
                     now = datetime.now(UTC)
                     delta = now - accessed_time
 

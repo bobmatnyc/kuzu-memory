@@ -108,7 +108,9 @@ class ConsolidationEngine:
             List of eligible memories
         """
         try:
-            cutoff_date = (datetime.now(UTC) - timedelta(days=self.min_age_days)).isoformat()
+            cutoff_date = (
+                datetime.now(UTC) - timedelta(days=self.min_age_days)
+            ).isoformat()
             current_time = datetime.now(UTC).isoformat()
 
             # Build eligible types list
@@ -170,7 +172,9 @@ class ConsolidationEngine:
         clustered_ids: set[str] = set()
 
         # Sort candidates by access count (descending) to pick best centroids
-        sorted_candidates = sorted(candidates, key=lambda m: m.access_count, reverse=True)
+        sorted_candidates = sorted(
+            candidates, key=lambda m: m.access_count, reverse=True
+        )
 
         for i, candidate in enumerate(sorted_candidates):
             # Skip if already clustered
@@ -178,7 +182,9 @@ class ConsolidationEngine:
                 continue
 
             # Find similar memories using deduplication engine
-            remaining = [m for m in sorted_candidates[i + 1 :] if m.id not in clustered_ids]
+            remaining = [
+                m for m in sorted_candidates[i + 1 :] if m.id not in clustered_ids
+            ]
 
             if not remaining:
                 break
@@ -197,16 +203,20 @@ class ConsolidationEngine:
 
             # Create cluster if we have enough similar memories
             if len(similar_memories) >= self.MIN_CLUSTER_SIZE - 1:
-                cluster_members = [candidate] + similar_memories
+                cluster_members = [candidate, *similar_memories]
 
                 # Build similarity score map
-                similarity_scores = {candidate.id: 1.0}  # Centroid has perfect similarity
+                similarity_scores = {
+                    candidate.id: 1.0
+                }  # Centroid has perfect similarity
                 for memory, score, _ in duplicates:
                     if memory in similar_memories:
                         similarity_scores[memory.id] = score
 
                 # Calculate average similarity
-                avg_similarity = sum(similarity_scores.values()) / len(similarity_scores)
+                avg_similarity = sum(similarity_scores.values()) / len(
+                    similarity_scores
+                )
 
                 cluster = MemoryCluster(
                     cluster_id=f"cluster-{candidate.id[:8]}-{int(time.time())}",
@@ -267,7 +277,9 @@ class ConsolidationEngine:
             unique_words = memory_words - centroid_words
 
             # If there's significant unique information (>30% unique words)
-            uniqueness_ratio = len(unique_words) / len(memory_words) if memory_words else 0
+            uniqueness_ratio = (
+                len(unique_words) / len(memory_words) if memory_words else 0
+            )
 
             if uniqueness_ratio > 0.3:
                 # Extract first sentence or up to 100 chars
@@ -382,7 +394,9 @@ class ConsolidationEngine:
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to consolidate cluster {cluster.cluster_id}: {e}")
+                    logger.error(
+                        f"Failed to consolidate cluster {cluster.cluster_id}: {e}"
+                    )
                     continue
 
             execution_time_ms = (time.time() - start_time) * 1000
@@ -462,7 +476,9 @@ class ConsolidationEngine:
                     "consolidated_id": consolidated_memory.id,
                     "consolidation_date": datetime.now(UTC).isoformat(),
                     "cluster_id": cluster.cluster_id,
-                    "similarity_score": cluster.similarity_scores.get(original_memory.id, 0.0),
+                    "similarity_score": cluster.similarity_scores.get(
+                        original_memory.id, 0.0
+                    ),
                 }
 
                 self.db_adapter.execute_query(rel_query, rel_params)
@@ -534,7 +550,9 @@ class ConsolidationEngine:
 
             self.db_adapter.execute_query(delete_query, {"memory_ids": memory_ids})
 
-            logger.debug(f"Deleted {len(memory_ids)} memories from cluster {cluster.cluster_id}")
+            logger.debug(
+                f"Deleted {len(memory_ids)} memories from cluster {cluster.cluster_id}"
+            )
             return len(memory_ids)
 
         except Exception as e:

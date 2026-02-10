@@ -45,10 +45,16 @@ def mcp() -> None:
 
 @mcp.command()
 @click.option("--port", type=int, help="Port to run server on (for network mode)")
-@click.option("--stdio", is_flag=True, default=True, help="Use stdio for communication (default)")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--stdio", is_flag=True, default=True, help="Use stdio for communication (default)"
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
-def serve(ctx: click.Context, port: int | None, stdio: bool, project_root: str | None) -> None:
+def serve(
+    ctx: click.Context, port: int | None, stdio: bool, project_root: str | None
+) -> None:
     """
     Run the MCP server for Claude Code integration.
 
@@ -90,10 +96,16 @@ def serve(ctx: click.Context, port: int | None, stdio: bool, project_root: str |
 
 @mcp.command()
 @click.option("--port", type=int, help="Port to run server on (for network mode)")
-@click.option("--stdio", is_flag=True, default=True, help="Use stdio for communication (default)")
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--stdio", is_flag=True, default=True, help="Use stdio for communication (default)"
+)
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
-def start(ctx: click.Context, port: int | None, stdio: bool, project_root: str | None) -> None:
+def start(
+    ctx: click.Context, port: int | None, stdio: bool, project_root: str | None
+) -> None:
     """
     Start the MCP server (alias for 'serve').
 
@@ -247,7 +259,9 @@ def config(ctx: click.Context, output: str | None) -> None:
             output_path.write_text(config_json)
             rich_print(f"✅ Configuration saved to: {output_path}", style="green")
         else:
-            rich_panel(config_json, title="📋 Claude Code MCP Configuration", style="blue")
+            rich_panel(
+                config_json, title="📋 Claude Code MCP Configuration", style="blue"
+            )
 
             rich_print("\n📌 To use this configuration:", style="blue")
             rich_print("1. Copy the JSON above")
@@ -265,14 +279,18 @@ def config(ctx: click.Context, output: str | None) -> None:
 @mcp.command()
 @click.option("--detailed", is_flag=True, help="Show detailed component status")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
-@click.option("--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)")
+@click.option(
+    "--continuous", is_flag=True, help="Continuous monitoring mode (use Ctrl+C to stop)"
+)
 @click.option(
     "--interval",
     type=int,
     default=5,
     help="Check interval in seconds for continuous mode",
 )
-@click.option("--project-root", type=click.Path(exists=True), help="Project root directory")
+@click.option(
+    "--project-root", type=click.Path(exists=True), help="Project root directory"
+)
 @click.pass_context
 def health(
     ctx: click.Context,
@@ -386,7 +404,9 @@ def health(
                     console.print(f"  P50 Latency: {perf.latency_p50_ms:.2f}ms")
                     console.print(f"  P95 Latency: {perf.latency_p95_ms:.2f}ms")
                     console.print(f"  P99 Latency: {perf.latency_p99_ms:.2f}ms")
-                    console.print(f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s")
+                    console.print(
+                        f"  Throughput: {perf.throughput_ops_per_sec:.2f} ops/s"
+                    )
                     console.print(f"  Error Rate: {perf.error_rate * 100:.2f}%")
 
                 # Resource metrics (if detailed)
@@ -401,7 +421,9 @@ def health(
                 # Summary
                 summary = result.health.to_dict()["summary"]
                 console.print("\n[bold]Component Summary[/bold]")
-                console.print(f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}")
+                console.print(
+                    f"  [green]Healthy:[/green] {summary['healthy']}/{summary['total']}"
+                )
                 if summary["degraded"] > 0:
                     console.print(f"  [yellow]Degraded:[/yellow] {summary['degraded']}")
                 if summary["unhealthy"] > 0:

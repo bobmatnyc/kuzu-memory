@@ -235,7 +235,9 @@ def get_query(query_name: str) -> str:
     """
     if query_name not in SCHEMA_QUERIES:
         available_queries = ", ".join(SCHEMA_QUERIES.keys())
-        raise KeyError(f"Query '{query_name}' not found. Available queries: {available_queries}")
+        raise KeyError(
+            f"Query '{query_name}' not found. Available queries: {available_queries}"
+        )
 
     return SCHEMA_QUERIES[query_name]
 
@@ -332,7 +334,9 @@ def ensure_indexes(db_path: Path) -> dict[str, bool]:
             results["schema_valid"] = True
 
             # Kuzu automatically provides these optimizations
-            results["primary_keys_indexed"] = True  # Hash index on primary keys (automatic)
+            results["primary_keys_indexed"] = (
+                True  # Hash index on primary keys (automatic)
+            )
             results["columnar_storage"] = True  # Kuzu's architecture (automatic)
             results["vectorized_execution"] = True  # Kuzu's query processor (automatic)
 

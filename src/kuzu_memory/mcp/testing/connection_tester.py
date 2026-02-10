@@ -157,7 +157,11 @@ class MCPConnectionTester:
 
         try:
             # Prepare server command
-            cmd = self.server_path.split() if " " in self.server_path else [self.server_path]
+            cmd = (
+                self.server_path.split()
+                if " " in self.server_path
+                else [self.server_path]
+            )
 
             # Start server process with stdio pipes
             self.process = subprocess.Popen(
@@ -175,7 +179,9 @@ class MCPConnectionTester:
 
             # Check if process is still running
             if self.process.poll() is not None:
-                stderr = self.process.stderr.read().decode() if self.process.stderr else ""
+                stderr = (
+                    self.process.stderr.read().decode() if self.process.stderr else ""
+                )
                 raise RuntimeError(f"Server process terminated immediately: {stderr}")
 
             duration = (time.time() - start_time) * 1000
@@ -317,7 +323,11 @@ class MCPConnectionTester:
                 )
             else:
                 # Type guard: response could be None in else branch
-                error_msg = response.get("error", "Unknown error") if response else "No response"
+                error_msg = (
+                    response.get("error", "Unknown error")
+                    if response
+                    else "No response"
+                )
                 return ConnectionTestResult(
                     test_name=test_name,
                     success=False,
@@ -462,7 +472,9 @@ class MCPConnectionTester:
                 error=str(e),
             )
 
-    async def simulate_high_latency(self, delay_ms: float = 100) -> ConnectionTestResult:
+    async def simulate_high_latency(
+        self, delay_ms: float = 100
+    ) -> ConnectionTestResult:
         """
         Simulate high latency connection scenario.
 
@@ -565,11 +577,15 @@ class MCPConnectionTester:
             return ConnectionTestResult(
                 test_name=test_name,
                 success=all_passed,
-                status=(ConnectionStatus.CONNECTED if all_passed else ConnectionStatus.ERROR),
+                status=(
+                    ConnectionStatus.CONNECTED if all_passed else ConnectionStatus.ERROR
+                ),
                 duration_ms=duration,
                 severity=TestSeverity.INFO if all_passed else TestSeverity.ERROR,
                 message=(
-                    "JSON-RPC compliance validated" if all_passed else "Compliance check failed"
+                    "JSON-RPC compliance validated"
+                    if all_passed
+                    else "Compliance check failed"
                 ),
                 metadata={"checks": compliance_checks},
             )
@@ -654,7 +670,9 @@ class MCPConnectionTester:
 
                 # Process alive but no data - retry if attempts remain
                 if attempt < max_retries - 1:
-                    logger.debug(f"Empty response on attempt {attempt + 1}, retrying...")
+                    logger.debug(
+                        f"Empty response on attempt {attempt + 1}, retrying..."
+                    )
                     await asyncio.sleep(retry_delay)
                     continue
 
@@ -705,7 +723,9 @@ class MCPConnectionTester:
         # Read response with retry logic
         return await self._read_response_with_retry()
 
-    async def run_test_suite(self, suite_name: str = "MCP Connection Tests") -> ConnectionTestSuite:
+    async def run_test_suite(
+        self, suite_name: str = "MCP Connection Tests"
+    ) -> ConnectionTestSuite:
         """
         Run complete test suite.
 

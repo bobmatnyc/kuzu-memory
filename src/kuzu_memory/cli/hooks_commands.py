@@ -273,7 +273,9 @@ def hooks_status(project: str | None, verbose: bool) -> None:
 @click.option("--dry-run", is_flag=True, help="Preview changes without applying")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 @click.option("--project", type=click.Path(exists=True), help="Project directory")
-def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None) -> None:
+def install_hooks(
+    system: str, dry_run: bool, verbose: bool, project: str | None
+) -> None:
     """
     Install hooks for specified system.
 
@@ -306,7 +308,9 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
     console.print(
         "\n[blue]Note:[/blue] 'kuzu-memory install <platform>' is now the recommended command."
     )
-    console.print("   It automatically installs the right components for each platform.\n")
+    console.print(
+        "   It automatically installs the right components for each platform.\n"
+    )
 
     try:
         # Determine project root
@@ -331,7 +335,9 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
         if is_subservient_mode(project_root):
             config = get_subservient_config(project_root)
             managed_by = (
-                config.get("managed_by", "parent framework") if config else "parent framework"
+                config.get("managed_by", "parent framework")
+                if config
+                else "parent framework"
             )
             console.print(
                 f"\n📦 [cyan]Subservient Mode Detected[/cyan]\n"
@@ -356,12 +362,16 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
             sys.exit(1)
 
         # Show installation info
-        console.print(f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]")
+        console.print(
+            f"\n🪝 [bold cyan]Installing {installer.ai_system_name}[/bold cyan]"
+        )
         console.print(f"📁 Project: {project_root}")
         console.print(f"📋 Description: {installer.description}")
 
         if dry_run:
-            console.print("\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+            console.print(
+                "\n[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]"
+            )
 
         console.print()
 
@@ -400,12 +410,16 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
             console.print("\n[green]🎯 Next Steps:[/green]")
             if system == "claude-code":
                 console.print("1. Reload Claude Code window or restart")
-                console.print("2. Hooks will auto-enhance prompts and learn from responses")
+                console.print(
+                    "2. Hooks will auto-enhance prompts and learn from responses"
+                )
                 console.print("3. Check .claude/settings.local.json for configuration")
             elif system == "auggie":
                 console.print("1. Open or reload your Auggie workspace")
                 console.print("2. Rules will be active for enhanced context")
-                console.print("3. Check AGENTS.md and .augment/rules/ for configuration")
+                console.print(
+                    "3. Check AGENTS.md and .augment/rules/ for configuration"
+                )
 
         else:
             console.print(f"\n[red]❌ {result.message}[/red]")
@@ -458,7 +472,9 @@ def list_hooks() -> None:
 
     console.print(table)
 
-    console.print("\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n")
+    console.print(
+        "\n💡 [dim]Use 'kuzu-memory hooks install <system>' to install[/dim]\n"
+    )
 
 
 def _get_memories_with_lock(
@@ -491,7 +507,9 @@ def _get_memories_with_lock(
             # Disable git sync for hooks - session-start hook handles git sync asynchronously
             memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
             # Use specified strategy (default: keyword for fast graph-only search)
-            memory_context = memory.attach_memories(prompt, max_memories=5, strategy=strategy)
+            memory_context = memory.attach_memories(
+                prompt, max_memories=5, strategy=strategy
+            )
             memories = memory_context.memories
             memory.close()
             return memories, None
@@ -552,7 +570,9 @@ def hooks_enhance() -> None:
         # Limit prompt size
         max_prompt_length = 100000
         if len(prompt) > max_prompt_length:
-            logger.warning(f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars")
+            logger.warning(
+                f"Prompt truncated from {len(prompt)} to {max_prompt_length} chars"
+            )
             prompt = prompt[:max_prompt_length]
 
         # Find project root and initialize memory
@@ -577,7 +597,9 @@ def hooks_enhance() -> None:
             # Get memories with fail-fast lock check to prevent blocking
             # if database is locked (e.g., by MCP server or another session)
             # Use "keyword" strategy for fast graph-only search (no vector/embedding computation)
-            memories, error = _get_memories_with_lock(db_path, prompt, strategy="keyword")
+            memories, error = _get_memories_with_lock(
+                db_path, prompt, strategy="keyword"
+            )
 
             if error == "locked":
                 logger.info("Database busy (another session), skipping enhancement")
@@ -720,7 +742,9 @@ def hooks_session_start() -> None:
                     # Session start is the right place to sync once per session
                     # Other hooks (learn, enhance) skip sync since they're called frequently
                     # Disable git sync on init - use async background sync instead
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
+                    memory = KuzuMemory(
+                        db_path=db_path, enable_git_sync=False, auto_sync=False
+                    )
 
                     # Type narrowing: we've already checked project_root is not None
                     assert project_root is not None
@@ -734,7 +758,9 @@ def hooks_session_start() -> None:
                         },
                     )
 
-                    logger.info(f"Session start memory stored for project: {project_name}")
+                    logger.info(
+                        f"Session start memory stored for project: {project_name}"
+                    )
                     memory.close()
 
                     # Fire-and-forget async git sync in background
@@ -876,7 +902,9 @@ def _learn_worker(
 
             max_text_length = 1000000
             if len(assistant_text) > max_text_length:
-                logger.warning(f"Truncating from {len(assistant_text)} to {max_text_length} chars")
+                logger.warning(
+                    f"Truncating from {len(assistant_text)} to {max_text_length} chars"
+                )
                 assistant_text = assistant_text[:max_text_length]
 
             # Check for duplicates using cache
@@ -923,7 +951,9 @@ def _learn_worker(
                 with try_lock_database(db_path, timeout=0.0):
                     # Disable git sync for hooks - session-start hook handles git sync asynchronously
                     # This reduces worker latency from 330-530ms to ~50ms (98% reduction)
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
+                    memory = KuzuMemory(
+                        db_path=db_path, enable_git_sync=False, auto_sync=False
+                    )
 
                     memory.remember(
                         content=assistant_text,
@@ -1011,9 +1041,13 @@ def _learn_async(logger: Any) -> None:
         if debug_timing:
             spawn_time = (time.time() - spawn_start) * 1000
             total_time = (time.time() - start_time) * 1000
-            logger.info(f"Spawn process: {spawn_time:.1f}ms | Total: {total_time:.1f}ms")
+            logger.info(
+                f"Spawn process: {spawn_time:.1f}ms | Total: {total_time:.1f}ms"
+            )
 
-        logger.info(f"Learning task queued asynchronously (PID: {process.pid}, cwd={project_root})")
+        logger.info(
+            f"Learning task queued asynchronously (PID: {process.pid}, cwd={project_root})"
+        )
 
         # Return immediately with queued status
         _exit_hook_with_json()
@@ -1125,7 +1159,9 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
 
         max_text_length = 1000000
         if len(assistant_text) > max_text_length:
-            logger.warning(f"Truncating from {len(assistant_text)} to {max_text_length} chars")
+            logger.warning(
+                f"Truncating from {len(assistant_text)} to {max_text_length} chars"
+            )
             assistant_text = assistant_text[:max_text_length]
 
         # Check for duplicates
@@ -1153,7 +1189,9 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
                 with try_lock_database(db_path, timeout=0.0):
                     # Disable git sync for hooks - session-start hook handles git sync asynchronously
                     # This reduces worker latency from 330-530ms to ~50ms (98% reduction)
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
+                    memory = KuzuMemory(
+                        db_path=db_path, enable_git_sync=False, auto_sync=False
+                    )
 
                     memory.remember(
                         content=assistant_text,

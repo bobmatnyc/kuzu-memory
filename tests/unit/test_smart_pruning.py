@@ -226,7 +226,9 @@ class TestProtectionRules:
 class TestCandidateSelection:
     """Test candidate selection for pruning."""
 
-    def test_get_prune_candidates_filters_by_threshold(self, smart_strategy, mock_db_adapter):
+    def test_get_prune_candidates_filters_by_threshold(
+        self, smart_strategy, mock_db_adapter
+    ):
         """Test that candidates are filtered by score threshold."""
         # Mock query results with varying scores
         mock_db_adapter.execute_query.return_value = [
@@ -259,7 +261,9 @@ class TestCandidateSelection:
         assert candidates[0].memory_id == "low-score"
         assert candidates[0].total_score < smart_strategy.threshold
 
-    def test_get_prune_candidates_excludes_protected(self, smart_strategy, mock_db_adapter):
+    def test_get_prune_candidates_excludes_protected(
+        self, smart_strategy, mock_db_adapter
+    ):
         """Test that protected memories are excluded from candidates."""
         mock_db_adapter.execute_query.return_value = [
             {

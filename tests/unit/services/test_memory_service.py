@@ -20,7 +20,6 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
 from kuzu_memory.services.memory_service import MemoryService
 
@@ -45,7 +44,9 @@ def mock_kuzu_memory(mock_memory_store):
 @pytest.fixture
 def memory_service(mock_kuzu_memory):
     """MemoryService instance with mocked KuzuMemory."""
-    with patch("kuzu_memory.services.memory_service.KuzuMemory", return_value=mock_kuzu_memory):
+    with patch(
+        "kuzu_memory.services.memory_service.KuzuMemory", return_value=mock_kuzu_memory
+    ):
         service = MemoryService(db_path=Path("/tmp/test.db"))
         service.initialize()
         yield service
@@ -181,9 +182,13 @@ class TestMemoryServiceDelegation:
             metadata={"key": "value"},
         )
 
-    def test_attach_memories_delegates_to_kuzu_memory(self, memory_service, mock_kuzu_memory):
+    def test_attach_memories_delegates_to_kuzu_memory(
+        self, memory_service, mock_kuzu_memory
+    ):
         """Test attach_memories() delegates to KuzuMemory."""
-        mock_context = MemoryContext(original_prompt="test", enhanced_prompt="test", memories=[])
+        mock_context = MemoryContext(
+            original_prompt="test", enhanced_prompt="test", memories=[]
+        )
         mock_kuzu_memory.attach_memories.return_value = mock_context
 
         result = memory_service.attach_memories("test prompt", max_memories=5)
@@ -195,10 +200,14 @@ class TestMemoryServiceDelegation:
 
     def test_attach_memories_with_strategy(self, memory_service, mock_kuzu_memory):
         """Test attach_memories() with custom strategy."""
-        mock_context = MemoryContext(original_prompt="test", enhanced_prompt="test", memories=[])
+        mock_context = MemoryContext(
+            original_prompt="test", enhanced_prompt="test", memories=[]
+        )
         mock_kuzu_memory.attach_memories.return_value = mock_context
 
-        result = memory_service.attach_memories("test prompt", max_memories=10, strategy="entity")
+        result = memory_service.attach_memories(
+            "test prompt", max_memories=10, strategy="entity"
+        )
 
         assert result == mock_context
         mock_kuzu_memory.attach_memories.assert_called_once_with(
@@ -207,10 +216,14 @@ class TestMemoryServiceDelegation:
 
     def test_attach_memories_with_filters(self, memory_service, mock_kuzu_memory):
         """Test attach_memories() with additional filters."""
-        mock_context = MemoryContext(original_prompt="test", enhanced_prompt="test", memories=[])
+        mock_context = MemoryContext(
+            original_prompt="test", enhanced_prompt="test", memories=[]
+        )
         mock_kuzu_memory.attach_memories.return_value = mock_context
 
-        memory_service.attach_memories("test prompt", user_id="user-1", session_id="session-1")
+        memory_service.attach_memories(
+            "test prompt", user_id="user-1", session_id="session-1"
+        )
 
         mock_kuzu_memory.attach_memories.assert_called_once_with(
             prompt="test prompt",
@@ -220,7 +233,9 @@ class TestMemoryServiceDelegation:
             session_id="session-1",
         )
 
-    def test_get_recent_memories_delegates_to_kuzu_memory(self, memory_service, mock_kuzu_memory):
+    def test_get_recent_memories_delegates_to_kuzu_memory(
+        self, memory_service, mock_kuzu_memory
+    ):
         """Test get_recent_memories() delegates to KuzuMemory."""
         mock_memory = Mock(spec=Memory)
         mock_memories = [mock_memory]
@@ -229,21 +244,29 @@ class TestMemoryServiceDelegation:
         result = memory_service.get_recent_memories(limit=10)
 
         assert result == mock_memories
-        mock_kuzu_memory.get_recent_memories.assert_called_once_with(limit=10, memory_type=None)
+        mock_kuzu_memory.get_recent_memories.assert_called_once_with(
+            limit=10, memory_type=None
+        )
 
-    def test_get_recent_memories_with_type_filter(self, memory_service, mock_kuzu_memory):
+    def test_get_recent_memories_with_type_filter(
+        self, memory_service, mock_kuzu_memory
+    ):
         """Test get_recent_memories() with memory type filter."""
         mock_memories = []
         mock_kuzu_memory.get_recent_memories.return_value = mock_memories
 
-        result = memory_service.get_recent_memories(limit=20, memory_type=MemoryType.EPISODIC)
+        result = memory_service.get_recent_memories(
+            limit=20, memory_type=MemoryType.EPISODIC
+        )
 
         assert result == mock_memories
         mock_kuzu_memory.get_recent_memories.assert_called_once_with(
             limit=20, memory_type=MemoryType.EPISODIC
         )
 
-    def test_get_memory_count_delegates_to_kuzu_memory(self, memory_service, mock_kuzu_memory):
+    def test_get_memory_count_delegates_to_kuzu_memory(
+        self, memory_service, mock_kuzu_memory
+    ):
         """Test get_memory_count() delegates to KuzuMemory."""
         mock_kuzu_memory.get_memory_count.return_value = 42
 
@@ -252,7 +275,9 @@ class TestMemoryServiceDelegation:
         assert result == 42
         mock_kuzu_memory.get_memory_count.assert_called_once()
 
-    def test_get_database_size_delegates_to_kuzu_memory(self, memory_service, mock_kuzu_memory):
+    def test_get_database_size_delegates_to_kuzu_memory(
+        self, memory_service, mock_kuzu_memory
+    ):
         """Test get_database_size() delegates to KuzuMemory."""
         mock_kuzu_memory.get_database_size.return_value = 1024000
 
@@ -286,7 +311,9 @@ class TestMemoryServiceCRUDOperations:
         # Verify memory was stored
         mock_memory_store.store_memory.assert_called_once()
 
-    def test_get_memory_delegates_to_memory_store(self, memory_service, mock_memory_store):
+    def test_get_memory_delegates_to_memory_store(
+        self, memory_service, mock_memory_store
+    ):
         """Test get_memory() delegates to memory_store."""
         mock_memory = Mock(spec=Memory)
         mock_memory_store.get_memory_by_id.return_value = mock_memory
@@ -296,7 +323,9 @@ class TestMemoryServiceCRUDOperations:
         assert result == mock_memory
         mock_memory_store.get_memory_by_id.assert_called_once_with("memory-123")
 
-    def test_list_memories_delegates_to_memory_store(self, memory_service, mock_memory_store):
+    def test_list_memories_delegates_to_memory_store(
+        self, memory_service, mock_memory_store
+    ):
         """Test list_memories() delegates to memory_store."""
         mock_memories = [Mock(spec=Memory), Mock(spec=Memory), Mock(spec=Memory)]
         mock_memory_store.get_recent_memories.return_value = mock_memories
@@ -323,7 +352,9 @@ class TestMemoryServiceCRUDOperations:
             mock_mem3,
         ]
 
-        result = memory_service.list_memories(memory_type=MemoryType.PREFERENCE, limit=100)
+        result = memory_service.list_memories(
+            memory_type=MemoryType.PREFERENCE, limit=100
+        )
 
         # Should filter to only PREFERENCE type
         assert len(result) == 2
@@ -375,7 +406,9 @@ class TestMemoryServiceCRUDOperations:
         """Test update_memory() returns None when memory not found."""
         mock_memory_store.get_memory_by_id.return_value = None
 
-        result = memory_service.update_memory(memory_id="nonexistent", content="new content")
+        result = memory_service.update_memory(
+            memory_id="nonexistent", content="new content"
+        )
 
         assert result is None
 
@@ -518,7 +551,9 @@ class TestMemoryServicePerformance:
         """Test handling of large memory content."""
         large_content = "x" * 50000  # 50KB content
 
-        result = memory_service.add_memory(content=large_content, memory_type=MemoryType.SEMANTIC)
+        result = memory_service.add_memory(
+            content=large_content, memory_type=MemoryType.SEMANTIC
+        )
 
         assert len(result.content) == 50000
         mock_memory_store.store_memory.assert_called_once()

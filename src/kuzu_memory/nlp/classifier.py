@@ -249,7 +249,9 @@ class MemoryClassifier:
                 [
                     (
                         "tfidf",
-                        TfidfVectorizer(max_features=100, ngram_range=(1, 2), stop_words="english"),
+                        TfidfVectorizer(
+                            max_features=100, ngram_range=(1, 2), stop_words="english"
+                        ),
                     ),
                     ("clf", MultinomialNB(alpha=0.1)),
                 ]
@@ -643,7 +645,9 @@ class MemoryClassifier:
             # Get POS tags and filter for nouns and verbs
             pos_tags = pos_tag(keywords)
             important_words = [
-                word for word, pos in pos_tags if pos.startswith("NN") or pos.startswith("VB")
+                word
+                for word, pos in pos_tags
+                if pos.startswith("NN") or pos.startswith("VB")
             ]
 
             # Count frequencies (stem words if stemmer available)
@@ -654,7 +658,9 @@ class MemoryClassifier:
                 word_freq[key] = word_freq.get(key, 0) + 1
 
             # Sort by frequency
-            sorted_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
+            sorted_keywords = sorted(
+                word_freq.items(), key=lambda x: x[1], reverse=True
+            )
 
             return [word for word, _ in sorted_keywords][:10]
 
@@ -693,7 +699,10 @@ class MemoryClassifier:
 
             # Don't override SENSORY type with PREFERENCE intent
             # Sensory descriptions like "smells like" are more specific than preference
-            if memory_type == MemoryType.SENSORY and suggested_type == MemoryType.PREFERENCE:
+            if (
+                memory_type == MemoryType.SENSORY
+                and suggested_type == MemoryType.PREFERENCE
+            ):
                 return memory_type, confidence
 
             # If intent strongly suggests a different type, adjust
@@ -854,7 +863,9 @@ class MemoryClassifier:
 
             # Pattern matching
             pattern_type = self._check_type_indicators(content_lower)
-            pattern_confidence = 0.8 + self.PATTERN_CONFIDENCE_BOOST if pattern_type else 0.0
+            pattern_confidence = (
+                0.8 + self.PATTERN_CONFIDENCE_BOOST if pattern_type else 0.0
+            )
 
             # Entity extraction (can be optimized further with batch NER)
             entities_result = self.extract_entities(content)
@@ -890,7 +901,9 @@ class MemoryClassifier:
 
             # Boost confidence based on entities
             if all_entities:
-                final_confidence = min(1.0, final_confidence + self.ENTITY_CONFIDENCE_BOOST)
+                final_confidence = min(
+                    1.0, final_confidence + self.ENTITY_CONFIDENCE_BOOST
+                )
 
             # Apply intent adjustments
             if intent:

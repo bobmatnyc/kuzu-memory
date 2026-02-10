@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory.migrations import MigrationManager
 from kuzu_memory.migrations.v1_6_33_async_hooks import AsyncHooksMigration
 
@@ -155,7 +154,9 @@ def test_migration_keeps_user_prompt_submit_synchronous():
 
         # Verify async flag was removed from UserPromptSubmit
         updated_settings = json.loads(settings_path.read_text())
-        user_prompt_submit_hook = updated_settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]
+        user_prompt_submit_hook = updated_settings["hooks"]["UserPromptSubmit"][0][
+            "hooks"
+        ][0]
         assert "async" not in user_prompt_submit_hook
 
         # Verify async flag was added to SessionStart

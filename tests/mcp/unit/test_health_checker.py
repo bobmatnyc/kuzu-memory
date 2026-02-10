@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from kuzu_memory.mcp.testing.health_checker import (
     ComponentHealth,
     HealthCheckResult,
@@ -207,7 +206,9 @@ class TestMCPHealthChecker:
         performance = PerformanceMetrics(error_rate=0.001)
         resources = ResourceMetrics(memory_mb=50.0, cpu_percent=20.0)
 
-        status = health_checker._determine_overall_status(components, performance, resources)
+        status = health_checker._determine_overall_status(
+            components, performance, resources
+        )
 
         assert status == HealthStatus.HEALTHY
 
@@ -221,7 +222,9 @@ class TestMCPHealthChecker:
         performance = PerformanceMetrics(error_rate=0.001)
         resources = ResourceMetrics(memory_mb=50.0)
 
-        status = health_checker._determine_overall_status(components, performance, resources)
+        status = health_checker._determine_overall_status(
+            components, performance, resources
+        )
 
         assert status == HealthStatus.UNHEALTHY
 
@@ -234,7 +237,9 @@ class TestMCPHealthChecker:
         performance = PerformanceMetrics(error_rate=0.15)  # 15% error rate
         resources = ResourceMetrics(memory_mb=50.0)
 
-        status = health_checker._determine_overall_status(components, performance, resources)
+        status = health_checker._determine_overall_status(
+            components, performance, resources
+        )
 
         assert status == HealthStatus.UNHEALTHY
 
@@ -247,7 +252,9 @@ class TestMCPHealthChecker:
         performance = PerformanceMetrics(error_rate=0.001)
         resources = ResourceMetrics(memory_mb=600.0)  # Over threshold
 
-        status = health_checker._determine_overall_status(components, performance, resources)
+        status = health_checker._determine_overall_status(
+            components, performance, resources
+        )
 
         assert status == HealthStatus.UNHEALTHY
 
@@ -261,7 +268,9 @@ class TestMCPHealthChecker:
         performance = PerformanceMetrics(error_rate=0.001)
         resources = ResourceMetrics(memory_mb=50.0)
 
-        status = health_checker._determine_overall_status(components, performance, resources)
+        status = health_checker._determine_overall_status(
+            components, performance, resources
+        )
 
         assert status == HealthStatus.DEGRADED
 
@@ -269,7 +278,9 @@ class TestMCPHealthChecker:
     async def test_check_cli_health_success(self, health_checker):
         """Test CLI health check - success."""
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="kuzu-memory 1.1.7\n", stderr="")
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout="kuzu-memory 1.1.7\n", stderr=""
+            )
 
             result = await health_checker._check_cli_health(retry=False)
 
@@ -306,7 +317,9 @@ class TestMCPHealthChecker:
             # Verify checked_paths metadata includes multiple locations
             assert "checked_paths" in result.metadata
             assert isinstance(result.metadata["checked_paths"], list)
-            assert len(result.metadata["checked_paths"]) >= 3  # env var + 2 project-local + default
+            assert (
+                len(result.metadata["checked_paths"]) >= 3
+            )  # env var + 2 project-local + default
 
     @pytest.mark.asyncio
     async def test_check_database_health_not_exists(self, health_checker, tmp_path):
@@ -349,7 +362,9 @@ class TestMCPHealthChecker:
             assert result.metadata["path"] == str(db_path)
             # Verify project-local path was checked
             assert "checked_paths" in result.metadata
-            assert any("kuzu-memories" in path for path in result.metadata["checked_paths"])
+            assert any(
+                "kuzu-memories" in path for path in result.metadata["checked_paths"]
+            )
 
     @pytest.mark.asyncio
     async def test_collect_performance_metrics_empty_history(self, health_checker):
@@ -398,7 +413,9 @@ class TestMCPHealthChecker:
     async def test_collect_resource_metrics_with_psutil(self, health_checker):
         """Test resource metrics collection - with psutil."""
         mock_process = MagicMock()
-        mock_process.memory_info.return_value = MagicMock(rss=100 * 1024 * 1024)  # 100 MB
+        mock_process.memory_info.return_value = MagicMock(
+            rss=100 * 1024 * 1024
+        )  # 100 MB
         mock_process.cpu_percent.return_value = 25.5
         mock_process.connections.return_value = [1, 2, 3]  # 3 connections
         mock_process.num_threads.return_value = 5
@@ -523,8 +540,12 @@ class TestHealthCheckIntegration:
             patch.object(health_checker, "_check_protocol_health") as mock_protocol,
             patch.object(health_checker, "_check_tools_health") as mock_tools,
         ):
-            mock_protocol.return_value = ComponentHealth("protocol", HealthStatus.HEALTHY, "OK")
-            mock_tools.return_value = ComponentHealth("tools", HealthStatus.HEALTHY, "OK")
+            mock_protocol.return_value = ComponentHealth(
+                "protocol", HealthStatus.HEALTHY, "OK"
+            )
+            mock_tools.return_value = ComponentHealth(
+                "tools", HealthStatus.HEALTHY, "OK"
+            )
 
             await health_checker.check_health(detailed=True, retry=False)
 

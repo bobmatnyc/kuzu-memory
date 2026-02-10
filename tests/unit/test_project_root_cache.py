@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kuzu_memory.cli.hooks_commands import (
     _cache_project_root,
     _get_cached_project_root,
@@ -67,7 +66,9 @@ def test_get_cached_project_root_returns_none_when_expired(tmp_path: Path) -> No
 
     # Write expired cache (6 minutes old)
     expired_timestamp = time.time() - 360  # 6 minutes
-    cache_file.write_text(json.dumps({"path": str(project_root), "timestamp": expired_timestamp}))
+    cache_file.write_text(
+        json.dumps({"path": str(project_root), "timestamp": expired_timestamp})
+    )
 
     with patch("kuzu_memory.cli.hooks_commands.Path") as mock_path:
         mock_path.return_value = cache_file
@@ -84,7 +85,9 @@ def test_get_cached_project_root_returns_path_when_valid(tmp_path: Path) -> None
 
     # Write fresh cache (1 minute old)
     fresh_timestamp = time.time() - 60  # 1 minute
-    cache_file.write_text(json.dumps({"path": str(project_root), "timestamp": fresh_timestamp}))
+    cache_file.write_text(
+        json.dumps({"path": str(project_root), "timestamp": fresh_timestamp})
+    )
 
     with patch("kuzu_memory.cli.hooks_commands.Path") as mock_path:
         mock_path.return_value = cache_file
@@ -107,7 +110,9 @@ def test_get_cached_project_root_returns_none_when_path_missing(tmp_path: Path) 
     nonexistent_path = tmp_path / "deleted-project"
 
     # Write cache pointing to nonexistent path (don't create the directory)
-    cache_file.write_text(json.dumps({"path": str(nonexistent_path), "timestamp": time.time()}))
+    cache_file.write_text(
+        json.dumps({"path": str(nonexistent_path), "timestamp": time.time()})
+    )
 
     with patch("kuzu_memory.cli.hooks_commands.Path") as mock_path:
         # Mock the Path() constructor

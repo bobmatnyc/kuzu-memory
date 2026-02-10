@@ -92,7 +92,9 @@ class AccessTracker:
             try:
                 # Check if we should flush based on time or size
                 current_time = time.time()
-                should_flush_time = (current_time - last_batch_time) >= self.batch_interval
+                should_flush_time = (
+                    current_time - last_batch_time
+                ) >= self.batch_interval
                 should_flush_size = len(pending_events) >= self.batch_size
 
                 if should_flush_time or should_flush_size:

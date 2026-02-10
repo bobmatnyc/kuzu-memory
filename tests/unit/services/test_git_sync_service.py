@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.integrations.git_sync import GitSyncManager
 from kuzu_memory.protocols.services import IConfigService
@@ -54,7 +53,9 @@ def service(mock_config_service):
 
 def test_initialization_creates_git_sync_manager(mock_config_service):
     """Test that initialization creates GitSyncManager instance."""
-    with patch("kuzu_memory.services.git_sync_service.GitSyncManager") as mock_manager_class:
+    with patch(
+        "kuzu_memory.services.git_sync_service.GitSyncManager"
+    ) as mock_manager_class:
         service = GitSyncService(config_service=mock_config_service)
         service.initialize()
 
@@ -100,7 +101,9 @@ def test_context_manager_lifecycle(mock_config_service):
 
 def test_double_initialization_is_safe(service, mock_config_service):
     """Test that double initialization is safe (no-op)."""
-    with patch("kuzu_memory.services.git_sync_service.GitSyncManager") as mock_manager_class:
+    with patch(
+        "kuzu_memory.services.git_sync_service.GitSyncManager"
+    ) as mock_manager_class:
         service.initialize()
         first_manager = service._git_sync
 
@@ -279,7 +282,9 @@ def test_initializes_config_service(mock_config_service):
 
 def test_uses_config_service_for_project_root(mock_config_service):
     """Test that service uses config service to get project root."""
-    with patch("kuzu_memory.services.git_sync_service.GitSyncManager") as mock_manager_class:
+    with patch(
+        "kuzu_memory.services.git_sync_service.GitSyncManager"
+    ) as mock_manager_class:
         service = GitSyncService(config_service=mock_config_service)
         service.initialize()
 
@@ -335,7 +340,9 @@ def test_invalid_project_root_handling(mock_config_service):
     # Simulate config service returning invalid path
     mock_config_service.get_project_root.return_value = Path("/nonexistent/path")
 
-    with patch("kuzu_memory.services.git_sync_service.GitSyncManager") as mock_manager_class:
+    with patch(
+        "kuzu_memory.services.git_sync_service.GitSyncManager"
+    ) as mock_manager_class:
         service = GitSyncService(config_service=mock_config_service)
         service.initialize()
 

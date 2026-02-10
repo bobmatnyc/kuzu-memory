@@ -167,7 +167,9 @@ def setup(
                 project_root = project_root_raw
             else:
                 # Should not happen, but handle gracefully
-                raise ValueError(f"Unexpected project_root type: {type(project_root_raw)}")
+                raise ValueError(
+                    f"Unexpected project_root type: {type(project_root_raw)}"
+                )
 
             rich_print(f"\n📁 Project detected: {project_root}", style="green")
         except Exception as e:
@@ -185,7 +187,9 @@ def setup(
         already_initialized = db_path.exists()
 
         if already_initialized:
-            rich_print(f"✅ Memory database already initialized: {db_path}", style="dim")
+            rich_print(
+                f"✅ Memory database already initialized: {db_path}", style="dim"
+            )
             if force:
                 rich_print("   Force flag set - will reinitialize", style="yellow")
         else:
@@ -194,7 +198,9 @@ def setup(
         # Initialize or update database
         if not already_initialized or force:
             if dry_run:
-                rich_print("\n[DRY RUN] Would initialize memory database at:", style="yellow")
+                rich_print(
+                    "\n[DRY RUN] Would initialize memory database at:", style="yellow"
+                )
                 rich_print(f"  {db_path}", style="dim")
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
@@ -204,7 +210,9 @@ def setup(
                 except SystemExit:
                     # init command may exit with code 1 if already exists
                     if not force:
-                        rich_print("   Database already exists (use --force to overwrite)")
+                        rich_print(
+                            "   Database already exists (use --force to overwrite)"
+                        )
 
         # Verify database schema and optimization for both new and existing databases
         if not dry_run and db_path.exists():
@@ -221,7 +229,9 @@ def setup(
 
             except Exception as e:
                 # Verification failure is non-critical, log warning
-                rich_print(f"  ⚠️  Optimization verification skipped: {e}", style="yellow")
+                rich_print(
+                    f"  ⚠️  Optimization verification skipped: {e}", style="yellow"
+                )
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2: AI TOOL DETECTION & INSTALLATION
@@ -231,17 +241,23 @@ def setup(
         if is_subservient_mode(project_root):
             config = get_subservient_config(project_root)
             managed_by = (
-                config.get("managed_by", "parent framework") if config else "parent framework"
+                config.get("managed_by", "parent framework")
+                if config
+                else "parent framework"
             )
             rich_print(
                 f"\n📦 Subservient mode detected - hooks managed by {managed_by}",
                 style="cyan",
             )
-            rich_print("   Skipping hook installation (managed externally)", style="dim")
+            rich_print(
+                "   Skipping hook installation (managed externally)", style="dim"
+            )
             skip_install = True  # Force skip
 
         if skip_install:
-            rich_print("\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow")
+            rich_print(
+                "\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow"
+            )
         else:
             rich_print("\n🔍 Detecting installed AI tools...", style="cyan")
 
@@ -259,7 +275,9 @@ def setup(
                         if system.health_status == "healthy"
                         else "⚠️" if system.health_status == "needs_repair" else "❌"
                     )
-                    rich_print(f"   {status_icon} {system.name}: {system.health_status}")
+                    rich_print(
+                        f"   {status_icon} {system.name}: {system.health_status}"
+                    )
 
                 # If integration specified, use it; otherwise use first detected
                 target_integration = integration or installed_systems[0].name
@@ -283,7 +301,9 @@ def setup(
                             f"\n⚙️  {action} {target_integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(ctx, target_integration, project_root, force=True)
+                        _install_integration(
+                            ctx, target_integration, project_root, force=True
+                        )
                 else:
                     rich_print(
                         f"\n✅ {target_integration} integration is up to date",
@@ -306,7 +326,9 @@ def setup(
                             f"\n⚙️  Installing {integration} integration...",
                             style="cyan",
                         )
-                        _install_integration(ctx, integration, project_root, force=force)
+                        _install_integration(
+                            ctx, integration, project_root, force=force
+                        )
                 else:
                     # Auto-detect which tool user is likely using
                     rich_print(
@@ -349,7 +371,9 @@ def setup(
                     # Always update hooks on setup - no force flag needed
                     hooks_result = hooks_installer.install(force=True, dry_run=dry_run)
                     if hooks_result.success:
-                        rich_print("  ✅ Claude Code hooks and MCP configured", style="green")
+                        rich_print(
+                            "  ✅ Claude Code hooks and MCP configured", style="green"
+                        )
                         claude_hooks_installed = True
                     else:
                         rich_print(
@@ -406,22 +430,31 @@ def setup(
                 config_service.initialize()
 
                 with ServiceManager.diagnostic_service(config_service) as diagnostic:
-                    hooks_status = run_async(diagnostic.check_hooks_status(project_root))
+                    hooks_status = run_async(
+                        diagnostic.check_hooks_status(project_root)
+                    )
 
                     overall = hooks_status["overall_status"]
                     if overall == "fully_configured":
-                        rich_print("  ✅ All hooks verified successfully", style="green")
+                        rich_print(
+                            "  ✅ All hooks verified successfully", style="green"
+                        )
                     elif overall == "partially_configured":
                         rich_print("  ⚠️  Hooks partially configured", style="yellow")
 
                         # Show what's missing
-                        if not hooks_status["git_hooks"]["installed"] and git_repo_detected:
+                        if (
+                            not hooks_status["git_hooks"]["installed"]
+                            and git_repo_detected
+                        ):
                             rich_print(
                                 "    - Git hooks: Not installed (use --with-git-hooks)",
                                 style="dim",
                             )
                         if not hooks_status["claude_code_hooks"]["installed"]:
-                            rich_print("    - Claude Code hooks: Not configured", style="dim")
+                            rich_print(
+                                "    - Claude Code hooks: Not configured", style="dim"
+                            )
                     else:
                         rich_print("  ⚠️  Hooks verification failed", style="yellow")
 
@@ -447,13 +480,19 @@ def setup(
             next_steps = []
 
             if skip_install:
-                next_steps.append("• Install AI tool: kuzu-memory install <integration>")
+                next_steps.append(
+                    "• Install AI tool: kuzu-memory install <integration>"
+                )
 
             # Add hooks status to next steps
             if git_hooks_installed:
-                next_steps.append("✅ Git hooks installed - commits will auto-sync to memory")
+                next_steps.append(
+                    "✅ Git hooks installed - commits will auto-sync to memory"
+                )
             elif not skip_git_hooks and git_repo_detected:
-                next_steps.append("💡 Note: Git hooks installation attempted - check status above")
+                next_steps.append(
+                    "💡 Note: Git hooks installation attempted - check status above"
+                )
             elif skip_git_hooks and git_repo_detected:
                 next_steps.append("💡 Enable auto-sync: kuzu-memory git install-hooks")
 
@@ -587,7 +626,9 @@ def _find_git_directory(project_root: Path) -> Path | None:
     return None
 
 
-def _install_git_hooks(ctx: click.Context, project_root: Path, force: bool = False) -> bool:
+def _install_git_hooks(
+    ctx: click.Context, project_root: Path, force: bool = False
+) -> bool:
     """
     Install git post-commit hooks for automatic sync.
 

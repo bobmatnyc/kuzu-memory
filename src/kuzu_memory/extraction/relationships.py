@@ -146,7 +146,9 @@ class RelationshipDetector:
                 continue
 
             # Detect pattern-based relationships
-            pattern_relationships = self._detect_pattern_relationships(new_memory, existing_memory)
+            pattern_relationships = self._detect_pattern_relationships(
+                new_memory, existing_memory
+            )
             relationships.extend(pattern_relationships)
 
             # Detect semantic relationships
@@ -207,7 +209,9 @@ class RelationshipDetector:
 
             if overlap_ratio > 0.3:  # Significant entity overlap
                 # Convert entities to strings for context (handles both str and dict types)
-                overlap_str = ", ".join(str(e) if isinstance(e, dict) else e for e in overlap)
+                overlap_str = ", ".join(
+                    str(e) if isinstance(e, dict) else e for e in overlap
+                )
                 relationship = Relationship(
                     source_id=new_memory.id,
                     target_id=existing_memory.id,
@@ -218,10 +222,14 @@ class RelationshipDetector:
                 relationships.append(relationship)
 
         # Check for topic similarity based on memory types
-        if new_memory.memory_type == existing_memory.memory_type and new_memory.memory_type in [
-            MemoryType.SEMANTIC,
-            MemoryType.PROCEDURAL,
-        ]:
+        if (
+            new_memory.memory_type == existing_memory.memory_type
+            and new_memory.memory_type
+            in [
+                MemoryType.SEMANTIC,
+                MemoryType.PROCEDURAL,
+            ]
+        ):
             # Same type memories in specific categories are likely related
             relationship = Relationship(
                 source_id=new_memory.id,
@@ -265,7 +273,9 @@ class RelationshipDetector:
 
         return relationships
 
-    def _contexts_are_related(self, context1: str, context2: str, threshold: float = 0.3) -> bool:
+    def _contexts_are_related(
+        self, context1: str, context2: str, threshold: float = 0.3
+    ) -> bool:
         """Check if two contexts are related based on word overlap."""
         if not context1 or not context2:
             return False
@@ -284,7 +294,9 @@ class RelationshipDetector:
         similarity = intersection / union if union > 0 else 0
         return similarity >= threshold
 
-    def detect_entity_relationships(self, entities: list[Entity], text: str) -> list[Relationship]:
+    def detect_entity_relationships(
+        self, entities: list[Entity], text: str
+    ) -> list[Relationship]:
         """
         Detect relationships between entities in text.
 

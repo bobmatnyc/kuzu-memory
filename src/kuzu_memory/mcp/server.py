@@ -250,7 +250,11 @@ class KuzuMemoryMCPServer:
                             "strategy": {
                                 "type": "string",
                                 "description": "Optimization strategy to use",
-                                "enum": ["top_accessed", "stale_cleanup", "consolidate_similar"],
+                                "enum": [
+                                    "top_accessed",
+                                    "stale_cleanup",
+                                    "consolidate_similar",
+                                ],
                                 "default": "top_accessed",
                             },
                             "limit": {
@@ -269,7 +273,9 @@ class KuzuMemoryMCPServer:
             ]
 
         @self.server.call_tool()  # type: ignore[untyped-decorator]
-        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        async def handle_call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> list[TextContent]:
             """Handle tool calls."""
 
             if name == "kuzu_enhance":
@@ -302,7 +308,9 @@ class KuzuMemoryMCPServer:
                 )
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
-                result = await self._stats(bool(detailed) if detailed is not None else False)
+                result = await self._stats(
+                    bool(detailed) if detailed is not None else False
+                )
             elif name == "kuzu_optimize":
                 strategy = arguments.get("strategy", "top_accessed")
                 limit = arguments.get("limit", 20)
@@ -362,7 +370,9 @@ class KuzuMemoryMCPServer:
                     stderr=asyncio.subprocess.PIPE,
                     cwd=self.project_root,
                 )
-                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=10.0
+                )
 
                 if process.returncode == 0:
                     return stdout.decode().strip()
@@ -521,11 +531,15 @@ class KuzuMemoryMCPServer:
 
             # Execute optimization based on strategy
             if strategy == "top_accessed":
-                result = await self._optimize_top_accessed(db_adapter, tracker, limit, dry_run)
+                result = await self._optimize_top_accessed(
+                    db_adapter, tracker, limit, dry_run
+                )
             elif strategy == "stale_cleanup":
                 result = await self._optimize_stale_cleanup(db_adapter, limit, dry_run)
             elif strategy == "consolidate_similar":
-                result = await self._optimize_consolidate_similar(db_adapter, limit, dry_run)
+                result = await self._optimize_consolidate_similar(
+                    db_adapter, limit, dry_run
+                )
             else:
                 result = {
                     "status": "error",
@@ -623,7 +637,9 @@ class KuzuMemoryMCPServer:
                     f"Found {optimization_candidates} consolidation opportunities among top-accessed memories"
                 )
                 if dry_run:
-                    suggestions.append("Run with dry_run=false to consolidate similar memories")
+                    suggestions.append(
+                        "Run with dry_run=false to consolidate similar memories"
+                    )
             else:
                 suggestions.append(
                     "No similar memories found among top-accessed. Memory context is already optimized."
@@ -697,10 +713,14 @@ class KuzuMemoryMCPServer:
                     # Parse timestamp
                     if accessed_at:
                         if isinstance(accessed_at, str):
-                            accessed_at = datetime.fromisoformat(accessed_at.replace("Z", "+00:00"))
+                            accessed_at = datetime.fromisoformat(
+                                accessed_at.replace("Z", "+00:00")
+                            )
                     elif created_at:
                         if isinstance(created_at, str):
-                            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                            created_at = datetime.fromisoformat(
+                                created_at.replace("Z", "+00:00")
+                            )
                         accessed_at = created_at
 
                     if accessed_at and accessed_at < stale_threshold:
@@ -713,7 +733,9 @@ class KuzuMemoryMCPServer:
             if not dry_run and stale_candidates:
                 # Execute archiving and deletion
                 pruning_strategy._archive_memories(stale_candidates)
-                pruning_strategy._delete_memories([c.memory_id for c in stale_candidates])
+                pruning_strategy._delete_memories(
+                    [c.memory_id for c in stale_candidates]
+                )
 
                 for candidate in stale_candidates:
                     actions_taken.append(
@@ -743,9 +765,13 @@ class KuzuMemoryMCPServer:
                         "Run with dry_run=false to archive these memories (30-day recovery window)"
                     )
                 else:
-                    suggestions.append("Archived memories can be restored within 30 days if needed")
+                    suggestions.append(
+                        "Archived memories can be restored within 30 days if needed"
+                    )
             else:
-                suggestions.append("No stale memories found. All memories are actively used.")
+                suggestions.append(
+                    "No stale memories found. All memories are actively used."
+                )
 
             return {
                 "status": "completed",
@@ -759,7 +785,9 @@ class KuzuMemoryMCPServer:
                         sum(len(c.memory_id) for c in stale_candidates) * 100
                     ),  # Estimate
                     "estimated_recall_improvement": (
-                        f"{min(10, len(stale_candidates))}%" if stale_candidates else "0%"
+                        f"{min(10, len(stale_candidates))}%"
+                        if stale_candidates
+                        else "0%"
                     ),
                 },
                 "suggestions": suggestions,
@@ -880,7 +908,9 @@ class KuzuMemoryMCPServer:
 
         # Use stdio_server async context manager for proper stream handling
         async with stdio_server() as (read_stream, write_stream):
-            logger.info(f"KuzuMemory MCP Server running for project: {self.project_root}")
+            logger.info(
+                f"KuzuMemory MCP Server running for project: {self.project_root}"
+            )
 
             # Start queue processor in background
             await self.queue_processor.start()

@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from kuzu_memory.utils.subservient import (
     create_subservient_config,
     enable_subservient_mode,
@@ -23,7 +22,9 @@ class TestEnableSubservientMode:
 
     def test_enable_subservient_mode_creates_config(self, tmp_path: Path) -> None:
         """Test that enable_subservient_mode creates config file."""
-        result = enable_subservient_mode(project_root=tmp_path, managed_by="test-framework")
+        result = enable_subservient_mode(
+            project_root=tmp_path, managed_by="test-framework"
+        )
 
         assert result["success"] is True
         assert "config_path" in result
@@ -40,7 +41,8 @@ class TestEnableSubservientMode:
     def test_enable_subservient_mode_with_string_path(self, tmp_path: Path) -> None:
         """Test enable_subservient_mode accepts string path."""
         result = enable_subservient_mode(
-            project_root=str(tmp_path), managed_by="test-framework"  # String instead of Path
+            project_root=str(tmp_path),
+            managed_by="test-framework",  # String instead of Path
         )
 
         assert result["success"] is True
@@ -126,7 +128,9 @@ class TestSubservientModeIntegration:
         assert is_subservient_mode(tmp_path) is False
 
         # Enable subservient mode
-        result = enable_subservient_mode(project_root=tmp_path, managed_by="integration-test")
+        result = enable_subservient_mode(
+            project_root=tmp_path, managed_by="integration-test"
+        )
         assert result["success"] is True
 
         # Verify detection works
@@ -198,7 +202,9 @@ class TestParentFrameworkScenarios:
         project_root = tmp_path
 
         # 1. Enable subservient mode
-        result = enable_subservient_mode(project_root=project_root, managed_by="claude-mpm")
+        result = enable_subservient_mode(
+            project_root=project_root, managed_by="claude-mpm"
+        )
         assert result["success"] is True
 
         # 2. Verify subservient mode is active

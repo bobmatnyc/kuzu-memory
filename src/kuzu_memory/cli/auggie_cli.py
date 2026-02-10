@@ -40,7 +40,9 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
 
             if args.verbose:
                 print("\n📊 Detailed Information:")
-                memory_context = enhancement.get("memory_context") if enhancement else None
+                memory_context = (
+                    enhancement.get("memory_context") if enhancement else None
+                )
                 if (
                     memory_context
                     and hasattr(memory_context, "memories")
@@ -50,7 +52,9 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
                     for i, memory in enumerate(memory_context.memories[:3]):
                         print(f"  {i + 1}. {memory.content[:60]}...")
 
-                executed_rules = enhancement["rule_modifications"].get("executed_rules", [])
+                executed_rules = enhancement["rule_modifications"].get(
+                    "executed_rules", []
+                )
                 if executed_rules:
                     print(f"Rules applied: {len(executed_rules)}")
                     for rule_info in executed_rules:
@@ -81,7 +85,9 @@ def cmd_learn_response(args: argparse.Namespace) -> int:
             print("=" * 30)
             if learning_result:
                 print(f"Quality Score: {learning_result.get('quality_score', 0):.2f}")
-                print(f"Memories Created: {len(learning_result.get('extracted_memories', []))}")
+                print(
+                    f"Memories Created: {len(learning_result.get('extracted_memories', []))}"
+                )
 
                 if "corrections" in learning_result:
                     corrections = learning_result["corrections"]
@@ -122,7 +128,9 @@ def cmd_list_rules(args: argparse.Namespace) -> int:
                 by_type[rule_type].append(rule)
 
             for rule_type, type_rules in by_type.items():
-                print(f"\n🔧 {rule_type.replace('_', ' ').title()} ({len(type_rules)} rules):")
+                print(
+                    f"\n🔧 {rule_type.replace('_', ' ').title()} ({len(type_rules)} rules):"
+                )
 
                 for rule in sorted(type_rules, key=lambda r: r.priority.value):
                     status = "✅" if rule.enabled else "❌"
@@ -134,7 +142,9 @@ def cmd_list_rules(args: argparse.Namespace) -> int:
                     if args.verbose:
                         print(f"      ID: {rule.id}")
                         print(f"      Description: {rule.description}")
-                        print(f"      Executions: {executions}, Success: {success_rate:.1f}%")
+                        print(
+                            f"      Executions: {executions}, Success: {success_rate:.1f}%"
+                        )
                         print(f"      Conditions: {rule.conditions}")
                         print(f"      Actions: {rule.actions}")
                         print()
@@ -235,7 +245,9 @@ def cmd_stats(args: argparse.Namespace) -> int:
             print("\nResponse Learner:")
             print(f"  Learning Events: {learner_stats['total_learning_events']}")
             if "average_quality_score" in learner_stats:
-                print(f"  Average Quality: {learner_stats['average_quality_score']:.2f}")
+                print(
+                    f"  Average Quality: {learner_stats['average_quality_score']:.2f}"
+                )
 
             if args.verbose:
                 print("\n🔧 Rule Performance:")
@@ -405,8 +417,12 @@ def main() -> int:
     stats_parser.set_defaults(func=cmd_stats)
 
     # Test integration command
-    test_parser = subparsers.add_parser("test", help="Test integration with sample data")
-    test_parser.add_argument("--user-id", default="test-user", help="User ID for testing")
+    test_parser = subparsers.add_parser(
+        "test", help="Test integration with sample data"
+    )
+    test_parser.add_argument(
+        "--user-id", default="test-user", help="User ID for testing"
+    )
     test_parser.set_defaults(func=cmd_test_integration)
 
     args = parser.parse_args()

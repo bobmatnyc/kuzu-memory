@@ -164,7 +164,8 @@ def stale(
 
             rich_print(f"  {i}. {content}", style="dim")
             rich_print(
-                f"     Created: {created_str} | Accesses: {row['access_count']}", style="dim"
+                f"     Created: {created_str} | Accesses: {row['access_count']}",
+                style="dim",
             )
 
         if len(rows) > 10:
@@ -302,7 +303,11 @@ def duplicates(
             # Find duplicates of this memory
             duplicates = dedup.find_duplicates(
                 mem.content,
-                [m for m in all_memories if m.id != mem.id and m.id not in processed_ids],
+                [
+                    m
+                    for m in all_memories
+                    if m.id != mem.id and m.id not in processed_ids
+                ],
             )
 
             if duplicates:
@@ -326,7 +331,9 @@ def duplicates(
         to_remove: list[str] = []
         cluster_summaries = []
 
-        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as _memory:
+        with ServiceManager.memory_service(
+            db_path=db_path_obj, enable_git_sync=False
+        ) as _memory:
             for cluster in duplicate_clusters:
                 # Get full memory objects for this cluster
                 cluster_memories = []
@@ -400,7 +407,9 @@ def duplicates(
                 rich_print(f"  ❌ Removing: {dup_content}", style="red")
 
         if len(cluster_summaries) > 5:
-            remaining_removed = sum(summary["count"] for summary in cluster_summaries[5:])
+            remaining_removed = sum(
+                summary["count"] for summary in cluster_summaries[5:]
+            )
             rich_print(
                 f"\n  ... and {len(cluster_summaries) - 5} more clusters ({remaining_removed} removals)",
                 style="dim",
@@ -549,7 +558,9 @@ def orphans(
             # Count BELONGS_TO_SESSION orphans
             result = conn.execute(session_query)
             rows = result.get_as_pl()
-            orphan_counts["BELONGS_TO_SESSION"] = rows[0]["count"] if len(rows) > 0 else 0
+            orphan_counts["BELONGS_TO_SESSION"] = (
+                rows[0]["count"] if len(rows) > 0 else 0
+            )
 
         total_orphans = sum(orphan_counts.values())
 
@@ -884,7 +895,9 @@ def all(
 
         # Execute duplicate cleanup
         rich_print("\n📝 Running duplicate cleanup...", style="blue")
-        ctx.invoke(duplicates, threshold=threshold, dry_run=False, yes=True, db_path=db_path)
+        ctx.invoke(
+            duplicates, threshold=threshold, dry_run=False, yes=True, db_path=db_path
+        )
 
         # Execute orphan cleanup
         rich_print("\n📝 Running orphan cleanup...", style="blue")

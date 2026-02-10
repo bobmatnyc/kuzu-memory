@@ -48,9 +48,9 @@ class TestConnectionLatency:
         latency, connected = await connect_disconnect()
 
         assert connected, "Connection should succeed"
-        assert latency < LATENCY_THRESHOLDS["connection"]["critical"], (
-            f"Connection latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["connection"]["critical"]
+        ), f"Connection latency {latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_connection_latency_percentiles(self, project_root):
@@ -93,9 +93,9 @@ class TestConnectionLatency:
 
         latency = await initialize()
 
-        assert latency < LATENCY_THRESHOLDS["initialization"]["critical"], (
-            f"Initialization latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["initialization"]["critical"]
+        ), f"Initialization latency {latency:.2f}ms exceeds critical threshold"
 
 
 @pytest.mark.performance
@@ -117,9 +117,9 @@ class TestToolCallLatency:
         latency, result = await call_stats()
 
         assert result is not None, "Stats call should return result"
-        assert latency < LATENCY_THRESHOLDS["tool_call"]["critical"], (
-            f"Stats latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
+        ), f"Stats latency {latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_recall_tool_latency(self, initialized_client, benchmark):
@@ -137,9 +137,9 @@ class TestToolCallLatency:
 
         assert result is not None, "Recall should return result"
         # Recall should be very fast (target 3ms)
-        assert latency < LATENCY_THRESHOLDS["tool_call"]["critical"], (
-            f"Recall latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
+        ), f"Recall latency {latency:.2f}ms exceeds critical threshold"
 
         print(f"\nRecall latency: {latency:.2f}ms (target: 3ms typical)")
 
@@ -153,9 +153,9 @@ class TestToolCallLatency:
         latency = (time.perf_counter() - start) * 1000
 
         assert result is not None, "Enhance should return result"
-        assert latency < LATENCY_THRESHOLDS["tool_call"]["critical"], (
-            f"Enhance latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
+        ), f"Enhance latency {latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_tool_latency_by_type(self, initialized_client):
@@ -167,9 +167,7 @@ class TestToolCallLatency:
             args = (
                 {"query": "test", "limit": 5}
                 if tool_name == "recall"
-                else {"limit": 10}
-                if tool_name == "recent"
-                else {}
+                else {"limit": 10} if tool_name == "recent" else {}
             )
 
             start = time.perf_counter()
@@ -184,7 +182,11 @@ class TestToolCallLatency:
             status = (
                 "✓"
                 if latency < LATENCY_THRESHOLDS["tool_call"]["target"]
-                else ("⚠" if latency < LATENCY_THRESHOLDS["tool_call"]["critical"] else "✗")
+                else (
+                    "⚠"
+                    if latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
+                    else "✗"
+                )
             )
             print(f"  {tool:15s}: {latency:6.2f}ms {status}")
 
@@ -208,9 +210,9 @@ class TestRoundtripLatency:
         latency, result = await ping()
 
         assert result is not None, "Ping should return result"
-        assert latency < LATENCY_THRESHOLDS["roundtrip"]["critical"], (
-            f"Ping roundtrip {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["roundtrip"]["critical"]
+        ), f"Ping roundtrip {latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_tools_list_roundtrip(self, initialized_client):
@@ -220,9 +222,9 @@ class TestRoundtripLatency:
         latency = (time.perf_counter() - start) * 1000
 
         assert result is not None, "tools/list should return result"
-        assert latency < LATENCY_THRESHOLDS["roundtrip"]["critical"], (
-            f"tools/list roundtrip {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["roundtrip"]["critical"]
+        ), f"tools/list roundtrip {latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_sequential_roundtrips(self, initialized_client):
@@ -244,9 +246,9 @@ class TestRoundtripLatency:
             assert result is not None, f"{method} should return result"
 
         avg_latency = sum(latencies) / len(latencies)
-        assert avg_latency < LATENCY_THRESHOLDS["roundtrip"]["critical"], (
-            f"Average roundtrip {avg_latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            avg_latency < LATENCY_THRESHOLDS["roundtrip"]["critical"]
+        ), f"Average roundtrip {avg_latency:.2f}ms exceeds critical threshold"
 
     @pytest.mark.asyncio
     async def test_batch_request_latency(self, initialized_client):
@@ -263,9 +265,9 @@ class TestRoundtripLatency:
 
         assert results is not None, "Batch should return results"
         assert len(results) == 3, "Should get 3 responses"
-        assert latency < LATENCY_THRESHOLDS["batch"]["critical"], (
-            f"Batch latency {latency:.2f}ms exceeds critical threshold"
-        )
+        assert (
+            latency < LATENCY_THRESHOLDS["batch"]["critical"]
+        ), f"Batch latency {latency:.2f}ms exceeds critical threshold"
 
 
 @pytest.mark.performance
@@ -324,6 +326,6 @@ class TestLatencyConsistency:
         print(f"  Warmup overhead: {first_latency - avg_subsequent:.2f}ms")
 
         # Warmed up latency should meet targets
-        assert avg_subsequent < LATENCY_THRESHOLDS["tool_call"]["critical"], (
-            "Warmed up latency exceeds critical threshold"
-        )
+        assert (
+            avg_subsequent < LATENCY_THRESHOLDS["tool_call"]["critical"]
+        ), "Warmed up latency exceeds critical threshold"

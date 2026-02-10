@@ -67,7 +67,9 @@ class ConfigService(BaseService):
         else:
             self._project_root = find_project_root()
 
-        self.logger.info(f"ConfigService initialized with project_root={self._project_root}")
+        self.logger.info(
+            f"ConfigService initialized with project_root={self._project_root}"
+        )
 
     def _do_cleanup(self) -> None:
         """Cleanup resources."""

@@ -92,7 +92,9 @@ class RecallStrategy:
                 self.config.performance.enable_performance_monitoring
                 and execution_time > self.config.performance.max_recall_time_ms
             ):
-                logger.warning(f"{self.strategy_name} recall took {execution_time:.1f}ms")
+                logger.warning(
+                    f"{self.strategy_name} recall took {execution_time:.1f}ms"
+                )
 
             return memories
 
@@ -272,7 +274,9 @@ class KeywordRecallStrategy(RecallStrategy):
         words = re.findall(r"\b[a-zA-Z]+\b", text.lower())
 
         # Filter out stop words and short words
-        keywords = [word for word in words if word not in self.stop_words and len(word) > 2]
+        keywords = [
+            word for word in words if word not in self.stop_words and len(word) > 2
+        ]
 
         # Count word frequency
         word_counts: dict[str, int] = defaultdict(int)

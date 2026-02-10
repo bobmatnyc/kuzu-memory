@@ -155,7 +155,9 @@ class AsyncHooksMigration(HooksMigration):
                         f"Enabled async on {count} SessionStart hook(s) in {settings_path.name}"
                     )
                     modified = True
-                    logger.info(f"Enabled async on {count} SessionStart hook(s) in {settings_path}")
+                    logger.info(
+                        f"Enabled async on {count} SessionStart hook(s) in {settings_path}"
+                    )
 
             # Migrate PostToolUse hooks
             if "PostToolUse" in hooks:
@@ -165,11 +167,15 @@ class AsyncHooksMigration(HooksMigration):
                         f"Enabled async on {count} PostToolUse hook(s) in {settings_path.name}"
                     )
                     modified = True
-                    logger.info(f"Enabled async on {count} PostToolUse hook(s) in {settings_path}")
+                    logger.info(
+                        f"Enabled async on {count} PostToolUse hook(s) in {settings_path}"
+                    )
 
             # Verify UserPromptSubmit remains synchronous
             if "UserPromptSubmit" in hooks:
-                sync_count = self._ensure_synchronous(hooks["UserPromptSubmit"], "enhance")
+                sync_count = self._ensure_synchronous(
+                    hooks["UserPromptSubmit"], "enhance"
+                )
                 if sync_count > 0:
                     warnings.append(
                         f"Removed async flag from {sync_count} UserPromptSubmit hook(s) "

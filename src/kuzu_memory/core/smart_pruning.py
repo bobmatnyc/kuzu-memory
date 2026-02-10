@@ -153,7 +153,9 @@ class SmartPruningStrategy:
         # Normalize: 0 chars = 1.0, 10000+ chars = 0.0
         return max(0.0, 1.0 - (content_length / self.MAX_CONTENT_SIZE))
 
-    def _calculate_access_score(self, access_count: int, accessed_at: datetime | None) -> float:
+    def _calculate_access_score(
+        self, access_count: int, accessed_at: datetime | None
+    ) -> float:
         """
         Calculate access score (more access = higher score).
 
@@ -179,7 +181,9 @@ class SmartPruningStrategy:
 
             days_since_access = (now - accessed_at).days
             # Normalize: 0 days = 1.0, 90+ days = 0.0
-            recency_score = max(0.0, 1.0 - (days_since_access / self.RECENCY_WINDOW_DAYS))
+            recency_score = max(
+                0.0, 1.0 - (days_since_access / self.RECENCY_WINDOW_DAYS)
+            )
 
         # Weighted combination: favor frequency slightly over recency
         return (freq_score * 0.6) + (recency_score * 0.4)
@@ -327,7 +331,9 @@ class SmartPruningStrategy:
         """
         scores = self.calculate_scores()
 
-        candidates = [s for s in scores if s.total_score < self.threshold and not s.is_protected]
+        candidates = [
+            s for s in scores if s.total_score < self.threshold and not s.is_protected
+        ]
 
         logger.info(
             f"Found {len(candidates)} prune candidates "
@@ -356,7 +362,9 @@ class SmartPruningStrategy:
             # Calculate scores and get candidates
             all_scores = self.calculate_scores()
             candidates = [
-                s for s in all_scores if s.total_score < self.threshold and not s.is_protected
+                s
+                for s in all_scores
+                if s.total_score < self.threshold and not s.is_protected
             ]
             protected_count = sum(1 for s in all_scores if s.is_protected)
 
@@ -364,13 +372,19 @@ class SmartPruningStrategy:
             score_breakdown = {
                 "total_memories": len(all_scores),
                 "avg_age_score": (
-                    sum(s.age_score for s in all_scores) / len(all_scores) if all_scores else 0
+                    sum(s.age_score for s in all_scores) / len(all_scores)
+                    if all_scores
+                    else 0
                 ),
                 "avg_size_score": (
-                    sum(s.size_score for s in all_scores) / len(all_scores) if all_scores else 0
+                    sum(s.size_score for s in all_scores) / len(all_scores)
+                    if all_scores
+                    else 0
                 ),
                 "avg_access_score": (
-                    sum(s.access_score for s in all_scores) / len(all_scores) if all_scores else 0
+                    sum(s.access_score for s in all_scores) / len(all_scores)
+                    if all_scores
+                    else 0
                 ),
                 "avg_importance_score": (
                     sum(s.importance_score for s in all_scores) / len(all_scores)
@@ -701,7 +715,9 @@ class ArchiveManager:
             RETURN COUNT(a) AS count
             """
 
-            result = self.db_adapter.execute_query(query, {"current_time": current_time})
+            result = self.db_adapter.execute_query(
+                query, {"current_time": current_time}
+            )
             count = result[0].get("count", 0) if result else 0
 
             if count > 0:
@@ -712,7 +728,9 @@ class ArchiveManager:
                 DELETE a
                 """
 
-                self.db_adapter.execute_query(delete_query, {"current_time": current_time})
+                self.db_adapter.execute_query(
+                    delete_query, {"current_time": current_time}
+                )
                 logger.info(f"Purged {count} expired archives")
 
             return count

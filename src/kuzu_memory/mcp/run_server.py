@@ -134,7 +134,9 @@ class MCPProtocolHandler:
                     try:
                         from .testing.health_checker import MCPHealthChecker
 
-                        health_checker = MCPHealthChecker(project_root=Path.cwd(), timeout=2.0)
+                        health_checker = MCPHealthChecker(
+                            project_root=Path.cwd(), timeout=2.0
+                        )
                         health_result = await health_checker.check_health(
                             detailed=False, retry=False
                         )
@@ -186,15 +188,21 @@ class MCPProtocolHandler:
                 return None
             return JSONRPCMessage.create_response(
                 request_id,
-                error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"),
+                error=JSONRPCError(
+                    JSONRPCErrorCode.INTERNAL_ERROR, f"Internal error: {e!s}"
+                ),
             )
 
-    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_tool(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a tool and format the response for MCP."""
         # Map tool names to server methods (strip kuzu_ prefix, add _ prefix)
         method_name = "_" + tool_name.removeprefix("kuzu_")
         if not hasattr(self.server, method_name):
-            raise JSONRPCError(JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}")
+            raise JSONRPCError(
+                JSONRPCErrorCode.METHOD_NOT_FOUND, f"Tool not found: {tool_name}"
+            )
 
         try:
             # Get the tool method
@@ -497,11 +505,15 @@ class MCPProtocolHandler:
                     is_shutdown = message.get("method") == "shutdown"
 
                     # Process single request
-                    logger.debug(f"Processing request: method={message.get('method')}, id={message.get('id')}")
+                    logger.debug(
+                        f"Processing request: method={message.get('method')}, id={message.get('id')}"
+                    )
                     response_or_none = await self.handle_request(message)
                     logger.debug(f"Handler returned: {response_or_none is not None}")
                     if response_or_none is not None:
-                        logger.debug(f"Writing response for id={response_or_none.get('id')}")
+                        logger.debug(
+                            f"Writing response for id={response_or_none.get('id')}"
+                        )
                         self.protocol.write_message(response_or_none)
                         logger.debug("Response written")
 
@@ -522,7 +534,9 @@ class MCPProtocolHandler:
                 # Send error response if possible (with a dummy ID since we don't have a request)
                 error_response = JSONRPCMessage.create_response(
                     1,  # Use dummy ID for unhandled errors
-                    error=JSONRPCError(JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"),
+                    error=JSONRPCError(
+                        JSONRPCErrorCode.INTERNAL_ERROR, f"Server error: {e!s}"
+                    ),
                 )
                 if error_response is not None:
                     self.protocol.write_message(error_response)
