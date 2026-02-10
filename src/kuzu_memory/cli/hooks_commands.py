@@ -21,6 +21,7 @@ from rich.table import Table
 
 from ..installers.registry import get_installer, has_installer
 from ..utils.project_setup import find_project_root
+from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .enums import HookSystem
 
 console = Console()
@@ -213,7 +214,7 @@ def hooks_status(project: str | None, verbose: bool) -> None:
     try:
         # Determine project root
         if project:
-            project_root = Path(project)
+            project_root = Path(project).resolve()
         else:
             try:
                 found_root = find_project_root()
@@ -310,7 +311,7 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
     try:
         # Determine project root
         if project:
-            project_root = Path(project)
+            project_root = Path(project).resolve()
         else:
             try:
                 found_root = find_project_root()
@@ -325,6 +326,20 @@ def install_hooks(system: str, dry_run: bool, verbose: bool, project: str | None
                     "[red]❌ Could not find project root. Use --project to specify.[/red]"
                 )
                 sys.exit(1)
+
+        # Check for subservient mode
+        if is_subservient_mode(project_root):
+            config = get_subservient_config(project_root)
+            managed_by = (
+                config.get("managed_by", "parent framework") if config else "parent framework"
+            )
+            console.print(
+                f"\n📦 [cyan]Subservient Mode Detected[/cyan]\n"
+                f"   Hooks are managed by: {managed_by}\n"
+                f"   Skipping installation to avoid conflicts.\n\n"
+                f"💡 To install hooks manually, unset KUZU_MEMORY_MODE or remove .kuzu-memory-config"
+            )
+            sys.exit(0)  # Graceful exit
 
         # Check if installer exists
         if not has_installer(system):

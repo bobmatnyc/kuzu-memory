@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .base import BaseInstaller, InstallationError, InstallationResult
 from .json_utils import (
     fix_broken_mcp_args,
@@ -1208,6 +1209,28 @@ exec {kuzu_cmd} "$@"
         try:
             if dry_run:
                 logger.info("DRY RUN MODE - No changes will be made")
+
+            # Check for subservient mode
+            if is_subservient_mode(self.project_root):
+                config = get_subservient_config(self.project_root)
+                managed_by = (
+                    config.get("managed_by", "parent framework") if config else "parent framework"
+                )
+
+                message = (
+                    f"Subservient mode detected - hooks managed by {managed_by}. "
+                    "Installation skipped to avoid conflicts."
+                )
+
+                return InstallationResult(
+                    success=True,
+                    ai_system=self.ai_system_name,
+                    files_created=[],
+                    files_modified=[],
+                    backup_files=[],
+                    message=message,
+                    warnings=["Hooks not installed - running in subservient mode"],
+                )
 
             # Check prerequisites
             errors = self.check_prerequisites()

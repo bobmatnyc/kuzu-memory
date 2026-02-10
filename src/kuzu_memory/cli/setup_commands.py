@@ -16,6 +16,7 @@ from ..utils.project_setup import (
     get_project_db_path,
     get_project_memories_dir,
 )
+from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .cli_utils import rich_panel, rich_print
 from .init_commands import init
 from .install_unified import _detect_installed_systems
@@ -226,6 +227,19 @@ def setup(
         # PHASE 2: AI TOOL DETECTION & INSTALLATION
         # ═══════════════════════════════════════════════════════════
 
+        # Check for subservient mode before installation
+        if is_subservient_mode(project_root):
+            config = get_subservient_config(project_root)
+            managed_by = (
+                config.get("managed_by", "parent framework") if config else "parent framework"
+            )
+            rich_print(
+                f"\n📦 Subservient mode detected - hooks managed by {managed_by}",
+                style="cyan",
+            )
+            rich_print("   Skipping hook installation (managed externally)", style="dim")
+            skip_install = True  # Force skip
+
         if skip_install:
             rich_print("\n⏭️  Skipping AI tool installation (--skip-install)", style="yellow")
         else:
@@ -243,9 +257,7 @@ def setup(
                     status_icon = (
                         "✅"
                         if system.health_status == "healthy"
-                        else "⚠️"
-                        if system.health_status == "needs_repair"
-                        else "❌"
+                        else "⚠️" if system.health_status == "needs_repair" else "❌"
                     )
                     rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 
