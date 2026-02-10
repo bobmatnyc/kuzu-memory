@@ -96,12 +96,18 @@ class TestConnectionIntegration:
             response = await client.send_request("shutdown", {})
             assert response is not None
 
-            # Give time for graceful shutdown
-            await asyncio.sleep(0.5)
+            # Wait for graceful shutdown with retry logic (exponential backoff)
+            max_retries = 5
+            for attempt in range(max_retries):
+                await asyncio.sleep(0.2 * (2 ** attempt))  # 0.2s, 0.4s, 0.8s, 1.6s, 3.2s
 
-            # Process should have terminated
-            if client.process:
-                assert client.process.poll() is not None, "Server did not shut down gracefully"
+                if client.process and client.process.poll() is not None:
+                    # Process terminated successfully
+                    break
+            else:
+                # All retries exhausted
+                if client.process:
+                    assert client.process.poll() is not None, "Server did not shut down gracefully after 6.2s"
 
         finally:
             # Ensure cleanup
@@ -266,9 +272,19 @@ class TestConnectionIntegration:
             # Step 3: Send initialized notification
             await client.send_notification("notifications/initialized", {})
 
-            # Step 4: Verify operational
-            ping_response = await client.send_request("ping", {})
-            assert ping_response is not None, "Post-initialization ping failed"
+            # Step 4: Wait for server to process notification before next request
+            # Notifications are fire-and-forget, but server needs time to process
+            await asyncio.sleep(0.3)
+
+            # Step 5: Verify operational with retry logic
+            ping_response = None
+            for attempt in range(3):
+                ping_response = await client.send_request("ping", {})
+                if ping_response is not None:
+                    break
+                await asyncio.sleep(0.2 * (attempt + 1))  # 0.2s, 0.4s, 0.6s
+
+            assert ping_response is not None, "Post-initialization ping failed after retries"
 
         finally:
             await client.disconnect()

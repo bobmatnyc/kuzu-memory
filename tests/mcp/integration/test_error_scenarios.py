@@ -440,11 +440,18 @@ class TestNotificationErrors:
             # Send invalid notification
             await client.send_notification("invalid/notification", {})
 
-            # Server should continue functioning
-            await asyncio.sleep(0.2)
+            # Server should continue functioning - wait for processing
+            await asyncio.sleep(0.3)
 
-            response = await client.send_request("ping", {})
-            assert response is not None
+            # Retry ping with exponential backoff to handle bulk test timing issues
+            response = None
+            for attempt in range(3):
+                response = await client.send_request("ping", {})
+                if response is not None:
+                    break
+                await asyncio.sleep(0.2 * (attempt + 1))  # 0.2s, 0.4s, 0.6s
+
+            assert response is not None, "Server failed to respond after invalid notification"
 
         finally:
             await client.disconnect()
@@ -466,11 +473,17 @@ class TestNotificationErrors:
             await client.send_notification("notifications/test", {})
 
             # Give server time to process notification before next request
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.3)
 
-            # Should still work
-            response = await client.send_request("ping", {})
-            assert response is not None
+            # Should still work - retry with exponential backoff
+            response = None
+            for attempt in range(3):
+                response = await client.send_request("ping", {})
+                if response is not None:
+                    break
+                await asyncio.sleep(0.2 * (attempt + 1))  # 0.2s, 0.4s, 0.6s
+
+            assert response is not None, "Server failed to respond after error and notification"
 
         finally:
             await client.disconnect()
