@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from kuzu_memory.client import KuzuMemoryClient, create_client
 from kuzu_memory.core.models import Memory, MemoryType
+from kuzu_memory.utils.exceptions import ValidationError
 
 
 @pytest.fixture
@@ -154,7 +155,7 @@ class TestKuzuMemoryClientRecall:
             project_root=temp_project_root, enable_git_sync=False
         ) as client:
             # Empty query should raise ValidationError from underlying service
-            with pytest.raises(ValueError):
+            with pytest.raises(ValidationError):
                 await client.recall("")
 
     @pytest.mark.asyncio
@@ -210,7 +211,7 @@ class TestKuzuMemoryClientEnhance:
             project_root=temp_project_root, enable_git_sync=False
         ) as client:
             # Empty prompt should raise ValidationError
-            with pytest.raises(ValueError):
+            with pytest.raises(ValidationError):
                 await client.enhance("")
 
 

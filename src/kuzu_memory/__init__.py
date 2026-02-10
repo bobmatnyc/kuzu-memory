@@ -35,6 +35,11 @@ try:
     from .core.config import KuzuMemoryConfig
     from .core.memory import KuzuMemory
     from .core.models import Memory, MemoryContext, MemoryType
+    from .utils.subservient import (
+        create_subservient_config,
+        enable_subservient_mode,
+        is_subservient_mode,
+    )
 
     # All imports successful
     _IMPORT_ERROR = None
@@ -75,6 +80,22 @@ except ImportError as e:
     ) -> Any:
         raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
 
+    def enable_subservient_mode(
+        project_root: Path | str,
+        managed_by: str = "unknown",
+        set_env_var: bool = False,
+    ) -> dict[str, str | bool]:
+        raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+
+    def is_subservient_mode(project_root: Path | None = None) -> bool:
+        raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+
+    def create_subservient_config(
+        project_root: Path,
+        managed_by: str = "unknown",
+    ) -> Path:
+        raise ImportError(f"KuzuMemory core components not available: {_IMPORT_ERROR}")
+
 
 # Public API
 __all__ = [
@@ -89,8 +110,11 @@ __all__ = [
     "__version_info__",
     "create_client",
     "create_memory_instance",
+    "create_subservient_config",
+    "enable_subservient_mode",
     "get_database_path",
     "is_available",
+    "is_subservient_mode",
 ]
 
 # Package metadata

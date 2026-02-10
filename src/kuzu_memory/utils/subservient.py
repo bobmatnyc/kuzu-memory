@@ -148,3 +148,76 @@ def remove_subservient_config(project_root: Path) -> bool:
     except Exception as e:
         logger.error(f"Failed to remove subservient config: {e}")
         raise
+
+
+def enable_subservient_mode(
+    project_root: Path | str,
+    managed_by: str = "unknown",
+    set_env_var: bool = False,
+) -> dict[str, str | bool]:
+    """
+    Enable subservient mode for a project.
+
+    This convenience function is designed for parent frameworks (like Claude MPM)
+    to programmatically enable subservient mode during their setup phase.
+
+    Subservient mode signals that kuzu-memory is managed by a parent framework:
+    - Hooks are NOT installed by kuzu-memory (parent manages hooks centrally)
+    - Database location may be managed by parent
+    - Configuration is stored in .kuzu-memory-config file
+
+    Args:
+        project_root: Project root directory (Path or string)
+        managed_by: Name of parent framework managing this installation
+                   (e.g., "claude-mpm", "auggie", "custom-framework")
+        set_env_var: If True, also set KUZU_MEMORY_MODE environment variable
+                    (only affects current process, not persistent)
+
+    Returns:
+        Dictionary with:
+        - success: True if successfully enabled
+        - config_path: Path to created config file
+        - env_var_set: True if environment variable was set
+
+    Raises:
+        OSError: If config file cannot be created
+        ValueError: If project_root is invalid
+
+    Example:
+        >>> from kuzu_memory import enable_subservient_mode
+        >>>
+        >>> # Parent framework (e.g., Claude MPM) during setup
+        >>> result = enable_subservient_mode(
+        ...     project_root="/path/to/project",
+        ...     managed_by="claude-mpm"
+        ... )
+        >>> print(f"Config created at: {result['config_path']}")
+    """
+    # Validate and normalize project_root
+    if isinstance(project_root, str):
+        project_root = Path(project_root)
+
+    if not isinstance(project_root, Path):
+        raise ValueError(f"project_root must be Path or str, got {type(project_root)}")
+
+    if not project_root.exists():
+        raise ValueError(f"Project root does not exist: {project_root}")
+
+    if not project_root.is_dir():
+        raise ValueError(f"Project root is not a directory: {project_root}")
+
+    # Create subservient config file
+    config_path = create_subservient_config(project_root, managed_by=managed_by)
+
+    # Optionally set environment variable (affects current process only)
+    env_var_set = False
+    if set_env_var:
+        os.environ["KUZU_MEMORY_MODE"] = "subservient"
+        env_var_set = True
+        logger.info("Set KUZU_MEMORY_MODE=subservient environment variable")
+
+    return {
+        "success": True,
+        "config_path": str(config_path),
+        "env_var_set": env_var_set,
+    }
