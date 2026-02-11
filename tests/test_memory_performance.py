@@ -52,17 +52,23 @@ def main():
 
             print(f"  Recalled {len(context.memories)} memories in {recall_time:.2f}ms")
 
-            # Performance summary
+            # Performance summary with documented targets
             print("\n📊 Performance Summary:")
-            print(f"  Generation: {generation_time:.2f}ms")
-            print(f"  Recall: {recall_time:.2f}ms")
+            print(f"  Generation (Learning): {generation_time:.2f}ms (target: <200ms)")
+            print(f"  Recall: {recall_time:.2f}ms (target: <50ms)")
+            print("\nDocumented requirements (Issue #19):")
+            print("  - Recall: <50ms (graph query optimization)")
+            print("  - Learning: <200ms (async, non-blocking)")
+            print("  - Enhancement: <100ms (blocking operation)")
 
-            # Basic performance validation
-            if generation_time < 1000.0 and recall_time < 500.0:
-                print("✅ Performance test PASSED")
+            # Basic performance validation based on documented requirements
+            # Allow 2x overhead for subprocess and test environment
+            if generation_time < 400.0 and recall_time < 100.0:
+                print("✅ Performance test PASSED (within 2x documented targets)")
                 return 0
             else:
                 print("⚠️  Performance test completed with slower than optimal times")
+                print("    Note: Subprocess overhead may affect these measurements")
                 return 0
 
             memory.close()

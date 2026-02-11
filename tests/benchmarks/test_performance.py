@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from kuzu_memory import KuzuMemory
 
 
@@ -75,9 +76,7 @@ class TestPerformanceBenchmarks:
 
         return memory
 
-    def measure_operation_times(
-        self, operation_func, iterations: int = 100
-    ) -> dict[str, float]:
+    def measure_operation_times(self, operation_func, iterations: int = 100) -> dict[str, float]:
         """Measure operation times and return statistics."""
         times = []
 
@@ -98,7 +97,14 @@ class TestPerformanceBenchmarks:
         }
 
     def test_attach_memories_performance_target(self, populated_memory):
-        """Test that attach_memories meets <10ms performance target."""
+        """Test that attach_memories (recall) meets <50ms performance target.
+
+        Documented requirement from Issue #19:
+        - Recall: <50ms (graph query optimization)
+
+        Note: Direct API calls avoid subprocess overhead, so we use stricter thresholds
+        than MCP tests which include JSON-RPC and stdio communication.
+        """
         test_prompts = [
             "What's my name?",
             "What programming languages do I use?",
@@ -109,9 +115,7 @@ class TestPerformanceBenchmarks:
 
         def attach_operation():
             prompt = test_prompts[0]  # Use first prompt for consistency
-            context = populated_memory.attach_memories(
-                prompt, user_id="user-0", max_memories=5
-            )
+            context = populated_memory.attach_memories(prompt, user_id="user-0", max_memories=5)
             # NOTE: Don't assert len(context.memories) > 0 for now as recall has separate issues
             # The performance test should measure timing regardless of recall results
             return context
@@ -119,39 +123,44 @@ class TestPerformanceBenchmarks:
         # Measure performance
         stats = self.measure_operation_times(attach_operation, iterations=50)
 
-        print("\nattach_memories() Performance:")
+        print("\nattach_memories() Performance (Recall):")
         print(f"  Mean: {stats['mean']:.2f}ms")
         print(f"  Median: {stats['median']:.2f}ms")
         print(f"  P95: {stats['p95']:.2f}ms")
         print(f"  P99: {stats['p99']:.2f}ms")
         print(f"  Min: {stats['min']:.2f}ms")
         print(f"  Max: {stats['max']:.2f}ms")
+        print("  Target: <50ms (documented requirement)")
 
-        # Performance assertions (relaxed for test environment)
-        assert (
-            stats["mean"] < 50.0
-        ), f"Mean time {stats['mean']:.2f}ms exceeds 50ms target"
-        assert (
-            stats["p95"] < 100.0
-        ), f"P95 time {stats['p95']:.2f}ms exceeds 100ms threshold"
-        assert (
-            stats["p99"] < 200.0
-        ), f"P99 time {stats['p99']:.2f}ms exceeds 200ms threshold"
+        # Performance assertions based on documented requirements (Issue #19)
+        # Direct API calls should meet stricter targets than MCP tests
+        assert stats["mean"] < 50.0, (
+            f"Mean time {stats['mean']:.2f}ms exceeds 50ms target (Issue #19)"
+        )
+        assert stats["p95"] < 75.0, f"P95 time {stats['p95']:.2f}ms exceeds 75ms threshold"
+        assert stats["p99"] < 100.0, f"P99 time {stats['p99']:.2f}ms exceeds 100ms threshold"
 
     def test_generate_memories_performance_target(self, temp_db_path, benchmark_config):
-        """Test that generate_memories meets <20ms performance target."""
+        """Test that generate_memories (learning) meets <200ms performance target.
+
+        Documented requirement from Issue #19:
+        - Learning: <200ms (async, non-blocking)
+
+        Note: Direct API calls avoid subprocess overhead. Learning includes entity extraction,
+        pattern compilation, and database writes, so we allow up to 200ms.
+        """
         # Disable performance monitoring to avoid PerformanceError during test
         test_config = benchmark_config.copy()
-        test_config["performance"][
-            "max_generation_time_ms"
-        ] = 200.0  # Relaxed for test environment
-        test_config["performance"][
-            "enable_performance_monitoring"
-        ] = False  # Disable to avoid errors
+        test_config["performance"]["max_generation_time_ms"] = 200.0  # Documented requirement
+        test_config["performance"]["enable_performance_monitoring"] = (
+            False  # Disable to avoid errors during test
+        )
 
         memory = KuzuMemory(db_path=temp_db_path, config=test_config)
 
-        test_content = "I'm working on a new feature for the mobile app using React Native and TypeScript."
+        test_content = (
+            "I'm working on a new feature for the mobile app using React Native and TypeScript."
+        )
 
         def generate_operation():
             memory_ids = memory.generate_memories(
@@ -163,24 +172,22 @@ class TestPerformanceBenchmarks:
         # Measure performance
         stats = self.measure_operation_times(generate_operation, iterations=50)
 
-        print("\ngenerate_memories() Performance:")
+        print("\ngenerate_memories() Performance (Learning):")
         print(f"  Mean: {stats['mean']:.2f}ms")
         print(f"  Median: {stats['median']:.2f}ms")
         print(f"  P95: {stats['p95']:.2f}ms")
         print(f"  P99: {stats['p99']:.2f}ms")
         print(f"  Min: {stats['min']:.2f}ms")
         print(f"  Max: {stats['max']:.2f}ms")
+        print("  Target: <200ms (documented requirement)")
 
-        # Performance assertions (relaxed for test environment with schema creation)
-        assert (
-            stats["mean"] < 100.0
-        ), f"Mean time {stats['mean']:.2f}ms exceeds 100ms target"
-        assert (
-            stats["p95"] < 150.0
-        ), f"P95 time {stats['p95']:.2f}ms exceeds 150ms threshold"
-        assert (
-            stats["p99"] < 250.0
-        ), f"P99 time {stats['p99']:.2f}ms exceeds 250ms threshold"
+        # Performance assertions based on documented requirements (Issue #19)
+        # Direct API calls should meet stricter targets than MCP tests
+        assert stats["mean"] < 200.0, (
+            f"Mean time {stats['mean']:.2f}ms exceeds 200ms target (Issue #19)"
+        )
+        assert stats["p95"] < 300.0, f"P95 time {stats['p95']:.2f}ms exceeds 300ms threshold"
+        assert stats["p99"] < 400.0, f"P99 time {stats['p99']:.2f}ms exceeds 400ms threshold"
 
         memory.close()
 
@@ -209,9 +216,7 @@ class TestPerformanceBenchmarks:
 
         # All strategies should be reasonably fast (relaxed for test environment)
         for strategy, stats in strategy_stats.items():
-            assert (
-                stats["mean"] < 75.0
-            ), f"{strategy} strategy too slow: {stats['mean']:.2f}ms"
+            assert stats["mean"] < 75.0, f"{strategy} strategy too slow: {stats['mean']:.2f}ms"
 
     def test_cache_performance_impact(self, populated_memory):
         """Test the performance impact of caching."""
@@ -239,9 +244,7 @@ class TestPerformanceBenchmarks:
         print(f"  Speedup: {first_stats['mean'] / cached_stats['mean']:.1f}x")
 
         # Cached calls should be faster
-        assert (
-            cached_stats["mean"] < first_stats["mean"]
-        ), "Cache should improve performance"
+        assert cached_stats["mean"] < first_stats["mean"], "Cache should improve performance"
 
     def test_memory_count_scaling(self, temp_db_path, benchmark_config):
         """Test how performance scales with number of memories."""
@@ -281,9 +284,9 @@ class TestPerformanceBenchmarks:
         min_time = min(performance_data.values())
         degradation_factor = max_time / min_time
 
-        assert (
-            degradation_factor < 200.0
-        ), f"Performance degraded by {degradation_factor:.1f}x with more memories (relaxed for test environment)"
+        assert degradation_factor < 200.0, (
+            f"Performance degraded by {degradation_factor:.1f}x with more memories (relaxed for test environment)"
+        )
 
         memory.close()
 
@@ -364,7 +367,16 @@ class TestPerformanceBenchmarks:
 
 
 def test_benchmark_thresholds():
-    """Standalone test to validate performance thresholds - used by make perf-validate."""
+    """Standalone test to validate performance thresholds - used by make perf-validate.
+
+    Documented requirements from Issue #19:
+    - Enhancement: <100ms (blocking operation)
+    - Learning: <200ms (async, non-blocking)
+    - Recall: <50ms (graph query optimization)
+
+    Note: This test uses direct API calls (no subprocess overhead), so thresholds
+    are tighter than MCP tests which include JSON-RPC and stdio communication.
+    """
     import tempfile
     from pathlib import Path
 
@@ -372,11 +384,11 @@ def test_benchmark_thresholds():
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = Path(temp_dir) / "threshold_test.db"
 
-        # Basic config for threshold testing
+        # Basic config for threshold testing based on documented requirements
         config = {
             "performance": {
-                "max_recall_time_ms": 100.0,  # Relaxed for test environment
-                "max_generation_time_ms": 200.0,  # Relaxed for test environment
+                "max_recall_time_ms": 50.0,  # Documented requirement
+                "max_generation_time_ms": 200.0,  # Documented requirement
                 "enable_performance_monitoring": False,  # Disabled for test
             },
         }
@@ -390,14 +402,14 @@ def test_benchmark_thresholds():
             session_id="threshold-session",
         )
 
-        # Test recall performance threshold
+        # Test recall performance threshold (documented: <50ms)
         start_time = time.perf_counter()
         memory.attach_memories(
             "What technologies are mentioned?", user_id="threshold-user", max_memories=5
         )
         recall_time = (time.perf_counter() - start_time) * 1000
 
-        # Test generation performance threshold
+        # Test learning/generation performance threshold (documented: <200ms)
         start_time = time.perf_counter()
         memory.generate_memories(
             "Another test for generation performance with PostgreSQL and TypeScript.",
@@ -409,15 +421,16 @@ def test_benchmark_thresholds():
         memory.close()
 
         print("\nPerformance Threshold Validation:")
-        print(f"  Recall time: {recall_time:.2f}ms (target: <100ms)")
-        print(f"  Generation time: {generation_time:.2f}ms (target: <200ms)")
+        print(f"  Recall time: {recall_time:.2f}ms (target: <50ms, Issue #19)")
+        print(f"  Learning time: {generation_time:.2f}ms (target: <200ms, Issue #19)")
 
-        # Relaxed assertions for test environment
-        assert (
-            recall_time < 500.0
-        ), f"Recall time {recall_time:.2f}ms exceeds 500ms threshold"
-        assert (
-            generation_time < 1000.0
-        ), f"Generation time {generation_time:.2f}ms exceeds 1000ms threshold"
+        # Assertions based on documented requirements (Issue #19)
+        # Allow some overhead for test environment but keep reasonable limits
+        assert recall_time < 100.0, (
+            f"Recall time {recall_time:.2f}ms exceeds 100ms threshold (2x documented target)"
+        )
+        assert generation_time < 400.0, (
+            f"Learning time {generation_time:.2f}ms exceeds 400ms threshold (2x documented target)"
+        )
 
         print("✅ Performance thresholds validated successfully")

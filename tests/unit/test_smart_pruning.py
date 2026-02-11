@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from kuzu_memory.core.smart_pruning import (
     ArchiveManager,
     RetentionScore,
@@ -38,6 +39,78 @@ def smart_strategy(mock_db_adapter):
 
 class TestScoreCalculation:
     """Test individual factor score calculations."""
+
+    def test_weighted_retention_score_formula(self, smart_strategy, mock_db_adapter):
+        """Test that retention score correctly combines weighted factors.
+
+        Formula: total_score = (age_score * 0.35) + (size_score * 0.20) +
+                               (access_score * 0.30) + (importance * 0.15)
+
+        Verifies that the weighted combination matches expected value.
+        """
+        # Create memory with known characteristics for predictable individual scores
+        # Age: 180 days old -> age_score ~0.5 (halfway to max 365 days)
+        # Size: 5000 chars -> size_score ~0.5 (halfway to max 10000 chars)
+        # Access: 10 accesses, 45 days ago -> access_score ~0.5 (mid-range)
+        # Importance: 0.6 -> importance_score = 0.6
+        created_at = datetime.now(UTC) - timedelta(days=180)
+        accessed_at = datetime.now(UTC) - timedelta(days=45)
+
+        mock_db_adapter.execute_query.return_value = [
+            {
+                "id": "test-weighted",
+                "content": "a" * 5000,  # 5000 chars = mid-range size
+                "created_at": created_at.isoformat(),
+                "accessed_at": accessed_at.isoformat(),
+                "access_count": 10,
+                "importance": 0.6,
+                "source_type": "manual",
+                "memory_type": "FACT",
+            }
+        ]
+
+        # Calculate scores
+        scores = smart_strategy.calculate_scores()
+
+        assert len(scores) == 1
+        score = scores[0]
+
+        # Verify individual scores are calculated correctly
+        age_score = smart_strategy._calculate_age_score(created_at)
+        size_score = smart_strategy._calculate_size_score(5000)
+        access_score = smart_strategy._calculate_access_score(10, accessed_at)
+        importance_score = 0.6
+
+        # Verify individual scores match what was calculated
+        assert abs(score.age_score - age_score) < 0.001
+        assert abs(score.size_score - size_score) < 0.001
+        assert abs(score.access_score - access_score) < 0.001
+        assert abs(score.importance_score - importance_score) < 0.001
+
+        # Calculate expected weighted total using documented formula
+        expected_total = (
+            (age_score * 0.35)  # Age weight
+            + (size_score * 0.20)  # Size weight
+            + (access_score * 0.30)  # Access weight
+            + (importance_score * 0.15)  # Importance weight
+        )
+
+        # Verify total score matches weighted formula (within floating-point tolerance)
+        assert abs(score.total_score - expected_total) < 0.001, (
+            f"Weighted score mismatch: got {score.total_score:.4f}, "
+            f"expected {expected_total:.4f} "
+            f"(age={age_score:.4f}*0.35 + size={size_score:.4f}*0.20 + "
+            f"access={access_score:.4f}*0.30 + importance={importance_score:.4f}*0.15)"
+        )
+
+        # Verify weights sum to 1.0 (sanity check on constants)
+        weights_sum = (
+            smart_strategy.WEIGHT_AGE
+            + smart_strategy.WEIGHT_SIZE
+            + smart_strategy.WEIGHT_ACCESS
+            + smart_strategy.WEIGHT_IMPORTANCE
+        )
+        assert abs(weights_sum - 1.0) < 0.001, "Weights must sum to 1.0"
 
     def test_age_score_recent(self, smart_strategy):
         """Test age score for recent memory (should be high)."""
@@ -226,9 +299,7 @@ class TestProtectionRules:
 class TestCandidateSelection:
     """Test candidate selection for pruning."""
 
-    def test_get_prune_candidates_filters_by_threshold(
-        self, smart_strategy, mock_db_adapter
-    ):
+    def test_get_prune_candidates_filters_by_threshold(self, smart_strategy, mock_db_adapter):
         """Test that candidates are filtered by score threshold."""
         # Mock query results with varying scores
         mock_db_adapter.execute_query.return_value = [
@@ -261,9 +332,7 @@ class TestCandidateSelection:
         assert candidates[0].memory_id == "low-score"
         assert candidates[0].total_score < smart_strategy.threshold
 
-    def test_get_prune_candidates_excludes_protected(
-        self, smart_strategy, mock_db_adapter
-    ):
+    def test_get_prune_candidates_excludes_protected(self, smart_strategy, mock_db_adapter):
         """Test that protected memories are excluded from candidates."""
         mock_db_adapter.execute_query.return_value = [
             {
@@ -331,9 +400,7 @@ class TestPruningExecution:
             {
                 "id": "candidate-1",
                 "content": "a" * 9000,  # Large content
-                "created_at": (
-                    datetime.now(UTC) - timedelta(days=350)
-                ).isoformat(),  # Very old
+                "created_at": (datetime.now(UTC) - timedelta(days=350)).isoformat(),  # Very old
                 "accessed_at": None,  # Never accessed
                 "access_count": 0,
                 "importance": 0.1,  # Low importance
