@@ -14,7 +14,7 @@ from typing import TypedDict
 import click
 
 from ..core.config import KuzuMemoryConfig
-from ..models.memory import Memory
+from ..core.models import Memory
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.deduplication import DeduplicationEngine
 from .cli_utils import rich_panel, rich_print
