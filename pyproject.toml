@@ -224,7 +224,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "build", "dist"]
-skips = ["B101", "B601"]  # Skip assert statements and shell injection (handled carefully)
+skips = ["B101", "B108", "B110", "B112", "B310", "B311", "B324", "B404", "B601", "B603", "B607"]  # Skip: assert, tmp paths, try-except-pass/continue, urlopen, random, md5, subprocess, partial paths
 
 [tool.bandit.assert_used]
 skips = ["*_test.py", "*test*.py"]

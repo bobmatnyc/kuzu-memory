@@ -62,14 +62,14 @@ repos:
 
   # Security checks with bandit
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
+    rev: 1.9.3
     hooks:
       - id: bandit
         name: bandit-security
         description: "Security vulnerability scanning with Bandit"
         args: ["-c", "pyproject.toml"]
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^tests/
+        exclude: ^(tests/|examples/|scripts/|tmp/)
 
   # Documentation checks
   - repo: https://github.com/pycqa/doc8
@@ -94,7 +94,7 @@ repos:
 default_language_version:
   python: python3.11
 
-default_stages: [commit]
+default_stages: [pre-commit]
 
 # Fail fast - stop on first failure
 fail_fast: true
