@@ -863,13 +863,14 @@ wheels = [
 
 [[package]]
 name = "kuzu-memory"
-version = "1.6.35"
+version = "1.6.36"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "gitpython" },
     { name = "kuzu" },
     { name = "mcp" },
+    { name = "numpy" },
     { name = "packaging" },
     { name = "psutil" },
     { name = "py-mcp-installer" },
@@ -904,7 +905,6 @@ ner = [
 ]
 nlp = [
     { name = "nltk" },
-    { name = "numpy" },
     { name = "scikit-learn" },
 ]
 test = [
@@ -933,7 +933,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "nltk", marker = "extra == 'nlp'", specifier = ">=3.8" },
-    { name = "numpy", marker = "extra == 'nlp'", specifier = ">=1.24" },
+    { name = "numpy", specifier = ">=1.24" },
     { name = "packaging", specifier = ">=20.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0" },
     { name = "psutil", specifier = ">=5.9.0" },
