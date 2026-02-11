@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.6.36] - 2026-02-11
+
+### Fixed
+- **CRITICAL**: Fixed broken CLI caused by incorrect import path in cleanup_commands.py (#20)
+  - All `kuzu-memory` commands were failing with `ModuleNotFoundError: No module named 'kuzu_memory.models'`
+  - Changed `from ..models.memory import Memory` to `from ..core.models import Memory`
+  - **Users on v1.6.34 or v1.6.35 should upgrade immediately**
+
 ## [1.6.35] - 2026-02-11
 
 ### Changed
@@ -1105,7 +1113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.35...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.36...HEAD
+[1.6.36]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.35...v1.6.36
 [1.6.35]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.34...v1.6.35
 [1.6.34]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.33...v1.6.34
 [1.6.33]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.6.32...v1.6.33
