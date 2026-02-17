@@ -84,6 +84,7 @@ Run with --fix to attempt automatic repairs
 | Error Pattern | Likely Cause | Quick Fix | Doctor Check |
 |---------------|--------------|-----------|--------------|
 | `Command not found` | Installation issue | `pip install kuzu-memory` | N/A |
+| `No matching distribution found` | Private pip index | `pipx install kuzu-memory --pip-args="--extra-index-url https://pypi.org/simple/"` | N/A |
 | `Database not initialized` | Missing init | `kuzu-memory init` | `memory_database_file` |
 | `Permission denied` | File permissions | `chmod -R 755 kuzu-memories/` | `memory_database_directory` |
 | `Timeout expired` | Performance issue | Check system resources | `server_startup` |
@@ -126,6 +127,43 @@ pipx install kuzu-memory
 # Option 4: Direct execution
 python -m kuzu_memory.cli.commands --version
 ```
+
+### **Problem: No Matching Distribution Found (Private Pip Index)**
+```bash
+# Symptom
+pipx install kuzu-memory
+# ERROR: Could not find a version that satisfies the requirement kuzu-memory (from versions: none)
+# ERROR: No matching distribution found for kuzu-memory
+
+# Check pip configuration
+pip config list
+# If you see a custom index-url like:
+# global.index-url='https://company.jfrog.io/artifactory/api/pypi/private/simple'
+# This is likely the cause - your pip only searches a private index
+
+# Solution 1: Override index for this install (recommended)
+pipx install kuzu-memory --pip-args="--index-url https://pypi.org/simple/"
+
+# Solution 2: Add PyPI as extra index (preserves corporate index)
+pipx install kuzu-memory --pip-args="--extra-index-url https://pypi.org/simple/"
+
+# Solution 3: For pip directly
+pip install kuzu-memory --extra-index-url https://pypi.org/simple/
+
+# Solution 4: For uv
+uv pip install kuzu-memory --index-url https://pypi.org/simple/
+
+# Long-term solution: Ask IT to configure private index to proxy PyPI
+```
+
+**Common Private Index Providers:**
+- JFrog Artifactory
+- AWS CodeArtifact
+- Azure Artifacts
+- Nexus Repository
+- GitLab Package Registry
+
+**Verification:** kuzu-memory is published on PyPI: https://pypi.org/project/kuzu-memory/
 
 ### **Problem: Import Errors**
 ```bash
