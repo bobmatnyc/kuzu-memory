@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import AnyUrl
 
 from kuzu_memory.__version__ import __version__
+from kuzu_memory.core.models import MemoryType
 
 # MCP SDK imports (will be dynamically imported if available)
 try:
@@ -270,6 +271,55 @@ class KuzuMemoryMCPServer:
                         },
                     },
                 ),
+                Tool(
+                    name="kuzu_merge",
+                    description=(
+                        "Merge memories from another Kùzu database into the current one. Imports new "
+                        "memories while handling duplicates based on content hash and optional semantic "
+                        "similarity. Use this to consolidate memories from different sources or backup "
+                        "databases. "
+                        "\n\nStrategies: "
+                        "\n- skip: Ignore duplicate memories (safe default) "
+                        "\n- update: Overwrite existing memories with metadata from source "
+                        "\n- merge: Keep both versions with CONSOLIDATED_INTO relationship "
+                        "\n\nUse cases: "
+                        "\n- Importing memories from another project "
+                        "\n- Consolidating memories after database split "
+                        "\n- Restoring from backup with selective merge "
+                        "\n- Migrating memories between environments"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "source_path": {
+                                "type": "string",
+                                "description": "Path to the source Kùzu database directory to merge from",
+                            },
+                            "strategy": {
+                                "type": "string",
+                                "description": "Conflict resolution strategy: skip (ignore duplicates), update (overwrite with source), merge (keep both with relationship)",
+                                "enum": ["skip", "update", "merge"],
+                                "default": "skip",
+                            },
+                            "threshold": {
+                                "type": "number",
+                                "description": "Similarity threshold for deduplication (0.0-1.0, default: 0.95)",
+                                "default": 0.95,
+                            },
+                            "dry_run": {
+                                "type": "boolean",
+                                "description": "If true, preview changes without modifying database (default: true)",
+                                "default": True,
+                            },
+                            "backup": {
+                                "type": "boolean",
+                                "description": "Create backup of target database before merge (default: true)",
+                                "default": True,
+                            },
+                        },
+                        "required": ["source_path"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
@@ -315,6 +365,19 @@ class KuzuMemoryMCPServer:
                     str(strategy) if strategy is not None else "top_accessed",
                     int(limit) if isinstance(limit, int) else 20,
                     bool(dry_run) if dry_run is not None else True,
+                )
+            elif name == "kuzu_merge":
+                source_path = arguments.get("source_path", "")
+                strategy = arguments.get("strategy", "skip")
+                threshold = arguments.get("threshold", 0.95)
+                dry_run = arguments.get("dry_run", True)
+                backup = arguments.get("backup", True)
+                result = await self._merge(
+                    str(source_path) if source_path is not None else "",
+                    str(strategy) if strategy is not None else "skip",
+                    float(threshold) if isinstance(threshold, int | float) else 0.95,
+                    bool(dry_run) if dry_run is not None else True,
+                    bool(backup) if backup is not None else True,
                 )
             else:
                 result = f"Unknown tool: {name}"
@@ -864,6 +927,496 @@ class KuzuMemoryMCPServer:
                 "strategy": "consolidate_similar",
                 "error": str(e),
             }
+
+    async def _merge(
+        self, source_path: str, strategy: str, threshold: float, dry_run: bool, backup: bool
+    ) -> str:
+        """
+        Merge memories from another Kùzu database.
+
+        Args:
+            source_path: Path to source database directory
+            strategy: Conflict resolution strategy (skip, update, merge)
+            threshold: Similarity threshold for deduplication (0.0-1.0)
+            dry_run: If True, preview changes without executing
+            backup: If True, create backup before merge
+
+        Returns:
+            JSON-formatted merge results
+        """
+        import shutil
+        import time
+        import uuid
+        from datetime import UTC, datetime
+        from pathlib import Path
+
+        try:
+            import kuzu
+        except ImportError:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "error": "Kuzu library not found. Install with: pip install kuzu>=0.4.0",
+                }
+            )
+
+        from ..core.config import KuzuMemoryConfig
+        from ..core.models import Memory
+        from ..storage.kuzu_adapter import KuzuAdapter
+        from ..utils.deduplication import DeduplicationEngine
+
+        try:
+            # Validate inputs
+            if not source_path:
+                return json.dumps({"status": "error", "error": "source_path is required"})
+
+            if not (0.0 <= threshold <= 1.0):
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "error": f"threshold must be between 0.0 and 1.0, got {threshold}",
+                    }
+                )
+
+            source_path_obj = Path(source_path)
+            if not source_path_obj.exists():
+                return json.dumps(
+                    {"status": "error", "error": f"Source database not found: {source_path}"}
+                )
+
+            # Get target database path
+            target_path = self._get_db_path()
+            if not target_path.exists():
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "error": "Target database not found. Initialize with 'kuzu-memory setup' first.",
+                    }
+                )
+
+            start_time = time.time()
+
+            # Step 1: Read source database
+            logger.info(f"Reading source database: {source_path_obj}")
+            source_db = kuzu.Database(str(source_path_obj), read_only=True)
+            source_conn = kuzu.Connection(source_db)
+
+            source_query = """
+                MATCH (m:Memory)
+                RETURN m.id AS id,
+                       m.content AS content,
+                       m.content_hash AS content_hash,
+                       m.created_at AS created_at,
+                       m.memory_type AS memory_type,
+                       m.importance AS importance,
+                       m.confidence AS confidence,
+                       m.source_type AS source_type,
+                       m.agent_id AS agent_id,
+                       m.user_id AS user_id,
+                       m.session_id AS session_id,
+                       m.metadata AS metadata,
+                       m.accessed_at AS accessed_at,
+                       m.access_count AS access_count
+                ORDER BY m.created_at ASC
+            """
+
+            result = source_conn.execute(source_query)
+            source_memories_raw = []
+            column_names = result.get_column_names()
+            while result.has_next():
+                row = result.get_next()
+                row_dict = {column_names[i]: row[i] for i in range(len(column_names))}
+                source_memories_raw.append(row_dict)
+
+            if len(source_memories_raw) == 0:
+                return json.dumps(
+                    {
+                        "status": "completed",
+                        "message": "Source database is empty, nothing to merge",
+                        "total_source": 0,
+                        "duplicates_found": 0,
+                        "new_imported": 0,
+                        "updated": 0,
+                        "skipped": 0,
+                        "errors": 0,
+                    }
+                )
+
+            # Step 2: Read target database
+            logger.info(f"Reading target database: {target_path}")
+            config = KuzuMemoryConfig.default()
+            target_adapter = KuzuAdapter(target_path, config)
+            target_adapter.initialize()
+
+            with target_adapter._pool.get_connection() as target_conn:
+                target_query = """
+                    MATCH (m:Memory)
+                    RETURN m.id AS id,
+                           m.content AS content,
+                           m.content_hash AS content_hash,
+                           m.created_at AS created_at,
+                           m.memory_type AS memory_type,
+                           m.importance AS importance,
+                           m.confidence AS confidence,
+                           m.source_type AS source_type,
+                           m.accessed_at AS accessed_at,
+                           m.access_count AS access_count
+                """
+                result_target = target_conn.execute(target_query)
+                target_memories_raw = []
+                column_names_target = result_target.get_column_names()
+                while result_target.has_next():
+                    row_target = result_target.get_next()
+                    row_dict_target = {
+                        column_names_target[i]: row_target[i]
+                        for i in range(len(column_names_target))
+                    }
+                    target_memories_raw.append(row_dict_target)
+
+            # Convert to Memory objects
+            target_memories = []
+            target_hash_to_id = {}
+            for row in target_memories_raw:
+                # Convert memory_type string to MemoryType enum
+                memory_type_str = str(row["memory_type"])
+                try:
+                    memory_type = MemoryType(memory_type_str)
+                except ValueError:
+                    # Fallback to EPISODIC if unknown type
+                    memory_type = MemoryType.EPISODIC
+
+                mem = Memory(
+                    id=str(row["id"]),
+                    content=str(row["content"]),
+                    content_hash=str(row["content_hash"]),
+                    memory_type=memory_type,
+                    importance=float(row["importance"]) if row["importance"] else 0.5,
+                    confidence=float(row["confidence"]) if row["confidence"] else 1.0,
+                    source_type=str(row["source_type"]),
+                    created_at=datetime.fromisoformat(
+                        str(row["created_at"]).replace("Z", "+00:00")
+                    ),
+                    accessed_at=datetime.fromisoformat(
+                        str(row["accessed_at"]).replace("Z", "+00:00")
+                    )
+                    if row["accessed_at"]
+                    else None,
+                    access_count=int(row["access_count"]) if row["access_count"] else 0,
+                    # Add missing required fields with defaults
+                    valid_to=None,  # No expiration
+                    user_id=None,  # No user filtering
+                    session_id=None,  # No session filtering
+                )
+                target_memories.append(mem)
+                target_hash_to_id[mem.content_hash] = mem.id
+
+            # Step 3: Deduplicate
+            logger.info("Analyzing duplicates...")
+            dedup = DeduplicationEngine(
+                near_threshold=threshold,
+                semantic_threshold=threshold,
+                enable_update_detection=False,
+            )
+
+            # Type-annotate for mypy
+            new_memories: list[dict[str, Any]] = []
+            duplicate_memories: list[dict[str, Any]] = []
+            id_mapping: dict[str, str] = {}
+
+            for row in source_memories_raw:
+                source_content = str(row["content"])
+                source_content_hash = str(row["content_hash"])
+
+                # Check exact hash match first
+                if source_content_hash in target_hash_to_id:
+                    duplicate_memories.append(
+                        {
+                            "source_row": row,
+                            "target_id": target_hash_to_id[source_content_hash],
+                            "match_type": "exact",
+                            "similarity": 1.0,
+                        }
+                    )
+                    id_mapping[str(row["id"])] = target_hash_to_id[source_content_hash]
+                else:
+                    # Check semantic similarity
+                    duplicates = dedup.find_duplicates(source_content, target_memories)
+                    if duplicates:
+                        best_match, similarity, match_type = duplicates[0]
+                        duplicate_memories.append(
+                            {
+                                "source_row": row,
+                                "target_id": best_match.id,
+                                "match_type": match_type,
+                                "similarity": similarity,
+                            }
+                        )
+                        id_mapping[str(row["id"])] = best_match.id
+                    else:
+                        # No duplicate - new memory
+                        new_id = str(uuid.uuid4())
+                        new_memories.append({"source_row": row, "new_id": new_id})
+                        id_mapping[str(row["id"])] = new_id
+
+            analysis_time_ms = (time.time() - start_time) * 1000
+
+            # If dry-run, return preview
+            if dry_run:
+                return json.dumps(
+                    {
+                        "status": "preview",
+                        "dry_run": True,
+                        "total_source": len(source_memories_raw),
+                        "duplicates_found": len(duplicate_memories),
+                        "new_imported": len(new_memories),
+                        "updated": 0,
+                        "skipped": 0,
+                        "errors": 0,
+                        "analysis_time_ms": analysis_time_ms,
+                        "strategy": strategy,
+                        "threshold": threshold,
+                        "message": f"Preview: {len(new_memories)} new memories would be imported, {len(duplicate_memories)} duplicates found",
+                    },
+                    indent=2,
+                )
+
+            # Execute merge
+            # Backup if requested
+            backup_path = None
+            if backup:
+                logger.info("Creating backup...")
+                backup_path = target_path.parent / f"backup_{target_path.name}_{int(time.time())}"
+                try:
+                    shutil.copytree(target_path, backup_path)
+                except Exception as e:
+                    logger.warning(f"Backup failed: {e}")
+
+            # Import new memories
+            logger.info(f"Importing {len(new_memories)} new memories...")
+            imported_count = 0
+
+            with target_adapter._pool.get_connection() as target_conn:
+                for mem_data in new_memories:
+                    row = mem_data["source_row"]
+                    new_id = mem_data["new_id"]
+
+                    # Add merged_from to metadata
+                    metadata_str = str(row.get("metadata", "{}"))
+                    try:
+                        metadata = json.loads(metadata_str) if metadata_str != "{}" else {}
+                    except json.JSONDecodeError:
+                        metadata = {}
+
+                    metadata["merged_from"] = str(source_path)
+                    metadata["merged_at"] = datetime.now(UTC).isoformat()
+                    metadata["original_id"] = str(row["id"])
+
+                    insert_query = """
+                        CREATE (m:Memory {
+                            id: $id,
+                            content: $content,
+                            content_hash: $content_hash,
+                            created_at: $created_at,
+                            memory_type: $memory_type,
+                            importance: $importance,
+                            confidence: $confidence,
+                            source_type: $source_type,
+                            agent_id: $agent_id,
+                            user_id: $user_id,
+                            session_id: $session_id,
+                            metadata: $metadata,
+                            accessed_at: $accessed_at,
+                            access_count: $access_count,
+                            valid_from: $created_at,
+                            valid_to: NULL
+                        })
+                    """
+
+                    created_at_dt = row["created_at"]
+                    if isinstance(created_at_dt, str):
+                        created_at_dt = datetime.fromisoformat(created_at_dt.replace("Z", "+00:00"))
+
+                    accessed_at_dt = row.get("accessed_at")
+                    if accessed_at_dt and isinstance(accessed_at_dt, str):
+                        accessed_at_dt = datetime.fromisoformat(
+                            accessed_at_dt.replace("Z", "+00:00")
+                        )
+
+                    params = {
+                        "id": new_id,
+                        "content": str(row["content"]),
+                        "content_hash": str(row["content_hash"]),
+                        "created_at": created_at_dt,
+                        "memory_type": str(row["memory_type"]),
+                        "importance": float(row["importance"]) if row["importance"] else 0.5,
+                        "confidence": float(row["confidence"]) if row["confidence"] else 1.0,
+                        "source_type": str(row["source_type"]),
+                        "agent_id": str(row.get("agent_id", "default")),
+                        "user_id": str(row["user_id"]) if row.get("user_id") else None,
+                        "session_id": str(row["session_id"]) if row.get("session_id") else None,
+                        "metadata": json.dumps(metadata),
+                        "accessed_at": accessed_at_dt,
+                        "access_count": int(row.get("access_count", 0)),
+                    }
+
+                    target_conn.execute(insert_query, params)
+                    imported_count += 1
+
+            # Handle duplicates based on strategy
+            updated_count = 0
+            merged_count = 0
+            skipped_count = 0
+
+            if duplicate_memories:
+                if strategy == "update":
+                    logger.info(f"Updating {len(duplicate_memories)} duplicates...")
+                    with target_adapter._pool.get_connection() as target_conn:
+                        for dup in duplicate_memories:
+                            row = dup["source_row"]
+                            target_id = dup["target_id"]
+
+                            metadata_str = str(row.get("metadata", "{}"))
+                            try:
+                                metadata = json.loads(metadata_str) if metadata_str != "{}" else {}
+                            except json.JSONDecodeError:
+                                metadata = {}
+
+                            metadata["updated_from_merge"] = str(source_path)
+                            metadata["updated_at"] = datetime.now(UTC).isoformat()
+
+                            update_query = """
+                                MATCH (m:Memory {id: $id})
+                                SET m.importance = $importance,
+                                    m.confidence = $confidence,
+                                    m.metadata = $metadata,
+                                    m.accessed_at = $now,
+                                    m.access_count = m.access_count + 1
+                            """
+
+                            params = {
+                                "id": target_id,
+                                "importance": float(row["importance"])
+                                if row["importance"]
+                                else 0.5,
+                                "confidence": float(row["confidence"])
+                                if row["confidence"]
+                                else 1.0,
+                                "metadata": json.dumps(metadata),
+                                "now": datetime.now(UTC),
+                            }
+
+                            target_conn.execute(update_query, params)
+                            updated_count += 1
+
+                elif strategy == "merge":
+                    logger.info(
+                        f"Creating CONSOLIDATED_INTO relationships for {len(duplicate_memories)} duplicates..."
+                    )
+                    with target_adapter._pool.get_connection() as target_conn:
+                        for dup in duplicate_memories:
+                            row = dup["source_row"]
+                            target_id = dup["target_id"]
+
+                            merge_id = str(uuid.uuid4())
+
+                            metadata_str = str(row.get("metadata", "{}"))
+                            try:
+                                metadata = json.loads(metadata_str) if metadata_str != "{}" else {}
+                            except json.JSONDecodeError:
+                                metadata = {}
+
+                            metadata["merged_from"] = str(source_path)
+                            metadata["merged_at"] = datetime.now(UTC).isoformat()
+                            metadata["consolidated_with"] = target_id
+
+                            merge_query = """
+                                MATCH (target:Memory {id: $target_id})
+                                CREATE (merged:Memory {
+                                    id: $merge_id,
+                                    content: $content,
+                                    content_hash: $content_hash,
+                                    created_at: $created_at,
+                                    memory_type: $memory_type,
+                                    importance: $importance,
+                                    confidence: $confidence,
+                                    source_type: $source_type,
+                                    agent_id: $agent_id,
+                                    user_id: $user_id,
+                                    session_id: $session_id,
+                                    metadata: $metadata,
+                                    accessed_at: NULL,
+                                    access_count: 0,
+                                    valid_from: $created_at,
+                                    valid_to: NULL
+                                })
+                                CREATE (merged)-[:CONSOLIDATED_INTO {
+                                    consolidation_date: $now,
+                                    cluster_id: $cluster_id,
+                                    similarity_score: $similarity
+                                }]->(target)
+                            """
+
+                            created_at_dt = row["created_at"]
+                            if isinstance(created_at_dt, str):
+                                created_at_dt = datetime.fromisoformat(
+                                    created_at_dt.replace("Z", "+00:00")
+                                )
+
+                            params = {
+                                "target_id": target_id,
+                                "merge_id": merge_id,
+                                "content": str(row["content"]),
+                                "content_hash": str(row["content_hash"]),
+                                "created_at": created_at_dt,
+                                "memory_type": str(row["memory_type"]),
+                                "importance": float(row["importance"])
+                                if row["importance"]
+                                else 0.5,
+                                "confidence": float(row["confidence"])
+                                if row["confidence"]
+                                else 1.0,
+                                "source_type": str(row["source_type"]) + "-merged",
+                                "agent_id": str(row.get("agent_id", "default")),
+                                "user_id": str(row["user_id"]) if row.get("user_id") else None,
+                                "session_id": str(row["session_id"])
+                                if row.get("session_id")
+                                else None,
+                                "metadata": json.dumps(metadata),
+                                "now": datetime.now(UTC),
+                                "cluster_id": f"merge-{int(time.time())}",
+                                "similarity": dup["similarity"],
+                            }
+
+                            target_conn.execute(merge_query, params)
+                            merged_count += 1
+
+                else:  # skip strategy
+                    skipped_count = len(duplicate_memories)
+
+            execution_time_ms = (time.time() - start_time) * 1000
+
+            return json.dumps(
+                {
+                    "status": "completed",
+                    "total_source": len(source_memories_raw),
+                    "duplicates_found": len(duplicate_memories),
+                    "new_imported": imported_count,
+                    "updated": updated_count,
+                    "merged": merged_count,
+                    "skipped": skipped_count,
+                    "errors": 0,
+                    "execution_time_ms": execution_time_ms,
+                    "strategy": strategy,
+                    "threshold": threshold,
+                    "backup_path": str(backup_path) if backup_path else None,
+                    "message": f"Successfully merged {imported_count} new memories from {source_path}",
+                },
+                indent=2,
+            )
+
+        except Exception as e:
+            logger.error(f"Merge operation failed: {e}", exc_info=True)
+            return json.dumps({"status": "error", "error": str(e)})
 
     async def run(self) -> None:
         """Run the MCP server with queue processor."""
