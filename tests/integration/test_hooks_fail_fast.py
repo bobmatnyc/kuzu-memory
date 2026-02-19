@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.cli.hooks_commands import _get_memories_with_lock
 from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.utils.file_lock import try_lock_database
@@ -48,9 +49,7 @@ def test_get_memories_with_lock_fails_fast(tmp_path: Path) -> None:
 
     # Try to get memories (should return immediately)
     start_time = time.time()
-    memories, error = _get_memories_with_lock(
-        db_path, "How to build API?", strategy="keyword"
-    )
+    memories, error = _get_memories_with_lock(db_path, "How to build API?", strategy="keyword")
     elapsed = time.time() - start_time
 
     # Should complete quickly (< 0.1 seconds)
@@ -77,9 +76,7 @@ def test_get_memories_with_lock_works_when_unlocked(tmp_path: Path) -> None:
     memory.close()
 
     # Get memories (should succeed)
-    memories, error = _get_memories_with_lock(
-        db_path, "How to build API?", strategy="keyword"
-    )
+    memories, error = _get_memories_with_lock(db_path, "How to build API?", strategy="keyword")
 
     # Should not have error
     assert error is None

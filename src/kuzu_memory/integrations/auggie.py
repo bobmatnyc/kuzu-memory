@@ -107,9 +107,7 @@ class AuggieIntegration:
 
             # Check if we have recent activity
             if self.integration_stats["last_activity"]:
-                last_activity = datetime.fromisoformat(
-                    self.integration_stats["last_activity"]
-                )
+                last_activity = datetime.fromisoformat(self.integration_stats["last_activity"])
                 if datetime.now() - last_activity > timedelta(days=7):
                     return False
 
@@ -219,9 +217,7 @@ class AuggieIntegration:
                 for context_addition in modifications["added_context"]:
                     if "max_memories" in context_addition:
                         max_memories = context_addition["max_memories"]
-                        relevant_memories = rule_context.get("memories", [])[
-                            :max_memories
-                        ]
+                        relevant_memories = rule_context.get("memories", [])[:max_memories]
 
                         if relevant_memories:
                             context_text = "\n".join(
@@ -262,9 +258,7 @@ class AuggieIntegration:
             logger.error(f"Error enhancing prompt: {e}")
             return None
 
-    def learn_from_conversation(
-        self, conversation_data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def learn_from_conversation(self, conversation_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Learn from a complete conversation interaction.
 
@@ -316,9 +310,7 @@ class AuggieIntegration:
                 and len(learning_results["patterns_discovered"]) > 0
             ):
                 try:
-                    self.memory_synchronizer.sync_learned_patterns_to_memory(
-                        self.response_learner
-                    )
+                    self.memory_synchronizer.sync_learned_patterns_to_memory(self.response_learner)
                 except Exception as e:
                     logger.warning(f"Failed to sync patterns to memory: {e}")
 
@@ -392,18 +384,14 @@ class AuggieIntegration:
 
         # Calculate derived metrics
         if stats["prompts_enhanced"] > 0:
-            stats["enhancement_rate"] = (
-                stats["rules_executed"] / stats["prompts_enhanced"]
-            ) * 100
+            stats["enhancement_rate"] = (stats["rules_executed"] / stats["prompts_enhanced"]) * 100
         else:
             stats["enhancement_rate"] = 0.0
 
         # Add health information
         stats["health"] = {
             "rule_engine": "healthy" if self.rule_engine.rules else "inactive",
-            "learning_system": (
-                "healthy" if stats["responses_learned"] > 0 else "inactive"
-            ),
+            "learning_system": ("healthy" if stats["responses_learned"] > 0 else "inactive"),
             "memory_sync": "healthy" if self.memory_synchronizer else "unavailable",
         }
 

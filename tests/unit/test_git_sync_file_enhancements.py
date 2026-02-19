@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from kuzu_memory.core.config import GitSyncConfig
 from kuzu_memory.core.models import MemoryType
 from kuzu_memory.integrations.git_sync import GitSyncManager
@@ -76,13 +77,9 @@ class TestEnhancedContentFormat:
             "config.yaml",
         ]
 
-        with patch.object(
-            git_sync_manager, "_get_changed_files", return_value=changed_files
-        ):
+        with patch.object(git_sync_manager, "_get_changed_files", return_value=changed_files):
             with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(
-                    git_sync_manager, "_categorize_files", return_value={}
-                ):
+                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
                     memory = git_sync_manager._commit_to_memory(commit)
 
         # Verify content format
@@ -112,13 +109,9 @@ class TestEnhancedContentFormat:
         # Mock changed files (15 files)
         changed_files = [f"src/file{i}.py" for i in range(15)]
 
-        with patch.object(
-            git_sync_manager, "_get_changed_files", return_value=changed_files
-        ):
+        with patch.object(git_sync_manager, "_get_changed_files", return_value=changed_files):
             with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(
-                    git_sync_manager, "_categorize_files", return_value={}
-                ):
+                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
                     memory = git_sync_manager._commit_to_memory(commit)
 
         # Verify truncation
@@ -147,9 +140,7 @@ class TestEnhancedContentFormat:
 
         with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
             with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(
-                    git_sync_manager, "_categorize_files", return_value={}
-                ):
+                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
                     memory = git_sync_manager._commit_to_memory(commit)
 
         # Content should be just the message
@@ -403,9 +394,7 @@ class TestFileCategorization:
         # Should return empty dict (empty categories removed)
         assert categories == {}
 
-    def test_categorize_removes_empty_categories(
-        self, git_sync_manager: GitSyncManager
-    ) -> None:
+    def test_categorize_removes_empty_categories(self, git_sync_manager: GitSyncManager) -> None:
         """Test that empty categories are removed from result."""
         files = ["src/main.py"]  # Only source file
 
@@ -422,9 +411,7 @@ class TestFileCategorization:
 class TestMetadataIntegration:
     """Test integration of file stats and categories in metadata."""
 
-    def test_metadata_includes_file_stats(
-        self, git_sync_manager: GitSyncManager
-    ) -> None:
+    def test_metadata_includes_file_stats(self, git_sync_manager: GitSyncManager) -> None:
         """Test that metadata includes file_stats field."""
         commit = Mock()
         commit.message = "feat: add feature"
@@ -445,20 +432,14 @@ class TestMetadataIntegration:
         }
 
         with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
-            with patch.object(
-                git_sync_manager, "_get_file_stats", return_value=file_stats
-            ):
-                with patch.object(
-                    git_sync_manager, "_categorize_files", return_value={}
-                ):
+            with patch.object(git_sync_manager, "_get_file_stats", return_value=file_stats):
+                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
                     memory = git_sync_manager._commit_to_memory(commit)
 
         assert "file_stats" in memory.metadata
         assert memory.metadata["file_stats"] == file_stats
 
-    def test_metadata_includes_file_categories(
-        self, git_sync_manager: GitSyncManager
-    ) -> None:
+    def test_metadata_includes_file_categories(self, git_sync_manager: GitSyncManager) -> None:
         """Test that metadata includes file_categories field."""
         commit = Mock()
         commit.message = "feat: add feature"
@@ -491,9 +472,7 @@ class TestMetadataIntegration:
         assert "file_categories" in memory.metadata
         assert memory.metadata["file_categories"] == file_categories
 
-    def test_metadata_preserves_existing_fields(
-        self, git_sync_manager: GitSyncManager
-    ) -> None:
+    def test_metadata_preserves_existing_fields(self, git_sync_manager: GitSyncManager) -> None:
         """Test that new metadata fields don't break existing ones."""
         commit = Mock()
         commit.message = "feat: add feature"
@@ -510,17 +489,13 @@ class TestMetadataIntegration:
 
         with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
             with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(
-                    git_sync_manager, "_categorize_files", return_value={}
-                ):
+                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
                     memory = git_sync_manager._commit_to_memory(commit)
 
         # Verify all existing metadata fields are still present
         assert memory.metadata["commit_sha"] == "abc123def456"
         assert memory.metadata["commit_author"] == "Test Author <test@example.com>"
-        assert (
-            memory.metadata["commit_committer"] == "Test Committer <test@example.com>"
-        )
+        assert memory.metadata["commit_committer"] == "Test Committer <test@example.com>"
         assert "commit_timestamp" in memory.metadata
         assert memory.metadata["branch"] == "unknown"
         assert "changed_files" in memory.metadata
@@ -572,12 +547,8 @@ class TestMetadataIntegration:
             "config": ["config/auth.yaml"],
         }
 
-        with patch.object(
-            git_sync_manager, "_get_changed_files", return_value=changed_files
-        ):
-            with patch.object(
-                git_sync_manager, "_get_file_stats", return_value=file_stats
-            ):
+        with patch.object(git_sync_manager, "_get_changed_files", return_value=changed_files):
+            with patch.object(git_sync_manager, "_get_file_stats", return_value=file_stats):
                 with patch.object(
                     git_sync_manager,
                     "_categorize_files",

@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory import KuzuMemory, Memory, MemoryType
 from kuzu_memory.utils.exceptions import DatabaseError, ValidationError
 
@@ -169,9 +170,7 @@ class TestBatchOperations:
         """Test that batch operations update performance statistics correctly."""
         # Get initial stats
         initial_stats = kuzu_memory.get_statistics()
-        initial_generated = initial_stats["performance_stats"][
-            "total_memories_generated"
-        ]
+        initial_generated = initial_stats["performance_stats"]["total_memories_generated"]
         initial_recalled = initial_stats["performance_stats"]["total_memories_recalled"]
 
         # Store memories

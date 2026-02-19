@@ -58,9 +58,7 @@ class MemoryCache(ICache):
         # Track cached memory IDs for efficient cleanup
         self._cached_memory_ids: set[str] = set()
 
-    async def cache_memory(
-        self, memory: InternalMemory, ttl: timedelta | None = None
-    ) -> None:
+    async def cache_memory(self, memory: InternalMemory, ttl: timedelta | None = None) -> None:
         """
         Cache a memory with intelligent TTL based on importance.
 
@@ -210,9 +208,7 @@ class MemoryCache(ICache):
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in either cache."""
-        return await self._memory_cache.exists(key) or await self._query_cache.exists(
-            key
-        )
+        return await self._memory_cache.exists(key) or await self._query_cache.exists(key)
 
     async def clear(self) -> None:
         """Clear both caches."""
@@ -228,9 +224,7 @@ class MemoryCache(ICache):
         result.update(query_result)
         return result
 
-    async def set_multi(
-        self, items: dict[str, Any], ttl: timedelta | None = None
-    ) -> None:
+    async def set_multi(self, items: dict[str, Any], ttl: timedelta | None = None) -> None:
         """Set multiple values to appropriate caches."""
         for key, value in items.items():
             await self.set(key, value, ttl)

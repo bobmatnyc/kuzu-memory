@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from kuzu_memory.client import KuzuMemoryClient, create_client
 from kuzu_memory.core.models import Memory, MemoryType
 from kuzu_memory.utils.exceptions import ValidationError
@@ -41,9 +42,7 @@ class TestKuzuMemoryClientInitialization:
         assert not client.is_initialized
         assert client.db_path == temp_project_root / ".kuzu-memory" / "memories.db"
 
-    def test_client_with_custom_db_path(
-        self, temp_project_root: Path, temp_db_path: Path
-    ) -> None:
+    def test_client_with_custom_db_path(self, temp_project_root: Path, temp_db_path: Path) -> None:
         """Test client creation with custom database path."""
         client = KuzuMemoryClient(project_root=temp_project_root, db_path=temp_db_path)
 
@@ -51,9 +50,7 @@ class TestKuzuMemoryClientInitialization:
         assert client.db_path == temp_db_path
 
     @pytest.mark.asyncio
-    async def test_context_manager_initialization(
-        self, temp_project_root: Path
-    ) -> None:
+    async def test_context_manager_initialization(self, temp_project_root: Path) -> None:
         """Test async context manager properly initializes client."""
         async with KuzuMemoryClient(
             project_root=temp_project_root, enable_git_sync=False
@@ -75,9 +72,7 @@ class TestKuzuMemoryClientInitialization:
                 await client.__aenter__()
 
     @pytest.mark.asyncio
-    async def test_operation_without_initialization_raises(
-        self, temp_project_root: Path
-    ) -> None:
+    async def test_operation_without_initialization_raises(self, temp_project_root: Path) -> None:
         """Test that operations fail without initialization."""
         client = KuzuMemoryClient(project_root=temp_project_root)
 
@@ -391,9 +386,7 @@ class TestKuzuMemoryClientConvenience:
     @pytest.mark.asyncio
     async def test_create_client_function(self, temp_project_root: Path) -> None:
         """Test convenience create_client function."""
-        client = await create_client(
-            project_root=temp_project_root, enable_git_sync=False
-        )
+        client = await create_client(project_root=temp_project_root, enable_git_sync=False)
 
         try:
             assert client.is_initialized

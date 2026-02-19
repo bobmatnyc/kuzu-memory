@@ -1195,11 +1195,13 @@ def merge(
         result = source_conn.execute(source_query)
         # Convert result to list of dictionaries without polars
         source_memories_raw = []
-        column_names = result.get_column_names()
-        while result.has_next():
-            row = result.get_next()
-            row_dict = {column_names[i]: row[i] for i in range(len(column_names))}
-            source_memories_raw.append(row_dict)
+        # Handle single QueryResult (not a list)
+        if not isinstance(result, list):
+            column_names = result.get_column_names()
+            while result.has_next():
+                row_list: list[Any] = result.get_next()  # type: ignore[assignment]
+                row_dict = {str(column_names[i]): row_list[i] for i in range(len(column_names))}
+                source_memories_raw.append(row_dict)
 
         if len(source_memories_raw) == 0:
             rich_print("✅ Source database is empty, nothing to merge", style="green")

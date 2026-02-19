@@ -216,15 +216,11 @@ class TestClaudeDesktopToolExecution:
             assert stats_response is not None
 
             # Step 2: Recall recent memories
-            recall_response = await client.call_tool(
-                "kuzu_recall", {"query": "test", "limit": 5}
-            )
+            recall_response = await client.call_tool("kuzu_recall", {"query": "test", "limit": 5})
             assert recall_response is not None
 
             # Step 3: Get detailed stats
-            detailed_stats_response = await client.call_tool(
-                "kuzu_stats", {"detailed": True}
-            )
+            detailed_stats_response = await client.call_tool("kuzu_stats", {"detailed": True})
             assert detailed_stats_response is not None
 
         finally:
@@ -366,9 +362,7 @@ class TestClaudeDesktopConcurrentSessions:
         try:
             # Connect all clients
             connected_count = await concurrent_sim.connect_all()
-            assert (
-                connected_count >= 2
-            ), f"Only {connected_count}/{num_sessions} connected"
+            assert connected_count >= 2, f"Only {connected_count}/{num_sessions} connected"
 
             # Each session performs operations
             results = await concurrent_sim.concurrent_requests("ping", {})
@@ -404,9 +398,7 @@ class TestClaudeDesktopConcurrentSessions:
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            successful = sum(
-                1 for r in results if r is not None and not isinstance(r, Exception)
-            )
+            successful = sum(1 for r in results if r is not None and not isinstance(r, Exception))
             assert successful >= 2
 
         finally:
@@ -469,9 +461,7 @@ class TestClaudeDesktopRealWorldPatterns:
 
             for query in queries:
                 # Recall relevant context
-                recall = await client.call_tool(
-                    "kuzu_recall", {"query": query, "limit": 5}
-                )
+                recall = await client.call_tool("kuzu_recall", {"query": query, "limit": 5})
                 assert recall is not None
 
                 # Enhance with context
@@ -549,9 +539,7 @@ class TestClaudeDesktopRealWorldPatterns:
             assert "error" in error
 
             # Continue operation (error recovery)
-            success2 = await client.call_tool(
-                "kuzu_recall", {"query": "test", "limit": 5}
-            )
+            success2 = await client.call_tool("kuzu_recall", {"query": "test", "limit": 5})
             assert success2 is not None
 
             # Multiple operations after recovery

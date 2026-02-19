@@ -83,7 +83,7 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()  # type: ignore[misc]
+        @self.server.list_tools()
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
@@ -322,7 +322,7 @@ class KuzuMemoryMCPServer:
                 ),
             ]
 
-        @self.server.call_tool()  # type: ignore[misc]
+        @self.server.call_tool()
         async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
@@ -384,7 +384,7 @@ class KuzuMemoryMCPServer:
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()  # type: ignore[misc]
+        @self.server.list_resources()
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -396,7 +396,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()  # type: ignore[misc]
+        @self.server.list_resource_templates()
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [
@@ -1022,11 +1022,13 @@ class KuzuMemoryMCPServer:
 
             result = source_conn.execute(source_query)
             source_memories_raw = []
-            column_names = result.get_column_names()
-            while result.has_next():
-                row = result.get_next()
-                row_dict = {column_names[i]: row[i] for i in range(len(column_names))}
-                source_memories_raw.append(row_dict)
+            # Handle single QueryResult (not a list)
+            if not isinstance(result, list):
+                column_names = result.get_column_names()
+                while result.has_next():
+                    row_list: list[Any] = result.get_next()  # type: ignore[assignment]
+                    row_dict = {str(column_names[i]): row_list[i] for i in range(len(column_names))}
+                    source_memories_raw.append(row_dict)
 
             if len(source_memories_raw) == 0:
                 return json.dumps(

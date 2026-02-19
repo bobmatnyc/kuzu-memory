@@ -167,7 +167,9 @@ class TestToolCallLatency:
             args = (
                 {"query": "test", "limit": 5}
                 if tool_name == "recall"
-                else {"limit": 10} if tool_name == "recent" else {}
+                else {"limit": 10}
+                if tool_name == "recent"
+                else {}
             )
 
             start = time.perf_counter()
@@ -182,11 +184,7 @@ class TestToolCallLatency:
             status = (
                 "✓"
                 if latency < LATENCY_THRESHOLDS["tool_call"]["target"]
-                else (
-                    "⚠"
-                    if latency < LATENCY_THRESHOLDS["tool_call"]["critical"]
-                    else "✗"
-                )
+                else ("⚠" if latency < LATENCY_THRESHOLDS["tool_call"]["critical"] else "✗")
             )
             print(f"  {tool:15s}: {latency:6.2f}ms {status}")
 

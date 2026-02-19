@@ -160,9 +160,7 @@ class TestSessionLifecycle:
             await client.disconnect()
 
             # Verify cleanup - wait for process termination
-            terminated = await wait_for_process_termination(
-                client.process, max_wait=2.0
-            )
+            terminated = await wait_for_process_termination(client.process, max_wait=2.0)
             assert terminated, "Process did not terminate within 2s after disconnect"
 
         finally:
@@ -326,9 +324,7 @@ class TestConcurrentSessions:
             assert connected_count >= 3
 
             # Load test
-            results = await concurrent_sim.load_test(
-                requests_per_client=requests_per_client
-            )
+            results = await concurrent_sim.load_test(requests_per_client=requests_per_client)
 
             # Verify load handling
             assert results["total_requests"] >= requests_per_client * 3
@@ -449,12 +445,8 @@ class TestSessionCleanup:
 
             # Wait for process termination with timeout
             if client.process:
-                terminated = await wait_for_process_termination(
-                    client.process, max_wait=2.0
-                )
-                assert (
-                    terminated
-                ), "Process did not terminate within 2s after shutdown request"
+                terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+                assert terminated, "Process did not terminate within 2s after shutdown request"
 
         finally:
             if client.process and client.process.poll() is None:
@@ -477,12 +469,8 @@ class TestSessionCleanup:
             await client.disconnect()
 
             # Verify cleanup - wait for process termination
-            terminated = await wait_for_process_termination(
-                client.process, max_wait=2.0
-            )
-            assert (
-                terminated
-            ), "Process did not terminate within 2s after forced disconnect"
+            terminated = await wait_for_process_termination(client.process, max_wait=2.0)
+            assert terminated, "Process did not terminate within 2s after forced disconnect"
 
         finally:
             pass  # Already disconnected
@@ -519,8 +507,7 @@ class TestSessionCleanup:
         """Test cleanup of multiple sessions."""
         num_sessions = 3
         clients = [
-            MCPClientSimulator(project_root=project_root, timeout=10.0)
-            for _ in range(num_sessions)
+            MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_sessions)
         ]
 
         try:
@@ -535,9 +522,7 @@ class TestSessionCleanup:
 
             # Verify all cleaned up - wait for all processes to terminate
             for i, client in enumerate(clients):
-                terminated = await wait_for_process_termination(
-                    client.process, max_wait=2.0
-                )
+                terminated = await wait_for_process_termination(client.process, max_wait=2.0)
                 assert (
                     terminated
                 ), f"Client {i} process did not terminate within 2s after disconnect"

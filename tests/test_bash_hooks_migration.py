@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.migrations import MigrationManager
 from kuzu_memory.migrations.v1_7_0_bash_hooks import BashHooksMigration
 
@@ -107,9 +108,7 @@ def test_bash_hook_script_exists():
     if not bash_hooks_dir.exists():
         bash_hooks_dir = Path("src/kuzu_memory/hooks/bash")
 
-    assert (
-        bash_hooks_dir.exists()
-    ), f"Bash hooks directory not found at {bash_hooks_dir}"
+    assert bash_hooks_dir.exists(), f"Bash hooks directory not found at {bash_hooks_dir}"
 
     # Check for expected scripts
     expected_scripts = ["learn_hook.sh", "session_start_hook.sh", "enhance_hook.sh"]
@@ -143,12 +142,8 @@ def test_bash_hook_script_syntax():
         if script_path.exists():
             # Read script and check for shebang
             content = script_path.read_text()
-            assert content.startswith(
-                "#!/bin/bash"
-            ), f"Missing shebang in {script_name}"
-            assert (
-                "set -euo pipefail" in content
-            ), f"Missing safety flags in {script_name}"
+            assert content.startswith("#!/bin/bash"), f"Missing shebang in {script_name}"
+            assert "set -euo pipefail" in content, f"Missing safety flags in {script_name}"
 
 
 if __name__ == "__main__":

@@ -164,9 +164,7 @@ class InternalMemoryContext:
 
         # Calculate average confidence from memories
         if self.memories:
-            avg_confidence = sum(mem.confidence for mem in self.memories) / len(
-                self.memories
-            )
+            avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
             self.confidence = min(avg_confidence, self.confidence or 1.0)
 
     def to_system_message(self, format_style: str = "markdown") -> str:
@@ -212,17 +210,11 @@ class InternalMemoryContext:
         # Count by type
         type_counts: dict[str, int] = {}
         for mem in self.memories:
-            type_counts[mem.memory_type.value] = (
-                type_counts.get(mem.memory_type.value, 0) + 1
-            )
+            type_counts[mem.memory_type.value] = type_counts.get(mem.memory_type.value, 0) + 1
 
         # Calculate averages
-        avg_importance = sum(mem.importance for mem in self.memories) / len(
-            self.memories
-        )
-        avg_confidence = sum(mem.confidence for mem in self.memories) / len(
-            self.memories
-        )
+        avg_importance = sum(mem.importance for mem in self.memories) / len(self.memories)
+        avg_confidence = sum(mem.confidence for mem in self.memories) / len(self.memories)
 
         # Collect unique entities
         all_entities = set()

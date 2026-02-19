@@ -13,11 +13,13 @@ from typing import Any
 # Add src to path for testing (must be before other imports)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-import pytest
-import pytest_asyncio
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
 
-from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
-from kuzu_memory.mcp.testing.connection_tester import MCPConnectionTester
+from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer  # noqa: E402
+from kuzu_memory.mcp.testing.connection_tester import (  # noqa: E402
+    MCPConnectionTester,
+)
 
 
 @pytest.fixture
@@ -371,8 +373,7 @@ async def multiple_clients(project_root: Path):
 
     num_clients = 3
     clients = [
-        MCPClientSimulator(project_root=project_root, timeout=10.0)
-        for _ in range(num_clients)
+        MCPClientSimulator(project_root=project_root, timeout=10.0) for _ in range(num_clients)
     ]
 
     # Connect all
@@ -538,9 +539,7 @@ def concurrent_simulator(project_root: Path):
     """
     from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator
 
-    return ConcurrentClientSimulator(
-        num_clients=5, project_root=project_root, timeout=10.0
-    )
+    return ConcurrentClientSimulator(num_clients=5, project_root=project_root, timeout=10.0)
 
 
 # Pytest configuration for async tests

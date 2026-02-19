@@ -10,6 +10,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from kuzu_memory.core.models import ExtractedMemory, MemoryType
 from kuzu_memory.extraction.patterns import PatternExtractor, PatternMatch
 from kuzu_memory.utils.exceptions import ExtractionError
@@ -98,9 +99,7 @@ class TestPatternExtractor:
             found_content = any(
                 expected_content.lower() in m.content.lower() for m in semantic_memories
             )
-            assert (
-                found_content
-            ), f"Expected '{expected_content}' not found in extracted memories"
+            assert found_content, f"Expected '{expected_content}' not found in extracted memories"
 
     def test_preference_pattern_extraction(self, pattern_extractor):
         """Test extraction of preference-related memories."""
@@ -119,18 +118,13 @@ class TestPatternExtractor:
 
         for text, expected_content in test_cases:
             memories = pattern_extractor.extract_memories(text)
-            preference_memories = [
-                m for m in memories if m.memory_type == MemoryType.PREFERENCE
-            ]
+            preference_memories = [m for m in memories if m.memory_type == MemoryType.PREFERENCE]
 
-            assert (
-                len(preference_memories) > 0
-            ), f"No preference memory found for: {text}"
+            assert len(preference_memories) > 0, f"No preference memory found for: {text}"
 
             # Check content extraction
             found_content = any(
-                expected_content.lower() in m.content.lower()
-                for m in preference_memories
+                expected_content.lower() in m.content.lower() for m in preference_memories
             )
             assert found_content, f"Expected '{expected_content}' not found"
 
@@ -186,9 +180,7 @@ class TestPatternExtractor:
                 len(high_confidence_memories) > 0
             ), f"No high-confidence memory for correction: {text}"
 
-            found_content = any(
-                expected_content.lower() in m.content.lower() for m in memories
-            )
+            found_content = any(expected_content.lower() in m.content.lower() for m in memories)
             assert found_content, f"Expected '{expected_content}' not found"
 
     # Test Edge Cases and Error Handling
@@ -215,12 +207,8 @@ class TestPatternExtractor:
         assert len(memories) > 0
 
         # Should find semantic (facts/knowledge) and preference memories
-        semantic_memories = [
-            m for m in memories if m.memory_type == MemoryType.SEMANTIC
-        ]
-        preference_memories = [
-            m for m in memories if m.memory_type == MemoryType.PREFERENCE
-        ]
+        semantic_memories = [m for m in memories if m.memory_type == MemoryType.SEMANTIC]
+        preference_memories = [m for m in memories if m.memory_type == MemoryType.PREFERENCE]
 
         assert len(semantic_memories) > 0
         assert len(preference_memories) > 0
@@ -371,9 +359,7 @@ class TestPatternExtractor:
 
             # Should have at least one memory of the expected type
             type_memories = [m for m in memories if m.memory_type == expected_type]
-            assert (
-                len(type_memories) > 0
-            ), f"No {expected_type} memory found for: {text}"
+            assert len(type_memories) > 0, f"No {expected_type} memory found for: {text}"
 
     def test_confidence_score_assignment(self, pattern_extractor):
         """Test that confidence scores are properly assigned."""

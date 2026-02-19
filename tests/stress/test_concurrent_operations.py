@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory import KuzuMemory
 from kuzu_memory.core.models import MemoryType
 
@@ -278,10 +279,7 @@ class TestConcurrentOperations:
 
                 for i in range(num_operations):
                     try:
-                        content = (
-                            random.choice(contents)
-                            + f" Operation {i} by worker {worker_id}."
-                        )
+                        content = random.choice(contents) + f" Operation {i} by worker {worker_id}."
                         start_time = time.perf_counter()
                         memory_ids = memory.generate_memories(
                             content=content,
@@ -360,53 +358,31 @@ class TestConcurrentOperations:
             read_success_rate = len(successful_reads) / total_reads
             write_success_rate = len(successful_writes) / total_writes
 
-            assert (
-                read_success_rate > 0.95
-            ), f"Read success rate {read_success_rate:.1%} too low"
-            assert (
-                write_success_rate > 0.95
-            ), f"Write success rate {write_success_rate:.1%} too low"
+            assert read_success_rate > 0.95, f"Read success rate {read_success_rate:.1%} too low"
+            assert write_success_rate > 0.95, f"Write success rate {write_success_rate:.1%} too low"
 
             # Performance analysis
             if successful_reads:
-                avg_read_time = sum(r["time_ms"] for r in successful_reads) / len(
-                    successful_reads
-                )
+                avg_read_time = sum(r["time_ms"] for r in successful_reads) / len(successful_reads)
                 max_read_time = max(r["time_ms"] for r in successful_reads)
-                assert (
-                    avg_read_time < 150.0
-                ), f"Average read time {avg_read_time:.2f}ms too high"
-                assert (
-                    max_read_time < 800.0
-                ), f"Max read time {max_read_time:.2f}ms too high"
+                assert avg_read_time < 150.0, f"Average read time {avg_read_time:.2f}ms too high"
+                assert max_read_time < 800.0, f"Max read time {max_read_time:.2f}ms too high"
 
             if successful_writes:
                 avg_write_time = sum(r["time_ms"] for r in successful_writes) / len(
                     successful_writes
                 )
                 max_write_time = max(r["time_ms"] for r in successful_writes)
-                assert (
-                    avg_write_time < 300.0
-                ), f"Average write time {avg_write_time:.2f}ms too high"
-                assert (
-                    max_write_time < 1000.0
-                ), f"Max write time {max_write_time:.2f}ms too high"
+                assert avg_write_time < 300.0, f"Average write time {avg_write_time:.2f}ms too high"
+                assert max_write_time < 1000.0, f"Max write time {max_write_time:.2f}ms too high"
 
             print("Mixed Operations Performance:")
-            print(
-                f"  Read operations: {total_reads}, Success rate: {read_success_rate:.1%}"
-            )
-            print(
-                f"  Write operations: {total_writes}, Success rate: {write_success_rate:.1%}"
-            )
+            print(f"  Read operations: {total_reads}, Success rate: {read_success_rate:.1%}")
+            print(f"  Write operations: {total_writes}, Success rate: {write_success_rate:.1%}")
             if successful_reads:
-                print(
-                    f"  Read times - Avg: {avg_read_time:.2f}ms, Max: {max_read_time:.2f}ms"
-                )
+                print(f"  Read times - Avg: {avg_read_time:.2f}ms, Max: {max_read_time:.2f}ms")
             if successful_writes:
-                print(
-                    f"  Write times - Avg: {avg_write_time:.2f}ms, Max: {max_write_time:.2f}ms"
-                )
+                print(f"  Write times - Avg: {avg_write_time:.2f}ms, Max: {max_write_time:.2f}ms")
 
     def test_connection_pool_stress(self, temp_db_path, stress_config):
         """Test connection pool under stress conditions."""
@@ -427,9 +403,7 @@ class TestConcurrentOperations:
                         # Alternate between read and write operations
                         if op_id % 2 == 0:
                             # Write operation
-                            content = (
-                                f"Connection test {op_id} from worker {worker_id}."
-                            )
+                            content = f"Connection test {op_id} from worker {worker_id}."
                             start_time = time.perf_counter()
                             memory_ids = memory.generate_memories(
                                 content=content,
@@ -509,9 +483,7 @@ class TestConcurrentOperations:
                     except Exception as e:
                         pytest.fail(f"Worker failed with exception: {e}")
 
-                assert (
-                    completed == num_workers
-                ), f"Only {completed}/{num_workers} workers completed"
+                assert completed == num_workers, f"Only {completed}/{num_workers} workers completed"
 
             # Analyze connection pool performance
             all_results = []
@@ -525,20 +497,14 @@ class TestConcurrentOperations:
             total_operations = num_workers * operations_per_worker
             success_rate = len(successful_operations) / total_operations
 
-            assert (
-                success_rate > 0.90
-            ), f"Connection pool success rate {success_rate:.1%} too low"
-            assert (
-                len(failed_operations) < total_operations * 0.05
-            ), "Too many connection failures"
+            assert success_rate > 0.90, f"Connection pool success rate {success_rate:.1%} too low"
+            assert len(failed_operations) < total_operations * 0.05, "Too many connection failures"
 
             # Check for connection timeout or pool exhaustion errors
             timeout_errors = [
                 r for r in failed_operations if "timeout" in r.get("error", "").lower()
             ]
-            pool_errors = [
-                r for r in failed_operations if "pool" in r.get("error", "").lower()
-            ]
+            pool_errors = [r for r in failed_operations if "pool" in r.get("error", "").lower()]
 
             print("Connection Pool Stress Results:")
             print(f"  Total operations: {total_operations}")
@@ -591,14 +557,14 @@ class TestConcurrentOperations:
                 print(f"Testing with {target_count} memories...")
 
                 # Generate memories up to target count
-                current_count = len(
-                    [m for m in performance_results.keys() if m <= target_count]
-                )
+                current_count = len([m for m in performance_results.keys() if m <= target_count])
 
                 generation_times = []
                 successful_generations = 0
                 for i in range(current_count, target_count):
-                    content = f"{large_content_base} Memory entry number {i} with unique identifier."
+                    content = (
+                        f"{large_content_base} Memory entry number {i} with unique identifier."
+                    )
 
                     start_time = time.perf_counter()
                     memory_ids = memory.generate_memories(
@@ -636,9 +602,7 @@ class TestConcurrentOperations:
 
                 for query in recall_queries:
                     start_time = time.perf_counter()
-                    context = memory.attach_memories(
-                        prompt=query, user_id=user_id, max_memories=15
-                    )
+                    context = memory.attach_memories(prompt=query, user_id=user_id, max_memories=15)
                     end_time = time.perf_counter()
 
                     recall_time = (end_time - start_time) * 1000
@@ -652,14 +616,10 @@ class TestConcurrentOperations:
                     # Don't assert on memory count in stress tests - focus on performance
 
                 avg_generation_time = (
-                    sum(generation_times) / len(generation_times)
-                    if generation_times
-                    else 0
+                    sum(generation_times) / len(generation_times) if generation_times else 0
                 )
                 avg_recall_time = sum(recall_times) / len(recall_times)
-                avg_memories_returned = sum(memory_counts_returned) / len(
-                    memory_counts_returned
-                )
+                avg_memories_returned = sum(memory_counts_returned) / len(memory_counts_returned)
 
                 performance_results[target_count] = {
                     "avg_generation_time": avg_generation_time,
@@ -675,8 +635,7 @@ class TestConcurrentOperations:
             if performance_results:
                 sorted_counts = sorted(performance_results.keys())
                 recall_times_by_count = [
-                    performance_results[count]["avg_recall_time"]
-                    for count in sorted_counts
+                    performance_results[count]["avg_recall_time"] for count in sorted_counts
                 ]
 
                 # Compare first and last measurements to check for degradation
@@ -698,9 +657,7 @@ class TestConcurrentOperations:
                         )
 
                         print("Memory Pressure Analysis:")
-                        print(
-                            f"  Performance degradation ratio: {degradation_ratio:.1f}x"
-                        )
+                        print(f"  Performance degradation ratio: {degradation_ratio:.1f}x")
                         print(f"  First recall time: {first_recall:.2f}ms")
                         print(f"  Final recall time: {last_recall:.2f}ms")
                         print("  Memory pressure handled successfully")
@@ -708,9 +665,7 @@ class TestConcurrentOperations:
                         # All queries are very fast (likely cached or no data)
                         # Just verify no queries are unreasonably slow
                         max_recall = max(recall_times_by_count)
-                        assert (
-                            max_recall < 1000.0
-                        ), f"Max recall time {max_recall:.2f}ms too high"
+                        assert max_recall < 1000.0, f"Max recall time {max_recall:.2f}ms too high"
                         print("Memory Pressure Analysis:")
                         print("  All recall times very fast (< 1ms), likely cached")
                         print(f"  Max recall time: {max_recall:.2f}ms")

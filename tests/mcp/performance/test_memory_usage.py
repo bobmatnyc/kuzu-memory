@@ -149,7 +149,9 @@ class TestMemoryGrowth:
             args = (
                 {"query": "test", "limit": 5}
                 if tool == "recall"
-                else {"limit": 10} if tool == "recent" else {}
+                else {"limit": 10}
+                if tool == "recent"
+                else {}
             )
             await initialized_client.call_tool(tool, args)
 
@@ -345,12 +347,8 @@ class TestMemoryByToolType:
 
         print("\nMemory Usage by Tool Type:")
         for tool, mem in tool_memory.items():
-            print(
-                f"  {tool:15s}: {mem['total']:6.2f}MB total, {mem['per_op'] * 1000:6.2f}KB/op"
-            )
+            print(f"  {tool:15s}: {mem['total']:6.2f}MB total, {mem['per_op'] * 1000:6.2f}KB/op")
 
         # Each tool should have reasonable memory usage
         for tool, mem in tool_memory.items():
-            assert (
-                mem["per_op"] < 0.1
-            ), f"{tool} uses {mem['per_op']:.4f}MB per operation"
+            assert mem["per_op"] < 0.1, f"{tool} uses {mem['per_op']:.4f}MB per operation"

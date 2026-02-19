@@ -159,7 +159,7 @@ def rich_prompt(message: str, default: str | None = None) -> str:
             return cast(str, Prompt.ask(message, default=default, console=console))
         else:
             result = Prompt.ask(message, console=console)
-            return cast(str, result) if result else ""
+            return result if result else ""
     else:
         default_str = f" [{default}]" if default else ""
         response = input(f"{message}{default_str}: ").strip()

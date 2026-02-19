@@ -99,9 +99,7 @@ def show_clusters(
 
         db_path = get_project_db_path(project_root)
         if not db_path.exists():
-            rich_print(
-                "❌ Database not initialized. Run: kuzu-memory init", style="red"
-            )
+            rich_print("❌ Database not initialized. Run: kuzu-memory init", style="red")
             sys.exit(1)
 
         # Load config and create adapter
@@ -142,9 +140,7 @@ def show_clusters(
             )
             sys.exit(0)
 
-        rich_print(
-            f"✅ Found {len(candidates)} consolidation candidates", style="green"
-        )
+        rich_print(f"✅ Found {len(candidates)} consolidation candidates", style="green")
         rich_print("\n🔗 Clustering similar memories...", style="cyan")
 
         clusters = engine.cluster_memories(candidates)
@@ -168,9 +164,7 @@ def show_clusters(
             original_size = sum(len(m.content) for m in cluster.memories)
             summary_size = len(engine.create_summary(cluster))
             savings_bytes = original_size - summary_size
-            savings_pct = (
-                (savings_bytes / original_size * 100) if original_size > 0 else 0
-            )
+            savings_pct = (savings_bytes / original_size * 100) if original_size > 0 else 0
 
             rich_panel(
                 f"Cluster ID: {cluster.cluster_id}\n"
@@ -324,9 +318,7 @@ def run_consolidation(
 
         db_path = get_project_db_path(project_root)
         if not db_path.exists():
-            rich_print(
-                "❌ Database not initialized. Run: kuzu-memory init", style="red"
-            )
+            rich_print("❌ Database not initialized. Run: kuzu-memory init", style="red")
             sys.exit(1)
 
         # Load config and create adapter
@@ -349,9 +341,7 @@ def run_consolidation(
         )
 
         # Show mode
-        mode_text = (
-            "DRY RUN (no changes)" if is_dry_run else "EXECUTE (will apply changes)"
-        )
+        mode_text = "DRY RUN (no changes)" if is_dry_run else "EXECUTE (will apply changes)"
         mode_style = "yellow" if is_dry_run else "red"
 
         rich_panel(
@@ -412,9 +402,7 @@ def run_consolidation(
 
             # Show savings
             if result.memories_consolidated > 0:
-                reduction_count = (
-                    result.memories_consolidated - result.new_memories_created
-                )
+                reduction_count = result.memories_consolidated - result.new_memories_created
                 reduction_pct = (reduction_count / result.memories_consolidated) * 100
                 rich_print(
                     f"\n💾 Memory Reduction: {reduction_count} memories "

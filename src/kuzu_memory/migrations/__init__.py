@@ -59,23 +59,18 @@ def discover_migrations() -> list[type[Migration]]:
     for module_info in pkgutil.iter_modules([str(package_dir)]):
         if module_info.name.startswith("v"):  # Migration modules start with version
             try:
-                module = importlib.import_module(
-                    f".{module_info.name}", package=__package__
-                )
+                module = importlib.import_module(f".{module_info.name}", package=__package__)
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
                     if (
                         isinstance(attr, type)
                         and issubclass(attr, Migration)
-                        and attr.__name__
-                        not in base_class_names  # Skip only base classes
+                        and attr.__name__ not in base_class_names  # Skip only base classes
                     ):
                         migrations.append(attr)
                         logger.debug(f"Discovered migration: {attr.__name__}")
             except Exception as e:
-                logger.warning(
-                    f"Failed to import migration module {module_info.name}: {e}"
-                )
+                logger.warning(f"Failed to import migration module {module_info.name}: {e}")
 
     return migrations
 

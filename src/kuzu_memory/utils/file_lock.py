@@ -83,9 +83,7 @@ def try_lock_database(db_path: Path, timeout: float = 0.0) -> Iterator[bool]:
                         break
                     except OSError:
                         if time.time() - start_time > timeout:
-                            raise DatabaseBusyError(
-                                f"Database busy after {timeout}s: {db_path}"
-                            )
+                            raise DatabaseBusyError(f"Database busy after {timeout}s: {db_path}")
                         time.sleep(0.01)  # 10ms sleep between retries
         else:
             # Unix: use fcntl
@@ -105,9 +103,7 @@ def try_lock_database(db_path: Path, timeout: float = 0.0) -> Iterator[bool]:
                         break
                     except OSError:
                         if time.time() - start_time > timeout:
-                            raise DatabaseBusyError(
-                                f"Database busy after {timeout}s: {db_path}"
-                            )
+                            raise DatabaseBusyError(f"Database busy after {timeout}s: {db_path}")
                         time.sleep(0.01)  # 10ms sleep between retries
 
         logger.debug(f"Acquired lock on {db_path}")

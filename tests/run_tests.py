@@ -24,9 +24,7 @@ class TestRunner:
         self.results = {}
         self.failed_suites = []
 
-    def run_command(
-        self, cmd: list[str], description: str, timeout: int | None = None
-    ) -> bool:
+    def run_command(self, cmd: list[str], description: str, timeout: int | None = None) -> bool:
         """Run a command with enhanced error handling and reporting."""
         print(f"\n{'=' * 60}")
         print(f"🚀 Running: {description}")
@@ -36,9 +34,7 @@ class TestRunner:
         start_time = time.time()
 
         try:
-            result = subprocess.run(
-                cmd, check=True, capture_output=False, timeout=timeout
-            )
+            result = subprocess.run(cmd, check=True, capture_output=False, timeout=timeout)
 
             duration = time.time() - start_time
             print(f"✅ {description} completed successfully in {duration:.1f}s")
@@ -52,9 +48,7 @@ class TestRunner:
 
         except subprocess.CalledProcessError as e:
             duration = time.time() - start_time
-            print(
-                f"❌ {description} failed with exit code {e.returncode} after {duration:.1f}s"
-            )
+            print(f"❌ {description} failed with exit code {e.returncode} after {duration:.1f}s")
 
             self.results[description] = {
                 "status": "failed",
@@ -78,9 +72,7 @@ class TestRunner:
 
         except FileNotFoundError:
             print(f"❌ Command not found: {cmd[0]}")
-            print(
-                "💡 Make sure pytest is installed: pip install -r requirements-dev.txt"
-            )
+            print("💡 Make sure pytest is installed: pip install -r requirements-dev.txt")
 
             self.results[description] = {
                 "status": "command_not_found",
@@ -165,9 +157,7 @@ class TestRunner:
         else:
             return []
 
-    def run_test_suite(
-        self, test_path: str, description: str, timeout: int, args
-    ) -> bool:
+    def run_test_suite(self, test_path: str, description: str, timeout: int, args) -> bool:
         """Run a single test suite."""
         if not Path(test_path).exists():
             print(f"⏭️  Skipping {description} - directory not found: {test_path}")
@@ -184,9 +174,7 @@ class TestRunner:
         print("📊 TEST EXECUTION SUMMARY")
         print("=" * 60)
 
-        success_count = sum(
-            1 for r in self.results.values() if r["status"] == "success"
-        )
+        success_count = sum(1 for r in self.results.values() if r["status"] == "success")
         total_count = len(self.results)
 
         print(f"⏱️  Total Duration: {total_duration:.1f}s")
@@ -247,9 +235,7 @@ Examples:
         action="store_true",
         help="Verbose output with detailed test information",
     )
-    parser.add_argument(
-        "--coverage", action="store_true", help="Run with coverage reporting"
-    )
+    parser.add_argument("--coverage", action="store_true", help="Run with coverage reporting")
     parser.add_argument(
         "--fast",
         action="store_true",
@@ -261,15 +247,9 @@ Examples:
         type=int,
         help="Number of parallel workers for test execution",
     )
-    parser.add_argument(
-        "--markers", "-m", help="Run tests matching given mark expression"
-    )
-    parser.add_argument(
-        "--timeout", type=int, help="Timeout for individual tests in seconds"
-    )
-    parser.add_argument(
-        "--fail-fast", "-x", action="store_true", help="Stop on first failure"
-    )
+    parser.add_argument("--markers", "-m", help="Run tests matching given mark expression")
+    parser.add_argument("--timeout", type=int, help="Timeout for individual tests in seconds")
+    parser.add_argument("--fail-fast", "-x", action="store_true", help="Stop on first failure")
 
     args = parser.parse_args()
 

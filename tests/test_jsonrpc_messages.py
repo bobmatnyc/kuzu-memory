@@ -9,7 +9,11 @@ import sys
 # Add src to path (must be before other imports)
 sys.path.insert(0, "src")
 
-from kuzu_memory.mcp.protocol import JSONRPCError, JSONRPCErrorCode, JSONRPCMessage
+from kuzu_memory.mcp.protocol import (  # noqa: E402
+    JSONRPCError,
+    JSONRPCErrorCode,
+    JSONRPCMessage,
+)
 
 
 def test_message_formatting():
@@ -50,12 +54,8 @@ def test_message_formatting():
     print("\n5. Check notification detection:")
     msg_with_id = {"jsonrpc": "2.0", "method": "test", "id": 1}
     msg_no_id = {"jsonrpc": "2.0", "method": "test"}
-    print(
-        f"  Message with ID is notification: {JSONRPCMessage.is_notification(msg_with_id)}"
-    )
-    print(
-        f"  Message without ID is notification: {JSONRPCMessage.is_notification(msg_no_id)}"
-    )
+    print(f"  Message with ID is notification: {JSONRPCMessage.is_notification(msg_with_id)}")
+    print(f"  Message without ID is notification: {JSONRPCMessage.is_notification(msg_no_id)}")
 
     # Test 6: Parse invalid JSON-RPC version
     print("\n6. Parse invalid version:")

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.migrations import (
     CleanupMigration,
     ConfigMigration,
@@ -105,9 +106,7 @@ def test_migration_priority_ordering():
     # If we have multiple migrations, they should be sorted by priority
     if len(pending) > 1:
         priorities = [m.priority for m in pending]
-        assert priorities == sorted(
-            priorities
-        ), "Migrations should be sorted by priority"
+        assert priorities == sorted(priorities), "Migrations should be sorted by priority"
 
 
 def test_config_migration_base_class(tmp_path: Path):
@@ -214,9 +213,7 @@ def test_migration_type_filtering():
     )
 
     # If we have cleanup migrations, they should be in results
-    cleanup_count = sum(
-        1 for m in pending_all if m.migration_type == MigrationType.CLEANUP
-    )
+    cleanup_count = sum(1 for m in pending_all if m.migration_type == MigrationType.CLEANUP)
 
     if cleanup_count > 0:
         assert len(results) <= cleanup_count

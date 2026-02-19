@@ -72,9 +72,7 @@ class TestFindLastAssistantMessage:
         message = {
             "message": {
                 "role": "assistant",
-                "content": [
-                    {"type": "text", "text": "Line 1\r\nLine 2\rLine 3\nLine 4"}
-                ],
+                "content": [{"type": "text", "text": "Line 1\r\nLine 2\rLine 3\nLine 4"}],
             }
         }
 
@@ -245,9 +243,7 @@ class TestFindLastAssistantMessage:
                     {
                         "message": {
                             "role": "assistant",
-                            "content": [
-                                {"type": "text", "text": "Valid message\r\nwith CR"}
-                            ],
+                            "content": [{"type": "text", "text": "Valid message\r\nwith CR"}],
                         }
                     }
                 )
@@ -294,6 +290,7 @@ class TestHooksLearnAsync:
         """Test that hooks learn command has --sync flag option."""
         # Verify the command structure includes the --sync flag
         from click.testing import CliRunner
+
         from kuzu_memory.cli.hooks_commands import hooks_group
 
         runner = CliRunner()

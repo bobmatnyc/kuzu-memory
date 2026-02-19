@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+
 from kuzu_memory.monitoring.access_tracker import AccessTracker, get_access_tracker
 
 

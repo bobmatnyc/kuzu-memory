@@ -120,12 +120,8 @@ class BashHooksMigration(HooksMigration):
                     #     changes.append(f"Migrated enhance hook in {settings_path.name}")
 
                     elif "kuzu-memory hooks session-start" in cmd:
-                        hook["command"] = self._get_bash_hook_path(
-                            "session_start_hook.sh"
-                        )
-                        changes.append(
-                            f"Migrated session-start hook in {settings_path.name}"
-                        )
+                        hook["command"] = self._get_bash_hook_path("session_start_hook.sh")
+                        changes.append(f"Migrated session-start hook in {settings_path.name}")
                         logger.info(f"Migrated session-start hook in {settings_path}")
 
             if changes:

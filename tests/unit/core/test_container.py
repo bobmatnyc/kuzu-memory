@@ -16,6 +16,7 @@ Related Task: 1M-419 (Write Integration Tests)
 from typing import Protocol
 
 import pytest
+
 from kuzu_memory.core.container import (
     DependencyContainer,
     get_container,
@@ -27,19 +28,22 @@ from kuzu_memory.core.container import (
 class ITestService(Protocol):
     """Test service interface."""
 
-    def get_value(self) -> str: ...
+    def get_value(self) -> str:
+        ...
 
 
 class IConfigService(Protocol):
     """Test config service interface."""
 
-    def get_config(self) -> dict: ...
+    def get_config(self) -> dict:
+        ...
 
 
 class IDependentService(Protocol):
     """Service that depends on other services."""
 
-    def get_dependency(self) -> ITestService: ...
+    def get_dependency(self) -> ITestService:
+        ...
 
 
 # Test service implementations
@@ -168,9 +172,7 @@ def test_dependency_with_default_parameter():
     """Test dependency injection with default parameter values."""
     container = DependencyContainer()
     container.register_service(ITestService, TestServiceImpl, singleton=True)
-    container.register_service(
-        ServiceWithDefaultParam, ServiceWithDefaultParam, singleton=False
-    )
+    container.register_service(ServiceWithDefaultParam, ServiceWithDefaultParam, singleton=False)
 
     service = container.resolve(ServiceWithDefaultParam)
 
@@ -392,9 +394,7 @@ def test_dependency_injection_with_no_annotations():
             self.value = value
 
     container = DependencyContainer()
-    container.register_service(
-        ServiceWithDefaults, ServiceWithDefaults, singleton=False
-    )
+    container.register_service(ServiceWithDefaults, ServiceWithDefaults, singleton=False)
 
     service = container.resolve(ServiceWithDefaults)
     assert service.value == "default"

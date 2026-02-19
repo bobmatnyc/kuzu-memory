@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.mcp.run_server import MCPProtocolHandler
 from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer
 
@@ -33,9 +34,7 @@ async def test_protocol_version_2025_06_18():
     assert response is not None, "Response should not be None"
     assert response.get("jsonrpc") == "2.0", "Should have JSON-RPC 2.0"
     assert "result" in response, "Should have result field"
-    assert (
-        response["result"]["protocolVersion"] == "2025-06-18"
-    ), "Should echo back 2025-06-18"
+    assert response["result"]["protocolVersion"] == "2025-06-18", "Should echo back 2025-06-18"
     assert "capabilities" in response["result"], "Should have capabilities"
     assert "serverInfo" in response["result"], "Should have serverInfo"
 
@@ -57,9 +56,7 @@ async def test_protocol_version_backward_compatibility():
     response = await handler.handle_request(request)
 
     assert response is not None, "Response should not be None"
-    assert (
-        response["result"]["protocolVersion"] == "2024-11-05"
-    ), "Should support legacy 2024-11-05"
+    assert response["result"]["protocolVersion"] == "2024-11-05", "Should support legacy 2024-11-05"
 
 
 @pytest.mark.asyncio
@@ -142,6 +139,4 @@ async def test_full_handshake_with_claude_code_version():
         "kuzu_stats",
     ]
     for expected_tool in expected_tools:
-        assert (
-            expected_tool in tool_names
-        ), f"Should have {expected_tool} tool available"
+        assert expected_tool in tool_names, f"Should have {expected_tool} tool available"

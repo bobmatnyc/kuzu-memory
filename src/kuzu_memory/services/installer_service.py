@@ -137,9 +137,7 @@ class InstallerService(BaseService):
                 self.logger.error(f"Unknown integration: {integration}")
                 return False
 
-            result = installer.install(
-                force=force, dry_run=dry_run, verbose=verbose, **kwargs
-            )
+            result = installer.install(force=force, dry_run=dry_run, verbose=verbose, **kwargs)
 
             # BaseInstaller.install returns InstallationResult
             # Extract success from result
@@ -245,9 +243,7 @@ class InstallerService(BaseService):
             # Save if fixes were applied
             if fixes:
                 save_json_config(global_config_path, fixed_config)
-                self.logger.info(
-                    f"Successfully repaired MCP config with {len(fixes)} fix(es)"
-                )
+                self.logger.info(f"Successfully repaired MCP config with {len(fixes)} fix(es)")
                 for fix in fixes:
                     self.logger.debug(f"  - {fix}")
                 return True

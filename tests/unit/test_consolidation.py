@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+
 from kuzu_memory.core.models import Memory, MemoryType
 from kuzu_memory.nlp.consolidation import (
     ConsolidationEngine,
@@ -192,9 +193,7 @@ class TestConsolidationEngine:
         store_memory(db_adapter, eligible)
 
         # Store ineligible type (SEMANTIC)
-        ineligible = create_old_memory(
-            "Ineligible memory", memory_type=MemoryType.SEMANTIC
-        )
+        ineligible = create_old_memory("Ineligible memory", memory_type=MemoryType.SEMANTIC)
         store_memory(db_adapter, ineligible)
 
         candidates = consolidation_engine.find_candidates()
@@ -203,9 +202,7 @@ class TestConsolidationEngine:
         assert candidates[0].id == eligible.id
         assert candidates[0].memory_type == MemoryType.EPISODIC
 
-    def test_cluster_memories_empty_list(
-        self, consolidation_engine: ConsolidationEngine
-    ) -> None:
+    def test_cluster_memories_empty_list(self, consolidation_engine: ConsolidationEngine) -> None:
         """Test clustering with empty candidate list."""
         clusters = consolidation_engine.cluster_memories([])
         assert clusters == []
@@ -220,25 +217,17 @@ class TestConsolidationEngine:
         # Single memory cannot form a cluster (MIN_CLUSTER_SIZE = 2)
         assert len(clusters) == 0
 
-    def test_cluster_memories_similar_pair(
-        self, consolidation_engine: ConsolidationEngine
-    ) -> None:
+    def test_cluster_memories_similar_pair(self, consolidation_engine: ConsolidationEngine) -> None:
         """Test clustering with two similar memories."""
-        memory1 = create_old_memory(
-            "Python is a programming language for backend development"
-        )
-        memory2 = create_old_memory(
-            "Python is a programming language used for backend work"
-        )
+        memory1 = create_old_memory("Python is a programming language for backend development")
+        memory2 = create_old_memory("Python is a programming language used for backend work")
 
         clusters = consolidation_engine.cluster_memories([memory1, memory2])
 
         assert len(clusters) == 1
         cluster = clusters[0]
         assert len(cluster.memories) == 2
-        assert (
-            cluster.centroid_memory == memory1
-        )  # First in list with same access count
+        assert cluster.centroid_memory == memory1  # First in list with same access count
         assert cluster.avg_similarity >= 0.70
 
     def test_cluster_memories_dissimilar_pair(
@@ -263,9 +252,7 @@ class TestConsolidationEngine:
 
         # Cluster 2: JavaScript-related (more dissimilar)
         js1 = create_old_memory("JavaScript is the language for browser scripting")
-        js2 = create_old_memory(
-            "JavaScript powers dynamic web pages and client-side logic"
-        )
+        js2 = create_old_memory("JavaScript powers dynamic web pages and client-side logic")
 
         clusters = consolidation_engine.cluster_memories([python1, python2, js1, js2])
 
@@ -277,9 +264,7 @@ class TestConsolidationEngine:
         assert python_cluster is not None
         assert python2 in python_cluster.memories
 
-    def test_create_summary_single_memory(
-        self, consolidation_engine: ConsolidationEngine
-    ) -> None:
+    def test_create_summary_single_memory(self, consolidation_engine: ConsolidationEngine) -> None:
         """Test summary creation with single memory cluster."""
         memory = create_old_memory("Single memory content")
         cluster = MemoryCluster(
@@ -352,15 +337,9 @@ class TestConsolidationEngine:
     ) -> None:
         """Test consolidation workflow identifies clusters."""
         # Store similar memories with high similarity
-        memory1 = create_old_memory(
-            "Python programming language for software development"
-        )
-        memory2 = create_old_memory(
-            "Python programming language for software development projects"
-        )
-        memory3 = create_old_memory(
-            "Python programming language used in software development"
-        )
+        memory1 = create_old_memory("Python programming language for software development")
+        memory2 = create_old_memory("Python programming language for software development projects")
+        memory3 = create_old_memory("Python programming language used in software development")
         store_memory(db_adapter, memory1)
         store_memory(db_adapter, memory2)
         store_memory(db_adapter, memory3)

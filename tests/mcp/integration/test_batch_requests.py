@@ -146,9 +146,7 @@ class TestBatchRequests:
             await client.initialize()
 
             # Large batch (20 requests)
-            batch = [
-                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)
-            ]
+            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 21)]
 
             responses = await client.send_batch(batch)
 
@@ -178,17 +176,11 @@ class TestBatchRequests:
             responses = await client.send_batch(batch)
 
             # Per JSON-RPC 2.0, server must respond to empty batch with error
-            assert (
-                responses is not None
-            ), "Server should respond to empty batch with error"
+            assert responses is not None, "Server should respond to empty batch with error"
 
             # Should be a list with one error response
-            assert isinstance(
-                responses, list
-            ), f"Expected list response, got {type(responses)}"
-            assert (
-                len(responses) == 1
-            ), f"Expected 1 error response, got {len(responses)}"
+            assert isinstance(responses, list), f"Expected list response, got {type(responses)}"
+            assert len(responses) == 1, f"Expected 1 error response, got {len(responses)}"
 
             # Verify it's an error response with proper structure
             error_response = responses[0]
@@ -338,9 +330,7 @@ class TestBatchErrorScenarios:
             await client.initialize()
 
             # Large batch that might timeout
-            batch = [
-                {"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)
-            ]
+            batch = [{"jsonrpc": "2.0", "method": "ping", "id": i} for i in range(1, 31)]
 
             responses = await client.send_batch(batch)
 

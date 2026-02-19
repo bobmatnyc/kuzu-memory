@@ -123,9 +123,7 @@ class KuzuMemoryClient:
         """
         self._project_root = Path(project_root)
         self._db_path = (
-            Path(db_path)
-            if db_path
-            else self._project_root / ".kuzu-memory" / "memories.db"
+            Path(db_path) if db_path else self._project_root / ".kuzu-memory" / "memories.db"
         )
         self._enable_git_sync = enable_git_sync
         self._auto_sync = auto_sync

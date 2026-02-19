@@ -26,9 +26,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
-@click.option(
-    "--config-path", type=click.Path(), help="Path to save example configuration"
-)
+@click.option("--config-path", type=click.Path(), help="Path to save example configuration")
 @click.option("--project-root", type=click.Path(), help="Project root path (optional)")
 @click.pass_context
 def init(
@@ -81,9 +79,7 @@ def init(
 
             # Check if already initialized
             if db_path.exists() and not force:
-                rich_print(
-                    f"⚠️  Project already initialized at {memories_dir}", style="yellow"
-                )
+                rich_print(f"⚠️  Project already initialized at {memories_dir}", style="yellow")
                 rich_print("   Use --force to overwrite existing memories", style="dim")
                 sys.exit(1)
 
@@ -139,9 +135,7 @@ def init(
 
             except Exception as e:
                 # Verification failure is non-critical, log warning
-                rich_print(
-                    f"  ⚠️  Optimization verification skipped: {e}", style="yellow"
-                )
+                rich_print(f"  ⚠️  Optimization verification skipped: {e}", style="yellow")
 
             # Create example config if requested
             if config_path:
@@ -164,9 +158,7 @@ def init(
 
                 if auggie.is_auggie_project():
                     rich_print("\n🤖 Auggie project detected!")
-                    if rich_confirm(
-                        "Would you like to set up Auggie integration?", default=True
-                    ):
+                    if rich_confirm("Would you like to set up Auggie integration?", default=True):
                         try:
                             auggie.setup_project_integration()
                             rich_print("✅ Auggie integration configured")

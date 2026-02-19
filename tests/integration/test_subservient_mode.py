@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from kuzu_memory.installers.claude_hooks import ClaudeHooksInstaller
 from kuzu_memory.utils.subservient import create_subservient_config
 
@@ -29,9 +30,7 @@ def clean_env(monkeypatch):
 class TestClaudeHooksInstallerSubservient:
     """Test ClaudeHooksInstaller respects subservient mode."""
 
-    def test_installer_skips_in_subservient_mode_via_env(
-        self, test_project: Path, monkeypatch
-    ):
+    def test_installer_skips_in_subservient_mode_via_env(self, test_project: Path, monkeypatch):
         """Test that installer skips installation when env var is set."""
         monkeypatch.setenv("KUZU_MEMORY_MODE", "subservient")
 
@@ -44,9 +43,7 @@ class TestClaudeHooksInstallerSubservient:
         assert len(result.warnings) > 0
         assert "subservient mode" in result.warnings[0].lower()
 
-    def test_installer_skips_in_subservient_mode_via_config(
-        self, test_project: Path, clean_env
-    ):
+    def test_installer_skips_in_subservient_mode_via_config(self, test_project: Path, clean_env):
         """Test that installer skips installation when config file exists."""
         create_subservient_config(test_project, managed_by="claude-mpm")
 
@@ -71,9 +68,7 @@ class TestClaudeHooksInstallerSubservient:
             # Should fail with prerequisite error, not subservient mode skip
             assert "subservient" not in str(e).lower()
 
-    def test_installer_force_flag_ignored_in_subservient(
-        self, test_project: Path, monkeypatch
-    ):
+    def test_installer_force_flag_ignored_in_subservient(self, test_project: Path, monkeypatch):
         """Test that force flag doesn't override subservient mode."""
         monkeypatch.setenv("KUZU_MEMORY_MODE", "subservient")
 
@@ -85,9 +80,7 @@ class TestClaudeHooksInstallerSubservient:
         assert "subservient mode" in result.message.lower()
         assert len(result.files_created) == 0
 
-    def test_installer_dry_run_respects_subservient(
-        self, test_project: Path, monkeypatch
-    ):
+    def test_installer_dry_run_respects_subservient(self, test_project: Path, monkeypatch):
         """Test that dry run mode still respects subservient mode."""
         monkeypatch.setenv("KUZU_MEMORY_MODE", "subservient")
 
@@ -114,9 +107,7 @@ class TestSubservientModeEdgeCases:
         assert result.success is True
         assert "subservient mode" in result.message.lower()
 
-    def test_corrupted_config_file_treated_as_normal_mode(
-        self, test_project: Path, clean_env
-    ):
+    def test_corrupted_config_file_treated_as_normal_mode(self, test_project: Path, clean_env):
         """Test that corrupted config file doesn't prevent installation."""
         # Create corrupted config
         config_path = test_project / ".kuzu-memory-config"
@@ -189,9 +180,7 @@ class TestSubservientModeMessages:
             result = installer.install(force=False, dry_run=True)
             if result.success:
                 # Should not have subservient mode warnings
-                subservient_warnings = [
-                    w for w in result.warnings if "subservient" in w.lower()
-                ]
+                subservient_warnings = [w for w in result.warnings if "subservient" in w.lower()]
                 assert len(subservient_warnings) == 0
         except Exception:
             # May fail for prerequisites, that's OK

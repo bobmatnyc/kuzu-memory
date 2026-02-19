@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+
 from kuzu_memory.utils.subservient import (
     create_subservient_config,
     get_subservient_config,
@@ -120,9 +121,7 @@ class TestGetSubservientConfig:
     def test_valid_config_subservient(self, mock_project_root: Path):
         """Test parsing valid subservient config."""
         config_path = mock_project_root / ".kuzu-memory-config"
-        config_path.write_text(
-            "mode: subservient\nmanaged_by: claude-mpm\nversion: '1.0'\n"
-        )
+        config_path.write_text("mode: subservient\nmanaged_by: claude-mpm\nversion: '1.0'\n")
 
         result = get_subservient_config(mock_project_root)
         assert result is not None
@@ -203,9 +202,7 @@ class TestCreateSubservientConfig:
 
     def test_create_config_custom_managed_by(self, mock_project_root: Path):
         """Test creating config with custom managed_by."""
-        config_path = create_subservient_config(
-            mock_project_root, managed_by="claude-mpm"
-        )
+        config_path = create_subservient_config(mock_project_root, managed_by="claude-mpm")
 
         with open(config_path) as f:
             config = yaml.safe_load(f)
@@ -218,9 +215,7 @@ class TestCreateSubservientConfig:
         create_subservient_config(mock_project_root, managed_by="old-framework")
 
         # Overwrite with new config
-        config_path = create_subservient_config(
-            mock_project_root, managed_by="new-framework"
-        )
+        config_path = create_subservient_config(mock_project_root, managed_by="new-framework")
 
         with open(config_path) as f:
             config = yaml.safe_load(f)

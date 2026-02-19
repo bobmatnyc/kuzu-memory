@@ -612,11 +612,12 @@ class MCPHealthChecker:
 
         return metrics
 
-    async def _collect_resource_metrics(self) -> ResourceMetrics:
+    async def _collect_resource_metrics(self) -> ResourceMetrics:  # type: ignore[no-untyped-def]
         """Collect resource usage metrics."""
         metrics = ResourceMetrics()
 
-        if psutil is None:
+        # psutil is optional dependency - can be None at runtime
+        if psutil is None:  # pragma: no cover
             logger.warning("psutil not available, skipping resource metrics")
             return metrics
 

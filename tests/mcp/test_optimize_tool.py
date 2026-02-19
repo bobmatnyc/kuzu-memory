@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from kuzu_memory.core.models import Memory, MemoryType
 from kuzu_memory.mcp.server import KuzuMemoryMCPServer
 
@@ -106,9 +107,7 @@ class TestOptimizeTopAccessed:
             ),
             patch("kuzu_memory.monitoring.access_tracker.get_access_tracker"),
         ):
-            result_json = await mcp_server._optimize(
-                "top_accessed", limit=10, dry_run=True
-            )
+            result_json = await mcp_server._optimize("top_accessed", limit=10, dry_run=True)
             result = json.loads(result_json)
 
             assert result["status"] == "completed"
@@ -163,9 +162,7 @@ class TestOptimizeStaleCleanup:
                 return_value=mock_pruning,
             ),
         ):
-            result_json = await mcp_server._optimize(
-                "stale_cleanup", limit=10, dry_run=True
-            )
+            result_json = await mcp_server._optimize("stale_cleanup", limit=10, dry_run=True)
             result = json.loads(result_json)
 
             assert result["status"] == "completed"
@@ -209,9 +206,7 @@ class TestOptimizeConsolidateSimilar:
                 return_value=mock_consolidation,
             ),
         ):
-            result_json = await mcp_server._optimize(
-                "consolidate_similar", limit=10, dry_run=True
-            )
+            result_json = await mcp_server._optimize("consolidate_similar", limit=10, dry_run=True)
             result = json.loads(result_json)
 
             assert result["status"] == "completed"
@@ -225,9 +220,7 @@ class TestOptimizeErrorHandling:
     """Test error handling in optimize tool."""
 
     @pytest.mark.asyncio
-    async def test_missing_database(
-        self, tmp_path: Path, mcp_server: KuzuMemoryMCPServer
-    ) -> None:
+    async def test_missing_database(self, tmp_path: Path, mcp_server: KuzuMemoryMCPServer) -> None:
         """Test error when database doesn't exist."""
         # Create server with non-existent database
         empty_project = tmp_path / "empty_project"
@@ -252,9 +245,7 @@ class TestOptimizeErrorHandling:
             ),
             patch("kuzu_memory.monitoring.access_tracker.get_access_tracker"),
         ):
-            result_json = await mcp_server._optimize(
-                "invalid_strategy", limit=10, dry_run=True
-            )
+            result_json = await mcp_server._optimize("invalid_strategy", limit=10, dry_run=True)
             result = json.loads(result_json)
 
             assert result["status"] == "error"

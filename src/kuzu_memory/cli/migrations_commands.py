@@ -73,9 +73,7 @@ def migrations_run(dry_run: bool, migration_type: str | None) -> None:
         rich_print("[yellow](dry run - no changes will be made)[/yellow]")
     rich_print("")
 
-    results = manager.run_migrations(
-        __version__, dry_run=dry_run, migration_types=types
-    )
+    results = manager.run_migrations(__version__, dry_run=dry_run, migration_types=types)
 
     if not results:
         rich_print("[green]✓ No migrations needed[/green]")

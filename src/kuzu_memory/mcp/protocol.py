@@ -183,15 +183,13 @@ class JSONRPCProtocol:
     def __init__(self) -> None:
         """Initialize JSON-RPC protocol handler."""
         # Ensure text mode for stdin/stdout
-        if isinstance(sys.stdin, io.BufferedReader):  # type: ignore[unreachable]
-            self.reader = io.TextIOWrapper(sys.stdin, encoding="utf-8")  # type: ignore[unreachable]
+        if isinstance(sys.stdin, io.BufferedReader):
+            self.reader = io.TextIOWrapper(sys.stdin, encoding="utf-8")
         else:
             self.reader = sys.stdin
 
-        if isinstance(sys.stdout, io.BufferedWriter):  # type: ignore[unreachable]
-            self.writer = io.TextIOWrapper(  # type: ignore[unreachable]
-                sys.stdout, encoding="utf-8", line_buffering=True
-            )
+        if isinstance(sys.stdout, io.BufferedWriter):
+            self.writer = io.TextIOWrapper(sys.stdout, encoding="utf-8", line_buffering=True)
         else:
             self.writer = sys.stdout
 
