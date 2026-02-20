@@ -7,10 +7,39 @@ This document describes the release process for kuzu-memory.
 Before publishing, ensure you have:
 
 1. **PyPI API Token**: Stored in `.env.local` as `PYPI_API_KEY`
-2. **GitHub CLI**: Installed and authenticated (`gh auth status`)
-3. **Clean Repository**: No uncommitted changes
+   ```bash
+   # Create .env.local with your PyPI token
+   cat > .env.local <<EOF
+   PYPI_API_KEY=pypi-YOUR_TOKEN_HERE
+   GITHUB_TOKEN=ghp_YOUR_TOKEN_HERE  # Optional, for GitHub operations
+   EOF
+   ```
+   Get a PyPI token from: https://pypi.org/manage/account/token/
+
+2. **GitHub CLI**: Installed and authenticated with `workflow` scope
+   ```bash
+   # Check authentication status
+   gh auth status
+
+   # If not authenticated or missing workflow scope, run:
+   gh auth refresh -s workflow
+   ```
+
+3. **Clean Repository**: No uncommitted changes (except `uv.lock` which is auto-handled)
+   ```bash
+   git status  # Should show clean or only uv.lock
+   ```
+
 4. **Main Branch**: Currently on the `main` branch
-5. **All Tests Passing**: Run `make pre-publish` to verify
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+5. **All Tests Passing**: Run quality checks before publishing
+   ```bash
+   make quality test  # Or use make pre-publish if available
+   ```
 
 ## Quick Start
 
@@ -28,6 +57,74 @@ The simplest way to publish a new release:
 
 # Skip tests (use with caution)
 ./scripts/publish.sh patch --no-test
+```
+
+## Complete Publishing Flow
+
+```
+make publish-patch
+    ↓
+./scripts/publish.sh patch
+    ↓
+┌─────────────────────────────────────────┐
+│ 1. Validate Environment                 │
+│    - Check .env.local (PYPI_API_KEY)   │
+│    - Verify main branch                 │
+│    - Check working directory clean      │
+│    - Confirm tools installed (uv, gh)   │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 2. Bump Version                         │
+│    - Run manage_version.py bump patch   │
+│    - Update VERSION, pyproject.toml,    │
+│      __version__.py, CHANGELOG.md       │
+│    - Sync uv.lock if needed             │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 3. Build Package                        │
+│    - Clean old dist/ artifacts          │
+│    - Run uv build                       │
+│    - Verify .tar.gz and .whl created    │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 4. Run Sanity Tests (Optional)          │
+│    - pytest tests/unit/ -q --tb=no     │
+│    - Skip with --no-test flag           │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 5. Commit & Tag                         │
+│    - git add VERSION pyproject.toml ... │
+│    - git commit --no-verify (skip hooks)│
+│    - git tag vX.Y.Z                     │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 6. Push to GitHub                       │
+│    - git push origin main --tags        │
+│    - Disable rollback after push        │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 7. Publish to PyPI (CRITICAL PATH)      │
+│    - Export TWINE_PASSWORD=$PYPI_TOKEN  │
+│    - twine upload dist/kuzu_memory-*    │
+│    - ✅ SUCCESS if this completes       │
+└─────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────┐
+│ 8. GitHub Release (Non-Fatal)           │
+│    - gh release create vX.Y.Z           │
+│    - Warn if fails, don't exit          │
+│    - Package already on PyPI ✅         │
+└─────────────────────────────────────────┘
+    ↓
+✅ Release Complete!
+   - PyPI: https://pypi.org/project/kuzu-memory/X.Y.Z
+   - GitHub: https://github.com/.../releases/tag/vX.Y.Z
 ```
 
 ## What the Script Does
@@ -72,24 +169,73 @@ The `publish.sh` script automates the entire release process:
 
 ### 7. Publish to PyPI 📤
 
-- Uses `twine upload` with PyPI token authentication
+- Exports `PYPI_API_KEY` from `.env.local` as `TWINE_PASSWORD`
+- Uses `twine upload` with token authentication (`__token__` username)
 - Uploads both `.tar.gz` and `.whl` to PyPI
-- Handles token securely from `.env.local`
+- Handles token securely via environment variables (not command line)
 
 ### 8. GitHub Release 🎉
 
 - Creates GitHub release with auto-generated notes
 - Links to PyPI package
-- Completes the release process
+- **Non-fatal**: If this step fails, the package is already on PyPI (critical path succeeded)
+- Provides instructions for manual release creation if needed
 
-## Error Handling
+## Error Handling & Rollback
 
-The script includes robust error handling:
+The script includes robust error handling with automatic rollback:
+
+### Rollback Mechanism
+
+- **Automatic Rollback**: If any step fails **before** GitHub push (Step 6), the version bump is automatically rolled back
+- **Rollback Disabled After Push**: Once committed to GitHub, rollback is disabled (you can't rewrite public history)
+- **Files Restored on Rollback**:
+  - `VERSION`
+  - `pyproject.toml`
+  - `uv.lock`
+  - `src/kuzu_memory/__version__.py`
+  - `CHANGELOG.md`
+
+### Error Handling Features
 
 - **Immediate Exit**: Any error stops the process (`set -e`)
-- **Rollback on Failure**: Version bump is rolled back if publish fails
-- **Clear Error Messages**: Color-coded output explains what went wrong
-- **Safe Defaults**: Requires explicit confirmation for destructive actions
+- **Clear Error Messages**: Color-coded output (red for errors, yellow for warnings, green for success)
+- **Safe Defaults**: Pre-commit hooks skipped with `--no-verify` (code already validated)
+- **Non-Fatal GitHub Release**: PyPI publish is the critical path; GitHub release failure only warns
+
+### What Happens on Failure?
+
+**Before GitHub Push (Steps 1-5)**:
+- Script exits with error
+- Version bump is automatically rolled back
+- Working directory restored to pre-publish state
+- No remote changes made
+
+**After GitHub Push (Steps 6-8)**:
+- Script continues even if GitHub release fails
+- PyPI publish is critical path; if it succeeds, release is considered successful
+- Manual intervention may be needed for GitHub release
+
+### Manual Recovery
+
+If you need to manually recover from a failed publish:
+
+```bash
+# Check what was actually pushed
+git log --oneline -5
+git tag | grep v
+
+# If version was pushed but PyPI failed
+VERSION=$(cat VERSION)
+uv run twine upload "dist/kuzu_memory-${VERSION}"* -u __token__ -p "$(grep PYPI_API_KEY .env.local | cut -d= -f2)"
+
+# If GitHub release failed
+gh release create "v$VERSION" --generate-notes
+
+# If you need to undo a local version bump (not pushed yet)
+git restore VERSION pyproject.toml uv.lock src/kuzu_memory/__version__.py CHANGELOG.md
+git clean -fd dist/ build/
+```
 
 ## Manual Publishing (Not Recommended)
 
@@ -126,10 +272,74 @@ gh release create "v$(cat VERSION)" --generate-notes
 Create `.env.local` with your PyPI token:
 
 ```bash
-echo "PYPI_API_KEY=pypi-YOUR_TOKEN_HERE" > .env.local
+cat > .env.local <<EOF
+PYPI_API_KEY=pypi-YOUR_TOKEN_HERE
+GITHUB_TOKEN=ghp_YOUR_TOKEN_HERE  # Optional
+EOF
 ```
 
-Get a token from: https://pypi.org/manage/account/token/
+Get a PyPI token from: https://pypi.org/manage/account/token/
+
+**Important**: Never commit `.env.local` to git! It's already in `.gitignore`.
+
+### "PyPI upload failed: Invalid credentials"
+
+This means the token authentication failed. Verify:
+
+1. **Token format**: Should start with `pypi-` (e.g., `pypi-AgEIcH...`)
+2. **Token in .env.local**: Check the file has correct format:
+   ```bash
+   grep PYPI_API_KEY .env.local
+   # Should output: PYPI_API_KEY=pypi-YOUR_TOKEN
+   ```
+3. **Token permissions**: Ensure token has "Upload packages" scope on PyPI
+4. **Token not expired**: Regenerate if necessary at https://pypi.org/manage/account/token/
+
+### "GitHub release creation failed"
+
+The script now handles this gracefully (package is already on PyPI). To fix:
+
+1. **Check authentication**:
+   ```bash
+   gh auth status
+   # Look for "workflow" scope in the output
+   ```
+
+2. **Refresh with workflow scope** (if missing):
+   ```bash
+   gh auth refresh -s workflow
+   ```
+
+3. **Manually create release** (if needed):
+   ```bash
+   VERSION=$(cat VERSION)
+   gh release create "v$VERSION" --generate-notes
+   ```
+
+### "Working directory has uncommitted changes"
+
+The script now auto-handles `uv.lock` changes. For other files:
+
+```bash
+# Check what's uncommitted
+git status
+
+# Commit or stash your changes
+git add .
+git commit -m "your changes"
+# or
+git stash
+```
+
+### "uv.lock is dirty after version bump"
+
+This is now handled automatically by the script. The version bump updates `pyproject.toml`, which can trigger `uv.lock` updates. The script:
+
+1. Detects `uv.lock` changes
+2. Runs `uv sync` to update lockfile
+3. Includes `uv.lock` in the version bump commit
+
+If you see this issue, the script should auto-resolve it.
 
 ### "Must be on main branch"
 
@@ -214,12 +424,66 @@ Follow semantic versioning (semver):
 
 ## Security
 
-- ✅ **PyPI token stored in `.env.local`** (not committed to git)
-- ✅ **Token used via environment variable** (not command line)
-- ✅ **Twine upload uses token authentication** (secure)
+- ✅ **PyPI token stored in `.env.local`** (not committed to git, in `.gitignore`)
+- ✅ **Token used via environment variable** (`TWINE_PASSWORD`, not command line)
+- ✅ **Twine upload uses token authentication** (secure, no password visible in logs)
 - ✅ **Script validates token exists** (prevents accidental exposure)
+- ✅ **Pre-commit hooks skipped** (uses `--no-verify` to avoid sensitive data leaks)
 
 Never commit `.env.local` to version control!
+
+## Quick Reference
+
+### One-Command Publishing
+
+```bash
+# Patch release (most common)
+make publish-patch
+
+# Minor release (new features)
+make publish-minor
+
+# Major release (breaking changes)
+make publish-major
+
+# Skip tests (use with caution)
+make publish-no-test
+```
+
+### Prerequisites Checklist
+
+Before running `make publish-patch`:
+
+- [ ] `.env.local` exists with `PYPI_API_KEY=pypi-...`
+- [ ] GitHub CLI authenticated: `gh auth status` (with `workflow` scope)
+- [ ] On main branch: `git branch --show-current` → `main`
+- [ ] Working directory clean: `git status` → no uncommitted changes
+- [ ] Tests passing: `make quality test`
+
+### Environment File Template
+
+```bash
+# .env.local (never commit this file!)
+PYPI_API_KEY=pypi-YOUR_TOKEN_HERE
+GITHUB_TOKEN=ghp_YOUR_TOKEN_HERE  # Optional, for gh CLI
+```
+
+### Common Commands
+
+```bash
+# Check prerequisites
+gh auth status                    # Verify GitHub auth + workflow scope
+gh auth refresh -s workflow       # Add workflow scope if missing
+cat .env.local | grep PYPI        # Verify PyPI token exists
+
+# Publish
+make publish-patch                # Full automated release
+
+# Manual troubleshooting
+./scripts/publish.sh patch --no-test  # Skip tests
+git restore VERSION pyproject.toml    # Rollback version bump
+gh release create vX.Y.Z --generate-notes  # Manual GitHub release
+```
 
 ## Related Documentation
 
@@ -230,4 +494,7 @@ Never commit `.env.local` to version control!
 
 ---
 
-**Last Updated**: 2025-01-20
+**Last Updated**: 2026-02-19
+**Version**: 1.6.37
+**Script**: `scripts/publish.sh`
+**Make Targets**: `publish-patch`, `publish-minor`, `publish-major`, `publish-no-test`

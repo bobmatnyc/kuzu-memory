@@ -165,11 +165,18 @@ fi
 # Step 5: Commit and tag
 info "Step 5/8: Committing version bump..."
 
+# Check if uv.lock was modified by version bump (pyproject.toml update triggers lock)
+if [[ -n "$(git status --porcelain uv.lock 2>/dev/null)" ]]; then
+    info "uv.lock was updated by version bump, syncing dependencies..."
+    uv sync --no-progress
+fi
+
 git add VERSION pyproject.toml uv.lock src/kuzu_memory/__version__.py CHANGELOG.md
 
 if git diff --staged --quiet; then
     warn "No changes to commit (VERSION files may not have changed)"
 else
+    # Use --no-verify to skip pre-commit hooks (code already validated)
     git commit --no-verify -m "chore: bump version to $NEW_VERSION"
     success "Version bump committed"
 fi
@@ -190,14 +197,26 @@ ROLLBACK_NEEDED=false
 # Step 7: Publish to PyPI
 info "Step 7/8: Publishing to PyPI..."
 
-uv run twine upload "dist/kuzu_memory-${NEW_VERSION}"* -u __token__ -p "$PYPI_TOKEN"
+# Export PYPI_TOKEN as TWINE_PASSWORD for twine to use
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD="$PYPI_TOKEN"
+
+uv run twine upload "dist/kuzu_memory-${NEW_VERSION}"*
 success "Published to PyPI"
 
 # Step 8: Create GitHub release
 info "Step 8/8: Creating GitHub release..."
 
-gh release create "v$NEW_VERSION" --generate-notes
-success "GitHub release created"
+# Attempt GitHub release, but don't fail if it errors (PyPI publish is critical path)
+if gh release create "v$NEW_VERSION" --generate-notes 2>&1; then
+    success "GitHub release created"
+else
+    warn "GitHub release creation failed. You may need to:"
+    warn "  1. Check 'gh auth status' and ensure 'workflow' scope is enabled"
+    warn "  2. Re-authenticate with: gh auth refresh -s workflow"
+    warn "  3. Manually create release: gh release create v$NEW_VERSION --generate-notes"
+    warn "Package is already on PyPI, so this is non-critical."
+fi
 
 # Print summary
 echo ""
