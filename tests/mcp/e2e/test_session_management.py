@@ -11,10 +11,7 @@ import time
 
 import pytest
 
-from tests.mcp.fixtures.mock_clients import (
-    ConcurrentClientSimulator,
-    MCPClientSimulator,
-)
+from tests.mcp.fixtures.mock_clients import ConcurrentClientSimulator, MCPClientSimulator
 
 
 async def wait_for_process_termination(
@@ -102,6 +99,9 @@ class TestSessionLifecycle:
 
             # Send initialized notification
             await client.send_notification("notifications/initialized", {})
+
+            # Brief delay to allow server to process notification
+            await asyncio.sleep(0.1)
 
             # Verify session is operational
             response = await client.send_request("ping", {})
