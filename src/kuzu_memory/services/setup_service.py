@@ -123,7 +123,7 @@ class SetupService(BaseService):
         Returns:
             Path to project's database directory
 
-        Default: <project_root>/kuzu-memories/memories.db
+        Default: <project_root>/.kuzu-memory/memories.db
         """
         # Use provided project_root or fall back to initialized root
         root = project_root if project_root is not None else self._project_root
@@ -331,10 +331,10 @@ class SetupService(BaseService):
             True if structure was created or already exists
 
         Creates:
-        - kuzu-memories/ directory
-        - kuzu-memories/memories.db database
-        - kuzu-memories/README.md documentation
-        - kuzu-memories/project_info.md template
+        - .kuzu-memory/ directory
+        - .kuzu-memory/memories.db database
+        - .kuzu-memory/README.md documentation
+        - .kuzu-memory/project_info.md template
         """
         try:
             result = project_setup.create_project_memories_structure(
@@ -387,7 +387,7 @@ class SetupService(BaseService):
             True if structure is valid
 
         Checks:
-        - kuzu-memories/ directory exists
+        - .kuzu-memory/ directory exists
         - Database is accessible
         - Configuration files exist
         - Permissions are correct

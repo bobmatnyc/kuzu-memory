@@ -19,11 +19,7 @@ from typing import Any
 
 from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .base import BaseInstaller, InstallationError, InstallationResult
-from .json_utils import (
-    fix_broken_mcp_args,
-    load_json_config,
-    save_json_config,
-)
+from .json_utils import fix_broken_mcp_args, load_json_config, save_json_config
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +315,13 @@ class ClaudeHooksInstaller(BaseInstaller):
         Returns:
             Path to project database directory
         """
-        return self.project_root / "kuzu-memories"
+        new_path = self.project_root / ".kuzu-memory"
+        legacy_path = self.project_root / "kuzu-memories"
+        # Prefer new canonical path; fall back to legacy only when it is the
+        # only existing location (pre-migration state).
+        if not new_path.exists() and legacy_path.exists():
+            return legacy_path
+        return new_path
 
     def _get_project_config_path(self) -> Path:
         """

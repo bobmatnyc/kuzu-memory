@@ -261,7 +261,7 @@ pip show kuzu-memory
 kuzu-memory stats --detailed
 
 # Clear cache if needed
-rm -rf kuzu-memories/.cache
+rm -rf .kuzu-memory/.cache
 ```
 
 **Database issues:**
@@ -896,7 +896,7 @@ check_kuzu_memory() {
 
 # Function to initialize project if needed
 init_project_if_needed() {
-    if [[ ! -d "kuzu-memories" ]]; then
+    if [[ ! -d ".kuzu-memory" ]] && [[ ! -d "kuzu-memories" ]]; then
         log_info "Initializing KuzuMemory for this project..."
         if kuzu-memory init; then
             log_success "KuzuMemory initialized"

@@ -11,11 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .auggie_rules_v2 import (
-    get_agents_md_v2,
-    get_integration_rules_v2,
-    get_quick_reference_v2,
-)
+from .auggie_rules_v2 import get_agents_md_v2, get_integration_rules_v2, get_quick_reference_v2
 from .auggie_versions import (
     CURRENT_VERSION,
     AuggieRuleMigrator,
@@ -61,9 +57,10 @@ class AuggieInstallerV2(BaseInstaller):
         """Check Auggie-specific prerequisites."""
         errors = super().check_prerequisites()
 
-        # Check if KuzuMemory is initialized
-        kuzu_dir = self.project_root / "kuzu-memories"
-        if not kuzu_dir.exists():
+        # Check if KuzuMemory is initialized (check both new and legacy locations)
+        kuzu_dir = self.project_root / ".kuzu-memory"
+        legacy_dir = self.project_root / "kuzu-memories"
+        if not kuzu_dir.exists() and not legacy_dir.exists():
             errors.append("KuzuMemory not initialized. Run 'kuzu-memory init' first.")
 
         return errors

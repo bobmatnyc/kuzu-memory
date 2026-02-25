@@ -100,20 +100,73 @@ def find_project_root(start_path: Path | None = None, _home_dir: Path | None = N
     return current
 
 
+def migrate_db_location(project_root: Path) -> bool:
+    """
+    Migrate database from legacy kuzu-memories/ to .kuzu-memory/ if needed.
+
+    Handles two cases:
+    1. Full migration: old exists, new doesn't → move entire directory
+    2. Partial merge: both exist → copy missing files from old to new
+
+    Args:
+        project_root: Project root directory to check for migration
+
+    Returns:
+        True if migration was performed, False otherwise
+    """
+    old_path = project_root / "kuzu-memories"
+    new_path = project_root / ".kuzu-memory"
+
+    if old_path.exists() and not new_path.exists():
+        # Full migration: move entire directory
+        logger.info(f"Migrating database from {old_path} to {new_path}")
+        shutil.move(str(old_path), str(new_path))
+        logger.info(f"Migration complete: {new_path}")
+        return True
+    elif old_path.exists() and new_path.exists():
+        # Partial merge: copy missing auxiliary files (README, project_info, etc.)
+        # but never overwrite existing files in the new location
+        migrated = False
+        auxiliary_files = ["README.md", "project_info.md", "config.yaml"]
+        for filename in auxiliary_files:
+            src = old_path / filename
+            dst = new_path / filename
+            if src.exists() and not dst.exists():
+                shutil.copy2(str(src), str(dst))
+                logger.info(f"Copied missing {filename} from legacy to {new_path}")
+                migrated = True
+        return migrated
+    return False
+
+
 def get_project_memories_dir(project_root: Path | None = None) -> Path:
     """
     Get the project memories directory path.
+
+    Checks both the new canonical location (.kuzu-memory/) and the legacy
+    location (kuzu-memories/) for backward compatibility, preferring the new
+    location. If neither exists, returns the new canonical path.
 
     Args:
         project_root: Project root directory (auto-detected if None)
 
     Returns:
-        Path to kuzu-memories directory
+        Path to .kuzu-memory directory (or kuzu-memories/ if that is the only
+        existing location)
     """
     root = project_root if project_root is not None else find_project_root()
     if root is None:
         raise ValueError("Could not determine project root directory")
-    return root / "kuzu-memories"
+
+    new_path = root / ".kuzu-memory"
+    legacy_path = root / "kuzu-memories"
+
+    # Prefer new canonical path; fall back to legacy only when it already exists
+    # and the new path does not yet (pre-migration state).
+    if not new_path.exists() and legacy_path.exists():
+        return legacy_path
+
+    return new_path
 
 
 def get_project_db_path(project_root: Path | None = None) -> Path:
@@ -134,7 +187,10 @@ def create_project_memories_structure(
     project_root: Path | None = None, force: bool = False
 ) -> dict[str, Any]:
     """
-    Create the kuzu-memories directory structure for a project.
+    Create the .kuzu-memory directory structure for a project.
+
+    Runs migration from legacy kuzu-memories/ to .kuzu-memory/ before
+    creating the structure so that existing data is preserved.
 
     Args:
         project_root: Project root directory (auto-detected if None)
@@ -146,6 +202,9 @@ def create_project_memories_structure(
     root = project_root if project_root is not None else find_project_root()
     if root is None:
         raise ValueError("Could not determine project root directory")
+
+    # Migrate legacy location before creating structure
+    migrate_db_location(root)
 
     memories_dir = get_project_memories_dir(root)
     db_path = get_project_db_path(root)
@@ -208,7 +267,7 @@ def create_project_memories_structure(
 
 
 def create_memories_readme(project_root: Path) -> str:
-    """Create README content for the kuzu-memories directory."""
+    """Create README content for the .kuzu-memory directory."""
     project_name = project_root.name
 
     return f"""# 🧠 Project Memories - {project_name}

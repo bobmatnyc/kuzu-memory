@@ -340,11 +340,13 @@ class MCPHealthChecker:
                 if env_db_path:
                     candidate_paths.append(Path(env_db_path))
 
-                # 2. Project-local paths
+                # 2. Project-local paths (new canonical location first, then legacy)
                 candidate_paths.extend(
                     [
-                        self.project_root / "kuzu-memories" / "memories.db",
-                        self.project_root / "kuzu-memories" / "memory.db",
+                        self.project_root / ".kuzu-memory" / "memories.db",
+                        self.project_root / ".kuzu-memory" / "memory.db",
+                        self.project_root / "kuzu-memories" / "memories.db",  # legacy
+                        self.project_root / "kuzu-memories" / "memory.db",  # legacy
                     ]
                 )
 
@@ -612,7 +614,7 @@ class MCPHealthChecker:
 
         return metrics
 
-    async def _collect_resource_metrics(self) -> ResourceMetrics:  # type: ignore[no-untyped-def]
+    async def _collect_resource_metrics(self) -> ResourceMetrics:
         """Collect resource usage metrics."""
         metrics = ResourceMetrics()
 

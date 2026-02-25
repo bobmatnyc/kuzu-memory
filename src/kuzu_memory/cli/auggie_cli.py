@@ -47,8 +47,8 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
                     and memory_context.memories
                 ):
                     print(f"Memories used: {len(memory_context.memories)}")
-                    for i, memory in enumerate(memory_context.memories[:3]):
-                        print(f"  {i + 1}. {memory.content[:60]}...")
+                    for i, mem in enumerate(memory_context.memories[:3]):
+                        print(f"  {i + 1}. {mem.content[:60]}...")
 
                 executed_rules = enhancement["rule_modifications"].get("executed_rules", [])
                 if executed_rules:

@@ -73,7 +73,11 @@ class KuzuMemoryMCPServer:
         # Walk up from current directory
         current = Path.cwd()
         while current != current.parent:
-            if (current / ".git").exists() or (current / "kuzu-memories").exists():
+            if (
+                (current / ".git").exists()
+                or (current / ".kuzu-memory").exists()
+                or (current / "kuzu-memories").exists()  # legacy fallback
+            ):
                 return current
             current = current.parent
 
@@ -83,7 +87,7 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()
+        @self.server.list_tools()  # type: ignore[misc]
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
@@ -320,9 +324,63 @@ class KuzuMemoryMCPServer:
                         "required": ["source_path"],
                     },
                 ),
+                Tool(
+                    name="kuzu_export_shared",
+                    description=(
+                        "Export delta memories to kuzu-memory-shared/ as JSON files for sharing "
+                        "via git. Writes only user-generated memories (excludes git_sync source) "
+                        "that are newer than the last export and at least min_age_days old. "
+                        "Memories are grouped by creation date into memories-YYYY-MM-DD.json files "
+                        "that can be committed to git and pulled by teammates or other machines. "
+                        "\n\nUse cases: "
+                        "\n- Share project learnings across machines "
+                        "\n- Synchronise team knowledge via git "
+                        "\n- Back up memories to a git-tracked location"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "min_age_days": {
+                                "type": "integer",
+                                "description": "Minimum age of memories to export in days (default: 1, prevents intra-day exports)",
+                                "default": 1,
+                            },
+                            "project_path": {
+                                "type": "string",
+                                "description": "Project root directory override (auto-detected if omitted)",
+                            },
+                        },
+                    },
+                ),
+                Tool(
+                    name="kuzu_import_shared",
+                    description=(
+                        "Import new memories from kuzu-memory-shared/ JSON files into the local "
+                        "database. Scans memories-*.json files and inserts memories not already "
+                        "present (deduplication by content_hash). "
+                        "\n\nUse cases: "
+                        "\n- Pull shared memories after a git pull "
+                        "\n- Onboard a new machine with team knowledge "
+                        "\n- Merge memories exported by a colleague"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Project root directory override (auto-detected if omitted)",
+                            },
+                            "dry_run": {
+                                "type": "boolean",
+                                "description": "If true, preview what would be imported without making changes (default: false)",
+                                "default": False,
+                            },
+                        },
+                    },
+                ),
             ]
 
-        @self.server.call_tool()
+        @self.server.call_tool()  # type: ignore[misc]
         async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
@@ -379,12 +437,26 @@ class KuzuMemoryMCPServer:
                     bool(dry_run) if dry_run is not None else True,
                     bool(backup) if backup is not None else True,
                 )
+            elif name == "kuzu_export_shared":
+                min_age_days = arguments.get("min_age_days", 1)
+                project_path = arguments.get("project_path")
+                result = await self._export_shared(
+                    int(min_age_days) if isinstance(min_age_days, int) else 1,
+                    str(project_path) if project_path is not None else None,
+                )
+            elif name == "kuzu_import_shared":
+                project_path = arguments.get("project_path")
+                dry_run = arguments.get("dry_run", False)
+                result = await self._import_shared(
+                    str(project_path) if project_path is not None else None,
+                    bool(dry_run) if dry_run is not None else False,
+                )
             else:
                 result = f"Unknown tool: {name}"
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()
+        @self.server.list_resources()  # type: ignore[misc]
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -396,7 +468,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()
+        @self.server.list_resource_templates()  # type: ignore[misc]
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [
@@ -541,13 +613,33 @@ class KuzuMemoryMCPServer:
             return result
 
     def _get_db_path(self) -> Path:
-        """Get path to Kuzu database for current project."""
-        # Standard location is project_root/kuzu-memories
-        db_path = self.project_root / "kuzu-memories"
-        if not db_path.exists():
-            # Try alternative location (hidden directory)
-            db_path = self.project_root / ".kuzu-memories"
-        return db_path
+        """Get path to Kuzu database for current project.
+
+        Search order:
+        1. .kuzu-memory/  — new canonical dotfile location
+        2. kuzu-memories/ — legacy location (backward compatibility)
+        3. .kuzu-memories/ — alternative hidden legacy location
+        """
+        from ..utils.project_setup import migrate_db_location
+
+        # Run migration opportunistically (no-op if already migrated)
+        migrate_db_location(self.project_root)
+
+        new_path = self.project_root / ".kuzu-memory"
+        if new_path.exists():
+            return new_path
+
+        # Legacy fallbacks
+        legacy_path = self.project_root / "kuzu-memories"
+        if legacy_path.exists():
+            return legacy_path
+
+        alt_legacy = self.project_root / ".kuzu-memories"
+        if alt_legacy.exists():
+            return alt_legacy
+
+        # Default to new canonical path (will be created on first use)
+        return new_path
 
     async def _optimize(self, strategy: str, limit: int, dry_run: bool) -> str:
         """
@@ -1026,7 +1118,7 @@ class KuzuMemoryMCPServer:
             if not isinstance(result, list):
                 column_names = result.get_column_names()
                 while result.has_next():
-                    row_list: list[Any] = result.get_next()  # type: ignore[assignment]
+                    row_list: list[Any] = list(result.get_next())
                     row_dict = {str(column_names[i]): row_list[i] for i in range(len(column_names))}
                     source_memories_raw.append(row_dict)
 
@@ -1418,6 +1510,92 @@ class KuzuMemoryMCPServer:
 
         except Exception as e:
             logger.error(f"Merge operation failed: {e}", exc_info=True)
+            return json.dumps({"status": "error", "error": str(e)})
+
+    async def _export_shared(
+        self,
+        min_age_days: int = 1,
+        project_path: str | None = None,
+    ) -> str:
+        """
+        Export delta memories to kuzu-memory-shared/ as JSON files.
+
+        Args:
+            min_age_days: Minimum age of memories to export (default 1 day).
+            project_path: Override for the project root directory.
+
+        Returns:
+            JSON-formatted export results.
+        """
+        from .sharing import export_shared
+
+        try:
+            root = Path(project_path) if project_path else self.project_root
+            db_path = self._get_db_path()
+            summary = export_shared(
+                db_path=db_path,
+                project_root=root,
+                min_age_days=min_age_days,
+            )
+            return json.dumps(
+                {
+                    "status": "completed",
+                    **summary,
+                    "message": (
+                        f"Exported {summary['exported_count']} memories to "
+                        f"{len(summary['files_written'])} file(s) in "
+                        f"{root / 'kuzu-memory-shared'}"
+                    ),
+                },
+                indent=2,
+            )
+        except (ImportError, RuntimeError) as e:
+            return json.dumps({"status": "error", "error": str(e)})
+        except Exception as e:
+            logger.error("Export-shared failed: %s", e, exc_info=True)
+            return json.dumps({"status": "error", "error": str(e)})
+
+    async def _import_shared(
+        self,
+        project_path: str | None = None,
+        dry_run: bool = False,
+    ) -> str:
+        """
+        Import new memories from kuzu-memory-shared/ JSON files.
+
+        Args:
+            project_path: Override for the project root directory.
+            dry_run: If True, preview without making changes.
+
+        Returns:
+            JSON-formatted import results.
+        """
+        from .sharing import import_shared
+
+        try:
+            root = Path(project_path) if project_path else self.project_root
+            db_path = self._get_db_path()
+            summary = import_shared(
+                db_path=db_path,
+                project_root=root,
+                dry_run=dry_run,
+            )
+            verb = "would be imported" if dry_run else "imported"
+            return json.dumps(
+                {
+                    "status": "completed",
+                    **summary,
+                    "message": (
+                        f"{summary['imported_count']} memories {verb}, "
+                        f"{summary['skipped_duplicates']} duplicates skipped."
+                    ),
+                },
+                indent=2,
+            )
+        except (ImportError, RuntimeError) as e:
+            return json.dumps({"status": "error", "error": str(e)})
+        except Exception as e:
+            logger.error("Import-shared failed: %s", e, exc_info=True)
             return json.dumps({"status": "error", "error": str(e)})
 
     async def run(self) -> None:

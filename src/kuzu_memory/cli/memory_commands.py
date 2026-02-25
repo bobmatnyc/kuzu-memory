@@ -1199,7 +1199,7 @@ def merge(
         if not isinstance(result, list):
             column_names = result.get_column_names()
             while result.has_next():
-                row_list: list[Any] = result.get_next()  # type: ignore[assignment]
+                row_list: list[Any] = list(result.get_next())
                 row_dict = {str(column_names[i]): row_list[i] for i in range(len(column_names))}
                 source_memories_raw.append(row_dict)
 

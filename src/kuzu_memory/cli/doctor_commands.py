@@ -242,7 +242,7 @@ def doctor(
 
     Run comprehensive diagnostics to identify and fix issues with
     PROJECT-LEVEL configurations only:
-    - Project memory database (kuzu-memories/)
+    - Project memory database (.kuzu-memory/)
     - Claude Code MCP configuration (.claude/config.local.json)
     - Claude Code hooks (if configured)
     - MCP server lifecycle (startup, health, shutdown)
@@ -752,7 +752,7 @@ def connection(
     Test PROJECT database and MCP server connection.
 
     Validates project-level database connectivity and MCP protocol initialization.
-    Uses project memory database (kuzu-memories/), not user-level configurations.
+    Uses project memory database (.kuzu-memory/), not user-level configurations.
 
     Note: Uses DiagnosticService with async-to-sync bridge for I/O operations.
     """
@@ -970,7 +970,7 @@ def health(
     Quick PROJECT health check.
 
     Performs rapid health checks on PROJECT-LEVEL components:
-    - Project memory database (kuzu-memories/)
+    - Project memory database (.kuzu-memory/)
     - MCP server (if configured)
     - Tool availability
 

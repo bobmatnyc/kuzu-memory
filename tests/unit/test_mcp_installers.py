@@ -488,7 +488,7 @@ class TestAuggieMCPInstaller:
         assert "KUZU_MEMORY_PROJECT_ROOT" in env
         assert str(project_dir.resolve()) in env["KUZU_MEMORY_PROJECT_ROOT"]
         assert "KUZU_MEMORY_DB" in env
-        assert "kuzu-memories" in env["KUZU_MEMORY_DB"]
+        assert ".kuzu-memory" in env["KUZU_MEMORY_DB"]
 
 
 class TestInstallerRegistry:

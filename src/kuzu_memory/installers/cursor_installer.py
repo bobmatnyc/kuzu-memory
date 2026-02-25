@@ -61,7 +61,7 @@ class CursorInstaller(BaseInstaller):
                     args=["mcp"],
                     env={
                         "KUZU_MEMORY_PROJECT_ROOT": str(self.project_root),
-                        "KUZU_MEMORY_DB": str(self.project_root / "kuzu-memories"),
+                        "KUZU_MEMORY_DB": str(self.project_root / ".kuzu-memory"),
                     },
                 )
             }

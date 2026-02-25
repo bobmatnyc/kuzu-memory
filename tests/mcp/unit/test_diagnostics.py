@@ -290,8 +290,20 @@ class TestMCPDiagnostics:
             }
             config_path.write_text(json.dumps(config))
 
-            diagnostics = MCPDiagnostics()
+            # Create expected memory directory files so the check passes
+            (db_path / "README.md").write_text("# Test")
+            (db_path / "project_info.md").write_text("# Project Info")
+
+            # Initialize a real database so the database-file checks pass
+            from kuzu_memory.core.memory import KuzuMemory
+
+            db_file = db_path / "memories.db"
+            with KuzuMemory(db_path=db_file):
+                pass
+
+            diagnostics = MCPDiagnostics(project_root=Path(tmpdir))
             diagnostics.claude_config_path = config_path
+            diagnostics.memory_db_path = db_path
 
             results = await diagnostics.check_configuration()
 

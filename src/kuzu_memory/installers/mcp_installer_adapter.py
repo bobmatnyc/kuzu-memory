@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Try importing from py-mcp-installer package
 try:
+    # isort: off
     from py_mcp_installer import (
         DiagnosticReport,
         InspectionReport,
@@ -37,6 +38,7 @@ try:
         Scope,
     )
     from py_mcp_installer import InstallationResult as PyMCPInstallationResult
+    # isort: on
 
     HAS_MCP_INSTALLER = True
 except ImportError as e:
@@ -254,7 +256,7 @@ class MCPInstallerAdapter(BaseInstaller):
 
         # Add project root and database path to env
         env.setdefault("KUZU_MEMORY_PROJECT_ROOT", str(self.project_root))
-        env.setdefault("KUZU_MEMORY_DB", str(self.project_root / "kuzu-memories"))
+        env.setdefault("KUZU_MEMORY_DB", str(self.project_root / ".kuzu-memory"))
 
         # Convert scope string to Scope enum
         scope_enum = Scope.PROJECT if scope.lower() == "project" else Scope.GLOBAL

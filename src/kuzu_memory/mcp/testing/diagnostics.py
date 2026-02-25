@@ -138,7 +138,7 @@ class MCPDiagnostics:
     PROJECT-LEVEL MCP diagnostic and troubleshooting framework.
 
     Focuses exclusively on project-scoped diagnostics:
-    - Project memory database (kuzu-memories/)
+    - Project memory database (.kuzu-memory/)
     - Claude Code MCP configuration (.claude/settings.local.json)
     - Claude Code hooks (if configured)
 
@@ -163,14 +163,19 @@ class MCPDiagnostics:
         self.verbose = verbose
         # PROJECT-LEVEL CONFIG ONLY
         self.claude_code_config_path = self.project_root / ".claude" / "settings.local.json"
-        self.memory_db_path = self.project_root / "kuzu-memories"
+        # Use new canonical path; fall back to legacy if it is the only existing location
+        _new_path = self.project_root / ".kuzu-memory"
+        _legacy_path = self.project_root / "kuzu-memories"
+        self.memory_db_path = (
+            _legacy_path if (_legacy_path.exists() and not _new_path.exists()) else _new_path
+        )
 
     async def check_configuration(self) -> list[DiagnosticResult]:
         """
         Check PROJECT-LEVEL MCP configuration validity.
 
         Checks ONLY:
-        - Project memory database directory (kuzu-memories/)
+        - Project memory database directory (.kuzu-memory/)
         - Claude Code MCP config (.claude/settings.local.json)
         - Claude Code hooks (if configured)
 
@@ -297,7 +302,7 @@ class MCPDiagnostics:
                     check_name="memory_readme_file",
                     success=False,
                     severity=DiagnosticSeverity.WARNING,
-                    message="README.md missing from kuzu-memories directory",
+                    message="README.md missing from .kuzu-memory directory",
                     error=f"File not found: {readme_path}",
                     fix_suggestion="Run: kuzu-memory init --force",
                     duration_ms=(time.time() - start) * 1000,
@@ -323,7 +328,7 @@ class MCPDiagnostics:
                     check_name="project_info_file",
                     success=False,
                     severity=DiagnosticSeverity.WARNING,
-                    message="project_info.md missing from kuzu-memories directory",
+                    message="project_info.md missing from .kuzu-memory directory",
                     error=f"File not found: {project_info_path}",
                     fix_suggestion="Run: kuzu-memory init --force",
                     duration_ms=(time.time() - start) * 1000,

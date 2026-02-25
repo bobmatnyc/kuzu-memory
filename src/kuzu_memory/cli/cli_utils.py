@@ -158,7 +158,7 @@ def rich_prompt(message: str, default: str | None = None) -> str:
         if default is not None:
             return cast(str, Prompt.ask(message, default=default, console=console))
         else:
-            result = Prompt.ask(message, console=console)
+            result: str = cast(str, Prompt.ask(message, console=console))
             return result if result else ""
     else:
         default_str = f" [{default}]" if default else ""

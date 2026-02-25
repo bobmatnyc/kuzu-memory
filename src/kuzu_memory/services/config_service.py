@@ -98,7 +98,7 @@ class ConfigService(BaseService):
         Returns:
             Path to Kuzu database directory
 
-        Default: <project_root>/kuzu-memories/memories.db
+        Default: <project_root>/.kuzu-memory/memories.db
         """
         return get_project_db_path(self.get_project_root())
 
@@ -194,7 +194,7 @@ class ConfigService(BaseService):
         Get the project memories directory.
 
         Returns:
-            Path to kuzu-memories directory
+            Path to .kuzu-memory directory
         """
         return get_project_memories_dir(self.get_project_root())
 
@@ -202,7 +202,7 @@ class ConfigService(BaseService):
         """
         Ensure project memory structure exists.
 
-        Creates kuzu-memories directory, README, .gitignore, and project_info.md
+        Creates .kuzu-memory directory, README, .gitignore, and project_info.md
         if they don't already exist.
 
         Raises:

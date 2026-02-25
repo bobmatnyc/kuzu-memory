@@ -199,10 +199,12 @@ config.local.yml
 .env.staging
 
 # Memory system specific - KuzuMemory database locations
-.kuzu_memory/              # Primary database location (standardized)
-kuzu-memories/             # Legacy database location (to be consolidated)
+.kuzu-memory/              # Primary database location (canonical dotfile)
+.kuzu_memory/              # Alternate legacy path (underscore variant)
+kuzu-memories/             # Legacy database location (migrated to .kuzu-memory/)
 .test_kuzu_memory/         # Test database (ephemeral)
 .kuzu-memory-backups/      # Database backups (keep for safety)
+# NOTE: kuzu-memory-shared/ is intentionally NOT gitignored (shared/committed)
 memory_data/               # Legacy memory data
 memory_cache/              # Memory cache files
 *.memory                   # Memory export files
