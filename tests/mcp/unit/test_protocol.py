@@ -320,10 +320,17 @@ class TestBatchRequestHandler:
 
     @pytest.mark.asyncio
     async def test_process_batch_empty(self) -> None:
-        """Test processing empty batch returns None."""
+        """Test processing empty batch returns error per JSON-RPC 2.0 spec."""
         responses = await BatchRequestHandler.process_batch([], lambda x: x)
 
-        assert responses is None
+        # Per JSON-RPC 2.0 spec section 6, empty batch array is invalid
+        assert responses is not None
+        assert isinstance(responses, list)
+        assert len(responses) == 1
+        assert responses[0]["jsonrpc"] == "2.0"
+        assert responses[0]["id"] is None
+        assert "error" in responses[0]
+        assert responses[0]["error"]["code"] == JSONRPCErrorCode.INVALID_REQUEST
 
     @pytest.mark.asyncio
     async def test_process_batch_all_notifications(self) -> None:
