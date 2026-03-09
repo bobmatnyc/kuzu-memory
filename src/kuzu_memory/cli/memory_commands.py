@@ -1262,9 +1262,11 @@ def merge(
                 confidence=float(row["confidence"]) if row["confidence"] else 1.0,
                 source_type=str(row["source_type"]),
                 created_at=datetime.fromisoformat(str(row["created_at"]).replace("Z", "+00:00")),
-                accessed_at=datetime.fromisoformat(str(row["accessed_at"]).replace("Z", "+00:00"))
-                if row["accessed_at"]
-                else None,
+                accessed_at=(
+                    datetime.fromisoformat(str(row["accessed_at"]).replace("Z", "+00:00"))
+                    if row["accessed_at"]
+                    else None
+                ),
                 access_count=int(row["access_count"]) if row["access_count"] else 0,
                 # Add missing required fields with defaults
                 valid_to=None,  # No expiration
@@ -1347,7 +1349,10 @@ def merge(
             if strategy == "skip":
                 rich_print(f"   Duplicates to skip: {len(duplicate_memories):,}", style="cyan")
             elif strategy == "update":
-                rich_print(f"   Duplicates to update: {len(duplicate_memories):,}", style="cyan")
+                rich_print(
+                    f"   Duplicates to update: {len(duplicate_memories):,}",
+                    style="cyan",
+                )
             elif strategy == "merge":
                 rich_print(
                     f"   Duplicates to merge (CONSOLIDATED_INTO): {len(duplicate_memories):,}",
@@ -1466,12 +1471,12 @@ def merge(
                     "content_hash": str(row["content_hash"]),
                     "created_at": created_at_dt,  # Pass datetime object
                     "memory_type": str(row["memory_type"]),
-                    "importance": float(row["importance"]) if row["importance"] else 0.5,
-                    "confidence": float(row["confidence"]) if row["confidence"] else 1.0,
+                    "importance": (float(row["importance"]) if row["importance"] else 0.5),
+                    "confidence": (float(row["confidence"]) if row["confidence"] else 1.0),
                     "source_type": str(row["source_type"]),
                     "agent_id": str(row.get("agent_id", "default")),
                     "user_id": str(row["user_id"]) if row.get("user_id") else None,
-                    "session_id": str(row["session_id"]) if row.get("session_id") else None,
+                    "session_id": (str(row["session_id"]) if row.get("session_id") else None),
                     "metadata": json.dumps(metadata),
                     "accessed_at": accessed_at_dt,  # Pass datetime object or None
                     "access_count": int(row.get("access_count", 0)),
@@ -1486,7 +1491,10 @@ def merge(
 
         if duplicate_memories:
             if strategy == "update":
-                rich_print(f"\n🔄 Updating {len(duplicate_memories)} duplicates...", style="cyan")
+                rich_print(
+                    f"\n🔄 Updating {len(duplicate_memories)} duplicates...",
+                    style="cyan",
+                )
                 with target_adapter._pool.get_connection() as target_conn:
                     for dup in duplicate_memories:
                         row = dup["source_row"]
@@ -1513,8 +1521,8 @@ def merge(
 
                         params = {
                             "id": target_id,
-                            "importance": float(row["importance"]) if row["importance"] else 0.5,
-                            "confidence": float(row["confidence"]) if row["confidence"] else 1.0,
+                            "importance": (float(row["importance"]) if row["importance"] else 0.5),
+                            "confidence": (float(row["confidence"]) if row["confidence"] else 1.0),
                             "metadata": json.dumps(metadata),
                             "now": datetime.now(UTC),  # Pass datetime object
                         }
@@ -1585,12 +1593,14 @@ def merge(
                             "content_hash": str(row["content_hash"]),
                             "created_at": created_at_dt,  # Pass datetime object
                             "memory_type": str(row["memory_type"]),
-                            "importance": float(row["importance"]) if row["importance"] else 0.5,
-                            "confidence": float(row["confidence"]) if row["confidence"] else 1.0,
+                            "importance": (float(row["importance"]) if row["importance"] else 0.5),
+                            "confidence": (float(row["confidence"]) if row["confidence"] else 1.0),
                             "source_type": str(row["source_type"]) + "-merged",
                             "agent_id": str(row.get("agent_id", "default")),
-                            "user_id": str(row["user_id"]) if row.get("user_id") else None,
-                            "session_id": str(row["session_id"]) if row.get("session_id") else None,
+                            "user_id": (str(row["user_id"]) if row.get("user_id") else None),
+                            "session_id": (
+                                str(row["session_id"]) if row.get("session_id") else None
+                            ),
                             "metadata": json.dumps(metadata),
                             "now": datetime.now(UTC),  # Pass datetime object
                             "cluster_id": f"merge-{int(time.time())}",
@@ -1612,7 +1622,10 @@ def merge(
         if strategy == "update" and updated_count > 0:
             rich_print(f"   Memories updated: {updated_count:,}", style="cyan")
         elif strategy == "merge" and merged_count > 0:
-            rich_print(f"   Memories merged (CONSOLIDATED_INTO): {merged_count:,}", style="cyan")
+            rich_print(
+                f"   Memories merged (CONSOLIDATED_INTO): {merged_count:,}",
+                style="cyan",
+            )
         elif strategy == "skip":
             rich_print(f"   Duplicates skipped: {len(duplicate_memories):,}", style="dim")
 

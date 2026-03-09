@@ -189,10 +189,16 @@ class TestExportShared:
 
         old_ts = datetime.now(UTC) - timedelta(days=3)
         _insert_memory(
-            db_path, content="git sync memory", source_type="git_sync", created_at=old_ts
+            db_path,
+            content="git sync memory",
+            source_type="git_sync",
+            created_at=old_ts,
         )
         _insert_memory(
-            db_path, content="user memory", source_type="ai-conversation", created_at=old_ts
+            db_path,
+            content="user memory",
+            source_type="ai-conversation",
+            created_at=old_ts,
         )
 
         result = export_shared(db_path, tmp_path, min_age_days=1)

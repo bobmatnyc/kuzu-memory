@@ -304,12 +304,12 @@ def export_shared(
                 "created_at": _format_datetime(row.get("created_at")),
                 "memory_type": str(row.get("memory_type") or "semantic"),
                 "source_type": str(row.get("source_type") or "manual"),
-                "importance": float(row["importance"])
-                if row.get("importance") is not None
-                else 0.5,
-                "confidence": float(row["confidence"])
-                if row.get("confidence") is not None
-                else 1.0,
+                "importance": (
+                    float(row["importance"]) if row.get("importance") is not None else 0.5
+                ),
+                "confidence": (
+                    float(row["confidence"]) if row.get("confidence") is not None else 1.0
+                ),
                 "metadata": _parse_metadata(row.get("metadata")),
                 "agent_id": str(row.get("agent_id") or "default"),
                 "user_id": str(row["user_id"]) if row.get("user_id") else None,
@@ -562,16 +562,16 @@ def _insert_memories(kuzu_module: Any, db_path: Path, memories: list[dict[str, A
                 "created_at": created_at,
                 "memory_type": str(memory.get("memory_type") or "semantic"),
                 "source_type": str(memory.get("source_type") or "manual"),
-                "importance": float(memory["importance"])
-                if memory.get("importance") is not None
-                else 0.5,
-                "confidence": float(memory["confidence"])
-                if memory.get("confidence") is not None
-                else 1.0,
+                "importance": (
+                    float(memory["importance"]) if memory.get("importance") is not None else 0.5
+                ),
+                "confidence": (
+                    float(memory["confidence"]) if memory.get("confidence") is not None else 1.0
+                ),
                 "metadata": metadata_str,
                 "agent_id": str(memory.get("agent_id") or "default"),
                 "user_id": str(memory["user_id"]) if memory.get("user_id") else None,
-                "session_id": str(memory["session_id"]) if memory.get("session_id") else None,
+                "session_id": (str(memory["session_id"]) if memory.get("session_id") else None),
                 "accessed_at": now_dt,
             }
             conn.execute(insert_query, params)

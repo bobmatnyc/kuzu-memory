@@ -1021,7 +1021,12 @@ class KuzuMemoryMCPServer:
             }
 
     async def _merge(
-        self, source_path: str, strategy: str, threshold: float, dry_run: bool, backup: bool
+        self,
+        source_path: str,
+        strategy: str,
+        threshold: float,
+        dry_run: bool,
+        backup: bool,
     ) -> str:
         """
         Merge memories from another Kùzu database.
@@ -1073,7 +1078,10 @@ class KuzuMemoryMCPServer:
             source_path_obj = Path(source_path)
             if not source_path_obj.exists():
                 return json.dumps(
-                    {"status": "error", "error": f"Source database not found: {source_path}"}
+                    {
+                        "status": "error",
+                        "error": f"Source database not found: {source_path}",
+                    }
                 )
 
             # Get target database path
@@ -1190,11 +1198,11 @@ class KuzuMemoryMCPServer:
                     created_at=datetime.fromisoformat(
                         str(row["created_at"]).replace("Z", "+00:00")
                     ),
-                    accessed_at=datetime.fromisoformat(
-                        str(row["accessed_at"]).replace("Z", "+00:00")
-                    )
-                    if row["accessed_at"]
-                    else None,
+                    accessed_at=(
+                        datetime.fromisoformat(str(row["accessed_at"]).replace("Z", "+00:00"))
+                        if row["accessed_at"]
+                        else None
+                    ),
                     access_count=int(row["access_count"]) if row["access_count"] else 0,
                     # Add missing required fields with defaults
                     valid_to=None,  # No expiration
@@ -1342,12 +1350,12 @@ class KuzuMemoryMCPServer:
                         "content_hash": str(row["content_hash"]),
                         "created_at": created_at_dt,
                         "memory_type": str(row["memory_type"]),
-                        "importance": float(row["importance"]) if row["importance"] else 0.5,
-                        "confidence": float(row["confidence"]) if row["confidence"] else 1.0,
+                        "importance": (float(row["importance"]) if row["importance"] else 0.5),
+                        "confidence": (float(row["confidence"]) if row["confidence"] else 1.0),
                         "source_type": str(row["source_type"]),
                         "agent_id": str(row.get("agent_id", "default")),
                         "user_id": str(row["user_id"]) if row.get("user_id") else None,
-                        "session_id": str(row["session_id"]) if row.get("session_id") else None,
+                        "session_id": (str(row["session_id"]) if row.get("session_id") else None),
                         "metadata": json.dumps(metadata),
                         "accessed_at": accessed_at_dt,
                         "access_count": int(row.get("access_count", 0)),
@@ -1389,12 +1397,12 @@ class KuzuMemoryMCPServer:
 
                             params = {
                                 "id": target_id,
-                                "importance": float(row["importance"])
-                                if row["importance"]
-                                else 0.5,
-                                "confidence": float(row["confidence"])
-                                if row["confidence"]
-                                else 1.0,
+                                "importance": (
+                                    float(row["importance"]) if row["importance"] else 0.5
+                                ),
+                                "confidence": (
+                                    float(row["confidence"]) if row["confidence"] else 1.0
+                                ),
                                 "metadata": json.dumps(metadata),
                                 "now": datetime.now(UTC),
                             }
@@ -1463,18 +1471,18 @@ class KuzuMemoryMCPServer:
                                 "content_hash": str(row["content_hash"]),
                                 "created_at": created_at_dt,
                                 "memory_type": str(row["memory_type"]),
-                                "importance": float(row["importance"])
-                                if row["importance"]
-                                else 0.5,
-                                "confidence": float(row["confidence"])
-                                if row["confidence"]
-                                else 1.0,
+                                "importance": (
+                                    float(row["importance"]) if row["importance"] else 0.5
+                                ),
+                                "confidence": (
+                                    float(row["confidence"]) if row["confidence"] else 1.0
+                                ),
                                 "source_type": str(row["source_type"]) + "-merged",
                                 "agent_id": str(row.get("agent_id", "default")),
-                                "user_id": str(row["user_id"]) if row.get("user_id") else None,
-                                "session_id": str(row["session_id"])
-                                if row.get("session_id")
-                                else None,
+                                "user_id": (str(row["user_id"]) if row.get("user_id") else None),
+                                "session_id": (
+                                    str(row["session_id"]) if row.get("session_id") else None
+                                ),
                                 "metadata": json.dumps(metadata),
                                 "now": datetime.now(UTC),
                                 "cluster_id": f"merge-{int(time.time())}",

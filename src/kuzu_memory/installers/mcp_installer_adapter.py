@@ -38,6 +38,7 @@ try:
         Scope,
     )
     from py_mcp_installer import InstallationResult as PyMCPInstallationResult
+
     # isort: on
 
     HAS_MCP_INSTALLER = True

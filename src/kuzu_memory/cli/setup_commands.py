@@ -605,7 +605,11 @@ def _auto_detect_and_install_all_platforms(
 
                 if dry_run:
                     results.append(
-                        (platform_name, True, f"[DRY RUN] would install to {platform_name}")
+                        (
+                            platform_name,
+                            True,
+                            f"[DRY RUN] would install to {platform_name}",
+                        )
                     )
                     continue
 
