@@ -10,16 +10,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Add src to path for testing (must be before other imports)
+import pytest
+import pytest_asyncio
+
+# Add src to path for testing (must be before kuzu_memory imports)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-import pytest  # noqa: E402
-import pytest_asyncio  # noqa: E402
-
 from kuzu_memory.mcp.server import KuzuMemoryMCPServer as MCPServer  # noqa: E402
-from kuzu_memory.mcp.testing.connection_tester import (  # noqa: E402
-    MCPConnectionTester,
-)
+from kuzu_memory.mcp.testing.connection_tester import MCPConnectionTester  # noqa: E402
 
 
 @pytest.fixture

@@ -8,10 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-# Add src to path (must be before other imports)
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
+import pytest
 
-import pytest  # noqa: E402
+# Add src to path (must be before kuzu_memory imports)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
 from kuzu_memory.mcp.protocol import (  # noqa: E402
     BatchRequestHandler,

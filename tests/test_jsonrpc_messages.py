@@ -6,14 +6,10 @@ Test JSON-RPC message formatting directly.
 import json
 import sys
 
-# Add src to path (must be before other imports)
+# Add src to path (must be before kuzu_memory imports)
 sys.path.insert(0, "src")
 
-from kuzu_memory.mcp.protocol import (  # noqa: E402
-    JSONRPCError,
-    JSONRPCErrorCode,
-    JSONRPCMessage,
-)
+from kuzu_memory.mcp.protocol import JSONRPCError, JSONRPCErrorCode, JSONRPCMessage  # noqa: E402
 
 
 def test_message_formatting():
