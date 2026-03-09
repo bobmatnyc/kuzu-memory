@@ -11,15 +11,11 @@ from pathlib import Path
 import click
 
 from ..installers.claude_hooks import ClaudeHooksInstaller
-from ..utils.project_setup import (
-    find_project_root,
-    get_project_db_path,
-    get_project_memories_dir,
-)
+from ..utils.project_setup import find_project_root, get_project_db_path, get_project_memories_dir
 from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .cli_utils import rich_panel, rich_print
 from .init_commands import init
-from .install_unified import _detect_installed_systems
+from .install_unified import AVAILABLE_INTEGRATIONS, _detect_installed_systems
 
 
 def _show_version_info() -> None:
@@ -263,41 +259,68 @@ def setup(
                     )
                     rich_print(f"   {status_icon} {system.name}: {system.health_status}")
 
-                # If integration specified, use it; otherwise use first detected
-                target_integration = integration or installed_systems[0].name
-
-                # Check if update needed
-                needs_update = any(
-                    s.health_status == "needs_repair" or force
-                    for s in installed_systems
-                    if s.name == target_integration
-                )
-
-                if needs_update or force:
-                    action = "Reinstalling" if force else "Updating"
-                    if dry_run:
-                        rich_print(
-                            f"\n[DRY RUN] Would {action.lower()} integration: {target_integration}",
-                            style="yellow",
-                        )
+                if integration:
+                    # User explicitly requested a specific integration — update only that one
+                    needs_update = any(
+                        s.health_status == "needs_repair" or force
+                        for s in installed_systems
+                        if s.name == integration
+                    )
+                    if needs_update or force:
+                        action = "Reinstalling" if force else "Updating"
+                        if dry_run:
+                            rich_print(
+                                f"\n[DRY RUN] Would {action.lower()} integration: {integration}",
+                                style="yellow",
+                            )
+                        else:
+                            rich_print(
+                                f"\n⚙️  {action} {integration} integration...",
+                                style="cyan",
+                            )
+                            _install_integration(ctx, integration, project_root, force=True)
                     else:
                         rich_print(
-                            f"\n⚙️  {action} {target_integration} integration...",
-                            style="cyan",
+                            f"\n✅ {integration} integration is up to date",
+                            style="green",
                         )
-                        _install_integration(ctx, target_integration, project_root, force=True)
                 else:
-                    rich_print(
-                        f"\n✅ {target_integration} integration is up to date",
-                        style="green",
-                    )
+                    # No specific integration requested — update ALL detected ones
+                    healthy_list = [
+                        s for s in installed_systems if s.health_status == "healthy" and not force
+                    ]
+                    needs_update_list = [
+                        s
+                        for s in installed_systems
+                        if s.health_status in ("needs_repair", "broken") or force
+                    ]
+
+                    for s in healthy_list:
+                        rich_print(f"\n✅ {s.name} integration is up to date", style="green")
+
+                    for s in needs_update_list:
+                        action = "Reinstalling" if force else "Updating"
+                        if dry_run:
+                            rich_print(
+                                f"\n[DRY RUN] Would {action.lower()} integration: {s.name}",
+                                style="yellow",
+                            )
+                        else:
+                            rich_print(
+                                f"\n⚙️  {action} {s.name} integration...",
+                                style="cyan",
+                            )
+                            _install_integration(ctx, s.name, project_root, force=True)
 
             else:
-                # No existing installations - guide user
-                rich_print("   No existing installations detected", style="yellow")
+                # No existing installations — auto-detect and install to all available platforms
+                rich_print(
+                    "   No existing installations found — running auto-detection...",
+                    style="yellow",
+                )
 
                 if integration:
-                    # User specified integration - install it
+                    # User specified a particular integration — install only that one
                     if dry_run:
                         rich_print(
                             f"\n[DRY RUN] Would install: {integration}",
@@ -310,28 +333,47 @@ def setup(
                         )
                         _install_integration(ctx, integration, project_root, force=force)
                 else:
-                    # Auto-detect which tool user is likely using
-                    rich_print(
-                        "\n💡 No AI tool integration specified. Choose one:",
-                        style="cyan",
-                    )
-                    rich_print("\n  📋 Available integrations:")
-                    rich_print("     • claude-code      (Claude Code IDE)")
-                    rich_print("     • claude-desktop   (Claude Desktop app)")
-                    rich_print("     • cursor           (Cursor IDE)")
-                    rich_print("     • vscode           (VS Code)")
-                    rich_print("     • windsurf         (Windsurf IDE)")
-                    rich_print("     • auggie           (Auggie AI)")
+                    # Fully autonomous: detect every present platform and install to each
+                    if dry_run:
+                        rich_print(
+                            "\n[DRY RUN] Would auto-detect and install to all available platforms",
+                            style="yellow",
+                        )
+                    else:
+                        auto_results = _auto_detect_and_install_all_platforms(
+                            project_root, force=force, dry_run=False
+                        )
 
-                    if not dry_run:
-                        rich_print(
-                            "\n   Run: kuzu-memory setup --integration <name>",
-                            style="dim",
-                        )
-                        rich_print(
-                            "   Or: kuzu-memory install <name> (for manual control)",
-                            style="dim",
-                        )
+                        if auto_results:
+                            successful = [(n, m) for n, ok, m in auto_results if ok]
+                            failed = [(n, m) for n, ok, m in auto_results if not ok]
+
+                            if successful:
+                                rich_print(
+                                    f"\n✅ Installed to {len(successful)} platform(s):",
+                                    style="green",
+                                )
+                                for name, msg in successful:
+                                    rich_print(f"   ✅ {name}: {msg}", style="green")
+                            if failed:
+                                rich_print(
+                                    f"\n⚠️  Failed for {len(failed)} platform(s):",
+                                    style="yellow",
+                                )
+                                for name, msg in failed:
+                                    rich_print(f"   ❌ {name}: {msg}", style="yellow")
+                        else:
+                            # Truly nothing detected — show targeted guidance
+                            rich_print(
+                                "\n💡 No AI tool platforms detected automatically.",
+                                style="cyan",
+                            )
+                            rich_print("\n  📋 Install manually with:")
+                            rich_print("     kuzu-memory setup --integration claude-code")
+                            rich_print("     kuzu-memory setup --integration cursor")
+                            rich_print("     kuzu-memory setup --integration windsurf")
+                            rich_print("     kuzu-memory setup --integration codex")
+                            rich_print("     kuzu-memory setup --integration auggie")
 
         # ═══════════════════════════════════════════════════════════
         # PHASE 2.25: CLAUDE CODE HOOKS & MCP INSTALLATION
@@ -508,6 +550,101 @@ def setup(
             style="dim",
         )
         sys.exit(1)
+
+
+def _auto_detect_and_install_all_platforms(
+    project_root: Path,
+    force: bool = False,
+    dry_run: bool = False,
+) -> list[tuple[str, bool, str]]:
+    """
+    Auto-detect all installed AI platforms and install kuzu-memory MCP to each.
+
+    When py-mcp-installer is available, iterates over every platform in PLATFORM_MAP
+    and attempts installation wherever confidence >= 0.3 or the platform config
+    directory already exists.  Falls back to AISystemDetector when py-mcp-installer
+    is unavailable, installing via the registry-based path for any platform whose
+    parent directory exists (can_install=True).
+
+    Args:
+        project_root: Root directory of the project.
+        force: Force reinstall even if already configured.
+        dry_run: Preview changes without modifying files.
+
+    Returns:
+        List of (platform_name, success, message) tuples for every attempted install.
+    """
+    from ..installers.mcp_installer_adapter import (
+        HAS_MCP_INSTALLER,
+        PLATFORM_MAP,
+        MCPInstallerAdapter,
+    )
+
+    results: list[tuple[str, bool, str]] = []
+
+    if HAS_MCP_INSTALLER:
+        # Use py-mcp-installer to probe each known platform
+        for platform_enum, platform_name in PLATFORM_MAP.items():
+            try:
+                adapter = MCPInstallerAdapter(
+                    project_root=project_root,
+                    platform=platform_enum,
+                    dry_run=dry_run,
+                )
+                info = adapter.installer.platform_info
+                confidence: float = getattr(info, "confidence", 0.0)
+                config_path = getattr(info, "config_path", None)
+                cli_available: bool = getattr(info, "cli_available", False)
+
+                # Decide whether this platform is present enough to attempt install
+                config_dir_exists = config_path is not None and Path(config_path).parent.exists()
+                should_install = confidence >= 0.3 or cli_available or config_dir_exists
+
+                if not should_install:
+                    continue
+
+                if dry_run:
+                    results.append(
+                        (platform_name, True, f"[DRY RUN] would install to {platform_name}")
+                    )
+                    continue
+
+                result = adapter.install(force=force)
+                results.append((platform_name, result.success, result.message))
+
+            except Exception as exc:
+                # A failure for one platform must not block others
+                results.append((platform_name, False, str(exc)))
+
+    else:
+        # Fallback: use AISystemDetector + registry-based installers
+        from ..installers.detection import AISystemDetector
+        from ..installers.registry import get_installer
+
+        detector = AISystemDetector(project_root)
+        available = detector.detect_available()
+
+        for detected in available:
+            name = detected.installer_name
+            # Only attempt platforms that the registry knows about
+            if name not in AVAILABLE_INTEGRATIONS:
+                continue
+            try:
+                installer = get_installer(name, project_root)
+                if installer is None:
+                    continue
+
+                if dry_run:
+                    results.append((name, True, f"[DRY RUN] would install to {name}"))
+                    continue
+
+                result = installer.install(force=force)
+                results.append((name, result.success, result.message))
+
+            except Exception as exc:
+                results.append((name, False, str(exc)))
+
+    return results
 
 
 def _install_integration(
