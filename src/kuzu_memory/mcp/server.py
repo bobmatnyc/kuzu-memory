@@ -11,13 +11,15 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import AnyUrl
 
 from kuzu_memory.__version__ import __version__
 from kuzu_memory.core.models import MemoryType
-from kuzu_memory.services import MemoryService
+
+if TYPE_CHECKING:
+    pass
 
 # MCP SDK imports (will be dynamically imported if available)
 try:
@@ -527,6 +529,8 @@ class KuzuMemoryMCPServer:
 
     async def _enhance(self, prompt: str, max_memories: int = 5) -> str:
         """Enhance a prompt with project context via direct service call."""
+        from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
+
         if not prompt:
             return "Error: No prompt provided"
 
@@ -557,6 +561,8 @@ class KuzuMemoryMCPServer:
 
     async def _recall(self, query: str, limit: int = 5) -> str:
         """Query specific memories via direct service call."""
+        from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
+
         if not query:
             return "Error: No query provided"
 
@@ -574,6 +580,8 @@ class KuzuMemoryMCPServer:
 
     async def _remember(self, content: str, memory_type: str = "identity") -> str:
         """Store important project information via direct service call."""
+        from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
+
         if not content:
             return "Error: No content provided"
 
@@ -588,6 +596,8 @@ class KuzuMemoryMCPServer:
 
     async def _stats(self, detailed: bool = False) -> str:
         """Get memory system statistics via direct service call."""
+        from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
+
         db_path = self._get_db_path()
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
