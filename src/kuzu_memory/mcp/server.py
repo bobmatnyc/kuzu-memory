@@ -17,6 +17,7 @@ from pydantic import AnyUrl
 
 from kuzu_memory.__version__ import __version__
 from kuzu_memory.core.models import MemoryType
+from kuzu_memory.services import MemoryService
 
 # MCP SDK imports (will be dynamically imported if available)
 try:
@@ -484,12 +485,10 @@ class KuzuMemoryMCPServer:
         """
         Run a kuzu-memory command asynchronously.
 
-        Args:
-            args: Command arguments
-            capture_output: Whether to capture output
-
-        Returns:
-            Command output or status message
+        DEPRECATED: All tool methods now call the service layer directly via
+        MemoryService, eliminating the ~50-300ms Python subprocess startup
+        overhead per call.  This method is retained for potential future use
+        (e.g. one-off admin commands) but is no longer called by any tool.
         """
         try:
             cmd = ["kuzu-memory", *args]
@@ -527,90 +526,90 @@ class KuzuMemoryMCPServer:
             return f"Error: {e!s}"
 
     async def _enhance(self, prompt: str, max_memories: int = 5) -> str:
-        """Enhance a prompt with project context."""
+        """Enhance a prompt with project context via direct service call."""
         if not prompt:
             return "Error: No prompt provided"
 
-        args = [
-            "memory",
-            "enhance",
-            prompt,
-            "--max-memories",
-            str(max_memories),
-            "--format",
-            "plain",
-        ]
-        return await self._run_command(args)
+        db_path = self._get_db_path()
+        try:
+            with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
+                context = memory.attach_memories(prompt, max_memories=max_memories)
+            return context.enhanced_prompt or prompt
+        except Exception as e:
+            logger.error(f"MCP enhance failed: {e}")
+            return f"Error: {e}"
 
     async def _learn(self, content: str, source: str = "ai-conversation") -> str:
-        """Store a learning asynchronously."""
+        """Store a learning asynchronously via background learner (fire-and-forget)."""
         if not content:
             return "Error: No content provided"
 
-        args = ["memory", "learn", content, "--source", source, "--quiet", "--no-wait"]
-        # Fire and forget - don't wait for completion
-        return await self._run_command(args, capture_output=False)
+        db_path = self._get_db_path()
+        try:
+            from ..async_memory.background_learner import get_background_learner
+
+            learner = get_background_learner(db_path=db_path)
+            task_id = learner.learn_async(content=content, source=source)
+            return f"Learning stored asynchronously (task {task_id[:8]}...)"
+        except Exception as e:
+            logger.error(f"MCP learn failed: {e}")
+            return f"Error: {e}"
 
     async def _recall(self, query: str, limit: int = 5) -> str:
-        """Query specific memories."""
+        """Query specific memories via direct service call."""
         if not query:
             return "Error: No query provided"
 
-        args = [
-            "memory",
-            "recall",
-            query,
-            "--max-memories",
-            str(limit),
-            "--format",
-            "json",
-        ]
-        result = await self._run_command(args)
-
-        # Parse and format the JSON output
+        db_path = self._get_db_path()
         try:
-            data = json.loads(result)
-            if isinstance(data, list):
-                formatted = []
-                for memory in data:
-                    formatted.append(f"- {memory.get('content', 'No content')}")
-                return "\n".join(formatted) if formatted else "No memories found"
-            return result
-        except json.JSONDecodeError:
-            return result
+            with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
+                context = memory.attach_memories(query, max_memories=limit)
+            memories = context.memories
+            if not memories:
+                return "No memories found"
+            return "\n".join(f"- {m.content}" for m in memories)
+        except Exception as e:
+            logger.error(f"MCP recall failed: {e}")
+            return f"Error: {e}"
 
     async def _remember(self, content: str, memory_type: str = "identity") -> str:
-        """Store important project information."""
+        """Store important project information via direct service call."""
         if not content:
             return "Error: No content provided"
 
-        args = ["memory", "store", content, "--source", memory_type]
-        return await self._run_command(args)
+        db_path = self._get_db_path()
+        try:
+            with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
+                memory_id = memory.remember(content, source=memory_type)
+            return f"Stored memory with ID: {memory_id}"
+        except Exception as e:
+            logger.error(f"MCP remember failed: {e}")
+            return f"Error: {e}"
 
     async def _stats(self, detailed: bool = False) -> str:
-        """Get memory system statistics."""
-        args = ["status", "--format", "json"]
-        if detailed:
-            args.append("--detailed")
-
-        result = await self._run_command(args)
-
-        # Parse and format the JSON output
+        """Get memory system statistics via direct service call."""
+        db_path = self._get_db_path()
         try:
-            data = json.loads(result)
-            stats = []
-            stats.append(f"Total Memories: {data.get('total_memories', 0)}")
-            stats.append(f"Memory Types: {data.get('memory_types', {})}")
-            stats.append(f"Recent Activity: {data.get('recent_activity', 'N/A')}")
+            with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
+                total = memory.get_memory_count()
+                db_size = memory.get_database_size()
+                type_stats = memory.kuzu_memory.get_memory_type_stats()
+                newest = memory.kuzu_memory.get_newest_memory_date()
 
-            if detailed and "performance" in data:
-                perf = data["performance"]
-                stats.append(f"Avg Recall Time: {perf.get('avg_recall_time', 'N/A')}ms")
-                stats.append(f"Cache Hit Rate: {perf.get('cache_hit_rate', 'N/A')}%")
+            stats = []
+            stats.append(f"Total Memories: {total}")
+            stats.append(f"Memory Types: {type_stats}")
+            stats.append(f"Recent Activity: {newest.isoformat() if newest else 'N/A'}")
+            stats.append(f"Database Size: {db_size} bytes")
+
+            if detailed:
+                stats.append("Avg Recall Time: N/A")
+                stats.append("Cache Hit Rate: N/A")
 
             return "\n".join(stats)
-        except json.JSONDecodeError:
-            return result
+        except Exception as e:
+            logger.error(f"MCP stats failed: {e}")
+            return f"Error: {e}"
 
     def _get_db_path(self) -> Path:
         """Get path to Kuzu database for current project.
