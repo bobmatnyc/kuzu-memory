@@ -14,11 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.models import MemoryType
-from .queue_manager import (
-    MemoryTask,
-    TaskType,
-    get_queue_manager,
-)
+from .queue_manager import MemoryTask, TaskType, get_queue_manager
 
 logger = logging.getLogger(__name__)
 

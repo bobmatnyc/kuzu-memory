@@ -6,10 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from kuzu_memory.installers.mcp_installer_adapter import (
-    HAS_MCP_INSTALLER,
-    MCPInstallerAdapter,
-)
+from kuzu_memory.installers.mcp_installer_adapter import HAS_MCP_INSTALLER, MCPInstallerAdapter
 from kuzu_memory.mcp.testing.diagnostics import MCPDiagnostics
 from kuzu_memory.mcp.testing.health_checker import MCPHealthChecker
 from kuzu_memory.services.base import BaseService
