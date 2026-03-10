@@ -8,7 +8,9 @@ attach_memories() and generate_memories() with performance targets of <10ms and 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import threading
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -55,78 +57,82 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def cache_key_from_args(*args: Any, **kwargs: Any) -> str:
-    """Generate a cache key from function arguments."""
-    key_parts: list[str] = []
-    for arg in args:
-        if hasattr(arg, "__dict__"):
-            # Skip self/cls arguments
-            continue
-        key_parts.append(str(arg))
-    for k, v in sorted(kwargs.items()):
-        key_parts.append(f"{k}:{v}")
-    key_str = "|".join(key_parts)
-    return hashlib.md5(key_str.encode()).hexdigest()
-
-
 def cached_method(
     maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator for caching method results with TTL support.
 
+    Cache is per-decorator-application (shared across all instances of the class
+    that use the same decorated method), but keyed by instance id so each
+    instance has its own logical cache partition.  A threading.Lock serialises
+    all reads and writes, making it safe for concurrent access.
+
     Args:
-        maxsize: Maximum cache size (for LRU eviction)
+        maxsize: Maximum number of entries across all instances before eviction
         ttl_seconds: Time-to-live in seconds for cached results
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
-        cache: dict[str, R] = {}
-        cache_times: dict[str, float] = {}
+        # key -> (value, expires_at); shared dict, but keyed by id(self)
+        cache: dict[str, tuple[R, float]] = {}
+        lock = threading.Lock()
+
+        def _make_key(instance_id: int, args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+            parts = [str(instance_id)]
+            for a in args:
+                try:
+                    parts.append(json.dumps(a, sort_keys=True, default=str))
+                except Exception:
+                    parts.append(str(a))
+            for k, v in sorted(kwargs.items()):
+                try:
+                    parts.append(f"{k}={json.dumps(v, sort_keys=True, default=str)}")
+                except Exception:
+                    parts.append(f"{k}={v}")
+            return hashlib.sha256("|".join(parts).encode()).hexdigest()
 
         @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            # Generate cache key
-            cache_key = cache_key_from_args(*args, **kwargs)
+        def wrapper(self: Any, *args: Any, **kwargs: Any) -> R:
+            key = _make_key(id(self), args, kwargs)
+            now = time.monotonic()
+            with lock:
+                if key in cache:
+                    value, expires_at = cache[key]
+                    if now < expires_at:
+                        logger.debug(f"Cache hit for {func.__name__} with key {key[:8]}")
+                        return value
+                    # Expired — evict immediately
+                    del cache[key]
 
-            # Check if cached and not expired
-            if cache_key in cache:
-                cached_time = cache_times.get(cache_key, 0.0)
-                if time.time() - cached_time < ttl_seconds:
-                    logger.debug(f"Cache hit for {func.__name__} with key {cache_key[:8]}")
-                    return cache[cache_key]
-                else:
-                    # Expired, remove from cache
-                    del cache[cache_key]
-                    del cache_times[cache_key]
+                # Evict all expired entries if at capacity
+                if len(cache) >= maxsize:
+                    expired = [k for k, (_, exp) in cache.items() if now >= exp]
+                    for k in expired:
+                        del cache[k]
+                    # If still at capacity after expiry sweep, evict the entry
+                    # that expires soonest (closest to expiry = effectively LRU
+                    # given uniform TTLs)
+                    if len(cache) >= maxsize:
+                        oldest = min(cache.items(), key=lambda x: x[1][1])[0]
+                        del cache[oldest]
 
-            # Cache miss, execute function
-            result = func(*args, **kwargs)
-
-            # Store in cache with timestamp
-            cache[cache_key] = result
-            cache_times[cache_key] = time.time()
-
-            # LRU eviction if cache is too large
-            if len(cache) > maxsize:
-                # Remove oldest entry
-                oldest_key = min(cache_times, key=lambda k: cache_times[k])
-                del cache[oldest_key]
-                del cache_times[oldest_key]
-
-            return result
+                result = func(self, *args, **kwargs)
+                cache[key] = (result, now + ttl_seconds)
+                return result
 
         # Add cache control methods
         def cache_clear() -> None:
-            cache.clear()
-            cache_times.clear()
+            with lock:
+                cache.clear()
 
         def cache_info() -> dict[str, Any]:
-            return {
-                "size": len(cache),
-                "maxsize": maxsize,
-                "ttl": ttl_seconds,
-            }
+            with lock:
+                return {
+                    "size": len(cache),
+                    "maxsize": maxsize,
+                    "ttl": ttl_seconds,
+                }
 
         # Type-safe attribute assignment
         typed_wrapper = cast(Any, wrapper)
@@ -727,7 +733,6 @@ class KuzuMemory:
         recent = self.get_recent_memories(limit=1)
         return recent[0].created_at if recent else None
 
-    @cached_method()
     def batch_store_memories(self, memories: list[Memory]) -> list[str]:
         """
         Store multiple memories in a single batch operation.

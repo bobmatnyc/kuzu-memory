@@ -86,9 +86,13 @@ class KuzuConnectionPool:
             # Ensure parent directory exists
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Create shared database instance if not exists
-            if self._database is None:
-                self._database = kuzu.Database(str(self.db_path))
+            # Create shared database instance if not exists.
+            # Guarded by self._lock to prevent a TOCTOU race where two threads
+            # both observe self._database is None and then each instantiate a
+            # separate kuzu.Database object for the same path.
+            with self._lock:
+                if self._database is None:
+                    self._database = kuzu.Database(str(self.db_path))
 
             # Create connection using shared database
             connection = kuzu.Connection(self._database)
