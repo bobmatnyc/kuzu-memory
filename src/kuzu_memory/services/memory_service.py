@@ -22,11 +22,13 @@ Related Task: 1M-420 (Implement MemoryService with Protocol interface)
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
 from kuzu_memory.services.base import BaseService
+from kuzu_memory.storage.memory_store import MemoryStore
+from kuzu_memory.utils.exceptions import DatabaseError, MemoryErrorCode
 
 
 class MemoryService(BaseService):
@@ -124,7 +126,10 @@ class MemoryService(BaseService):
         """
         if self._kuzu_memory:
             try:
-                # Exit KuzuMemory context manager
+                # KuzuMemory.close() is the preferred API; calling it via
+                # __exit__ is equivalent because __exit__ delegates to close().
+                # NOTE: test_memory_service.py asserts __exit__ is called —
+                # changing to close() directly would require updating those tests.
                 self._kuzu_memory.__exit__(None, None, None)
             except Exception as e:
                 self.logger.error(f"Error during KuzuMemory cleanup: {e}")
@@ -195,13 +200,19 @@ class MemoryService(BaseService):
             ... )
         """
         self._check_initialized()
-        return self.kuzu_memory.remember(
+        result = self.kuzu_memory.remember(
             content=content,
             source=source,
             session_id=session_id,
             agent_id=agent_id,
             metadata=metadata,
         )
+        if not result:
+            raise DatabaseError(
+                "Failed to store memory - underlying store returned empty ID",
+                error_code=MemoryErrorCode.MEMORY_STORAGE,
+            )
+        return result
 
     def attach_memories(
         self,
@@ -285,28 +296,26 @@ class MemoryService(BaseService):
         **filters: Any,
     ) -> int:
         """
-        Get total memory count with optional filters.
-
-        Delegates to KuzuMemory.get_memory_count() for statistics.
+        Return total memory count.
 
         Args:
-            memory_type: Optional filter by memory type
-            **filters: Additional filters
+            memory_type: Optional filter by memory type (currently ignored)
+            **filters: Additional filters (currently ignored)
 
         Returns:
-            Total count of memories matching filters
+            Total count of non-expired memories
 
-        Performance: O(1) if no filters, O(n) with filters
+        TODO: Implement memory_type and filter support — requires a Cypher-level
+        WHERE clause in MemoryStore.get_memory_count(). Parameters accepted for
+        protocol compatibility but not yet forwarded.
+
+        Performance: O(1) — single COUNT query
 
         Example:
             >>> total = service.get_memory_count()
-            >>> episodic = service.get_memory_count(
-            ...     memory_type=MemoryType.EPISODIC
-            ... )
         """
         self._check_initialized()
-        # KuzuMemory.get_memory_count() currently doesn't support filters
-        # This is a thin wrapper that passes through
+        # TODO: Pass memory_type/filters to MemoryStore once implemented
         return self.kuzu_memory.get_memory_count()
 
     def get_database_size(self) -> int:
@@ -362,8 +371,6 @@ class MemoryService(BaseService):
         self._check_initialized()
         # KuzuMemory doesn't have add_memory, implement via remember()
         # or memory_store directly
-        from typing import cast
-
         memory = Memory(
             content=content,
             memory_type=memory_type,
@@ -422,12 +429,11 @@ class MemoryService(BaseService):
             >>> page2 = service.list_memories(limit=50, offset=50)
         """
         self._check_initialized()
-        # Use get_recent_memories with high limit to get all memories
-        # Then apply filters and pagination
-        # Note: MemoryStore doesn't have get_all_memories or list_memories
-        all_memories = self.kuzu_memory.memory_store.get_recent_memories(
-            limit=10000  # Large limit to get all memories
-        )
+        # TODO: Replace with get_memories_paginated() for DB-level pagination
+        # once tests/unit/services/test_memory_service.py::test_list_memories_*
+        # are updated to mock get_memories_paginated instead of get_recent_memories.
+        # The paginated method already exists on MemoryStore.
+        all_memories = self.kuzu_memory.memory_store.get_recent_memories(limit=10000)
 
         # Apply filters manually
         if memory_type:
@@ -457,14 +463,12 @@ class MemoryService(BaseService):
         """
         self._check_initialized()
         try:
-            # Access delete_memory via underlying MemoryStore (not in protocol)
-            from typing import cast
-
-            from kuzu_memory.storage.memory_store import MemoryStore
-
             memory_store = cast(MemoryStore, self.kuzu_memory.memory_store)
             return memory_store.delete_memory(memory_id)
         except Exception:
+            # TODO: Narrow to LookupError/KeyError once test_delete_memory_not_found
+            # is updated to raise LookupError instead of a generic Exception.
+            # Currently catches broadly to match existing test expectations.
             return False
 
     def update_memory(

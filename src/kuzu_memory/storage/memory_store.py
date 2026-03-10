@@ -452,6 +452,73 @@ class MemoryStore:
             logger.error(f"Error finding duplicate memories: {e}")
             return []
 
+    def get_memories_paginated(
+        self,
+        memory_type: Any | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Memory]:
+        """
+        Retrieve memories with DB-level pagination and optional type filter.
+
+        Uses Cypher SKIP/LIMIT so only the requested page is loaded into RAM,
+        avoiding the previous full-table scan pattern.
+
+        Args:
+            memory_type: Optional MemoryType to filter by (None = all types)
+            limit: Maximum number of memories to return
+            offset: Number of memories to skip (for pagination)
+
+        Returns:
+            List of Memory objects for the requested page
+        """
+        try:
+            if memory_type is not None:
+                query = """
+                    MATCH (m:Memory)
+                    WHERE m.memory_type = $memory_type
+                      AND (m.valid_to IS NULL OR m.valid_to > $now)
+                    RETURN m ORDER BY m.created_at DESC
+                    SKIP $offset LIMIT $limit
+                """
+                params: dict[str, Any] = {
+                    "memory_type": str(memory_type.value)
+                    if hasattr(memory_type, "value")
+                    else str(memory_type),
+                    "now": datetime.now(),
+                    "offset": offset,
+                    "limit": limit,
+                }
+            else:
+                query = """
+                    MATCH (m:Memory)
+                    WHERE m.valid_to IS NULL OR m.valid_to > $now
+                    RETURN m ORDER BY m.created_at DESC
+                    SKIP $offset LIMIT $limit
+                """
+                params = {
+                    "now": datetime.now(),
+                    "offset": offset,
+                    "limit": limit,
+                }
+
+            results = self.query_builder.db_adapter.execute_query(query, params)
+
+            memories = []
+            for row in results:
+                if "m" in row:
+                    memories.append(Memory.from_dict(row["m"]))
+
+            logger.debug(
+                f"Paginated query returned {len(memories)} memories "
+                f"(offset={offset}, limit={limit}, memory_type={memory_type})"
+            )
+            return memories
+
+        except Exception as e:
+            logger.error(f"Error getting paginated memories: {e}")
+            raise DatabaseError(f"Failed to get paginated memories: {e}")
+
     def delete_memory(self, memory_id: str) -> bool:
         """
         Delete a memory by its ID.
