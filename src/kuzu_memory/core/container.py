@@ -26,11 +26,22 @@ Related Task: 1M-417 (Enhance DI Container)
 """
 
 import inspect
+import threading
 from collections.abc import Callable
 from threading import RLock
 from typing import Any, TypeVar
 
 T = TypeVar("T")
+
+
+# NOTE (2026-03-10): This type-keyed DependencyContainer was built for the SOA refactor
+# but is NOT yet wired into production code. KuzuMemory uses core/dependencies.py
+# (string-keyed container). ServiceManager in cli/service_manager.py is the composition root.
+#
+# This module is kept because:
+# 1. The thread-safe design is sound and ready for use
+# 2. Future work should wire ServiceManager to resolve from this container
+# TODO: Wire ServiceManager to use this container — see GitHub issue #XXX
 
 
 class DependencyContainer:
@@ -64,9 +75,15 @@ class DependencyContainer:
         self._factories: dict[str, Callable[[], Any]] = {}
         self._singletons: dict[str, Any] = {}
         self._lock = RLock()  # Reentrant lock allows same thread to acquire multiple times
-        self._resolving: set[
-            str
-        ] = set()  # Track services currently being resolved (prevent circular deps)
+        self._local = (
+            threading.local()
+        )  # Per-thread resolving set for circular dependency detection
+
+    def _get_resolving(self) -> set[str]:
+        """Get the per-thread resolving set for circular dependency detection."""
+        if not hasattr(self._local, "resolving"):
+            self._local.resolving = set()
+        return self._local.resolving  # type: ignore[no-any-return]  # threading.local attribute typed dynamically
 
     def register_service(
         self, interface: type[T], implementation: type[T], singleton: bool = False
@@ -157,7 +174,7 @@ class DependencyContainer:
         name = interface.__name__
 
         # Check for circular dependency
-        if name in self._resolving:
+        if name in self._get_resolving():
             raise RuntimeError(f"Circular dependency detected while resolving: {name}")
 
         # Check singletons first
@@ -169,12 +186,12 @@ class DependencyContainer:
                     # Double-check after acquiring lock (another thread may have initialized)
                     if isinstance(self._singletons[name], type):
                         try:
-                            self._resolving.add(name)
+                            self._get_resolving().add(name)
                             instance: T = self._create_instance(singleton)
                             self._singletons[name] = instance
                             return instance
                         finally:
-                            self._resolving.discard(name)
+                            self._get_resolving().discard(name)
                     else:
                         # Already initialized by another thread
                         return self._singletons[name]  # type: ignore[no-any-return]  # Dynamic type from DI registry
@@ -186,10 +203,10 @@ class DependencyContainer:
             # If factory is a class, instantiate with DI; otherwise call factory function
             if isinstance(factory, type):
                 try:
-                    self._resolving.add(name)
+                    self._get_resolving().add(name)
                     return self._create_instance(factory)
                 finally:
-                    self._resolving.discard(name)
+                    self._get_resolving().discard(name)
             else:
                 return factory()  # type: ignore[no-any-return]  # Factory function return type is dynamic
 
