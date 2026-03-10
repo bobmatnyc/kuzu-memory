@@ -39,6 +39,34 @@ def reset_dependency_container():
     reset_container()
 
 
+@pytest.fixture(autouse=True)
+def reset_access_trackers():
+    """
+    Shutdown all AccessTracker singleton instances after each test.
+
+    AccessTrackers hold a background daemon thread and a persistent
+    KuzuAdapter.  Without explicit teardown the worker thread can outlive
+    the test's temporary database directory, causing join() timeouts or
+    spurious errors in subsequent tests.
+    """
+    import kuzu_memory.monitoring.access_tracker as _at
+
+    yield
+
+    # Collect all live trackers under the module-level lock, then shut each
+    # one down outside the lock to avoid holding it during potentially slow
+    # join() calls.
+    with _at._trackers_lock:
+        trackers = list(_at._trackers.values())
+        _at._trackers.clear()
+
+    for tracker in trackers:
+        try:
+            tracker.shutdown()
+        except Exception:
+            pass
+
+
 @pytest.fixture(scope="session")
 def test_data_dir():
     """Create a temporary directory for test data."""

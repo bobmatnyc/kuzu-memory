@@ -70,6 +70,12 @@ class AccessTracker:
         self._shutdown_event = threading.Event()
         self._running = False
 
+        # Persistent adapter — created once in _start_worker(), reused by
+        # _write_batch(), and torn down in shutdown().  Creating a new adapter
+        # on every batch write was expensive and exercised the lock re-entrancy
+        # bug in KuzuConnectionPool.initialize() from the background thread.
+        self._adapter: Any = None  # KuzuAdapter, imported lazily to avoid circular import
+
         # Statistics
         self._stats: TrackerStats = {
             "total_tracked": 0,
@@ -84,9 +90,22 @@ class AccessTracker:
         self._start_worker()
 
     def _start_worker(self) -> None:
-        """Start background worker thread for batch processing."""
+        """Start background worker thread and initialize the persistent adapter."""
         if self._running:
             return
+
+        # Initialize the persistent adapter once here so that _write_batch()
+        # can reuse it instead of creating a new adapter on every call.
+        try:
+            from ..core.config import KuzuMemoryConfig
+            from ..storage.kuzu_adapter import KuzuAdapter
+
+            config = KuzuMemoryConfig.default()
+            self._adapter = KuzuAdapter(self.db_path, config)
+            self._adapter.initialize()
+        except Exception as e:
+            logger.error(f"AccessTracker failed to initialize adapter: {e}", exc_info=True)
+            self._adapter = None
 
         self._running = True
         self._shutdown_event.clear()
@@ -143,7 +162,10 @@ class AccessTracker:
         """
         Write batch of access events to database.
 
-        Uses UNWIND for efficient batch updates.
+        Uses UNWIND for efficient batch updates.  Reuses the persistent
+        adapter created in _start_worker() rather than constructing a new one
+        on every call (which was expensive and triggered the re-entrancy
+        deadlock in KuzuConnectionPool.initialize()).
 
         Args:
             events: Dict of memory_id -> event data
@@ -151,15 +173,11 @@ class AccessTracker:
         if not events:
             return
 
+        if self._adapter is None:
+            # Adapter failed to initialise at startup or was torn down — skip.
+            return
+
         try:
-            # Import here to avoid circular dependency
-            from ..core.config import KuzuMemoryConfig
-            from ..storage.kuzu_adapter import KuzuAdapter
-
-            # Create adapter for database access
-            config = KuzuMemoryConfig.default()
-            adapter = KuzuAdapter(self.db_path, config)
-
             # Prepare batch data for UNWIND query
             batch_data = [
                 {
@@ -169,9 +187,6 @@ class AccessTracker:
                 }
                 for memory_id, event in events.items()
             ]
-
-            # Initialize adapter if needed
-            adapter.initialize()
 
             # Execute batch update using UNWIND
             # This is much more efficient than individual updates
@@ -183,7 +198,7 @@ class AccessTracker:
                     m.accessed_at = CAST(event.timestamp AS TIMESTAMP)
             """
 
-            with adapter._pool.get_connection() as conn:
+            with self._adapter._pool.get_connection() as conn:
                 conn.execute(query, {"events": batch_data})
 
             # Update statistics
@@ -275,7 +290,7 @@ class AccessTracker:
         logger.debug("AccessTracker flush requested")
 
     def shutdown(self) -> None:
-        """Gracefully shutdown worker thread."""
+        """Gracefully shutdown worker thread and close the persistent adapter."""
         if not self._running:
             return
 
@@ -286,6 +301,18 @@ class AccessTracker:
             self._worker_thread.join(timeout=10.0)
 
         self._running = False
+
+        # Tear down the persistent adapter after the worker thread has stopped
+        # so that any final _write_batch() call in the worker loop completes
+        # before we close the underlying connection pool.
+        if self._adapter is not None:
+            try:
+                self._adapter.close()
+            except Exception as e:
+                logger.debug(f"AccessTracker adapter close error (ignored): {e}")
+            finally:
+                self._adapter = None
+
         logger.debug("AccessTracker shutdown complete")
 
 

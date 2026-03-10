@@ -76,7 +76,11 @@ class KuzuConnectionPool:
         self.db_path = db_path
         self.pool_size = pool_size
         self._pool: Queue[Any] = Queue(maxsize=pool_size)  # kuzu.Connection has no type stubs
-        self._lock = threading.Lock()
+        # RLock (reentrant) is required because initialize() holds _lock and
+        # calls _create_connection(), which also acquires _lock to guard the
+        # one-time creation of self._database.  A plain Lock() would deadlock
+        # the calling thread on the second acquisition.
+        self._lock = threading.RLock()
         self._initialized = False
         self._database: Any = None  # kuzu.Database has no type stubs
 
