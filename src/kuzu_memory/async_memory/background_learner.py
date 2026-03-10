@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..core.memory import KuzuMemory
 from ..core.models import MemoryType
 from .queue_manager import (
     MemoryTask,
@@ -163,10 +162,12 @@ class BackgroundLearner:
         start_time = time.time()
 
         try:
-            # Open KuzuMemory connection
-            with KuzuMemory(db_path=self.db_path) as memory:
-                # Generate memories from content
-                memory_ids = memory.generate_memories(
+            # Open memory service connection via ServiceManager (lazy import to avoid circular deps)
+            from ..cli.service_manager import ServiceManager
+
+            with ServiceManager.memory_service(db_path=self.db_path) as memory:
+                # Use underlying KuzuMemory for generate_memories (not in IMemoryService protocol)
+                memory_ids = memory.kuzu_memory.generate_memories(
                     content=task.content, metadata=task.metadata, source=task.source
                 )
 
@@ -210,8 +211,10 @@ class BackgroundLearner:
             memory_type_str = task.metadata.get("memory_type", "PROCEDURAL")
             memory_type = MemoryType(memory_type_str)
 
-            # Open KuzuMemory connection
-            with KuzuMemory(db_path=self.db_path) as memory_system:
+            # Open memory service connection via ServiceManager (lazy import to avoid circular deps)
+            from ..cli.service_manager import ServiceManager
+
+            with ServiceManager.memory_service(db_path=self.db_path) as memory_system:
                 # Store the memory using remember() method
                 # Note: remember() doesn't accept memory_type directly, it's in metadata
                 task_metadata = task.metadata or {}

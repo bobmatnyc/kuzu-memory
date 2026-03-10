@@ -255,18 +255,46 @@ class RecallError(KuzuMemoryError):
 class ValidationError(KuzuMemoryError):
     """Input validation error."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # Handle both old signature (field, value, description) and new signature (message)
-        if len(args) == 3:
-            field, value, description = args
-            message = f"{field} {description}: {value}"
-        elif len(args) == 1:
-            message = args[0]
+    def __init__(
+        self,
+        message: str = "Validation error",
+        field: str | None = None,
+        value: Any = None,
+        description: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        # Support legacy 3-positional-arg callers: ValidationError(field, value, description)
+        # In that form, `message` holds the field name, `field` holds the value,
+        # and `value` holds the description string.
+        # Detect by checking whether `description` was passed positionally (i.e. `value`
+        # is a non-None string and `field` is also non-None) which matches the old pattern
+        # ValidationError(field_name, value_str, description_str).
+        # When callers use the new named form, `description` is set explicitly.
+        if description is not None:
+            # New named-param form: ValidationError(message=..., description=..., ...)
+            # description overrides message when message is still the default
+            effective_message = description if message == "Validation error" else message
+            self.field = field
+            self.value = value
+        elif value is not None and field is not None:
+            # Legacy 3-positional-arg form: ValidationError(field_name, value_str, description_str)
+            # Under the new signature, positional args map as:
+            #   message  = old field_name  (e.g. "prompt")
+            #   field    = old value       (e.g. the actual value of the field)
+            #   value    = old description (e.g. "cannot be empty")
+            # Reconstruct legacy message format: "{field_name} {description}: {value}"
+            effective_message = f"{message} {value}: {field}"
+            self.field = message  # actual field name
+            self.value = field  # actual value
         else:
-            message = kwargs.get("message", "Validation error")
+            # Single-message form: ValidationError("some message") or
+            # ValidationError(message="...", field="...", value=...)
+            effective_message = message
+            self.field = field
+            self.value = value
 
         super().__init__(
-            message=message,
+            message=effective_message,
             error_code=MemoryErrorCode.MEMORY_VALIDATION,
             suggestion="Check input parameters and format",
             recovery_actions=[RecoveryAction.CHECK_CONFIG],

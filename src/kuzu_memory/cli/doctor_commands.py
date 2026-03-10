@@ -22,9 +22,9 @@ import json
 import logging
 import sys
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, cast
 
 import click
 from rich.console import Console
@@ -33,170 +33,12 @@ from rich.table import Table
 from ..core.config import KuzuMemoryConfig
 from ..mcp.testing.diagnostics import MCPDiagnostics
 from ..mcp.testing.health_checker import HealthStatus, MCPHealthChecker
-from ..monitoring.access_tracker import get_access_tracker
-from ..storage.kuzu_adapter import KuzuAdapter
 from .async_utils import run_async
 from .cli_utils import rich_print
 from .enums import OutputFormat
 from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
-
-
-class AnalyticsHealthStatus(TypedDict):
-    """Type definition for analytics health status dictionary."""
-
-    enabled: bool
-    worker_running: bool
-    pending_events: int
-    last_flush: str | None
-    stale_count: int
-    stale_percentage: float
-    total_memories: int
-    total_accesses: int
-    most_active_memory: dict[str, Any] | None
-    average_access_count: float
-    recommendations: list[str]
-    status: str
-
-
-def _check_analytics_health(
-    db_path: Path, config: KuzuMemoryConfig, verbose: bool = False
-) -> AnalyticsHealthStatus:
-    """
-    Check analytics system health.
-
-    Args:
-        db_path: Path to database
-        config: KuzuMemory configuration
-        verbose: Include detailed information
-
-    Returns:
-        Dict with analytics health status
-    """
-    health_status: AnalyticsHealthStatus = {
-        "enabled": config.analytics.enabled,
-        "worker_running": False,
-        "pending_events": 0,
-        "last_flush": None,
-        "stale_count": 0,
-        "stale_percentage": 0.0,
-        "total_memories": 0,
-        "total_accesses": 0,
-        "most_active_memory": None,
-        "average_access_count": 0.0,
-        "recommendations": [],
-        "status": "unknown",
-    }
-
-    try:
-        # Check if analytics is enabled in config
-        if not config.analytics.enabled:
-            health_status["status"] = "disabled"
-            health_status["recommendations"].append(
-                "Analytics is disabled. Enable with 'kuzu-memory config set analytics.enabled true'"
-            )
-            return health_status
-
-        # Get tracker statistics
-        tracker = get_access_tracker(db_path)
-        stats = tracker.get_stats()
-
-        health_status["worker_running"] = tracker._running
-        health_status["pending_events"] = stats["queue_size"]
-        health_status["last_flush"] = stats["last_batch_time"]
-
-        # Query database for stale memories and access patterns
-        adapter = KuzuAdapter(db_path, config)
-        adapter.initialize()
-
-        # Get total memory count
-        results = adapter.execute_query("MATCH (m:Memory) RETURN count(*) AS total")
-        health_status["total_memories"] = int(results[0]["total"]) if results else 0
-
-        # Calculate stale memories (using config threshold)
-        if health_status["total_memories"] > 0:
-            cutoff_date = (
-                datetime.now(UTC) - timedelta(days=config.analytics.stale_threshold_days)
-            ).isoformat()
-
-            query = """
-                MATCH (m:Memory)
-                WHERE (m.accessed_at IS NULL OR m.accessed_at < $cutoff_date)
-                  AND m.created_at < $cutoff_date
-                RETURN count(*) AS stale_count
-            """
-            results = adapter.execute_query(query, {"cutoff_date": cutoff_date})
-            health_status["stale_count"] = int(results[0]["stale_count"]) if results else 0
-
-            health_status["stale_percentage"] = (
-                (health_status["stale_count"] / health_status["total_memories"]) * 100
-                if health_status["total_memories"] > 0
-                else 0.0
-            )
-
-        # Get access patterns
-        # Total accesses tracked
-        query = """
-            MATCH (m:Memory)
-            WHERE m.access_count IS NOT NULL AND m.access_count > 0
-            RETURN sum(m.access_count) AS total_accesses,
-                   avg(m.access_count) AS avg_access_count
-        """
-        results = adapter.execute_query(query)
-        if results:
-            health_status["total_accesses"] = int(results[0].get("total_accesses") or 0)
-            health_status["average_access_count"] = float(results[0].get("avg_access_count") or 0.0)
-
-        # Most active memory (if verbose)
-        if verbose:
-            query = """
-                MATCH (m:Memory)
-                WHERE m.access_count IS NOT NULL AND m.access_count > 0
-                RETURN m.id AS id,
-                       m.content AS content,
-                       m.access_count AS access_count
-                ORDER BY m.access_count DESC
-                LIMIT 1
-            """
-            results = adapter.execute_query(query)
-            if results:
-                row = results[0]
-                content = str(row["content"])[:100]
-                health_status["most_active_memory"] = {
-                    "id": str(row["id"]),
-                    "content": content,
-                    "access_count": int(row["access_count"]),
-                }
-
-        # Determine overall status and recommendations
-        if not health_status["worker_running"]:
-            health_status["status"] = "degraded"
-            health_status["recommendations"].append(
-                "⚠️ Worker thread not running. Restart the application."
-            )
-        elif health_status["stale_percentage"] > 50:
-            health_status["status"] = "warning"
-            health_status["recommendations"].append(
-                f"⚠️ {health_status['stale_percentage']:.0f}% of memories are stale. "
-                f"Consider running 'kuzu-memory memory prune --strategy safe'"
-            )
-        elif health_status["stale_percentage"] > 30:
-            health_status["status"] = "healthy"
-            health_status["recommendations"].append(
-                f"💡 {health_status['stale_percentage']:.0f}% of memories are stale. "
-                "Monitor and consider pruning soon."
-            )
-        else:
-            health_status["status"] = "healthy"
-
-        return health_status
-
-    except Exception as e:
-        logger.error(f"Failed to check analytics health: {e}", exc_info=True)
-        health_status["status"] = "error"
-        health_status["recommendations"].append(f"❌ Error checking analytics: {e}")
-        return health_status
 
 
 @click.group(invoke_without_command=True)
@@ -377,8 +219,14 @@ def diagnose(
             try:
                 # Load config for analytics settings
                 config = KuzuMemoryConfig.default()
-                db_path = config_service.get_db_path()
-                analytics_health = _check_analytics_health(db_path, config, verbose=verbose)
+                with ServiceManager.diagnostic_service(config_service) as diagnostic:
+                    from ..services.diagnostic_service import (
+                        DiagnosticService as ConcreteDiagnosticService,
+                    )
+
+                    analytics_health = cast(
+                        ConcreteDiagnosticService, diagnostic
+                    ).check_analytics_health(config, verbose=verbose)
             except Exception as e:
                 logger.warning(f"Analytics health check failed: {e}")
                 # Continue without analytics health
@@ -1161,9 +1009,9 @@ def autotune(
       # Only adjust timeouts, no pruning
       kuzu-memory doctor autotune --no-prune
     """
-    from ..core.memory import KuzuMemory
     from ..services.autotune_service import AutoTuneService
     from ..utils.project_setup import find_project_root, get_project_db_path
+    from .service_manager import ServiceManager
 
     try:
         # Determine project root
@@ -1183,11 +1031,9 @@ def autotune(
         rich_print(f"Project: {project_path}", style="dim")
         rich_print(f"Database: {db_path}\n", style="dim")
 
-        # Initialize memory and run auto-tune
-        memory = KuzuMemory(db_path=db_path)
-
-        try:
-            service = AutoTuneService(memory)
+        # Initialize memory and run auto-tune via ServiceManager
+        with ServiceManager.memory_service(db_path=db_path) as memory:
+            service = AutoTuneService(memory.kuzu_memory)
             result = service.run(
                 auto_prune=not no_prune,
                 auto_adjust_timeout=not no_timeout_adjust,
@@ -1240,9 +1086,6 @@ def autotune(
                     if "Error" in action:
                         rich_print(f"   {action}", style="red")
                 sys.exit(1)
-
-        finally:
-            memory.close()
 
     except Exception as e:
         rich_print(f"❌ Auto-tune error: {e}", style="red")

@@ -13,10 +13,9 @@ from typing import Any
 
 import click
 
-from ..core.memory import KuzuMemory
 from ..core.models import MemoryType
 from ..utils.project_setup import get_project_db_path
-from .cli_utils import rich_panel, rich_print, rich_table
+from .cli_utils import parse_cli_metadata, rich_panel, rich_print, rich_table
 from .enums import OutputFormat, RecallStrategy
 from .service_manager import ServiceManager
 
@@ -97,21 +96,14 @@ def store(
         # Convert db_path to Path object if provided
         db_path_obj = Path(db_path) if db_path else None
 
-        # Parse metadata if provided
-        parsed_metadata = {}
-        if metadata:
-            try:
-                parsed_metadata = json.loads(metadata)
-            except json.JSONDecodeError as e:
-                rich_print(f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow")
-
-        # Add CLI context
-        parsed_metadata.update(
-            {
+        # Parse metadata and add CLI context
+        parsed_metadata = parse_cli_metadata(
+            metadata,
+            extra={
                 "cli_timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
                 "agent_id": agent_id,
-            }
+            },
         )
 
         # Use ServiceManager for memory service lifecycle
@@ -200,17 +192,11 @@ def learn(
       kuzu-memory memory learn "Complex content to process" --timeout 10
     """
     try:
-        # Parse metadata if provided
-        parsed_metadata = {}
-        if metadata:
-            try:
-                parsed_metadata = json.loads(metadata)
-            except json.JSONDecodeError as e:
-                if not quiet:
-                    rich_print(f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow")
-
-        # Add CLI context
-        parsed_metadata.update({"cli_timestamp": datetime.now().isoformat(), "cli_source": source})
+        # Parse metadata and add CLI context
+        parsed_metadata = parse_cli_metadata(
+            metadata,
+            extra={"cli_timestamp": datetime.now().isoformat(), "cli_source": source},
+        )
 
         # Asynchronous learning with smart waiting
         try:
@@ -256,7 +242,7 @@ def learn(
             # Fallback to synchronous learning
             db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-            with KuzuMemory(db_path=db_path) as memory:
+            with ServiceManager.memory_service(db_path=db_path) as memory:
                 memory_id = memory.remember(content, source=source, metadata=parsed_metadata)
 
                 if not quiet:

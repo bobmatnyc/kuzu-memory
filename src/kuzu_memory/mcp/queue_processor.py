@@ -105,7 +105,7 @@ class HookQueueProcessor:
             data: Hook data from bash queue
         """
         # Import here to avoid circular dependencies
-        from ..core.memory import KuzuMemory
+        from ..cli.service_manager import ServiceManager
         from ..utils.project_setup import find_project_root, get_project_db_path
 
         try:
@@ -139,14 +139,13 @@ class HookQueueProcessor:
                 logger.info("No valid assistant message to store")
                 return
 
-            # Store the memory
-            memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
-            memory.remember(
-                content=assistant_text,
-                source="claude-code-hook",
-                metadata={"agent_id": "assistant", "via": "bash-queue"},
-            )
-            memory.close()
+            # Store the memory via ServiceManager
+            with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
+                memory.remember(
+                    content=assistant_text,
+                    source="claude-code-hook",
+                    metadata={"agent_id": "assistant", "via": "bash-queue"},
+                )
 
             logger.info("Learn memory stored successfully via queue")
 
@@ -161,7 +160,7 @@ class HookQueueProcessor:
             data: Hook data from bash queue
         """
         # Import here to avoid circular dependencies
-        from ..core.memory import KuzuMemory
+        from ..cli.service_manager import ServiceManager
         from ..utils.project_setup import find_project_root, get_project_db_path
 
         try:
@@ -176,19 +175,18 @@ class HookQueueProcessor:
                 logger.warning("Database not initialized, skipping session")
                 return
 
-            # Store session start memory
-            memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
+            # Store session start memory via ServiceManager
             project_name = project_root.name
-            memory.remember(
-                content=f"Session started in {project_name}",
-                source="claude-code-session",
-                metadata={
-                    "agent_id": "session-tracker",
-                    "event_type": "session_start",
-                    "via": "bash-queue",
-                },
-            )
-            memory.close()
+            with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
+                memory.remember(
+                    content=f"Session started in {project_name}",
+                    source="claude-code-session",
+                    metadata={
+                        "agent_id": "session-tracker",
+                        "event_type": "session_start",
+                        "via": "bash-queue",
+                    },
+                )
 
             logger.info(f"Session start memory stored for project: {project_name}")
 

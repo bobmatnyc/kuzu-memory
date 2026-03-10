@@ -4,6 +4,8 @@ Dependency injection container and interfaces for KuzuMemory.
 Provides clean separation of concerns and improved testability.
 """
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -41,7 +43,13 @@ class MemoryStoreProtocol(Protocol):
 
     @abstractmethod
     def _store_memory_in_database(self, memory: Memory, is_update: bool = False) -> None:
-        """Store a memory in the database (internal method)."""
+        """Store a memory in the database (internal method).
+
+        NOTE: Private methods ideally should not appear in public Protocol interfaces.
+        This method is retained because memory.py accesses it via the MemoryStoreProtocol
+        type (self.memory_store._store_memory_in_database). Removing it would require
+        updating memory.py to cast to the concrete MemoryStore type first.
+        """
         ...
 
     @abstractmethod
@@ -96,7 +104,7 @@ class RecallCoordinatorProtocol(Protocol):
         user_id: str | None = None,
         session_id: str | None = None,
         agent_id: str = "default",
-    ) -> Any:  # Returns MemoryContext
+    ) -> Any:  # Returns MemoryContext; typed Any to preserve existing type: ignore in callers
         """Attach relevant memories to a prompt."""
         ...
 

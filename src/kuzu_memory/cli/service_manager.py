@@ -133,7 +133,8 @@ class ServiceManager:
 
         # Create config service if not provided
         concrete_config: ConcreteConfigService
-        if config_service is None:
+        config_owned = config_service is None
+        if config_owned:
             project_root = find_project_root()
             concrete_config = ConfigService(project_root)
             concrete_config.initialize()
@@ -151,6 +152,8 @@ class ServiceManager:
         finally:
             # Ensure cleanup even on exceptions
             service.cleanup()
+            if config_owned:
+                concrete_config.cleanup()
 
     @staticmethod
     @contextmanager
@@ -203,7 +206,8 @@ class ServiceManager:
 
         # Create config service if not provided
         concrete_config: ConcreteConfigService
-        if config_service is None:
+        config_owned = config_service is None
+        if config_owned:
             project_root = find_project_root()
             concrete_config = ConfigService(project_root)
             concrete_config.initialize()
@@ -230,6 +234,8 @@ class ServiceManager:
         finally:
             # Ensure cleanup even on exceptions
             service.cleanup()
+            if config_owned:
+                concrete_config.cleanup()
 
 
 __all__ = ["ServiceManager"]

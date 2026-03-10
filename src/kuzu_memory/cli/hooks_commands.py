@@ -482,18 +482,17 @@ def _get_memories_with_lock(
         - (None, "locked") if database is locked by another process
         - (None, error_message) if an error occurred
     """
-    from ..core.memory import KuzuMemory
     from ..utils.file_lock import DatabaseBusyError, try_lock_database
+    from .service_manager import ServiceManager
 
     try:
         # Try to acquire lock with 0 timeout (fail immediately if locked)
         with try_lock_database(db_path, timeout=0.0):
             # Disable git sync for hooks - session-start hook handles git sync asynchronously
-            memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
-            # Use specified strategy (default: keyword for fast graph-only search)
-            memory_context = memory.attach_memories(prompt, max_memories=5, strategy=strategy)
-            memories = memory_context.memories
-            memory.close()
+            with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
+                # Use specified strategy (default: keyword for fast graph-only search)
+                memory_context = memory.attach_memories(prompt, max_memories=5, strategy=strategy)
+                memories = memory_context.memories
             return memories, None
 
     except DatabaseBusyError:
@@ -667,8 +666,8 @@ def hooks_session_start() -> None:
     import os
     from pathlib import Path
 
-    from ..core.memory import KuzuMemory
     from ..utils.project_setup import find_project_root, get_project_db_path
+    from .service_manager import ServiceManager
 
     # Configure minimal logging for hook execution
     log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
@@ -720,22 +719,23 @@ def hooks_session_start() -> None:
                     # Session start is the right place to sync once per session
                     # Other hooks (learn, enhance) skip sync since they're called frequently
                     # Disable git sync on init - use async background sync instead
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
 
                     # Type narrowing: we've already checked project_root is not None
                     assert project_root is not None
                     project_name = project_root.name
-                    memory.remember(
-                        content=f"Session started in {project_name}",
-                        source="claude-code-session",
-                        metadata={
-                            "agent_id": "session-tracker",
-                            "event_type": "session_start",
-                        },
-                    )
+                    with ServiceManager.memory_service(
+                        db_path=db_path, enable_git_sync=False
+                    ) as memory:
+                        memory.remember(
+                            content=f"Session started in {project_name}",
+                            source="claude-code-session",
+                            metadata={
+                                "agent_id": "session-tracker",
+                                "event_type": "session_start",
+                            },
+                        )
 
                     logger.info(f"Session start memory stored for project: {project_name}")
-                    memory.close()
 
                     # Fire-and-forget async git sync in background
                     # This doesn't block the hook response
@@ -837,9 +837,9 @@ def _learn_worker(
         transcript_path = Path(transcript_path_str) if transcript_path_str else None
 
         # Import heavy dependencies only in worker
-        from ..core.memory import KuzuMemory
         from ..utils.file_lock import DatabaseBusyError, try_lock_database
         from ..utils.project_setup import get_project_db_path
+        from .service_manager import ServiceManager
 
         # Get transcript path from input if not provided
         if transcript_path is None:
@@ -923,16 +923,16 @@ def _learn_worker(
                 with try_lock_database(db_path, timeout=0.0):
                     # Disable git sync for hooks - session-start hook handles git sync asynchronously
                     # This reduces worker latency from 330-530ms to ~50ms (98% reduction)
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
-
-                    memory.remember(
-                        content=assistant_text,
-                        source="claude-code-hook",
-                        metadata={"agent_id": "assistant"},
-                    )
+                    with ServiceManager.memory_service(
+                        db_path=db_path, enable_git_sync=False
+                    ) as memory:
+                        memory.remember(
+                            content=assistant_text,
+                            source="claude-code-hook",
+                            metadata={"agent_id": "assistant"},
+                        )
 
                     logger.info("Memory stored successfully")
-                    memory.close()
 
             except DatabaseBusyError:
                 logger.info("Database busy (another session), skipping learn")
@@ -1031,8 +1031,8 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
     """
     from pathlib import Path
 
-    from ..core.memory import KuzuMemory
     from ..utils.project_setup import find_project_root, get_project_db_path
+    from .service_manager import ServiceManager
 
     # Deduplication cache
     cache_file = log_dir / ".kuzu_learn_cache.json"
@@ -1153,16 +1153,16 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
                 with try_lock_database(db_path, timeout=0.0):
                     # Disable git sync for hooks - session-start hook handles git sync asynchronously
                     # This reduces worker latency from 330-530ms to ~50ms (98% reduction)
-                    memory = KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False)
-
-                    memory.remember(
-                        content=assistant_text,
-                        source="claude-code-hook",
-                        metadata={"agent_id": "assistant"},
-                    )
+                    with ServiceManager.memory_service(
+                        db_path=db_path, enable_git_sync=False
+                    ) as memory:
+                        memory.remember(
+                            content=assistant_text,
+                            source="claude-code-hook",
+                            metadata={"agent_id": "assistant"},
+                        )
 
                     logger.info("Memory stored successfully")
-                    memory.close()
 
             except DatabaseBusyError:
                 logger.info("Database busy (another session), skipping learn")

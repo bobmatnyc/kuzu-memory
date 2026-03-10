@@ -6,6 +6,7 @@ Provides Rich-based formatting functions and fallbacks for terminal output.
 
 from __future__ import annotations
 
+import json
 from typing import Any, cast
 
 # Rich imports for beautiful CLI output
@@ -22,6 +23,51 @@ except ImportError:
 
 # Initialize rich console
 console: Console | None = Console() if RICH_AVAILABLE else None
+
+
+def parse_cli_metadata(
+    metadata_str: str | None, extra: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Parse CLI metadata JSON string and merge with extra fields.
+
+    Args:
+        metadata_str: Optional JSON string from CLI --metadata option
+        extra: Optional extra key/value pairs to merge into result
+
+    Returns:
+        Parsed metadata dict, with extra fields merged in
+    """
+    result: dict[str, Any] = {}
+    if metadata_str:
+        try:
+            result = json.loads(metadata_str)
+        except json.JSONDecodeError as e:
+            rich_print(f"⚠️  Invalid JSON in metadata, ignoring: {e}", style="yellow")
+    if extra:
+        result.update(extra)
+    return result
+
+
+def get_db_path(ctx: Any) -> Any:
+    """Extract and validate db_path from Click context.
+
+    Args:
+        ctx: Click context object
+
+    Returns:
+        Path to database
+
+    Raises:
+        click.UsageError: If db_path is not configured
+    """
+    from pathlib import Path
+
+    import click
+
+    db_path = ctx.obj.get("db_path") if ctx.obj else None
+    if db_path is None:
+        raise click.UsageError("Database path not configured. Run 'kuzu-memory init' first.")
+    return Path(db_path)
 
 
 def rich_print(text: str, style: str | None = None, **kwargs: Any) -> None:

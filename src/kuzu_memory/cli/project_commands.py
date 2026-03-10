@@ -14,7 +14,6 @@ from typing import Any
 
 import click
 
-from ..core.memory import KuzuMemory
 from ..integrations.auggie import AuggieIntegration
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import (
@@ -25,6 +24,7 @@ from ..utils.project_setup import (
     get_project_memories_dir,
 )
 from .cli_utils import rich_confirm, rich_panel, rich_print
+from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,6 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> Non
       kuzu-memory init --config-path ./my-kuzu-config.json
     """
     try:
-        from ..core.config import KuzuMemoryConfig
-        from ..core.memory import KuzuMemory
-
         project_root = ctx.obj.get("project_root") or find_project_root()
         memories_dir = get_project_memories_dir(project_root)
         db_path = get_project_db_path(project_root)
@@ -72,8 +69,7 @@ def init(ctx: click.Context, force: bool, config_path: Path | str | None) -> Non
         rich_print(f"✅ Created memories directory: {memories_dir}")
 
         # Initialize database with default config
-        config = KuzuMemoryConfig()
-        with KuzuMemory(db_path=db_path, config=config) as memory:
+        with ServiceManager.memory_service(db_path=db_path) as memory:
             # Store initial project context
             project_context = get_project_context_summary(project_root)
             if project_context:
@@ -176,14 +172,14 @@ def project(ctx: click.Context, verbose: bool) -> None:
             return
 
         # Disable git_sync for read-only project info operation (performance optimization)
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
             # Get basic stats
             total_memories = memory.get_memory_count()
             recent_memories = memory.get_recent_memories(limit=5)
 
-            # Memory type breakdown
-            type_stats = memory.get_memory_type_stats()
-            source_stats = memory.get_source_stats()
+            # Memory type breakdown (methods not in IMemoryService protocol, use kuzu_memory)
+            type_stats = memory.kuzu_memory.get_memory_type_stats()
+            source_stats = memory.kuzu_memory.get_source_stats()
 
             rich_print("\n🧠 Memory Statistics:")
             rich_print(f"   Total Memories: {total_memories}")
@@ -246,7 +242,7 @@ def project(ctx: click.Context, verbose: bool) -> None:
         health_status = "✅ Healthy"
         try:
             # Basic health checks (read-only, no git_sync needed)
-            with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+            with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
                 memory.get_recent_memories(limit=1)
                 # Add more health checks as needed
         except Exception as e:
@@ -293,7 +289,7 @@ def stats(ctx: click.Context, detailed: bool, output_format: str) -> None:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
         # Disable git_sync for read-only stats operation (performance optimization)
-        with KuzuMemory(db_path=db_path, enable_git_sync=False) as memory:
+        with ServiceManager.memory_service(db_path=db_path, enable_git_sync=False) as memory:
             # Collect all statistics - simplified to avoid query errors
             recent_memories = memory.get_recent_memories(limit=24)
             stats_data: dict[str, Any] = {
@@ -304,13 +300,14 @@ def stats(ctx: click.Context, detailed: bool, output_format: str) -> None:
             }
 
             if detailed:
-                # Add detailed statistics
+                # Add detailed statistics (methods not in IMemoryService protocol, use kuzu_memory)
+                km = memory.kuzu_memory
                 stats_data.update(
                     {
-                        "daily_activity": memory.get_daily_activity_stats(days=7),
-                        "avg_memory_length": memory.get_average_memory_length(),
-                        "oldest_memory": memory.get_oldest_memory_date(),
-                        "newest_memory": memory.get_newest_memory_date(),
+                        "daily_activity": km.get_daily_activity_stats(days=7),
+                        "avg_memory_length": km.get_average_memory_length(),
+                        "oldest_memory": km.get_oldest_memory_date(),
+                        "newest_memory": km.get_newest_memory_date(),
                     }
                 )
 
@@ -411,7 +408,7 @@ def cleanup(ctx: click.Context, force: bool) -> None:
     try:
         db_path = get_project_db_path(ctx.obj.get("project_root"))
 
-        with KuzuMemory(db_path=db_path) as memory:
+        with ServiceManager.memory_service(db_path=db_path) as memory:
             # Note: These cleanup methods are not yet implemented in KuzuMemory
             # This is placeholder code for future functionality
             rich_print("⚠️  Cleanup functionality not yet fully implemented", style="yellow")

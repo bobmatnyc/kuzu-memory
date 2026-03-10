@@ -14,14 +14,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .. import KuzuMemory
+from ..cli.service_manager import ServiceManager
 from ..integrations.auggie import AuggieIntegration
 
 
 def cmd_enhance_prompt(args: argparse.Namespace) -> int:
     """Enhance a prompt using Auggie integration."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             auggie = AuggieIntegration(memory)
 
             enhancement = auggie.enhance_prompt(
@@ -66,7 +67,8 @@ def cmd_enhance_prompt(args: argparse.Namespace) -> int:
 def cmd_learn_response(args: argparse.Namespace) -> int:
     """Learn from an AI response and user feedback."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             auggie = AuggieIntegration(memory)
 
             conversation_data = {
@@ -105,7 +107,8 @@ def cmd_learn_response(args: argparse.Namespace) -> int:
 def cmd_list_rules(args: argparse.Namespace) -> int:
     """List all Auggie rules."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             auggie = AuggieIntegration(memory)
 
             rules = auggie.rule_engine.rules
@@ -149,7 +152,8 @@ def cmd_list_rules(args: argparse.Namespace) -> int:
 def cmd_create_rule(args: argparse.Namespace) -> int:
     """Create a new custom rule."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             _ = AuggieIntegration(memory)  # Future: use for create_custom_rule
 
             # Parse conditions and actions from JSON
@@ -174,7 +178,8 @@ def cmd_create_rule(args: argparse.Namespace) -> int:
 def cmd_export_rules(args: argparse.Namespace) -> int:
     """Export rules to a JSON file."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             _ = AuggieIntegration(memory)  # Future: use for export_rules
 
             # TODO: export_rules method not yet implemented in AuggieIntegration
@@ -191,7 +196,8 @@ def cmd_export_rules(args: argparse.Namespace) -> int:
 def cmd_import_rules(args: argparse.Namespace) -> int:
     """Import rules from a JSON file."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             _ = AuggieIntegration(memory)  # Future: use for import_rules
 
             # TODO: import_rules method not yet implemented in AuggieIntegration
@@ -208,7 +214,8 @@ def cmd_import_rules(args: argparse.Namespace) -> int:
 def cmd_stats(args: argparse.Namespace) -> int:
     """Show integration statistics."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             auggie = AuggieIntegration(memory)
 
             stats = auggie.get_integration_stats()
@@ -264,7 +271,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
 def cmd_test_integration(args: argparse.Namespace) -> int:
     """Test the Auggie integration with sample data."""
     try:
-        with KuzuMemory(db_path=args.db_path) as memory:
+        with ServiceManager.memory_service(db_path=args.db_path) as _svc:
+            memory = _svc.kuzu_memory
             auggie = AuggieIntegration(memory)
 
             print("🧪 Testing Auggie Integration:")
