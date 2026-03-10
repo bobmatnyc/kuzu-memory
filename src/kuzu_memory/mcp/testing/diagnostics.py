@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -1448,7 +1449,6 @@ class MCPDiagnostics:
         start = time.time()
         try:
             # Create a temporary transcript file for testing
-            import tempfile
 
             with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tf:
                 transcript_path = tf.name
@@ -1526,7 +1526,7 @@ class MCPDiagnostics:
         # 3. Hook Environment Checks
         # Check log directory
         start = time.time()
-        log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+        log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
         if log_dir.exists() and os.access(log_dir, os.W_OK):
             results.append(
                 DiagnosticResult(

@@ -9,6 +9,7 @@ without blocking the hooks execution.
 import asyncio
 import json
 import logging
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -24,14 +25,19 @@ class HookQueueProcessor:
     blocking the hook execution.
     """
 
-    def __init__(self, queue_dir: str = "/tmp/kuzu-memory-queue") -> None:
+    def __init__(self, queue_dir: str | None = None) -> None:
         """
         Initialize the queue processor.
 
         Args:
             queue_dir: Directory where queued hook data is stored
         """
-        self.queue_dir = Path(queue_dir)
+        resolved = (
+            queue_dir
+            if queue_dir is not None
+            else str(Path(tempfile.gettempdir()) / "kuzu-memory-queue")
+        )
+        self.queue_dir = Path(resolved)
         self.queue_dir.mkdir(parents=True, exist_ok=True)
         self._running = False
         self._task: asyncio.Task[None] | None = None

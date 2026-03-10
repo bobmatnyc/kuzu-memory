@@ -11,6 +11,7 @@ import json
 import multiprocessing
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -520,7 +521,7 @@ def hooks_enhance() -> None:
     from ..utils.project_setup import find_project_root, get_project_db_path
 
     # Configure minimal logging for hook execution
-    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
     log_file = log_dir / "kuzu_enhance.log"
 
     logging.basicConfig(
@@ -670,7 +671,7 @@ def hooks_session_start() -> None:
     from .service_manager import ServiceManager
 
     # Configure minimal logging for hook execution
-    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
     log_file = log_dir / "kuzu_session_start.log"
 
     logging.basicConfig(
@@ -779,7 +780,7 @@ def hooks_learn(sync_mode: bool) -> None:
     from pathlib import Path
 
     # Configure minimal logging for hook execution
-    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+    log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
     log_file = log_dir / "kuzu_learn.log"
 
     logging.basicConfig(
@@ -989,7 +990,7 @@ def _learn_async(logger: Any) -> None:
         transcript_path_str = input_data.get("transcript_path")
 
         # Get log directory
-        log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", "/tmp"))
+        log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
 
         # OPTIMIZATION 2: Use multiprocessing.Process instead of subprocess (80ms → 20ms)
         if debug_timing:

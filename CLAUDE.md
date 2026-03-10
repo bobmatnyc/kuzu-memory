@@ -6,7 +6,7 @@ KuzuMemory is a lightweight, embedded graph-based memory system for AI applicati
 
 **Purpose**: Provide AI applications with project-specific memory and context awareness
 **Architecture**: Kùzu graph database + sentence-transformers embeddings + temporal decay
-**Language**: Python 3.12+
+**Language**: Python 3.11+
 **Key Frameworks**: Click (CLI), Pydantic (validation), FastAPI (future MCP server)
 
 ## Technology Stack

@@ -371,7 +371,7 @@ def recall(
                         {
                             "id": mem.id,
                             "content": mem.content,
-                            "source": getattr(mem, "source_type", "unknown"),
+                            "source": mem.source_type,
                             "created_at": mem.created_at.isoformat(),
                             "memory_type": mem.memory_type,
                             "relevance": getattr(mem, "relevance_score", 0.0),
@@ -543,7 +543,7 @@ def enhance(
                         {
                             "id": mem.id,
                             "content": mem.content,
-                            "source": getattr(mem, "source_type", "unknown"),
+                            "source": mem.source_type,
                             "created_at": mem.created_at.isoformat(),
                             "relevance": getattr(mem, "relevance_score", 0.0),
                         }
@@ -959,7 +959,7 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | No
                         {
                             "id": mem.id,
                             "content": mem.content,
-                            "source": getattr(mem, "source_type", "unknown"),
+                            "source": mem.source_type,
                             "memory_type": mem.memory_type,
                             "created_at": mem.created_at.isoformat(),
                         }
@@ -990,7 +990,7 @@ def recent(ctx: click.Context, limit: int, output_format: str, db_path: str | No
                     [
                         mem.id[:8] + "...",
                         mem.content[:80] + ("..." if len(mem.content) > 80 else ""),
-                        getattr(mem, "source_type", "unknown"),
+                        mem.source_type,
                         mem.memory_type,
                         mem.created_at.strftime("%m/%d %H:%M"),
                     ]
