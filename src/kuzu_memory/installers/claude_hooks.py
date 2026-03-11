@@ -1418,14 +1418,15 @@ exec {kuzu_cmd} "$@"
                 # Add new kuzu-memory handlers
                 existing_settings["hooks"][hook_type].extend(handlers)
 
-            # Validate hook events before writing
-            self._validate_hook_events(existing_settings)
-
             # Auto-fix invalid events during install (not just repair)
+            # Must run BEFORE validation so the warning only fires for unfixable events
             fixed_events, event_messages = self._migrate_legacy_events(existing_settings)
             if fixed_events:
                 for msg in event_messages:
                     logger.info(msg)
+
+            # Validate hook events after migration (only warns about truly unfixable events)
+            self._validate_hook_events(existing_settings)
 
             # Write hooks configuration to settings.local.json
             # (MCP servers will be configured in ~/.claude.json separately)

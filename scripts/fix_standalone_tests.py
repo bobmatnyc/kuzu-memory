@@ -16,7 +16,7 @@ def fix_test_file(filename):
     """Add pytest.skip to test functions in a file."""
     print(f"Fixing {filename}...")
 
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         content = f.read()
 
     # Find all test functions and add skip calls

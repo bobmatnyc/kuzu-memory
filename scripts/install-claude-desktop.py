@@ -50,7 +50,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Optional
 
 
 class Colors:
@@ -134,7 +134,7 @@ class ClaudeDesktopInstaller:
         else:
             raise OSError(f"Unsupported operating system: {system}")
 
-    def _find_kuzu_memory(self) -> Tuple[Optional[str], Optional[Path]]:
+    def _find_kuzu_memory(self) -> tuple[Optional[str], Optional[Path]]:
         """
         Find the kuzu-memory installation.
 
@@ -246,7 +246,7 @@ class ClaudeDesktopInstaller:
 
         return backup_path
 
-    def _create_mcp_config(self) -> Dict[str, Any]:
+    def _create_mcp_config(self) -> dict[str, Any]:
         """
         Create the MCP server configuration for KuzuMemory.
 
@@ -290,7 +290,7 @@ class ClaudeDesktopInstaller:
                 }
             }
 
-    def _update_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _update_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """
         Update the Claude Desktop configuration with KuzuMemory MCP server.
 
@@ -353,7 +353,7 @@ class ClaudeDesktopInstaller:
 
             # Load existing config
             try:
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path) as f:
                     config = json.load(f)
             except json.JSONDecodeError as e:
                 self._log(f"Failed to parse existing config: {e}", "error")
@@ -375,7 +375,7 @@ class ClaudeDesktopInstaller:
                 with open(self.config_path, 'w') as f:
                     json.dump(config, f, indent=2)
                 self._log(f"Updated configuration: {self.config_path}", "success")
-            except IOError as e:
+            except OSError as e:
                 self._log(f"Failed to write configuration: {e}", "error")
                 return False
 
@@ -422,7 +422,7 @@ class ClaudeDesktopInstaller:
 
         try:
             # Load configuration
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
 
             # Check if kuzu-memory exists
@@ -446,7 +446,7 @@ class ClaudeDesktopInstaller:
 
             return True
 
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             self._log(f"Failed to update configuration: {e}", "error")
             if backup_path:
                 self._log(f"Restore from backup: {backup_path}", "info")
@@ -474,7 +474,7 @@ class ClaudeDesktopInstaller:
             return False
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
 
             if "mcpServers" not in config or "kuzu-memory" not in config["mcpServers"]:
@@ -488,7 +488,7 @@ class ClaudeDesktopInstaller:
                 self._log("Configuration details:", "info")
                 print(json.dumps(mcp_config, indent=2))
 
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             self._log(f"Failed to read configuration: {e}", "error")
             return False
 

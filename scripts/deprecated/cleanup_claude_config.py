@@ -3,8 +3,9 @@
 Safely remove all kuzu-memory MCP server entries from global Claude configuration.
 """
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
+
 
 def main():
     # Read the config
@@ -13,7 +14,7 @@ def main():
     print(f"Reading configuration from: {config_path}")
 
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config = json.load(f)
     except json.JSONDecodeError as e:
         print(f"ERROR: Invalid JSON in config file: {e}")
@@ -22,7 +23,7 @@ def main():
         print(f"ERROR: Failed to read config: {e}")
         sys.exit(1)
 
-    print(f"Configuration loaded successfully")
+    print("Configuration loaded successfully")
     print(f"Top-level keys: {list(config.keys())}")
 
     # Find and count kuzu-memory entries
@@ -35,7 +36,7 @@ def main():
             del config['mcpServers']['kuzu-memory']
             removed_count += 1
             removal_log.append("Removed kuzu-memory from top-level mcpServers")
-            print(f"✓ Removed kuzu-memory from top-level mcpServers")
+            print("✓ Removed kuzu-memory from top-level mcpServers")
 
     # Check projects for mcpServers (this is where they actually are)
     if 'projects' in config and isinstance(config['projects'], dict):
@@ -77,11 +78,11 @@ def main():
         print(f"\n✅ Updated configuration written to {config_path}")
     except Exception as e:
         print(f"\n❌ ERROR: Failed to write config: {e}")
-        print(f"⚠ Original config is backed up, no changes were saved")
+        print("⚠ Original config is backed up, no changes were saved")
         sys.exit(1)
 
     # Summary
-    print(f"\nRemoval Summary:")
+    print("\nRemoval Summary:")
     for log_entry in removal_log:
         print(f"  - {log_entry}")
 

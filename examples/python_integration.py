@@ -6,11 +6,11 @@ This module demonstrates how to integrate KuzuMemory with Python AI applications
 Uses subprocess calls for reliability and compatibility.
 """
 
-import subprocess
 import json
+import subprocess
 import sys
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Any, Optional
 
 
 class KuzuMemoryIntegration:
@@ -74,7 +74,7 @@ class KuzuMemoryIntegration:
             return prompt
 
     def store_learning(self, content: str, source: str = 'ai-conversation',
-                      quiet: bool = True, metadata: Optional[Dict[str, Any]] = None) -> bool:
+                      quiet: bool = True, metadata: Optional[dict[str, Any]] = None) -> bool:
         """
         Store learning content asynchronously (non-blocking).
 
@@ -108,7 +108,7 @@ class KuzuMemoryIntegration:
             print(f"Warning: Learning failed: {e}", file=sys.stderr)
             return False
 
-    def get_project_stats(self) -> Dict[str, Any]:
+    def get_project_stats(self) -> dict[str, Any]:
         """
         Get project memory statistics.
 

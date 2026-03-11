@@ -8,8 +8,8 @@ This script shows:
 3. How sentiment affects importance calculation
 """
 
-from kuzu_memory.nlp import MemoryClassifier, SentimentResult
 from kuzu_memory.core.models import MemoryType
+from kuzu_memory.nlp import MemoryClassifier
 
 
 def demonstrate_sentiment_analysis():

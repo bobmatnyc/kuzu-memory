@@ -4,21 +4,21 @@ Profile service layer overhead for migrated commands.
 
 Measures baseline vs. service layer execution time to verify <5% overhead target.
 """
-import time
 import statistics
-from pathlib import Path
-from typing import Dict, Tuple
 
 # Add project to path
 import sys
+import time
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from kuzu_memory.cli.service_manager import ServiceManager
-from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.core.config import KuzuMemoryConfig
+from kuzu_memory.core.memory import KuzuMemory
 
 
-def measure_execution_time(func, iterations: int = 10) -> Tuple[float, float]:
+def measure_execution_time(func, iterations: int = 10) -> tuple[float, float]:
     """Measure mean and std dev of execution time."""
     times = []
     for _ in range(iterations):
@@ -30,7 +30,7 @@ def measure_execution_time(func, iterations: int = 10) -> Tuple[float, float]:
     return statistics.mean(times), statistics.stdev(times) if len(times) > 1 else 0.0
 
 
-def profile_memory_service_overhead() -> Dict[str, float]:
+def profile_memory_service_overhead() -> dict[str, float]:
     """Profile overhead of memory service initialization and simple query."""
     test_db = Path("/tmp/kuzu_profile_test")
     test_db.mkdir(exist_ok=True)
@@ -64,7 +64,7 @@ def profile_memory_service_overhead() -> Dict[str, float]:
     }
 
 
-def print_results(service_name: str, results: Dict[str, float]):
+def print_results(service_name: str, results: dict[str, float]):
     """Print formatted results."""
     print(f"\n{'='*60}")
     print(f"{service_name} Service Overhead Analysis")

@@ -17,7 +17,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 
 class VersionManager:
@@ -47,7 +47,7 @@ class VersionManager:
         pattern = r"^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
         return bool(re.match(pattern, version))
 
-    def parse_version(self, version: str) -> Tuple[int, int, int]:
+    def parse_version(self, version: str) -> tuple[int, int, int]:
         """Parse semantic version into major, minor, patch components."""
         parts = version.split("-")[0].split("+")[0]  # Remove pre-release and build metadata
         major, minor, patch = map(int, parts.split("."))
@@ -109,7 +109,7 @@ class VersionManager:
         self.update_version_py(new_version)
         return new_version
 
-    def get_git_info(self) -> Dict[str, str]:
+    def get_git_info(self) -> dict[str, str]:
         """Get current git commit and branch information."""
         try:
             commit = subprocess.check_output(
@@ -122,7 +122,7 @@ class VersionManager:
         except subprocess.CalledProcessError:
             return {"commit": "unknown", "branch": "unknown"}
 
-    def generate_build_info(self) -> Dict[str, str]:
+    def generate_build_info(self) -> dict[str, str]:
         """Generate build information."""
         version = self.get_current_version()
         git_info = self.get_git_info()
@@ -140,7 +140,7 @@ class VersionManager:
         self.build_info_file.write_text(json.dumps(build_info, indent=2) + "\n")
         return build_info
 
-    def update_changelog(self, version: str, changes: Optional[List[str]] = None) -> None:
+    def update_changelog(self, version: str, changes: Optional[list[str]] = None) -> None:
         """Update CHANGELOG.md with new version entry."""
         if not self.changelog_file.exists():
             print(f"Warning: CHANGELOG.md not found at {self.changelog_file}")
@@ -350,11 +350,11 @@ def main():
         current = vm.get_current_version()
         new_version = vm.bump_version(args.type)
         print(f"🚀 Bumped version: {current} → {new_version}")
-        print(f"📝 Updated VERSION, pyproject.toml, and __version__.py")
+        print("📝 Updated VERSION, pyproject.toml, and __version__.py")
 
         # Update changelog
         vm.update_changelog(new_version, args.changelog)
-        print(f"📝 Updated CHANGELOG.md")
+        print("📝 Updated CHANGELOG.md")
 
         # Create git tag
         if not args.no_tag:
@@ -362,7 +362,7 @@ def main():
 
     elif args.action == "build-info":
         build_info = vm.generate_build_info()
-        print(f"🔨 Generated BUILD_INFO:")
+        print("🔨 Generated BUILD_INFO:")
         print(json.dumps(build_info, indent=2))
 
     elif args.action == "tag":

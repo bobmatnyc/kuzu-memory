@@ -8,11 +8,9 @@ Ensures that:
 3. No contamination of the JSON-RPC communication channel
 """
 
-import asyncio
 import json
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -42,7 +40,6 @@ class MCPProtocolComplianceTest:
         # Start the MCP server via CLI command
         # For testing, we need to run the development version directly
         # to ensure we test the current code changes
-        import os
 
         project_root = Path(__file__).parent.parent
         cmd = [

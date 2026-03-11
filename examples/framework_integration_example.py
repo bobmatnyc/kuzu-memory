@@ -14,7 +14,6 @@ from pathlib import Path
 
 from kuzu_memory import (
     KuzuMemoryClient,
-    create_subservient_config,
     enable_subservient_mode,
     is_subservient_mode,
 )
@@ -40,7 +39,7 @@ class AIFramework:
         # Enable subservient mode (prevents kuzu-memory from managing hooks)
         result = enable_subservient_mode(project_root=project_root, managed_by=framework_name)
 
-        print(f"✅ Subservient mode enabled")
+        print("✅ Subservient mode enabled")
         print(f"   Config file: {result['config_path']}")
         print(f"   Managed by: {framework_name}\n")
 
@@ -63,7 +62,7 @@ class AIFramework:
 
         # Get initial stats
         stats = self.memory.get_stats()
-        print(f"✅ Memory backend initialized")
+        print("✅ Memory backend initialized")
         print(f"   Database: {self.memory.db_path}")
         print(f"   Existing memories: {stats['memory_count']}\n")
 

@@ -63,7 +63,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 
 class Colors:
@@ -165,7 +165,7 @@ class HomeInstaller:
         else:
             raise OSError(f"Unsupported operating system: {system}")
 
-    def _find_system_installation(self) -> Tuple[Optional[str], Optional[Path]]:
+    def _find_system_installation(self) -> tuple[Optional[str], Optional[Path]]:
         """
         Find system installation of kuzu-memory.
 
@@ -442,11 +442,11 @@ performance:
         self.claude_config_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Load or create config
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
         if self.claude_config_path.exists():
             self._backup_config(self.claude_config_path)
             try:
-                with open(self.claude_config_path, "r") as f:
+                with open(self.claude_config_path) as f:
                     config = json.load(f)
             except json.JSONDecodeError as e:
                 self._log(f"Failed to parse existing config: {e}", "error")
@@ -617,7 +617,7 @@ performance:
             self._backup_config(self.claude_config_path)
 
             try:
-                with open(self.claude_config_path, "r") as f:
+                with open(self.claude_config_path) as f:
                     config = json.load(f)
 
                 if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
@@ -631,7 +631,7 @@ performance:
 
                     self._log("Removed from Claude Desktop config", "success")
 
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 self._log(f"Failed to update Claude config: {e}", "warning")
 
         # Remove installation directory
@@ -685,7 +685,7 @@ performance:
         # Check Claude Desktop config
         if self.claude_config_path.exists():
             try:
-                with open(self.claude_config_path, "r") as f:
+                with open(self.claude_config_path) as f:
                     config = json.load(f)
 
                 if "mcpServers" in config and "kuzu-memory" in config["mcpServers"]:
@@ -695,7 +695,7 @@ performance:
                 else:
                     self._log("Not configured in Claude Desktop", "warning")
 
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 self._log(f"Failed to read Claude config: {e}", "warning")
 
         # Validate system installation for wrapper mode

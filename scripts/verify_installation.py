@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def check_installation():
     """Check if KuzuMemory is properly installed."""
     print("KuzuMemory Claude Code Integration Verification")
@@ -80,7 +81,7 @@ def check_installation():
     try:
         # Import and test MCP server initialization
         sys.path.insert(0, str(Path(__file__).parent / "src"))
-        from kuzu_memory.integrations.mcp_server import KuzuMemoryMCPServer, MCP_AVAILABLE
+        from kuzu_memory.integrations.mcp_server import MCP_AVAILABLE, KuzuMemoryMCPServer
 
         if MCP_AVAILABLE:
             server = KuzuMemoryMCPServer()

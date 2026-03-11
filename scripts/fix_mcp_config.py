@@ -20,12 +20,11 @@ Options:
 
 import argparse
 import json
-import os
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any
 
 
 class Colors:
@@ -88,10 +87,10 @@ class MCPConfigFixer:
             shutil.copy2(self.config_path, backup_path)
             self._log(f"Created backup: {backup_path}", "success")
             return backup_path
-        except IOError as e:
-            raise IOError(f"Failed to create backup: {e}")
+        except OSError as e:
+            raise OSError(f"Failed to create backup: {e}")
 
-    def _find_kuzu_memory_entries(self, config: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
+    def _find_kuzu_memory_entries(self, config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
         """
         Find all kuzu-memory MCP server entries in the configuration.
 
@@ -121,7 +120,7 @@ class MCPConfigFixer:
 
         return entries
 
-    def _is_kuzu_memory_server(self, server_config: Dict[str, Any]) -> bool:
+    def _is_kuzu_memory_server(self, server_config: dict[str, Any]) -> bool:
         """
         Determine if a server configuration is for kuzu-memory.
 
@@ -146,7 +145,7 @@ class MCPConfigFixer:
 
         return False
 
-    def _needs_fix(self, server_config: Dict[str, Any]) -> bool:
+    def _needs_fix(self, server_config: dict[str, Any]) -> bool:
         """
         Check if a server configuration needs to be fixed.
 
@@ -179,7 +178,7 @@ class MCPConfigFixer:
 
         return False
 
-    def _fix_server_config(self, server_config: Dict[str, Any]) -> Dict[str, Any]:
+    def _fix_server_config(self, server_config: dict[str, Any]) -> dict[str, Any]:
         """
         Fix a server configuration by updating the args and command.
 
@@ -254,7 +253,7 @@ class MCPConfigFixer:
         # Step 2: Load configuration
         self._log("Loading configuration...", "info")
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
         except json.JSONDecodeError as e:
             raise json.JSONDecodeError(
@@ -312,7 +311,7 @@ class MCPConfigFixer:
         self._log("Creating backup before making changes...", "info")
         try:
             backup_path = self._create_backup()
-        except IOError as e:
+        except OSError as e:
             self._log(f"Failed to create backup: {e}", "error")
             self._log("Aborting to prevent data loss", "error")
             return False
@@ -336,7 +335,7 @@ class MCPConfigFixer:
             with open(self.config_path, 'w') as f:
                 json.dump(config, f, indent=2)
                 f.write('\n')  # Add trailing newline
-        except IOError as e:
+        except OSError as e:
             self._log(f"Failed to write configuration: {e}", "error")
             self._log(f"You can restore from backup: {backup_path}", "warning")
             return False
@@ -367,7 +366,7 @@ class MCPConfigFixer:
             return False
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
         except json.JSONDecodeError as e:
             self._log(f"Invalid JSON: {e}", "error")
@@ -391,10 +390,10 @@ class MCPConfigFixer:
             self._log(f"  Args: {args}", "info")
 
             if needs_fix:
-                self._log(f"  Status: NEEDS FIX", "warning")
+                self._log("  Status: NEEDS FIX", "warning")
                 all_correct = False
             else:
-                self._log(f"  Status: OK", "success")
+                self._log("  Status: OK", "success")
 
         if all_correct:
             self._log("", "info")

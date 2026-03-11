@@ -16,9 +16,8 @@ Options:
 import argparse
 import shutil
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import List, Tuple
+from pathlib import Path
 
 
 class DatabaseConsolidator:
@@ -39,7 +38,7 @@ class DatabaseConsolidator:
         if self.backup and not self.dry_run:
             self.backup_dir.mkdir(exist_ok=True)
 
-    def analyze_databases(self) -> List[Tuple[Path, bool, int]]:
+    def analyze_databases(self) -> list[tuple[Path, bool, int]]:
         """Analyze existing database locations and return status."""
         databases = []
 
@@ -152,7 +151,7 @@ class DatabaseConsolidator:
                 if not self.dry_run:
                     shutil.rmtree(self.primary_db)
                 else:
-                    print(f"[DRY RUN] Would remove primary database")
+                    print("[DRY RUN] Would remove primary database")
 
             # Move legacy to primary
             success = self.consolidate_database(self.legacy_db, self.primary_db)

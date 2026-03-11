@@ -14,6 +14,7 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextlib import nullcontext as _nullcontext
 from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
@@ -201,6 +202,11 @@ class KuzuAdapter:
         self.config = config
         self._pool = KuzuConnectionPool(db_path, pool_size=config.storage.connection_pool_size)
         self._schema_initialized = False
+        # Kùzu enforces a single-writer constraint at the engine level: only one
+        # write transaction may be open at a time across all connections.  This
+        # lock serialises all write operations so that concurrent callers (e.g.
+        # asyncio.to_thread workers) queue behind each other instead of racing.
+        self._write_lock = threading.Lock()
 
     def initialize(self) -> None:
         """Initialize the database and schema."""
@@ -307,6 +313,19 @@ class KuzuAdapter:
         except Exception as e:
             raise DatabaseError(f"Failed to create schema: {e}")
 
+    # Queries that mutate state and therefore require the write lock.  This is
+    # intentionally conservative: any keyword that begins a write clause is
+    # listed so we never accidentally run two concurrent writers.
+    _WRITE_KEYWORDS = frozenset(
+        ["create", "merge", "set", "delete", "remove", "detach", "drop", "begin"]
+    )
+
+    @classmethod
+    def _is_write_query(cls, query: str) -> bool:
+        """Return True when *query* contains a write clause."""
+        first_keyword = query.strip().split()[0].lower() if query.strip() else ""
+        return first_keyword in cls._WRITE_KEYWORDS
+
     def execute_query(
         self,
         query: str,
@@ -315,6 +334,10 @@ class KuzuAdapter:
     ) -> list[dict[str, Any]]:
         """
         Execute a query and return results.
+
+        Write queries are serialised through ``_write_lock`` so that concurrent
+        callers (e.g. asyncio.to_thread workers) queue safely behind each other
+        instead of racing for the single Kùzu write-transaction slot.
 
         Args:
             query: Cypher query to execute
@@ -331,61 +354,85 @@ class KuzuAdapter:
         start_time = time.time()
         timeout_ms = timeout_ms or self.config.storage.query_timeout_ms
 
-        try:
-            with self._pool.get_connection() as conn:
-                # Execute query
-                if parameters:
-                    # Debug logging for parameter issues
-                    if "week_ago" in query and "week_ago" not in parameters:
-                        logger.warning(
-                            f"Query contains $week_ago but parameter not provided. Params: {parameters.keys()}"
-                        )
-                    result = conn.execute(query, parameters)
+        is_write = self._is_write_query(query)
+        max_retries = self.config.storage.max_write_retries if is_write else 1
+        backoff_s = self.config.storage.write_retry_backoff_ms / 1000.0
+
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                # Serialise write operations so concurrent threads never hold two
+                # open write transactions against the same Kùzu database at once.
+                lock_ctx = self._write_lock if is_write else _nullcontext()
+                with lock_ctx:
+                    with self._pool.get_connection() as conn:
+                        # Execute query
+                        if parameters:
+                            # Debug logging for parameter issues
+                            if "week_ago" in query and "week_ago" not in parameters:
+                                logger.warning(
+                                    f"Query contains $week_ago but parameter not provided. Params: {parameters.keys()}"
+                                )
+                            result = conn.execute(query, parameters)
+                        else:
+                            result = conn.execute(query)
+
+                        # Convert result to list of dictionaries
+                        results = []
+                        while result.has_next():
+                            row = result.get_next()
+                            # Convert row to dictionary
+                            row_dict = {}
+                            for i in range(len(result.get_column_names())):
+                                col_name = result.get_column_names()[i]
+                                row_dict[col_name] = row[i]
+                            results.append(row_dict)
+
+                        # Check performance
+                        execution_time_ms = (time.time() - start_time) * 1000
+                        if self.config.performance.enable_performance_monitoring:
+                            if execution_time_ms > timeout_ms:
+                                raise PerformanceError(
+                                    f"Query execution exceeded timeout: {execution_time_ms:.1f}ms > {timeout_ms}ms"
+                                )
+
+                            if (
+                                self.config.performance.log_slow_operations
+                                and execution_time_ms > timeout_ms * 0.8
+                            ):
+                                logger.warning(
+                                    f"Slow query ({execution_time_ms:.1f}ms): {query[:100]}..."
+                                )
+
+                        return results
+
+            except Exception as e:
+                if isinstance(e, PerformanceError):
+                    raise
+
+                # Check for specific Kuzu errors
+                error_msg = str(e).lower()
+                if "only one write transaction" in error_msg and is_write and attempt < max_retries - 1:
+                    # Another connection beat us to the write slot; back off and retry.
+                    wait = backoff_s * (2**attempt)
+                    logger.warning(
+                        f"Write-transaction contention on attempt {attempt + 1}/{max_retries}; "
+                        f"retrying in {wait * 1000:.0f}ms"
+                    )
+                    time.sleep(wait)
+                    last_exc = e
+                    continue
+                elif "locked" in error_msg or "busy" in error_msg:
+                    raise DatabaseLockError(f"Database locked: {self.db_path}")
+                elif "corrupt" in error_msg or "malformed" in error_msg:
+                    raise CorruptedDatabaseError(
+                        f"Database corrupted at {self.db_path}: {e}",
+                        context={"db_path": str(self.db_path), "error": str(e)},
+                    )
                 else:
-                    result = conn.execute(query)
+                    raise DatabaseError(f"Query execution failed: {e}")
 
-                # Convert result to list of dictionaries
-                results = []
-                while result.has_next():
-                    row = result.get_next()
-                    # Convert row to dictionary
-                    row_dict = {}
-                    for i in range(len(result.get_column_names())):
-                        col_name = result.get_column_names()[i]
-                        row_dict[col_name] = row[i]
-                    results.append(row_dict)
-
-                # Check performance
-                execution_time_ms = (time.time() - start_time) * 1000
-                if self.config.performance.enable_performance_monitoring:
-                    if execution_time_ms > timeout_ms:
-                        raise PerformanceError(
-                            f"Query execution exceeded timeout: {execution_time_ms:.1f}ms > {timeout_ms}ms"
-                        )
-
-                    if (
-                        self.config.performance.log_slow_operations
-                        and execution_time_ms > timeout_ms * 0.8
-                    ):
-                        logger.warning(f"Slow query ({execution_time_ms:.1f}ms): {query[:100]}...")
-
-                return results
-
-        except Exception as e:
-            if isinstance(e, PerformanceError):
-                raise
-
-            # Check for specific Kuzu errors
-            error_msg = str(e).lower()
-            if "locked" in error_msg or "busy" in error_msg:
-                raise DatabaseLockError(f"Database locked: {self.db_path}")
-            elif "corrupt" in error_msg or "malformed" in error_msg:
-                raise CorruptedDatabaseError(
-                    f"Database corrupted at {self.db_path}: {e}",
-                    context={"db_path": str(self.db_path), "error": str(e)},
-                )
-            else:
-                raise DatabaseError(f"Query execution failed: {e}")
+        raise DatabaseError(f"Query execution failed after {max_retries} retries: {last_exc}")
 
     def execute_transaction(
         self,
@@ -409,48 +456,52 @@ class KuzuAdapter:
         timeout_ms = timeout_ms or self.config.storage.query_timeout_ms * len(queries)
 
         try:
-            with self._pool.get_connection() as conn:
-                # Begin transaction
-                conn.execute("BEGIN TRANSACTION")
+            # All explicit transactions are write transactions; hold the write
+            # lock for the full duration so no other thread can open a competing
+            # write transaction while this one is in flight.
+            with self._write_lock:
+                with self._pool.get_connection() as conn:
+                    # Begin transaction
+                    conn.execute("BEGIN TRANSACTION")
 
-                results = []
-                try:
-                    # Execute all queries
-                    for query, parameters in queries:
-                        if parameters:
-                            result = conn.execute(query, parameters)
-                        else:
-                            result = conn.execute(query)
+                    results = []
+                    try:
+                        # Execute all queries
+                        for query, parameters in queries:
+                            if parameters:
+                                result = conn.execute(query, parameters)
+                            else:
+                                result = conn.execute(query)
 
-                        # Convert result
-                        query_results = []
-                        while result.has_next():
-                            row = result.get_next()
-                            row_dict = {}
-                            for i in range(len(result.get_column_names())):
-                                col_name = result.get_column_names()[i]
-                                row_dict[col_name] = row[i]
-                            query_results.append(row_dict)
+                            # Convert result
+                            query_results = []
+                            while result.has_next():
+                                row = result.get_next()
+                                row_dict = {}
+                                for i in range(len(result.get_column_names())):
+                                    col_name = result.get_column_names()[i]
+                                    row_dict[col_name] = row[i]
+                                query_results.append(row_dict)
 
-                        results.append(query_results)
+                            results.append(query_results)
 
-                    # Commit transaction
-                    conn.execute("COMMIT")
+                        # Commit transaction
+                        conn.execute("COMMIT")
 
-                    # Check performance
-                    execution_time_ms = (time.time() - start_time) * 1000
-                    if (
-                        self.config.performance.enable_performance_monitoring
-                        and execution_time_ms > timeout_ms
-                    ):
-                        logger.warning(f"Slow transaction ({execution_time_ms:.1f}ms)")
+                        # Check performance
+                        execution_time_ms = (time.time() - start_time) * 1000
+                        if (
+                            self.config.performance.enable_performance_monitoring
+                            and execution_time_ms > timeout_ms
+                        ):
+                            logger.warning(f"Slow transaction ({execution_time_ms:.1f}ms)")
 
-                    return results
+                        return results
 
-                except Exception:
-                    # Rollback on error
-                    conn.execute("ROLLBACK")
-                    raise
+                    except Exception:
+                        # Rollback on error
+                        conn.execute("ROLLBACK")
+                        raise
 
         except Exception as e:
             raise DatabaseError(f"Transaction failed: {e}")

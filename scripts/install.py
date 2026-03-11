@@ -8,13 +8,14 @@ that gets users productive with KuzuMemory in under 3 minutes.
 Now with Claude Code MCP integration support!
 """
 
-import subprocess
-import sys
-import time
 import json
 import os
 import platform
+import subprocess
+import sys
+import time
 from pathlib import Path
+
 
 def print_banner():
     """Print the installation banner."""
@@ -32,16 +33,16 @@ def print_banner():
 def run_command(cmd, description, show_output=False):
     """Run a command with progress indication."""
     print(f"⏳ {description}...")
-    
+
     try:
         if show_output:
             result = subprocess.run(cmd, shell=True, check=True)
         else:
             result = subprocess.run(
-                cmd, 
-                shell=True, 
-                check=True, 
-                capture_output=True, 
+                cmd,
+                shell=True,
+                check=True,
+                capture_output=True,
                 text=True
             )
         print(f"✅ {description} completed")
@@ -53,13 +54,13 @@ def run_command(cmd, description, show_output=False):
 def check_python_version():
     """Check if Python version is compatible."""
     print("🔍 Checking Python version...")
-    
+
     version = sys.version_info
     if version.major < 3 or (version.major == 3 and version.minor < 8):
         print(f"❌ Python {version.major}.{version.minor} is not supported")
         print("   KuzuMemory requires Python 3.8 or higher")
         return False
-    
+
     print(f"✅ Python {version.major}.{version.minor}.{version.micro} is compatible")
     return True
 
@@ -67,34 +68,34 @@ def install_dependencies():
     """Install required dependencies."""
     dependencies = [
         "kuzu>=0.4.0",
-        "pydantic>=2.0", 
+        "pydantic>=2.0",
         "click>=8.1.0",
         "pyyaml>=6.0",
         "python-dateutil>=2.8",
         "typing-extensions>=4.5",
         "rich>=13.0.0"
     ]
-    
+
     print("📦 Installing dependencies...")
-    
+
     for dep in dependencies:
         success, output = run_command(f"pip install {dep}", f"Installing {dep.split('>=')[0]}")
         if not success:
             return False
-    
+
     return True
 
 def install_kuzu_memory():
     """Install KuzuMemory in development mode."""
     print("🧠 Installing KuzuMemory...")
-    
+
     # Check if we're in the KuzuMemory directory
     if Path("setup.py").exists() or Path("pyproject.toml").exists():
         success, _ = run_command("pip install -e .", "Installing KuzuMemory (development mode)")
     else:
         print("⚠️  Not in KuzuMemory directory, installing from PyPI...")
         success, _ = run_command("pip install kuzu-memory", "Installing KuzuMemory from PyPI")
-    
+
     return success
 
 def detect_claude_installation():
@@ -167,7 +168,7 @@ def setup_claude_code_integration():
             print(f"✅ Backed up existing config to: {backup_path}")
 
             # Load existing config
-            with open(claude_config_path, 'r') as f:
+            with open(claude_config_path) as f:
                 existing_config = json.load(f)
 
             # Merge configurations
@@ -209,8 +210,8 @@ def test_installation():
         print("✅ CLI available")
 
         # Test core functionality
-        from kuzu_memory.core.memory import KuzuMemory
         from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.core.memory import KuzuMemory
         print("✅ Core components available")
 
         # Test MCP server
@@ -236,7 +237,7 @@ def test_installation():
 def run_demo():
     """Run the interactive demo."""
     print("🎮 Running demo...")
-    
+
     try:
         from kuzu_memory.cli.commands import cli
         cli(['demo'])
@@ -277,7 +278,7 @@ def show_next_steps():
 
 Ready to build intelligent AI applications! 🧠✨
 """
-    
+
     print(next_steps)
 
 def main():
@@ -316,22 +317,22 @@ def main():
 
     if not run_demo():
         print("⚠️  Demo failed, but installation is complete")
-    
+
     # Calculate installation time
     elapsed_time = time.time() - start_time
     minutes = int(elapsed_time // 60)
     seconds = int(elapsed_time % 60)
-    
+
     print("\n" + "="*60)
     print("🎉 INSTALLATION COMPLETE!")
     print("="*60)
     print(f"⏱️  Total time: {minutes}m {seconds}s")
-    
+
     if elapsed_time <= 180:  # 3 minutes
         print("🎯 3-minute installation goal achieved!")
     else:
         print("⏰ Installation took longer than 3 minutes, but it's complete!")
-    
+
     show_next_steps()
 
 if __name__ == "__main__":

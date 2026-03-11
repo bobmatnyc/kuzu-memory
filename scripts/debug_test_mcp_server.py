@@ -3,7 +3,6 @@
 Test script for KuzuMemory MCP Server.
 """
 
-import json
 import sys
 from pathlib import Path
 

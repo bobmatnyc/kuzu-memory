@@ -5,7 +5,7 @@ Script to fix common mypy --strict type errors across the codebase.
 import re
 import sys
 from pathlib import Path
-from typing import Pattern
+from re import Pattern
 
 
 def add_return_none_to_functions(content: str) -> str:

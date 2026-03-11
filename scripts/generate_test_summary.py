@@ -7,17 +7,17 @@ comprehensive HTML and markdown reports.
 """
 
 import argparse
+import glob
 import json
 import xml.etree.ElementTree as ET
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from datetime import datetime
-import glob
+from pathlib import Path
+from typing import Any, Optional
 
 
 class TestSummaryGenerator:
     """Generates comprehensive test summaries from multiple test suites."""
-    
+
     def __init__(self):
         """Initialize the test summary generator."""
         self.summary_data = {
@@ -35,8 +35,8 @@ class TestSummaryGenerator:
             'performance': {},
             'coverage': {}
         }
-    
-    def parse_junit_xml(self, xml_file: Path, suite_name: str) -> Dict[str, Any]:
+
+    def parse_junit_xml(self, xml_file: Path, suite_name: str) -> dict[str, Any]:
         """Parse JUnit XML test results."""
         if not xml_file.exists():
             return {
@@ -49,11 +49,11 @@ class TestSummaryGenerator:
                 'time': 0.0,
                 'test_cases': []
             }
-        
+
         try:
             tree = ET.parse(xml_file)
             root = tree.getroot()
-            
+
             # Handle different JUnit XML formats
             if root.tag == 'testsuites':
                 testsuite = root.find('testsuite')
@@ -61,7 +61,7 @@ class TestSummaryGenerator:
                     testsuite = root
             else:
                 testsuite = root
-            
+
             suite_data = {
                 'name': suite_name,
                 'status': 'completed',
@@ -72,7 +72,7 @@ class TestSummaryGenerator:
                 'time': float(testsuite.get('time', 0.0)),
                 'test_cases': []
             }
-            
+
             # Parse individual test cases
             for testcase in testsuite.findall('testcase'):
                 case_data = {
@@ -81,7 +81,7 @@ class TestSummaryGenerator:
                     'time': float(testcase.get('time', 0.0)),
                     'status': 'passed'
                 }
-                
+
                 # Check for failures, errors, or skips
                 if testcase.find('failure') is not None:
                     case_data['status'] = 'failed'
@@ -97,11 +97,11 @@ class TestSummaryGenerator:
                     case_data['status'] = 'skipped'
                     skipped = testcase.find('skipped')
                     case_data['skip_message'] = skipped.get('message', '')
-                
+
                 suite_data['test_cases'].append(case_data)
-            
+
             return suite_data
-            
+
         except ET.ParseError as e:
             return {
                 'name': suite_name,
@@ -114,23 +114,23 @@ class TestSummaryGenerator:
                 'time': 0.0,
                 'test_cases': []
             }
-    
-    def parse_benchmark_results(self, benchmark_file: Path) -> Dict[str, Any]:
+
+    def parse_benchmark_results(self, benchmark_file: Path) -> dict[str, Any]:
         """Parse benchmark results JSON."""
         if not benchmark_file.exists():
             return {'status': 'missing', 'benchmarks': []}
-        
+
         try:
-            with open(benchmark_file, 'r') as f:
+            with open(benchmark_file) as f:
                 data = json.load(f)
-            
+
             performance_data = {
                 'status': 'completed',
                 'benchmarks': [],
                 'machine_info': data.get('machine_info', {}),
                 'commit_info': data.get('commit_info', {})
             }
-            
+
             for benchmark in data.get('benchmarks', []):
                 bench_data = {
                     'name': benchmark.get('name', 'unknown'),
@@ -141,20 +141,20 @@ class TestSummaryGenerator:
                     'iterations': benchmark.get('stats', {}).get('rounds', 0)
                 }
                 performance_data['benchmarks'].append(bench_data)
-            
+
             return performance_data
-            
-        except (json.JSONDecodeError, IOError) as e:
+
+        except (OSError, json.JSONDecodeError) as e:
             return {
                 'status': 'parse_error',
                 'error': str(e),
                 'benchmarks': []
             }
-    
-    def aggregate_results(self, unit_results: List[Path], integration_results: Optional[Path],
+
+    def aggregate_results(self, unit_results: list[Path], integration_results: Optional[Path],
                          e2e_results: Optional[Path], benchmark_results: Optional[Path]):
         """Aggregate all test results."""
-        
+
         # Process unit test results (multiple Python versions)
         unit_suite_data = {
             'name': 'Unit Tests',
@@ -166,7 +166,7 @@ class TestSummaryGenerator:
             'time': 0.0,
             'python_versions': []
         }
-        
+
         for unit_file in unit_results:
             if unit_file.exists():
                 suite_data = self.parse_junit_xml(unit_file, f"Unit Tests ({unit_file.stem})")
@@ -176,31 +176,31 @@ class TestSummaryGenerator:
                 unit_suite_data['skipped'] += suite_data['skipped']
                 unit_suite_data['time'] += suite_data['time']
                 unit_suite_data['python_versions'].append(suite_data)
-        
+
         self.summary_data['suites']['unit'] = unit_suite_data
-        
+
         # Process integration test results
         if integration_results and integration_results.exists():
             integration_data = self.parse_junit_xml(integration_results, 'Integration Tests')
             self.summary_data['suites']['integration'] = integration_data
-        
+
         # Process E2E test results
         if e2e_results and e2e_results.exists():
             e2e_data = self.parse_junit_xml(e2e_results, 'End-to-End Tests')
             self.summary_data['suites']['e2e'] = e2e_data
-        
+
         # Process benchmark results
         if benchmark_results and benchmark_results.exists():
             perf_data = self.parse_benchmark_results(benchmark_results)
             self.summary_data['performance'] = perf_data
-        
+
         # Calculate overall statistics
         self._calculate_overall_stats()
-    
+
     def _calculate_overall_stats(self):
         """Calculate overall test statistics."""
         overall = self.summary_data['overall']
-        
+
         for suite_name, suite_data in self.summary_data['suites'].items():
             if suite_data.get('status') == 'completed':
                 overall['total_tests'] += suite_data.get('tests', 0)
@@ -208,30 +208,30 @@ class TestSummaryGenerator:
                 overall['error_tests'] += suite_data.get('errors', 0)
                 overall['skipped_tests'] += suite_data.get('skipped', 0)
                 overall['total_time'] += suite_data.get('time', 0.0)
-        
-        overall['passed_tests'] = (overall['total_tests'] - 
-                                 overall['failed_tests'] - 
-                                 overall['error_tests'] - 
+
+        overall['passed_tests'] = (overall['total_tests'] -
+                                 overall['failed_tests'] -
+                                 overall['error_tests'] -
                                  overall['skipped_tests'])
-        
+
         if overall['total_tests'] > 0:
             overall['success_rate'] = overall['passed_tests'] / overall['total_tests']
         else:
             overall['success_rate'] = 0.0
-    
+
     def generate_html_report(self, output_file: Path):
         """Generate HTML test summary report."""
         html_content = self._generate_html_content()
-        
+
         with open(output_file, 'w') as f:
             f.write(html_content)
-        
+
         print(f"HTML test summary generated: {output_file}")
-    
+
     def _generate_html_content(self) -> str:
         """Generate HTML content for the test report."""
         overall = self.summary_data['overall']
-        
+
         # Determine overall status
         if overall['failed_tests'] > 0 or overall['error_tests'] > 0:
             status_class = 'failed'
@@ -245,7 +245,7 @@ class TestSummaryGenerator:
             status_class = 'passed'
             status_icon = '✅'
             status_text = 'PASSED'
-        
+
         html = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -294,7 +294,7 @@ class TestSummaryGenerator:
             <div class="timestamp">Generated: {self.summary_data['timestamp']}</div>
             <div class="status-badge {status_class}">{status_icon} {status_text}</div>
         </div>
-        
+
         <div class="content">
             <div class="overview">
                 <div class="metric">
@@ -319,7 +319,7 @@ class TestSummaryGenerator:
                 </div>
             </div>
         """
-        
+
         # Add test suites
         for suite_name, suite_data in self.summary_data['suites'].items():
             if suite_data.get('status') == 'completed':
@@ -352,7 +352,7 @@ class TestSummaryGenerator:
                 </div>
             </div>
                 """
-        
+
         # Add performance results
         perf_data = self.summary_data.get('performance', {})
         if perf_data.get('status') == 'completed' and perf_data.get('benchmarks'):
@@ -360,7 +360,7 @@ class TestSummaryGenerator:
             <div class="performance">
                 <h2>📊 Performance Benchmarks</h2>
             """
-            
+
             for benchmark in perf_data['benchmarks']:
                 html += f"""
                 <div class="benchmark">
@@ -389,22 +389,22 @@ class TestSummaryGenerator:
                     </div>
                 </div>
                 """
-            
+
             html += "</div>"
-        
+
         html += """
         </div>
     </div>
 </body>
 </html>
         """
-        
+
         return html
-    
+
     def generate_markdown_report(self, output_file: Path):
         """Generate markdown test summary report."""
         overall = self.summary_data['overall']
-        
+
         # Determine overall status
         if overall['failed_tests'] > 0 or overall['error_tests'] > 0:
             status_icon = '❌'
@@ -415,7 +415,7 @@ class TestSummaryGenerator:
         else:
             status_icon = '✅'
             status_text = 'PASSED'
-        
+
         markdown_lines = [
             "# 🧪 KuzuMemory Test Summary",
             "",
@@ -435,12 +435,12 @@ class TestSummaryGenerator:
             "## Test Suites",
             ""
         ]
-        
+
         # Add test suite details
         for suite_name, suite_data in self.summary_data['suites'].items():
             if suite_data.get('status') == 'completed':
                 passed = suite_data.get('tests', 0) - suite_data.get('failures', 0) - suite_data.get('errors', 0) - suite_data.get('skipped', 0)
-                
+
                 markdown_lines.extend([
                     f"### {suite_data['name']}",
                     "",
@@ -452,7 +452,7 @@ class TestSummaryGenerator:
                     f"- **Duration:** {suite_data.get('time', 0):.1f}s",
                     ""
                 ])
-        
+
         # Add performance results
         perf_data = self.summary_data.get('performance', {})
         if perf_data.get('status') == 'completed' and perf_data.get('benchmarks'):
@@ -460,7 +460,7 @@ class TestSummaryGenerator:
                 "## 📊 Performance Benchmarks",
                 ""
             ])
-            
+
             for benchmark in perf_data['benchmarks']:
                 markdown_lines.extend([
                     f"### {benchmark['name']}",
@@ -472,11 +472,11 @@ class TestSummaryGenerator:
                     f"- **Iterations:** {benchmark['iterations']}",
                     ""
                 ])
-        
+
         # Write markdown file
         with open(output_file, 'w') as f:
             f.write('\n'.join(markdown_lines))
-        
+
         print(f"Markdown test summary generated: {output_file}")
 
 
@@ -489,17 +489,17 @@ def main():
     parser.add_argument("--benchmark-results", type=Path, help="Benchmark results JSON file")
     parser.add_argument("--output", type=Path, default=Path("test-summary.html"), help="Output HTML file")
     parser.add_argument("--markdown", type=Path, help="Output markdown file")
-    
+
     args = parser.parse_args()
-    
+
     generator = TestSummaryGenerator()
-    
+
     # Parse unit test results (handle glob patterns)
     unit_results = []
     if args.unit_results:
         for pattern in args.unit_results:
             unit_results.extend([Path(f) for f in glob.glob(pattern)])
-    
+
     # Aggregate all results
     generator.aggregate_results(
         unit_results=unit_results,
@@ -507,16 +507,16 @@ def main():
         e2e_results=args.e2e_results,
         benchmark_results=args.benchmark_results
     )
-    
+
     # Generate reports
     generator.generate_html_report(args.output)
-    
+
     if args.markdown:
         generator.generate_markdown_report(args.markdown)
-    
+
     # Print summary to console
     overall = generator.summary_data['overall']
-    print(f"\n📊 Test Summary:")
+    print("\n📊 Test Summary:")
     print(f"   Total: {overall['total_tests']}")
     print(f"   Passed: {overall['passed_tests']}")
     print(f"   Failed: {overall['failed_tests']}")

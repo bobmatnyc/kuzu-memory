@@ -12,8 +12,8 @@ from pathlib import Path
 # Add parent directory to path for local testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from kuzu_memory.nlp.classifier import MemoryClassifier
 from kuzu_memory.core.models import MemoryType
+from kuzu_memory.nlp.classifier import MemoryClassifier
 
 
 def print_classification(content: str, result):
@@ -105,7 +105,7 @@ def main():
     """
 
     entities = classifier.extract_entities(complex_content)
-    print(f"\n📝 Content: Complex technical discussion")
+    print("\n📝 Content: Complex technical discussion")
     print(f"\n👥 People: {', '.join(entities.people) if entities.people else 'None found'}")
     print(f"🏢 Organizations: {', '.join(entities.organizations) if entities.organizations else 'None found'}")
     print(f"📍 Locations: {', '.join(entities.locations) if entities.locations else 'None found'}")

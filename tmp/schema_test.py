@@ -5,7 +5,9 @@ Test our exact schema creation step by step.
 
 import tempfile
 from pathlib import Path
+
 import kuzu
+
 
 def test_schema_creation():
     """Test our schema creation step by step."""
@@ -14,17 +16,17 @@ def test_schema_creation():
 
     print("🧪 Testing Schema Creation")
     print("=" * 40)
-    
+
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = Path(temp_dir) / "test.db"
-        
+
         try:
             # Create database and connection
             database = kuzu.Database(str(db_path))
             connection = kuzu.Connection(database)
-            
+
             print("✅ Database and connection created")
-            
+
             # Test each table creation individually
             tables = [
                 ("SchemaVersion", """
@@ -78,7 +80,7 @@ def test_schema_creation():
                     )
                 """)
             ]
-            
+
             # Create node tables
             for table_name, ddl in tables:
                 print(f"\n📝 Creating {table_name} table...")
@@ -88,7 +90,7 @@ def test_schema_creation():
                 except Exception as e:
                     print(f"❌ {table_name} table failed: {e}")
                     return False
-            
+
             # Test relationship tables
             relationships = [
                 ("MENTIONS", """
@@ -122,7 +124,7 @@ def test_schema_creation():
                     )
                 """)
             ]
-            
+
             # Create relationship tables
             for rel_name, ddl in relationships:
                 print(f"\n📝 Creating {rel_name} relationship...")
@@ -133,14 +135,14 @@ def test_schema_creation():
                     print(f"❌ {rel_name} relationship failed: {e}")
                     print(f"   DDL: {ddl.strip()}")
                     return False
-            
+
             # Test some indices
             indices = [
                 ("idx_memory_content_hash", "CREATE INDEX IF NOT EXISTS idx_memory_content_hash ON Memory(content_hash)"),
                 ("idx_memory_type", "CREATE INDEX IF NOT EXISTS idx_memory_type ON Memory(memory_type)"),
                 ("idx_entity_name", "CREATE INDEX IF NOT EXISTS idx_entity_name ON Entity(name)")
             ]
-            
+
             for idx_name, ddl in indices:
                 print(f"\n📝 Creating {idx_name} index...")
                 try:
@@ -149,10 +151,10 @@ def test_schema_creation():
                 except Exception as e:
                     print(f"❌ {idx_name} index failed: {e}")
                     # Indices failing is not critical
-            
-            print(f"\n🎉 Schema creation completed successfully!")
+
+            print("\n🎉 Schema creation completed successfully!")
             return True
-            
+
         except Exception as e:
             print(f"❌ Error: {e}")
             import traceback

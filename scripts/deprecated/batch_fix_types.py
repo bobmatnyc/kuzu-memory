@@ -7,7 +7,6 @@ This script automates common type annotation patterns.
 import re
 import sys
 from pathlib import Path
-from typing import Callable
 
 
 def fix_file(file_path: Path) -> tuple[int, int]:
