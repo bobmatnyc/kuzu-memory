@@ -10,6 +10,21 @@
         "KUZU_MEMORY_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
         "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/kuzu-memories"
       }
+    },
+    "mcp-vector-search": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/masa/Projects/kuzu-memory",
+        "mcp-vector-search",
+        "mcp"
+      ],
+      "env": {
+        "PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
+        "MCP_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory"
+      }
     }
   }
 }
