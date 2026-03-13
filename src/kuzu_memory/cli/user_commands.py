@@ -16,6 +16,216 @@ import click
 from .cli_utils import rich_panel, rich_print, rich_table
 
 
+def _install_user_hooks() -> str:
+    """
+    Install kuzu-memory hooks into ~/.claude/settings.json (user-level).
+
+    User-level hooks fire in EVERY Claude Code project without per-project
+    installation.  They still write to the project-specific DB (via
+    KUZU_MEMORY_DB) and promote to the user DB at session end.
+
+    Returns a one-line status string for display.
+    """
+    import json
+    import shutil
+
+    user_settings = Path.home() / ".claude" / "settings.json"
+    user_settings.parent.mkdir(parents=True, exist_ok=True)
+
+    # Resolve kuzu-memory binary
+    kuzu_cmd = shutil.which("kuzu-memory") or "kuzu-memory"
+
+    hooks_block = {
+        "SessionStart": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{kuzu_cmd} hooks session-start",
+                        "async": True,
+                    }
+                ],
+            }
+        ],
+        "UserPromptSubmit": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{kuzu_cmd} hooks enhance",
+                    }
+                ],
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{kuzu_cmd} hooks learn",
+                        "async": True,
+                    }
+                ],
+            }
+        ],
+        "Stop": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{kuzu_cmd} hooks stop",
+                        "async": True,
+                    }
+                ],
+            }
+        ],
+    }
+
+    try:
+        settings: dict[str, Any] = {}
+        if user_settings.exists():
+            with open(user_settings) as f:
+                settings = json.load(f)
+
+        existing = settings.get("hooks", {})
+
+        # Merge: for each event, replace any existing kuzu-memory entries
+        for event, entries in hooks_block.items():
+            event_hooks = existing.get(event, [])
+            # Remove stale kuzu-memory entries
+            filtered = [
+                h
+                for h in event_hooks
+                if not (
+                    isinstance(h, dict)
+                    and any(
+                        "kuzu-memory" in str(hook.get("command", ""))
+                        for hook in h.get("hooks", [h])
+                    )
+                )
+            ]
+            existing[event] = filtered + entries
+
+        settings["hooks"] = existing
+
+        with open(user_settings, "w") as f:
+            json.dump(settings, f, indent=2)
+
+        return f"installed in {user_settings}"
+    except Exception as exc:
+        return f"skipped ({exc})"
+
+
+def _write_mpm_skill() -> str:
+    """
+    Write the kuzu-memory-usage skill to ~/.claude-mpm/skills/ so MPM
+    auto-loads it at startup without requiring a remote skills-repo entry.
+
+    Returns a one-line status string for display.
+    """
+    skill_dir = Path.home() / ".claude-mpm" / "skills" / "kuzu-memory-usage"
+    try:
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_file = skill_dir / "SKILL.md"
+        skill_file.write_text(_MPM_SKILL_CONTENT)
+        return f"written to {skill_file}"
+    except Exception as exc:
+        return f"skipped ({exc})"
+
+
+_MPM_SKILL_CONTENT = """\
+---
+name: kuzu-memory-usage
+description: How and when to use kuzu-memory hooks, MCP tools, and API for AI-native project memory
+version: 1.0.0
+category: toolchain
+tags: [memory, kuzu, mcp, context, ai, project-memory, cross-project]
+---
+# kuzu-memory Usage in Claude MPM Sessions
+
+kuzu-memory provides two complementary memory scopes used automatically when installed.
+
+## Session Init (PM — always run at start)
+
+When kuzu-memory user mode is active, call `kuzu_user_context` at the start of every
+session to inject cross-project patterns before reading static agent memory files:
+
+```
+kuzu_user_context(query="<task description>", limit_per_type=3)
+```
+
+This returns high-importance rules, patterns, gotchas, and architecture decisions
+promoted from all previous projects. Prepend the result to the initial context.
+
+## During Work (Research / Engineer agents)
+
+Use `kuzu_remember` with explicit `knowledge_type` for findings that should survive
+across projects:
+
+| knowledge_type | When to use | Auto-promotes? |
+|---|---|---|
+| `rule` | Hard constraints ("always use RLock for Kuzu writes") | ✅ |
+| `pattern` | Reusable solutions ("Repository pattern for DB access") | ✅ |
+| `gotcha` | Pitfalls to avoid ("Kuzu single-writer — serialise writes") | ✅ |
+| `architecture` | Structural decisions ("SOA with DI, no direct instantiation") | ✅ |
+| `convention` | Style/project preferences | ❌ project-only |
+| `note` | Default, observations | ❌ project-only |
+
+```python
+# Research agent discovers a cross-project gotcha:
+kuzu_remember(
+    content="Kuzu enforces single-writer: serialise all writes with RLock",
+    knowledge_type="gotcha",
+    importance=0.95,
+)
+
+# Engineer records architectural decision:
+kuzu_remember(
+    content="Use ServiceManager.memory_service() context manager, never KuzuMemory() directly",
+    knowledge_type="architecture",
+    importance=0.9,
+)
+```
+
+Use `kuzu_learn` (async, fire-and-forget) for observations that don't need cross-project promotion:
+
+```python
+kuzu_learn(content="User prefers pytest-asyncio for async tests in this project")
+```
+
+## Two-DB Model
+
+```
+.kuzu-memory/memories.db          ~/.kuzu-memory/user.db
+(project DB)                      (user DB)
+  ↑                                  ↑
+  kuzu_learn / kuzu_remember  →  auto-promoted at Stop hook
+  (all memories)                 (rule|pattern|gotcha|architecture, importance >= 0.8)
+```
+
+## Hook Firing Order (user-level install)
+
+1. **SessionStart** → background init
+2. **UserPromptSubmit** → `kuzu enhance` injects relevant project context into prompt
+3. **PostToolUse** → `kuzu learn` captures tool interactions asynchronously
+4. **Stop** → `kuzu stop` promotes eligible memories to user DB
+
+## CLI Reference
+
+```bash
+kuzu-memory user setup     # init user DB + install global hooks + write this skill
+kuzu-memory user status    # show what's in user DB
+kuzu-memory user promote   # manually promote from current project
+kuzu-memory user promote --dry-run
+kuzu-memory user disable   # pause promotion (user DB preserved)
+```
+"""
+
+
 @click.group()
 def user() -> None:
     """
@@ -77,13 +287,21 @@ def setup(ctx: click.Context, user_db_path: str | None) -> None:
         user_config_path.parent.mkdir(parents=True, exist_ok=True)
         config.save_to_file(user_config_path)
 
+        # Install user-level Claude Code hooks into ~/.claude/settings.json
+        hooks_status = _install_user_hooks()
+
+        # Write MPM integration skill to ~/.claude-mpm/skills/
+        skill_status = _write_mpm_skill()
+
         rich_panel(
             f"User DB initialised: {db_path}\n"
             f"Existing memories: {total}\n"
             f"Mode: user (saved to {user_config_path})\n\n"
             "From now on, sessions will automatically promote high-quality\n"
             "memories (importance >= 0.8, type in rule/pattern/gotcha/architecture)\n"
-            "to this shared database at session end.",
+            f"to this shared database at session end.\n\n"
+            f"Hooks: {hooks_status}\n"
+            f"MPM skill: {skill_status}",
             title="User Mode Enabled",
             style="green",
         )
