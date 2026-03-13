@@ -1264,27 +1264,38 @@ exec {kuzu_cmd} "$@"
                     if len(broken) > 5:
                         print(f"  ... and {len(broken) - 5} more")
 
-            # Create or update CLAUDE.md (always update if exists)
+            # Create or update CLAUDE.md — preserve existing user content
             claude_md_path = self.project_root / "CLAUDE.md"
+            kuzu_md_path = self.project_root / "KUZU.md"
             if claude_md_path.exists():
-                # Update existing file
-                if not dry_run:
-                    backup_path = self.create_backup(claude_md_path)
-                    if backup_path:
-                        self.backup_files.append(backup_path)
-                self.files_modified.append(claude_md_path)
+                # Existing CLAUDE.md found — write config to KUZU.md instead of overwriting
+                self.files_created.append(kuzu_md_path)
                 logger.info(
-                    f"{'Would update' if dry_run else 'Updating'} CLAUDE.md at {claude_md_path}"
+                    f"{'Would create' if dry_run else 'Creating'} KUZU.md at {kuzu_md_path} "
+                    f"(preserving existing CLAUDE.md)"
                 )
+                if not dry_run:
+                    kuzu_md_path.write_text(self._create_claude_md())
+                    # Append a reference to KUZU.md in the existing CLAUDE.md if not already present
+                    existing = claude_md_path.read_text()
+                    ref_line = (
+                        "\n## KuzuMemory Configuration\n"
+                        "See [KUZU.md](./KUZU.md) for KuzuMemory project memory configuration.\n"
+                    )
+                    if "KUZU.md" not in existing:
+                        claude_md_path.write_text(existing + ref_line)
+                        self.files_modified.append(claude_md_path)
+                        logger.info(
+                            f"Appended KUZU.md reference to existing CLAUDE.md at {claude_md_path}"
+                        )
             else:
-                # Create new file
+                # No existing CLAUDE.md — create it directly
                 self.files_created.append(claude_md_path)
                 logger.info(
                     f"{'Would create' if dry_run else 'Creating'} CLAUDE.md at {claude_md_path}"
                 )
-
-            if not dry_run:
-                claude_md_path.write_text(self._create_claude_md())
+                if not dry_run:
+                    claude_md_path.write_text(self._create_claude_md())
 
             # Create .claude-mpm directory and config
             mpm_dir = self.project_root / ".claude-mpm"
@@ -1896,7 +1907,28 @@ exec {kuzu_cmd} "$@"
         try:
             removed_files: list[Any] = []
 
-            # Remove CLAUDE.md if it was created by us
+            # Remove KUZU.md if it was created by us (when CLAUDE.md was pre-existing)
+            kuzu_md_path = self.project_root / "KUZU.md"
+            if kuzu_md_path.exists():
+                kuzu_content = kuzu_md_path.read_text()
+                if "KuzuMemory" in kuzu_content:
+                    kuzu_md_path.unlink()
+                    removed_files.append(kuzu_md_path)
+                    # Also strip the appended reference from CLAUDE.md if present
+                    claude_md_path = self.project_root / "CLAUDE.md"
+                    if claude_md_path.exists():
+                        existing = claude_md_path.read_text()
+                        ref_line = (
+                            "\n## KuzuMemory Configuration\n"
+                            "See [KUZU.md](./KUZU.md) for KuzuMemory project memory configuration.\n"
+                        )
+                        if ref_line in existing:
+                            claude_md_path.write_text(existing.replace(ref_line, ""))
+                            logger.info(
+                                f"Removed KuzuMemory reference from CLAUDE.md at {claude_md_path}"
+                            )
+
+            # Remove CLAUDE.md if it was created by us (when no pre-existing file existed)
             claude_md_path = self.project_root / "CLAUDE.md"
             if claude_md_path.exists():
                 content = claude_md_path.read_text()
@@ -1986,7 +2018,9 @@ exec {kuzu_cmd} "$@"
 
         # Check files
         claude_md = self.project_root / "CLAUDE.md"
+        kuzu_md = self.project_root / "KUZU.md"
         status["files"]["CLAUDE.md"] = claude_md.exists()
+        status["files"]["KUZU.md"] = kuzu_md.exists()
 
         mpm_config = self.project_root / ".claude-mpm" / "config.json"
         status["files"]["mpm_config"] = mpm_config.exists()
@@ -1998,10 +2032,12 @@ exec {kuzu_cmd} "$@"
         status["files"]["config_yaml"] = config_file.exists()
         status["config_exists"] = config_file.exists()
 
-        # Check if installed
+        # Check if installed — config may live in CLAUDE.md (fresh install) or KUZU.md
+        # (when a pre-existing CLAUDE.md was preserved)
+        config_md_present = status["files"]["CLAUDE.md"] or status["files"]["KUZU.md"]
         status["installed"] = all(
             [
-                status["files"]["CLAUDE.md"],
+                config_md_present,
                 status["files"]["mpm_config"],
                 status["files"]["settings.local.json"],
                 status["files"]["config_yaml"],
