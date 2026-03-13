@@ -20,6 +20,7 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 - **📱 Offline First** - Works completely without internet connection
 - **🔧 MCP Ready** - Native Claude Desktop integration with async learning support
 - **🤖 Hook System** - Automatic Claude Code integration using hooks (`UserPromptSubmit`, `Stop`)
+- **👤 User-Level Memory** - Cross-project `~/.kuzu-memory/user.db` automatically aggregates your best patterns and rules across all projects
 
 ## 🚀 Quick Start
 
@@ -36,7 +37,7 @@ pip install kuzu-memory
 pip install kuzu-memory[dev]
 ```
 
-**Now available on PyPI!** KuzuMemory v1.4.48 is published and ready for production use.
+**Now available on PyPI!** KuzuMemory v1.7.0 is published and ready for production use.
 
 ### Smart Setup (Recommended - ONE Command!)
 
@@ -326,6 +327,81 @@ No LLM required! KuzuMemory uses regex patterns to identify and store memories a
 
 **Important**: For pattern matching to work effectively, content should include clear subject-verb-object structures. Memories with specific entities, actions, or preferences are extracted more reliably than abstract statements.
 
+### Knowledge Types
+
+Every memory carries a **`knowledge_type`** — an orthogonal label that governs *retrieval* categorization (separate from the cognitive `MemoryType` which governs *retention*):
+
+| Type | When to use | Auto-promoted to user DB? |
+|------|-------------|--------------------------|
+| `rule` | Hard constraints: "always use RLock for re-entrant locks" | ✅ |
+| `pattern` | Repeatable solutions: "use Repository pattern for DB access" | ✅ |
+| `gotcha` | Pitfalls to avoid: "Kuzu single-writer — serialise with a lock" | ✅ |
+| `architecture` | Structural decisions: "SOA with dependency injection" | ✅ |
+| `convention` | Style preferences: "snake_case for Python, camelCase for JS" | ❌ (project-only) |
+| `note` | Everything else (default) | ❌ (project-only) |
+
+## 🗂️ Memory Scopes: Project vs User
+
+KuzuMemory supports two complementary scopes that work together:
+
+### Project Scope (default)
+
+Each project gets its own isolated database at `.kuzu-memory/memories.db`. Memories are **project-specific** — coding patterns, decisions, and context for that codebase only.
+
+```
+my-api/
+└── .kuzu-memory/
+    └── memories.db   ← project memories (git-ignored)
+```
+
+This is the default. No configuration required.
+
+### User Scope
+
+When you enable user mode, KuzuMemory automatically **promotes** high-quality memories from every project session into a shared `~/.kuzu-memory/user.db`. These are your *best* cross-project patterns — rules and gotchas that apply everywhere.
+
+```
+~/.kuzu-memory/
+└── user.db           ← aggregated patterns from all projects
+```
+
+**Promotion criteria** (applied at session end):
+- `knowledge_type` ∈ `rule | pattern | gotcha | architecture`
+- `importance ≥ 0.8`
+- Deduplicated by content hash — no duplicates accumulate
+
+**Enable user mode:**
+
+```bash
+# Initialize user DB and enable automatic promotion
+kuzu-memory user setup
+
+# Check what's been aggregated
+kuzu-memory user status
+
+# Manually promote from current project (useful for backfilling)
+kuzu-memory user promote
+
+# Preview without writing
+kuzu-memory user promote --dry-run
+
+# Return to project-only mode (user DB is preserved)
+kuzu-memory user disable
+```
+
+**At session start**, the MCP server merges relevant user-level patterns into your project context automatically via the `kuzu_user_context` tool — so the lesson you learned in `my-api` is available when you start work on `my-worker`.
+
+### Scope Comparison
+
+| | Project DB | User DB |
+|---|---|---|
+| **Location** | `.kuzu-memory/memories.db` | `~/.kuzu-memory/user.db` |
+| **Scope** | Single project | All projects |
+| **Lifetime** | Lives with the repo | Permanent, user-owned |
+| **Contents** | All memory types | High-importance rules, patterns, gotchas, architecture |
+| **Populated by** | Hooks + MCP tools | Auto-promotion at session end |
+| **Default** | ✅ Always active | ❌ Opt-in via `user setup` |
+
 ## 🏗️ Architecture
 
 ### High-Level Architecture
@@ -383,12 +459,12 @@ version: 1.0
 storage:
   max_size_mb: 50
   auto_compact: true
-  
+
 recall:
   max_memories: 10
   strategies:
     - keyword
-    - entity  
+    - entity
     - temporal
 
 patterns:
