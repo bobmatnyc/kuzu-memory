@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
-@click.option("--config-path", type=click.Path(), help="Path to save example configuration")
+@click.option(
+    "--config-path", type=click.Path(), help="Write an example configuration JSON file to this path"
+)
 @click.option("--project-root", type=click.Path(), help="Project root path (optional)")
 @click.pass_context
 def init(
@@ -42,14 +44,27 @@ def init(
     This command should be run once per project to enable memory functionality.
 
     \b
+    📍 DATABASE PATH:
+      By default the database is created at .kuzu-memory/memory.db inside
+      the project root.  Pass the global --db-path flag to use a custom
+      location instead:
+
+        kuzu-memory --db-path /data/myproject.db init
+
+      The path is shown in the completion panel so you can confirm it.
+
+    \b
     🎮 EXAMPLES:
-      # Basic initialization
+      # Basic initialization (default path)
       kuzu-memory init
 
       # Force re-initialization
       kuzu-memory init --force
 
-      # Initialize with custom config
+      # Custom database location
+      kuzu-memory --db-path /custom/path/memory.db init
+
+      # Save an example config file alongside the database
       kuzu-memory init --config-path ./my-kuzu-config.json
 
       # Initialize specific project
@@ -73,9 +88,11 @@ def init(
         setup_service.initialize()
 
         try:
-            # Get paths before initialization check
+            # Get paths before initialization check.
+            # Honour the global --db-path flag when it has been set; otherwise
+            # derive the path from the project root as usual.
             memories_dir = get_project_memories_dir(project_root_path)
-            db_path = get_project_db_path(project_root_path)
+            db_path = ctx.obj.get("db_path") or get_project_db_path(project_root_path)
 
             # Check if already initialized
             if db_path.exists() and not force:
@@ -170,10 +187,17 @@ def init(
             except ImportError:
                 pass
 
+            # When a custom --db-path was supplied it may sit outside the
+            # default memories_dir, so show both paths for clarity.
+            custom_db = ctx.obj.get("db_path")
+            db_path_label = str(db_path)
+            if custom_db and Path(custom_db) != get_project_db_path(project_root_path):
+                db_path_label = f"{db_path} (custom --db-path)"
+
             rich_panel(
                 f"KuzuMemory is now ready! 🎉\n\n"
                 f"📁 Memories directory: {memories_dir}\n"
-                f"🗄️  Database: {db_path}\n\n"
+                f"🗄️  Database: {db_path_label}\n\n"
                 f"Next steps:\n"
                 f"• Store your first memory: kuzu-memory memory store 'Project uses FastAPI'\n"
                 f"• Enhance prompts: kuzu-memory memory enhance 'How do I deploy?'\n"

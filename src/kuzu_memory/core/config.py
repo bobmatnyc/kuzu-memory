@@ -5,6 +5,8 @@ Provides flexible configuration with defaults, validation, and support
 for both programmatic and file-based configuration.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -185,6 +187,27 @@ class AnalyticsConfig:
 
 
 @dataclass
+class UserConfig:
+    """Configuration for user-level cross-project memory sharing."""
+
+    mode: str = "project"  # "project" | "user"
+    user_db_path: str = str(Path.home() / ".kuzu-memory" / "user.db")
+    promotion_min_importance: float = 0.8
+    promotion_knowledge_types: list[str] = field(
+        default_factory=lambda: ["rule", "pattern", "gotcha", "architecture"]
+    )
+    project_tag: str = ""  # auto-derived from cwd basename if empty
+
+    def effective_project_tag(self) -> str:
+        """Return project_tag if set, else current directory basename."""
+        return self.project_tag if self.project_tag else Path.cwd().name
+
+    def effective_user_db_path(self) -> Path:
+        """Return resolved Path for user DB."""
+        return Path(self.user_db_path).expanduser()
+
+
+@dataclass
 class KuzuMemoryConfig:
     """
     Main configuration class for KuzuMemory.
@@ -204,6 +227,7 @@ class KuzuMemoryConfig:
     prune: PruneConfig = field(default_factory=PruneConfig)
     smart_prune: SmartPruneConfig = field(default_factory=SmartPruneConfig)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
+    user: UserConfig = field(default_factory=UserConfig)
 
     # Global settings
     version: str = "1.0"
@@ -211,7 +235,7 @@ class KuzuMemoryConfig:
     log_level: str = "INFO"
 
     @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> "KuzuMemoryConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> KuzuMemoryConfig:
         """
         Create configuration from dictionary.
 
@@ -301,6 +325,13 @@ class KuzuMemoryConfig:
                     if hasattr(analytics_config, key):
                         setattr(analytics_config, key, value)
 
+            user_config = UserConfig()
+            if "user" in validated_config:
+                user_data = validated_config["user"]
+                for key, value in user_data.items():
+                    if hasattr(user_config, key):
+                        setattr(user_config, key, value)
+
             # Create main configuration
             return cls(
                 storage=storage_config,
@@ -313,6 +344,7 @@ class KuzuMemoryConfig:
                 prune=prune_config,
                 smart_prune=smart_prune_config,
                 analytics=analytics_config,
+                user=user_config,
                 version=validated_config.get("version", "1.0"),
                 debug=validated_config.get("debug", False),
                 log_level=validated_config.get("log_level", "INFO"),
@@ -322,7 +354,7 @@ class KuzuMemoryConfig:
             raise ConfigurationError(f"Failed to create configuration from dict: {e}")
 
     @classmethod
-    def from_file(cls, config_path: str | Path) -> "KuzuMemoryConfig":
+    def from_file(cls, config_path: str | Path) -> KuzuMemoryConfig:
         """
         Load configuration from YAML file.
 
@@ -355,7 +387,7 @@ class KuzuMemoryConfig:
             raise ConfigurationError(f"Failed to load configuration file: {e}")
 
     @classmethod
-    def default(cls) -> "KuzuMemoryConfig":
+    def default(cls) -> KuzuMemoryConfig:
         """Create configuration with all default values."""
         return cls()
 

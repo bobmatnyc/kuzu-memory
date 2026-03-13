@@ -9,7 +9,7 @@ from .config import (
     StorageConfig,
 )
 from .memory import KuzuMemory
-from .models import ExtractedMemory, Memory, MemoryContext, MemoryType
+from .models import ExtractedMemory, KnowledgeType, Memory, MemoryContext, MemoryType
 
 __all__ = [
     "ExtractedMemory",
@@ -19,6 +19,7 @@ __all__ = [
     # Configuration
     "KuzuMemoryConfig",
     # Models
+    "KnowledgeType",
     "Memory",
     "MemoryContext",
     "MemoryType",

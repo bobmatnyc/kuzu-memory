@@ -31,10 +31,15 @@ try:
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
-    # Stubs will be defined as aliases if needed, but we shouldn't define classes
-    # with the same names as the real imports - this causes mypy errors.
-    # Instead, we'll just let the import error propagate when MCP is used without
-    # the SDK being available.
+
+# Ensure MCP types are always bound for Pyright. mcp is a declared project
+# dependency so these succeed in the venv; TYPE_CHECKING=False at runtime
+# means this block never re-executes when the try block already succeeded.
+if TYPE_CHECKING:
+    from mcp.server import NotificationOptions, Server
+    from mcp.server.models import InitializationOptions
+    from mcp.server.stdio import stdio_server
+    from mcp.types import Resource, ResourceTemplate, TextContent, Tool
 
 
 logger = logging.getLogger(__name__)
@@ -90,7 +95,7 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()  # type: ignore[misc]
+        @self.server.list_tools()  # type: ignore[misc, unused-ignore]
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
@@ -440,7 +445,7 @@ class KuzuMemoryMCPServer:
                 ),
             ]
 
-        @self.server.call_tool()  # type: ignore[misc]
+        @self.server.call_tool()  # type: ignore[misc, unused-ignore]
         async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
 
@@ -530,7 +535,7 @@ class KuzuMemoryMCPServer:
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()  # type: ignore[misc]
+        @self.server.list_resources()  # type: ignore[misc, unused-ignore]
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -542,7 +547,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()  # type: ignore[misc]
+        @self.server.list_resource_templates()  # type: ignore[misc, unused-ignore]
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [

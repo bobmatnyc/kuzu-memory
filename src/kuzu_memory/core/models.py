@@ -88,6 +88,37 @@ class MemoryType(str, Enum):
         return migration_map.get(legacy_type.lower(), cls.EPISODIC)
 
 
+class KnowledgeType(str, Enum):
+    """
+    Software engineering knowledge categorization for AI coding assistants.
+
+    Orthogonal to MemoryType (which governs retention). KnowledgeType
+    governs *what kind* of engineering knowledge this memory represents,
+    enabling targeted retrieval (e.g., "give me all gotchas before I touch
+    the storage layer").
+
+    Values:
+    - RULE: Absolute constraints — things that must/must not be done
+      e.g. "Never instantiate KuzuMemory() directly in CLI code"
+    - PATTERN: Repeatable approaches — established ways of solving problems
+      e.g. "Use ServiceManager.memory_service() context manager for all DB access"
+    - CONVENTION: Style/workflow standards — how the team writes code
+      e.g. "Google style docstrings, run make pre-publish before commit"
+    - GOTCHA: Critical warnings — bugs or surprises that burned us
+      e.g. "KuzuConnectionPool._lock must be RLock (re-entrancy), not Lock"
+    - ARCHITECTURE: Structural decisions — how the system is designed
+      e.g. "MCP tools call service layer directly, no subprocess overhead"
+    - NOTE: General information — default for uncategorized memories
+    """
+
+    RULE = "rule"
+    PATTERN = "pattern"
+    CONVENTION = "convention"
+    GOTCHA = "gotcha"
+    ARCHITECTURE = "architecture"
+    NOTE = "note"
+
+
 class Memory(BaseModel):
     """
     Core memory model representing a single piece of stored information.
@@ -129,6 +160,14 @@ class Memory(BaseModel):
 
     # Classification
     memory_type: MemoryType = Field(default=MemoryType.EPISODIC, description="Type of memory")
+    knowledge_type: KnowledgeType = Field(
+        default=KnowledgeType.NOTE,
+        description="Software engineering knowledge category for targeted retrieval",
+    )
+    project_tag: str = Field(
+        default="",
+        description="Source project identifier (user DB only); empty string in project DBs",
+    )
     importance: float = Field(default=0.5, ge=0.0, le=1.0, description="Importance score (0-1)")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score (0-1)")
 
@@ -146,7 +185,7 @@ class Memory(BaseModel):
 
     # Pydantic V2 serializers for custom datetime formatting
     @field_serializer("created_at", "valid_from", "valid_to", "accessed_at")
-    def serialize_datetime(self, dt: datetime | None, _info: Any) -> str | None:
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
         """Serialize datetime to ISO format."""
         return dt.isoformat() if dt else None
 
@@ -166,8 +205,6 @@ class Memory(BaseModel):
     @classmethod
     def validate_entities(cls, v: list[str | dict[str, Any]]) -> list[str | dict[str, Any]]:
         """Validate entity list."""
-        if not isinstance(v, list):
-            raise ValueError("Entities must be a list")
         # Remove duplicates and empty strings
         cleaned: set[str | tuple[tuple[str, Any], ...]] = set()
         result: list[str | dict[str, Any]] = []
@@ -256,6 +293,8 @@ class Memory(BaseModel):
             "accessed_at": self.accessed_at,  # Keep as datetime for Kuzu
             "access_count": self.access_count,
             "memory_type": self.memory_type.value,
+            "knowledge_type": self.knowledge_type.value,
+            "project_tag": self.project_tag,
             "importance": self.importance,
             "confidence": self.confidence,
             "source_type": self.source_type,
@@ -284,6 +323,19 @@ class Memory(BaseModel):
         # Convert memory_type string to enum
         if isinstance(data.get("memory_type"), str):
             data["memory_type"] = MemoryType(data["memory_type"])
+
+        # Convert knowledge_type string to enum (with fallback for old rows)
+        if isinstance(data.get("knowledge_type"), str):
+            try:
+                data["knowledge_type"] = KnowledgeType(data["knowledge_type"])
+            except ValueError:
+                data["knowledge_type"] = KnowledgeType.NOTE
+        elif data.get("knowledge_type") is None:
+            data["knowledge_type"] = KnowledgeType.NOTE
+
+        # project_tag: default to empty string for old rows without the field
+        if data.get("project_tag") is None:
+            data["project_tag"] = ""
 
         return cls(**data)
 
@@ -328,14 +380,6 @@ class MemoryContext(BaseModel):
         default=0, ge=0, description="Total memories found before filtering"
     )
     memories_filtered: int = Field(default=0, ge=0, description="Number of memories filtered out")
-
-    @field_validator("memories")
-    @classmethod
-    def validate_memories(cls, v: list[Memory]) -> list[Memory]:
-        """Validate memories list."""
-        if not isinstance(v, list):
-            raise ValueError("Memories must be a list")
-        return v
 
     @field_validator("enhanced_prompt")
     @classmethod

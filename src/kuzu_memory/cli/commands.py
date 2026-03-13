@@ -29,18 +29,14 @@ from .git_commands import git
 from .help_commands import help_group
 from .hooks_commands import hooks_group
 from .init_commands import init
-from .install_unified import (
-    install_command,
-    remove_command,
-    repair_command,
-    uninstall_command,
-)
+from .install_unified import install_command, remove_command, repair_command, uninstall_command
 from .mcp_server_command import mcp_server
 from .memory_commands import enhance, memory, recall, recent, store
 from .migrations_commands import migrations_group
 from .setup_commands import setup
 from .status_commands import status
 from .update_commands import update
+from .user_commands import user
 
 # Set up logging for CLI
 logging.basicConfig(
@@ -62,11 +58,7 @@ def _silent_repair_mcp_configs() -> None:
     """
     try:
         # Import here to avoid circular imports
-        from ..installers.json_utils import (
-            fix_broken_mcp_args,
-            load_json_config,
-            save_json_config,
-        )
+        from ..installers.json_utils import fix_broken_mcp_args, load_json_config, save_json_config
 
         claude_json = Path.home() / ".claude.json"
         if not claude_json.exists():
@@ -680,6 +672,7 @@ cli.add_command(hooks_group, name="hooks")  # 14. Hook system integrations (DEPR
 cli.add_command(mcp_server)  # 15. MCP server (stdio mode) - replaces deprecated mcp install group
 cli.add_command(update)  # 16. Check for and install updates from PyPI
 cli.add_command(migrations_group, name="migrations")  # 17. Migration management
+cli.add_command(user)  # 18. User-level cross-project memory
 
 # Note: The 'mcp' command now starts the MCP server via stdio
 # The old 'mcp install' subcommands are deprecated - use 'kuzu-memory install <integration>' instead

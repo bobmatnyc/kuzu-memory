@@ -13,6 +13,7 @@ from kuzu_memory.services.git_sync_service import GitSyncService
 from kuzu_memory.services.installer_service import InstallerService
 from kuzu_memory.services.memory_service import MemoryService
 from kuzu_memory.services.setup_service import SetupService
+from kuzu_memory.services.user_memory_service import UserMemoryService
 
 __all__ = [
     "AutoTuneService",
@@ -23,5 +24,6 @@ __all__ = [
     "InstallerService",
     "MemoryService",
     "SetupService",
+    "UserMemoryService",
     "run_startup_autotune",
 ]

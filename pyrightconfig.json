@@ -1,0 +1,14 @@
+{
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["src", "tests"],
+  "exclude": [
+    "src/kuzu_memory/cli/_deprecated",
+    "**/__pycache__"
+  ],
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": true,
+  "reportUnusedVariable": "warning"
+}

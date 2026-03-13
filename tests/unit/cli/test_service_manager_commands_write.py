@@ -211,6 +211,53 @@ class TestInitCommand:
             assert result.exit_code == 1
             assert "already initialized" in result.output
 
+    def test_init_honours_global_db_path(self, runner, mock_config_service, mock_setup_service):
+        """Test that the global --db-path flag overrides the computed database path.
+
+        Regression test for GitHub issue #23: --db-path was silently ignored
+        during `kuzu-memory init`.
+        """
+        custom_db = MagicMock(spec=Path)
+        custom_db.exists.return_value = False
+
+        with (
+            patch("kuzu_memory.services.ConfigService") as MockConfig,
+            patch("kuzu_memory.services.SetupService") as MockSetup,
+            patch("kuzu_memory.cli.init_commands.find_project_root") as mock_find,
+            patch("kuzu_memory.cli.init_commands.get_project_db_path") as mock_db_path,
+            patch("kuzu_memory.cli.init_commands.get_project_memories_dir") as mock_mem_dir,
+            patch(
+                "kuzu_memory.cli.service_manager.ServiceManager.memory_service"
+            ) as mock_memory_ctx,
+            patch("kuzu_memory.cli.init_commands.AuggieIntegration") as MockAuggie,
+        ):
+            MockConfig.return_value = mock_config_service
+            MockSetup.return_value = mock_setup_service
+            mock_find.return_value = Path("/tmp/test-project")
+
+            # get_project_db_path returns a different path — should NOT be used
+            default_db = MagicMock(spec=Path)
+            default_db.exists.return_value = False
+            mock_db_path.return_value = default_db
+
+            mock_mem_dir.return_value = Path("/tmp/test-project/.kuzu-memory")
+
+            mock_memory = MagicMock()
+            mock_memory_ctx.return_value.__enter__.return_value = mock_memory
+
+            mock_auggie = MockAuggie.return_value
+            mock_auggie.is_auggie_project.return_value = False
+
+            # Pass the custom path through ctx.obj["db_path"] (as the global
+            # --db-path option would populate it).
+            result = runner.invoke(init, [], obj={"db_path": custom_db})
+
+            assert result.exit_code == 0, f"Output: {result.output}\nException: {result.exception}"
+
+            # The memory service must be opened with the custom path, not the
+            # default path derived from the project root.
+            mock_memory_ctx.assert_called_once_with(custom_db)
+
 
 class TestPruneCommand:
     """Test prune command migration to ServiceManager."""

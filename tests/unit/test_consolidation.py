@@ -5,19 +5,14 @@ Tests the ConsolidationEngine's ability to cluster similar memories,
 create summaries, and manage the consolidation lifecycle.
 """
 
-import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-import pytest
+import pytest  # type: ignore[import-untyped]
 
 from kuzu_memory.core.models import Memory, MemoryType
-from kuzu_memory.nlp.consolidation import (
-    ConsolidationEngine,
-    ConsolidationResult,
-    MemoryCluster,
-)
+from kuzu_memory.nlp.consolidation import ConsolidationEngine, ConsolidationResult, MemoryCluster
 from kuzu_memory.storage.kuzu_adapter import KuzuAdapter
 from kuzu_memory.utils.deduplication import DeduplicationEngine
 
@@ -80,6 +75,9 @@ def create_old_memory(
         access_count=access_count,
         importance=0.5,
         confidence=1.0,
+        valid_to=None,
+        user_id=None,
+        session_id=None,
     )
 
 
@@ -100,6 +98,8 @@ def store_memory(db_adapter: KuzuAdapter, memory: Memory) -> None:
         accessed_at: $accessed_at,
         access_count: $access_count,
         memory_type: $memory_type,
+        knowledge_type: $knowledge_type,
+        project_tag: $project_tag,
         importance: $importance,
         confidence: $confidence,
         source_type: $source_type,

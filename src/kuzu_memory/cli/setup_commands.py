@@ -175,7 +175,8 @@ def setup(
             sys.exit(1)
 
         memories_dir = get_project_memories_dir(project_root)
-        db_path = get_project_db_path(project_root)
+        # Honour the global --db-path flag when set; otherwise derive from project root.
+        db_path = ctx.obj.get("db_path") or get_project_db_path(project_root)
 
         # Check initialization status
         already_initialized = db_path.exists()

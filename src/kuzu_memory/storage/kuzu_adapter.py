@@ -13,12 +13,12 @@ import logging
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from contextlib import nullcontext as _nullcontext
 from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Any
+from typing import Any, cast
 
 try:
     import kuzu
@@ -363,7 +363,10 @@ class KuzuAdapter:
             try:
                 # Serialise write operations so concurrent threads never hold two
                 # open write transactions against the same Kùzu database at once.
-                lock_ctx = self._write_lock if is_write else _nullcontext()
+                lock_ctx = cast(
+                    AbstractContextManager[object],
+                    self._write_lock if is_write else _nullcontext(),
+                )
                 with lock_ctx:
                     with self._pool.get_connection() as conn:
                         # Execute query
@@ -412,7 +415,11 @@ class KuzuAdapter:
 
                 # Check for specific Kuzu errors
                 error_msg = str(e).lower()
-                if "only one write transaction" in error_msg and is_write and attempt < max_retries - 1:
+                if (
+                    "only one write transaction" in error_msg
+                    and is_write
+                    and attempt < max_retries - 1
+                ):
                     # Another connection beat us to the write slot; back off and retry.
                     wait = backoff_s * (2**attempt)
                     logger.warning(

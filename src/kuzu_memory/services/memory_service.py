@@ -21,14 +21,20 @@ Related Epic: 1M-415 (Refactor Commands to SOA/DI Architecture)
 Related Task: 1M-420 (Implement MemoryService with Protocol interface)
 """
 
+from __future__ import annotations
+
+import logging
 from pathlib import Path
 from typing import Any, cast
 
+from kuzu_memory.core.config import KuzuMemoryConfig
 from kuzu_memory.core.memory import KuzuMemory
 from kuzu_memory.core.models import Memory, MemoryContext, MemoryType
 from kuzu_memory.services.base import BaseService
 from kuzu_memory.storage.memory_store import MemoryStore
 from kuzu_memory.utils.exceptions import DatabaseError, MemoryErrorCode
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryService(BaseService):
@@ -70,7 +76,7 @@ class MemoryService(BaseService):
         self,
         db_path: Path,
         enable_git_sync: bool = True,
-        config: dict[str, Any] | None = None,
+        config: dict[str, Any] | KuzuMemoryConfig | None = None,
     ):
         """
         Initialize MemoryService.
@@ -78,7 +84,7 @@ class MemoryService(BaseService):
         Args:
             db_path: Path to Kuzu database
             enable_git_sync: Enable git synchronization (default: True)
-            config: Optional configuration dictionary
+            config: Optional configuration dict or KuzuMemoryConfig instance
 
         Example:
             >>> service = MemoryService(
@@ -90,7 +96,15 @@ class MemoryService(BaseService):
         super().__init__()
         self._db_path = db_path
         self._enable_git_sync = enable_git_sync
-        self._config = config or {}
+        # Accept both dict (legacy) and KuzuMemoryConfig for typed access
+        if isinstance(config, KuzuMemoryConfig):
+            self._typed_config: KuzuMemoryConfig = config
+            self._config: dict[str, Any] = config.to_dict()
+        else:
+            self._typed_config = (
+                KuzuMemoryConfig.from_dict(config) if config else KuzuMemoryConfig()
+            )
+            self._config = config or {}
         self._kuzu_memory: KuzuMemory | None = None
 
     def _do_initialize(self) -> None:
@@ -120,10 +134,17 @@ class MemoryService(BaseService):
         Exits the KuzuMemory context manager, releasing all resources including
         database connections, caches, and background tasks.
 
+        In user mode, triggers async promotion of high-quality memories to the
+        shared user DB before releasing resources.
+
         Error Handling:
         - Logs cleanup errors but doesn't raise (cleanup must complete)
         - Service is marked as uninitialized even if cleanup fails
         """
+        # Trigger user DB promotion BEFORE closing kuzu_memory (needs open DB)
+        if self._typed_config.user.mode == "user":
+            self._promote_eligible_memories()
+
         if self._kuzu_memory:
             try:
                 # KuzuMemory.close() is the preferred API; calling it via
@@ -136,6 +157,65 @@ class MemoryService(BaseService):
             finally:
                 self._kuzu_memory = None
         self.logger.info("MemoryService cleaned up")
+
+    def _promote_eligible_memories(self) -> int:
+        """
+        Promote high-quality memories to user DB. Called at session end in user mode.
+        Runs in a background thread — non-blocking.
+        Returns 0 immediately (count not available synchronously).
+        """
+        import threading
+
+        typed_config = self._typed_config
+        # Capture a reference to kuzu_memory while it's still open
+        kuzu_memory = self._kuzu_memory
+        if kuzu_memory is None:
+            return 0
+
+        def _do_promote() -> None:
+            try:
+                import datetime
+
+                from .user_memory_service import UserMemoryService
+
+                # Query promotion candidates from project DB
+                candidate_rows = kuzu_memory.db_adapter.execute_query(
+                    """MATCH (m:Memory)
+                    WHERE m.knowledge_type IN $types
+                      AND m.importance >= $min_imp
+                      AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))
+                    RETURN m ORDER BY m.importance DESC LIMIT 100""",
+                    {
+                        "types": typed_config.user.promotion_knowledge_types,
+                        "min_imp": typed_config.user.promotion_min_importance,
+                        "now": datetime.datetime.now().isoformat(),
+                    },
+                )
+
+                if not candidate_rows:
+                    return
+
+                memories = []
+                for row in candidate_rows:
+                    try:
+                        memory_data = row.get("m", row)
+                        memories.append(Memory.from_dict(memory_data))
+                    except Exception:
+                        pass
+                project_tag = typed_config.user.effective_project_tag()
+
+                with UserMemoryService(typed_config) as user_svc:
+                    written = user_svc.promote_batch(memories, project_tag)
+                    logger.info(
+                        f"Promoted {written}/{len(memories)} memories to user DB "
+                        f"(project_tag={project_tag!r})"
+                    )
+            except Exception as e:
+                logger.warning(f"User DB promotion failed (non-fatal): {e}")
+
+        thread = threading.Thread(target=_do_promote, daemon=True, name="kuzu-promote")
+        thread.start()
+        return 0  # async; count not available synchronously
 
     @property
     def kuzu_memory(self) -> KuzuMemory:
