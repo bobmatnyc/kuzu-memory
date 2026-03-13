@@ -14,12 +14,9 @@ from .models import ExtractedMemory, KnowledgeType, Memory, MemoryContext, Memor
 __all__ = [
     "ExtractedMemory",
     "ExtractionConfig",
-    # Main API
-    "KuzuMemory",
-    # Configuration
-    "KuzuMemoryConfig",
-    # Models
     "KnowledgeType",
+    "KuzuMemory",
+    "KuzuMemoryConfig",
     "Memory",
     "MemoryContext",
     "MemoryType",
