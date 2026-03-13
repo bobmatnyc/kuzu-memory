@@ -175,19 +175,37 @@ make pre-publish
 
 ### Release Process
 
+**Use the publish Makefile targets — they are the single authoritative flow.**
+Do NOT manually bump versions with `manage_version.py` before publishing; the
+publish script does the bump itself (double-bumping will skip a version).
+
+**Prerequisites** (one-time setup):
 ```bash
-# 1. Run quality gates
-make pre-publish
+# Create .env.local in project root with your PyPI token
+echo "PYPI_API_KEY=pypi-..." > .env.local
+# Ensure clean working directory on main branch
+```
 
-# 2. Bump version (patch/minor/major)
-./scripts/manage_version.py bump patch
+**Standard releases:**
+```bash
+make publish-patch   # Bug fixes, docs, minor tweaks  (1.x.y → 1.x.y+1)
+make publish-minor   # New features, non-breaking     (1.x.y → 1.x+1.0)
+make publish-major   # Breaking changes               (1.x.y → 2.0.0)
+```
 
-# 3. Build and publish
-make safe-release-build  # Includes quality gates
-make release-pypi        # Upload to PyPI
+Each target runs the full `scripts/publish.sh` pipeline:
+1. Validates environment (clean git, .env.local, main branch)
+2. Bumps version in VERSION, pyproject.toml, __version__.py, CHANGELOG.md
+3. Commits and tags the version bump
+4. Runs quality gates (ruff, mypy, pytest)
+5. Builds wheel + sdist via `uv build`
+6. Publishes to PyPI via `UV_PUBLISH_TOKEN` from .env.local
+7. Pushes commits and tag to GitHub
+8. Creates GitHub release with auto-generated notes
 
-# 4. Create GitHub release
-gh release create v$(cat VERSION) --generate-notes
+**Skip tests (emergency):**
+```bash
+./scripts/publish.sh patch --no-test
 ```
 
 ## Testing Guidelines
