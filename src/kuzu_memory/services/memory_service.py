@@ -251,6 +251,8 @@ class MemoryService(BaseService):
         session_id: str | None = None,
         agent_id: str | None = None,
         metadata: dict[str, Any] | None = None,
+        knowledge_type: str | None = None,
+        importance: float | None = None,
     ) -> str:
         """
         Store a new memory with automatic classification.
@@ -286,6 +288,8 @@ class MemoryService(BaseService):
             session_id=session_id,
             agent_id=agent_id,
             metadata=metadata,
+            knowledge_type=knowledge_type,
+            importance=importance,
         )
         if not result:
             raise DatabaseError(

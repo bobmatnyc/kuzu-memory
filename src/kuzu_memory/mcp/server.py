@@ -211,6 +211,38 @@ class KuzuMemoryMCPServer:
                                 ],
                                 "default": "identity",
                             },
+                            "knowledge_type": {
+                                "type": "string",
+                                "description": (
+                                    "Knowledge classification for cross-project promotion. "
+                                    "Memories with knowledge_type in [rule, pattern, gotcha, architecture] "
+                                    "and importance >= 0.8 are automatically promoted to the user-level "
+                                    "DB (~/.kuzu-memory/user.db) at session end when user mode is enabled. "
+                                    "Use: rule (hard constraints), pattern (reusable solutions), "
+                                    "gotcha (pitfalls to avoid), architecture (structural decisions), "
+                                    "convention (style choices, project-only), note (default, project-only)."
+                                ),
+                                "enum": [
+                                    "rule",
+                                    "pattern",
+                                    "gotcha",
+                                    "architecture",
+                                    "convention",
+                                    "note",
+                                ],
+                                "default": "note",
+                            },
+                            "importance": {
+                                "type": "number",
+                                "description": (
+                                    "Memory importance score 0.0-1.0 (default: 0.8). "
+                                    "Memories with importance >= 0.8 AND knowledge_type in "
+                                    "[rule, pattern, gotcha, architecture] are promoted to user DB."
+                                ),
+                                "default": 0.8,
+                                "minimum": 0.0,
+                                "maximum": 1.0,
+                            },
                         },
                         "required": ["content"],
                     },
@@ -473,9 +505,13 @@ class KuzuMemoryMCPServer:
             elif name == "kuzu_remember":
                 content = arguments.get("content", "")
                 memory_type = arguments.get("memory_type", "identity")
+                knowledge_type = arguments.get("knowledge_type", None)
+                importance = arguments.get("importance", None)
                 result = await self._remember(
                     str(content) if content is not None else "",
                     str(memory_type) if memory_type is not None else "identity",
+                    knowledge_type=str(knowledge_type) if knowledge_type is not None else None,
+                    importance=float(importance) if importance is not None else None,
                 )
             elif name == "kuzu_stats":
                 detailed = arguments.get("detailed", False)
@@ -654,7 +690,13 @@ class KuzuMemoryMCPServer:
             logger.error(f"MCP recall failed: {e}")
             return f"Error: {e}"
 
-    async def _remember(self, content: str, memory_type: str = "identity") -> str:
+    async def _remember(
+        self,
+        content: str,
+        memory_type: str = "identity",
+        knowledge_type: str | None = None,
+        importance: float | None = None,
+    ) -> str:
         """Store important project information via direct service call."""
         from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
 
@@ -664,7 +706,12 @@ class KuzuMemoryMCPServer:
         db_path = self._get_db_path()
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
-                memory_id = memory.remember(content, source=memory_type)
+                memory_id = memory.remember(
+                    content,
+                    source=memory_type,
+                    knowledge_type=knowledge_type,
+                    importance=importance,
+                )
             return f"Stored memory with ID: {memory_id}"
         except Exception as e:
             logger.error(f"MCP remember failed: {e}")

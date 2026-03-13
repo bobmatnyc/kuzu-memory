@@ -473,6 +473,8 @@ class KuzuMemory:
         session_id: str | None = None,
         agent_id: str | None = None,
         metadata: dict[str, Any] | None = None,
+        knowledge_type: str | None = None,
+        importance: float | None = None,
     ) -> str:
         """
         Store a single memory immediately (synchronous operation).
@@ -494,19 +496,28 @@ class KuzuMemory:
         # Use EPISODIC type for direct memories as they represent specific events/facts
         import uuid
 
-        from .models import MemoryType
+        from .models import KnowledgeType, MemoryType
 
         # Auto-populate user_id from git if not provided in metadata
         user_id: str | None = metadata.get("user_id") if metadata else None
         if user_id is None and self._user_id is not None:
             user_id = self._user_id
 
+        # Resolve knowledge_type — callers can pass the string value of the enum
+        kt: KnowledgeType = KnowledgeType.NOTE
+        if knowledge_type:
+            try:
+                kt = KnowledgeType(knowledge_type.lower())
+            except ValueError:
+                pass  # unknown value falls back to NOTE
+
         memory = Memory(
             id=str(uuid.uuid4()),
             content=content,
             memory_type=MemoryType.EPISODIC,
+            knowledge_type=kt,
             source_type=source or "manual",  # Note: field is source_type, not source
-            importance=0.8,  # Default importance for direct memories
+            importance=importance if importance is not None else 0.8,
             confidence=1.0,  # High confidence since it's explicit
             created_at=datetime.now(),  # Keep as datetime object
             valid_to=None,  # No expiration by default
