@@ -381,6 +381,63 @@ class KuzuMemoryMCPServer:
                         },
                     },
                 ),
+                Tool(
+                    name="kuzu_project_context",
+                    description=(
+                        "Structured project context bundle: Returns recent work summary, gotchas, "
+                        "architecture decisions, patterns, rules, and conventions from the current "
+                        "project's memory database. Designed for session-resume context injection. "
+                        "\n\nUse cases: "
+                        "\n- Inject project context at session start "
+                        "\n- Resume work on a project with full context "
+                        "\n- Get a structured overview of project knowledge"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "days_back": {
+                                "type": "integer",
+                                "description": "How many days back to look for recent work",
+                                "default": 14,
+                            },
+                            "max_per_type": {
+                                "type": "integer",
+                                "description": "Max memories per knowledge_type category",
+                                "default": 5,
+                            },
+                        },
+                    },
+                ),
+                Tool(
+                    name="kuzu_user_context",
+                    description=(
+                        "Cross-project context bundle (user mode only): Returns rules, patterns, "
+                        "gotchas, and architecture decisions from the shared user DB "
+                        "(~/.kuzu-memory/user.db), excluding memories from the current project. "
+                        "Complements kuzu_project_context for full session context. "
+                        "\n\nOnly available when mode=user is configured. Returns "
+                        '{"available": false} in project mode. '
+                        "\n\nUse cases: "
+                        "\n- Inject cross-project learnings at session start "
+                        "\n- Apply patterns learned from other projects "
+                        "\n- Access user-wide rules and conventions"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "days_back": {
+                                "type": "integer",
+                                "description": "How many days back to look for recent work",
+                                "default": 14,
+                            },
+                            "max_per_type": {
+                                "type": "integer",
+                                "description": "Max memories per knowledge_type category",
+                                "default": 5,
+                            },
+                        },
+                    },
+                ),
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
@@ -453,6 +510,20 @@ class KuzuMemoryMCPServer:
                 result = await self._import_shared(
                     str(project_path) if project_path is not None else None,
                     bool(dry_run) if dry_run is not None else False,
+                )
+            elif name == "kuzu_project_context":
+                days_back = arguments.get("days_back", 14)
+                max_per_type = arguments.get("max_per_type", 5)
+                result = await self._project_context(
+                    int(days_back) if isinstance(days_back, int) else 14,
+                    int(max_per_type) if isinstance(max_per_type, int) else 5,
+                )
+            elif name == "kuzu_user_context":
+                days_back = arguments.get("days_back", 14)
+                max_per_type = arguments.get("max_per_type", 5)
+                result = await self._user_context(
+                    int(days_back) if isinstance(days_back, int) else 14,
+                    int(max_per_type) if isinstance(max_per_type, int) else 5,
                 )
             else:
                 result = f"Unknown tool: {name}"
@@ -621,6 +692,135 @@ class KuzuMemoryMCPServer:
             logger.error(f"MCP stats failed: {e}")
             return f"Error: {e}"
 
+    async def _project_context(self, days_back: int = 14, max_per_type: int = 5) -> str:
+        """Return structured project context bundle from the current project DB."""
+        import datetime
+        import json as _json
+
+        from kuzu_memory.core.models import KnowledgeType
+        from kuzu_memory.services import MemoryService
+
+        db_path = self._get_db_path()
+        try:
+            with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
+                km = memory.kuzu_memory
+
+                # Recent work — last 3 days of WORKING/EPISODIC memories
+                recent_cutoff = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat()
+                now_iso = datetime.datetime.now().isoformat()
+
+                recent_rows = km.db_adapter.execute_query(
+                    """MATCH (m:Memory)
+                    WHERE m.created_at > TIMESTAMP($cutoff)
+                      AND m.memory_type IN ['working', 'episodic']
+                      AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))
+                    RETURN m ORDER BY m.created_at DESC LIMIT $limit""",
+                    {
+                        "cutoff": recent_cutoff,
+                        "now": now_iso,
+                        "limit": max_per_type * 2,
+                    },
+                )
+                recent_summaries = []
+                for row in recent_rows:
+                    mem_data = row.get("m", row)
+                    if isinstance(mem_data, dict):
+                        recent_summaries.append(mem_data.get("content", ""))
+
+                # Helper: query by knowledge_type
+                def _by_type(kt: str) -> list[dict[str, object]]:
+                    try:
+                        rows = km.db_adapter.execute_query(
+                            """MATCH (m:Memory)
+                            WHERE m.knowledge_type = $kt
+                              AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($now))
+                            RETURN m ORDER BY m.importance DESC LIMIT $limit""",
+                            {
+                                "kt": kt,
+                                "now": now_iso,
+                                "limit": max_per_type,
+                            },
+                        )
+                        result = []
+                        for r in rows:
+                            mem_data = r.get("m", r)
+                            if isinstance(mem_data, dict):
+                                result.append(
+                                    {
+                                        "content": mem_data.get("content", ""),
+                                        "importance": float(mem_data.get("importance", 0.5)),
+                                    }
+                                )
+                        return result
+                    except Exception:
+                        return []
+
+                context = {
+                    "recent_work": " ".join(recent_summaries[:3]) if recent_summaries else "",
+                    "gotchas": _by_type(KnowledgeType.GOTCHA.value),
+                    "architecture": _by_type(KnowledgeType.ARCHITECTURE.value),
+                    "patterns": _by_type(KnowledgeType.PATTERN.value),
+                    "rules": _by_type(KnowledgeType.RULE.value),
+                    "conventions": _by_type(KnowledgeType.CONVENTION.value),
+                }
+            return _json.dumps(context, indent=2)
+        except Exception as e:
+            logger.error(f"MCP project_context failed: {e}")
+            return _json.dumps({"error": str(e)})
+
+    async def _user_context(self, days_back: int = 14, max_per_type: int = 5) -> str:
+        """Return cross-project context from user DB (user mode only)."""
+        import json as _json
+
+        from kuzu_memory.core.config import KuzuMemoryConfig
+        from kuzu_memory.services.user_memory_service import UserMemoryService
+
+        try:
+            # Load config to check mode
+            from ..utils.config_loader import get_config_loader
+
+            config_loader = get_config_loader()
+            config: KuzuMemoryConfig = config_loader.load_config(self.project_root)
+        except Exception:
+            config = KuzuMemoryConfig()
+
+        if config.user.mode != "user":
+            return _json.dumps(
+                {"available": False, "reason": "Not in user mode. Set mode: user in config."}
+            )
+
+        try:
+            current_project_tag = config.user.effective_project_tag()
+            with UserMemoryService(config) as user_svc:
+                # Get patterns from user DB, excluding current project (already in project context)
+                from kuzu_memory.core.models import KnowledgeType
+
+                all_patterns = user_svc.get_patterns(limit=max_per_type * 6)
+                # Filter out memories from the current project to avoid duplication
+                cross_project = [m for m in all_patterns if m.project_tag != current_project_tag]
+
+                def _filter_by_type(kt: KnowledgeType) -> list[dict[str, object]]:
+                    return [
+                        {"content": m.content, "importance": m.importance, "project": m.project_tag}
+                        for m in cross_project
+                        if m.knowledge_type == kt
+                    ][:max_per_type]
+
+                context = {
+                    "available": True,
+                    "source": "user_db",
+                    "current_project_excluded": current_project_tag,
+                    "gotchas": _filter_by_type(KnowledgeType.GOTCHA),
+                    "architecture": _filter_by_type(KnowledgeType.ARCHITECTURE),
+                    "patterns": _filter_by_type(KnowledgeType.PATTERN),
+                    "rules": _filter_by_type(KnowledgeType.RULE),
+                    "conventions": _filter_by_type(KnowledgeType.CONVENTION),
+                }
+            return _json.dumps(context, indent=2)
+        except Exception as e:
+            logger.error(f"MCP user_context failed: {e}")
+            return _json.dumps({"available": False, "error": str(e)})
+
     def _get_db_path(self) -> Path:
         """Get path to Kuzu database for current project.
 
@@ -670,6 +870,13 @@ class KuzuMemoryMCPServer:
 
             # Get database path
             db_path = self._get_db_path()
+
+            # _get_db_path() may return a directory (e.g. when KUZU_MEMORY_DB is
+            # set to a directory like /home/ubuntu/Vaults/notes/kuzu-memories).
+            # KuzuAdapter requires a file path, so resolve memories.db inside the
+            # directory — matching the behaviour of MemoryService and other tools.
+            if db_path.is_dir():
+                db_path = db_path / "memories.db"
 
             if not db_path.exists():
                 return json.dumps(

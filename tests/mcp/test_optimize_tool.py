@@ -42,9 +42,15 @@ def mock_access_tracker():
 @pytest.fixture
 def mcp_server(tmp_path: Path) -> KuzuMemoryMCPServer:
     """Create MCP server instance for testing."""
-    # Create a test database directory
-    db_path = tmp_path / "kuzu-memories"
-    db_path.mkdir(parents=True, exist_ok=True)
+    # Create database in the canonical location that _get_db_path() returns.
+    # _get_db_path() calls migrate_db_location() which moves kuzu-memories/ to
+    # .kuzu-memory/, so create .kuzu-memory/memories.db directly to avoid the
+    # migration side-effect and match the path _optimize() resolves to.
+    db_dir = tmp_path / ".kuzu-memory"
+    db_dir.mkdir(parents=True, exist_ok=True)
+    # Create a placeholder db file so db_path.exists() is True after the
+    # directory-to-file resolution added in _optimize().
+    (db_dir / "memories.db").touch()
 
     # Create server with test project root
     server = KuzuMemoryMCPServer(project_root=tmp_path)
@@ -259,21 +265,20 @@ class TestOptimizeIntegration:
     @pytest.mark.asyncio
     async def test_optimize_end_to_end(self, tmp_path: Path) -> None:
         """Test complete optimization flow with real components."""
-        # MCP server expects database in standard location: project_root/kuzu-memories/
-        # But KuzuAdapter expects a database file path, not a directory
-        # So we use: project_root/kuzu-memories as the database file
-        db_dir = tmp_path / "kuzu-memories"
-
-        # Initialize database with test data
-        # KuzuAdapter will create the database at the given path
+        # Initialize database in the canonical location that _optimize() resolves
+        # to: project_root/.kuzu-memory/memories.db
         from kuzu_memory.core.config import KuzuMemoryConfig
         from kuzu_memory.storage.kuzu_adapter import KuzuAdapter
 
+        db_dir = tmp_path / ".kuzu-memory"
+        db_dir.mkdir(parents=True, exist_ok=True)
+        db_file = db_dir / "memories.db"
+
         config = KuzuMemoryConfig.default()
-        adapter = KuzuAdapter(db_dir, config)
+        adapter = KuzuAdapter(db_file, config)
         adapter.initialize()
 
-        # Create MCP server (it will find the database at project_root/kuzu-memories)
+        # Create MCP server (it will find .kuzu-memory/ and resolve memories.db)
         server = KuzuMemoryMCPServer(project_root=tmp_path)
 
         # Test optimization (dry-run)
