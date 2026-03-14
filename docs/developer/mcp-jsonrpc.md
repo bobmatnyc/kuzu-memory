@@ -80,15 +80,52 @@ The KuzuMemory MCP server implements the JSON-RPC 2.0 protocol for communication
 - `ping` - Health check
 
 ### KuzuMemory Tools
-- `enhance` - Enhance prompts with context
-- `learn` - Store learnings asynchronously
-- `recall` - Query memories
-- `remember` - Store direct memories
-- `stats` - Get memory statistics
-- `recent` - Get recent memories
-- `cleanup` - Clean expired memories
-- `project` - Get project information
-- `init` - Initialize project
+
+| Tool | Description |
+|------|-------------|
+| `kuzu_enhance` | RAG prompt augmentation — inject relevant project memories into a prompt |
+| `kuzu_learn` | Async/background learning — store observations without blocking |
+| `kuzu_recall` | Semantic memory retrieval — vector search across stored memories |
+| `kuzu_remember` | Synchronous critical-fact storage — supports `knowledge_type` and `importance` params |
+| `kuzu_stats` | Health check and diagnostics |
+| `kuzu_optimize` | Compact and optimize frequently-accessed memories |
+| `kuzu_merge` | Merge memories from another Kùzu database |
+| `kuzu_export_shared` | Export delta memories to `kuzu-memory-shared/` JSON for git sharing |
+| `kuzu_import_shared` | Import memories from `kuzu-memory-shared/` JSON files |
+| `kuzu_project_context` | Structured project context bundle for session-resume injection |
+| `kuzu_user_context` | Cross-project context bundle from `~/.kuzu-memory/user.db` (user mode only) |
+
+#### `kuzu_remember` — knowledge_type and importance
+
+`kuzu_remember` accepts two optional parameters that control cross-project promotion:
+
+```json
+{
+  "content": "Kuzu enforces single-writer: serialise all writes with RLock",
+  "knowledge_type": "gotcha",
+  "importance": 0.95
+}
+```
+
+- **`knowledge_type`** (string, default `"note"`): One of `rule | pattern | gotcha | architecture | convention | note`. Memories with a promotable type (`rule`, `pattern`, `gotcha`, `architecture`) and `importance >= 0.8` are automatically promoted to `~/.kuzu-memory/user.db` at session end when user mode is enabled.
+- **`importance`** (float 0–1, default `0.8`): Promotion threshold is `>= 0.8`. Use `1.0` for absolute constraints and `0.9` for strong patterns.
+
+#### `kuzu_project_context` and `kuzu_user_context`
+
+Both tools return a structured context bundle keyed by knowledge type:
+
+```json
+{
+  "recent_work": "...",
+  "gotchas": [{"content": "...", "importance": 0.95}],
+  "architecture": [...],
+  "patterns": [...],
+  "rules": [...],
+  "conventions": [...]
+}
+```
+
+`kuzu_user_context` queries the shared user DB and excludes memories already tagged with the current project. It returns `{"available": false}` when `mode=project` is configured.
 
 ## Error Codes
 

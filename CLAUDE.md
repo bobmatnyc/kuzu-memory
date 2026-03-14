@@ -534,6 +534,108 @@ kuzu-memory doctor hooks --fix
 **Issue**: Claude Code hooks not capturing session events
 **Fix**: Check `.claude/hooks.json` exists and is properly configured. Use `kuzu-memory doctor hooks --verbose` to see event subscriptions
 
+## KnowledgeType Classification
+
+`KnowledgeType` is an enum on every `Memory` node that governs *retrieval categorisation*
+and *cross-project promotion*. It is **orthogonal** to `MemoryType` (which governs
+retention/expiry). When writing code or MCP tool calls that store memories, always set
+`knowledge_type` explicitly for anything worth keeping.
+
+### Values and when to use them
+
+| Value | Use when | Auto-promotes to user DB? |
+|-------|----------|--------------------------|
+| `rule` | Hard constraints that must never be violated — e.g. "Always serialise Kuzu writes with RLock" | Yes |
+| `pattern` | Repeatable solutions — e.g. "Use `ServiceManager.memory_service()` context manager" | Yes |
+| `gotcha` | Bugs or surprises that burned us — e.g. "Kuzu single-writer: never open two writers" | Yes |
+| `architecture` | Structural decisions — e.g. "SOA with DI; no direct `KuzuMemory()` instantiation in CLI" | Yes |
+| `convention` | Style/workflow standards — e.g. "Google-style docstrings, run `make pre-publish` before commit" | No (project-only) |
+| `note` | General information, default for uncategorised memories | No (project-only) |
+
+### MCP tool usage
+
+Use `kuzu_remember` (synchronous) with an explicit `knowledge_type` for anything that
+should survive across sessions or projects:
+
+```python
+# Cross-project gotcha — will promote to user DB at session end
+kuzu_remember(
+    content="Kuzu enforces single-writer: serialise all writes with RLock",
+    knowledge_type="gotcha",
+    importance=0.95,
+)
+
+# Architectural decision for this project
+kuzu_remember(
+    content="Use ServiceManager.memory_service() context manager, never KuzuMemory() directly",
+    knowledge_type="architecture",
+    importance=0.9,
+)
+```
+
+Use `kuzu_learn` (async, fire-and-forget) for project-local observations that do not
+need cross-project promotion:
+
+```python
+kuzu_learn(content="User prefers pytest-asyncio for async tests in this project")
+```
+
+---
+
+## User-Level Memory (Cross-Project)
+
+When `mode=user` is configured, KuzuMemory maintains two databases:
+
+- **Project DB** (`.kuzu-memory/memories.db`): all memories for the current project
+- **User DB** (`~/.kuzu-memory/user.db`): high-quality memories promoted from all projects
+
+### Promotion criteria (applied at session end, `Stop` hook)
+
+A memory is promoted to the user DB if **all** of the following hold:
+1. `knowledge_type` in `rule | pattern | gotcha | architecture`
+2. `importance >= 0.8`
+3. Not already present (deduplicated by `content_hash`)
+
+Promotion runs in a background thread and is non-blocking. If it fails (e.g. file lock
+contention), it is retried at the next session end — no memories are lost.
+
+### Session-start context injection (MPM / agent pattern)
+
+At the start of a session, call both tools to get full context:
+
+```python
+# Project-specific recent work, gotchas, patterns, architecture
+project_ctx = kuzu_project_context(days_back=14, max_per_type=5)
+
+# Cross-project rules and patterns (user mode only)
+user_ctx = kuzu_user_context(max_per_type=3)
+# Returns {"available": false} when mode=project
+```
+
+Prepend both results to the initial agent context block before handing off to
+Research or Engineer agents. This replaces static `CLAUDE.md` reading for
+project context.
+
+### CLI management
+
+```bash
+# One-time setup: initialise user DB, install global hooks, write MPM skill
+kuzu-memory user setup
+
+# Check what has been aggregated
+kuzu-memory user status
+
+# Manually promote from current project (useful for backfilling)
+kuzu-memory user promote [--dry-run] [--min-importance 0.8]
+
+# Return to project-only mode (user DB is preserved)
+kuzu-memory user disable
+```
+
+Full design: `docs/user-level-memory.md`
+
+---
+
 ## Resources
 
 - **GitHub**: https://github.com/bobmatnyc/kuzu-memory
@@ -551,5 +653,5 @@ Check `docs/` directory for:
 
 ---
 
-**Last Updated**: 2025-12-11
-**Version**: 1.6.2
+**Last Updated**: 2026-03-14
+**Version**: 1.8.0

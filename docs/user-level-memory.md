@@ -1,7 +1,7 @@
-# User-Level Memory — Design Specification
+# User-Level Memory
 
-**Status**: Planned
-**Version target**: 1.7.0
+**Status**: Implemented
+**Shipped in**: 1.7.0
 **Author**: Architecture team
 **Date**: 2026-03-13
 
@@ -269,20 +269,21 @@ tagged with the current project (those are in `kuzu_project_context`).
 
 ```bash
 # Initialize user mode (one-time setup)
-kuzu-memory user setup
+# Also installs user-level Claude Code hooks and writes the MPM skill
+kuzu-memory user setup [--user-db-path PATH]
 
-# Check user DB status
+# Check user DB status (total memories, breakdown by knowledge_type, top projects)
 kuzu-memory user status
 
-# Manually promote memories from current project
-kuzu-memory user promote [--dry-run] [--min-importance 0.8]
+# Manually promote memories from the current project to user DB
+kuzu-memory user promote [--dry-run] [--min-importance FLOAT] [--db-path PATH]
 
-# Migrate from project mode to user mode
-kuzu-memory user migrate [--projects /path1 /path2 ...]
-
-# Show cross-project patterns
-kuzu-memory user patterns [--type gotcha|rule|pattern|architecture]
+# Revert to project-only mode (preserves user DB)
+kuzu-memory user disable
 ```
+
+Note: `user migrate` and `user patterns` are not yet implemented. Use
+`user promote --db-path` to backfill from individual project databases manually.
 
 ---
 
@@ -294,16 +295,23 @@ kuzu-memory user patterns [--type gotcha|rule|pattern|architecture]
 kuzu-memory user setup
 ```
 
-Creates `~/.kuzu-memory/user.db`, initializes schema, sets `mode: user` in
-`~/.kuzu-memory/config.yaml`.
+Creates `~/.kuzu-memory/user.db`, initialises the schema, sets `mode: user` in
+`~/.kuzu-memory/config.yaml`, installs user-level Claude Code hooks into
+`~/.claude/settings.json`, and writes the `kuzu-memory-usage` MPM skill to
+`~/.claude-mpm/skills/`.
 
-### Step 2: Initial promotion from existing projects (optional)
+### Step 2: Backfill from existing projects (optional)
 
 ```bash
-kuzu-memory user migrate --projects ~/Projects/project-a ~/Projects/project-b
+# Promote eligible memories from a specific project's database
+kuzu-memory user promote --db-path ~/Projects/project-a/.kuzu-memory
+
+# Preview first
+kuzu-memory user promote --db-path ~/Projects/project-a/.kuzu-memory --dry-run
 ```
 
-Scans each project's DB, promotes eligible memories. Shows preview with `--dry-run`.
+Scans the project DB for memories meeting the promotion criteria and writes them
+to the user DB. Deduplicates by content_hash — safe to run multiple times.
 
 ### Step 3: Verify
 
@@ -321,7 +329,7 @@ kuzu-memory user status
 No further action needed. Existing Claude Code hooks and MCP server configuration
 remain unchanged — mode is read from config automatically.
 
-### Rollback
+### Step 5: Rollback (if needed)
 
 ```bash
 # Revert to project mode (stop promotion, ignore user DB)
@@ -332,7 +340,8 @@ kuzu-memory user disable
 #   mode: project
 ```
 
-User DB is not deleted on disable. Re-enabling user mode resumes from existing state.
+The user DB is not deleted on disable. Re-enabling user mode with
+`kuzu-memory user setup` resumes from the existing state.
 
 ---
 
@@ -365,16 +374,19 @@ This replaces static CLAUDE.md reading with dynamic, recency-weighted, type-filt
 
 ---
 
-## Open Questions
+## Known Limitations and Future Work
 
 - **Embedding model consistency**: User DB promotion assumes the same embedding model
   across all contributing projects. If a project uses a different model, promoted memories
-  will have incompatible embedding vectors. Mitigation: store embedding model name with
-  each memory; skip promotion if model differs from user DB default.
+  may have incompatible embedding vectors. Not yet guarded against — the current
+  implementation promotes regardless of model.
 
-- **User DB backup**: Since user DB aggregates insights across all projects, it should
-  be included in standard backup recommendations. A `kuzu-memory user export` command
-  is a natural addition.
+- **User DB backup**: A `kuzu-memory user export` command is a natural future addition.
+  For now, back up `~/.kuzu-memory/user.db` manually.
 
-- **Privacy**: User DB lives in home directory. For shared machines or CI environments,
-  user mode should be explicitly disabled or pointed to an ephemeral path.
+- **Privacy**: User DB lives in the home directory. For shared machines or CI environments,
+  disable user mode explicitly (`kuzu-memory user disable`) or set
+  `KUZU_MEMORY_USER_DB_PATH` to an ephemeral path.
+
+- **`user migrate` and `user patterns` commands**: Listed in the original design but not
+  yet implemented. Use `user promote --db-path` for manual backfilling.
