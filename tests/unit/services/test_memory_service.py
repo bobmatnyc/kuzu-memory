@@ -158,6 +158,8 @@ class TestMemoryServiceDelegation:
             session_id=None,
             agent_id=None,
             metadata=None,
+            knowledge_type=None,
+            importance=None,
         )
 
     def test_remember_with_all_parameters(self, memory_service, mock_kuzu_memory):
@@ -179,6 +181,8 @@ class TestMemoryServiceDelegation:
             session_id="session-1",
             agent_id="agent-1",
             metadata={"key": "value"},
+            knowledge_type=None,
+            importance=None,
         )
 
     def test_attach_memories_delegates_to_kuzu_memory(self, memory_service, mock_kuzu_memory):
