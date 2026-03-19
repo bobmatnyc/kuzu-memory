@@ -95,7 +95,7 @@ class KuzuMemoryMCPServer:
     def _setup_handlers(self) -> None:
         """Set up MCP server handlers."""
 
-        @self.server.list_tools()  # type: ignore[misc, unused-ignore]
+        @self.server.list_tools()  # type: ignore[misc]
         async def handle_list_tools() -> list[Tool]:
             """List available tools."""
             return [
@@ -571,7 +571,7 @@ class KuzuMemoryMCPServer:
 
             return [TextContent(type="text", text=result)]
 
-        @self.server.list_resources()  # type: ignore[misc, unused-ignore]
+        @self.server.list_resources()  # type: ignore[misc]
         async def handle_list_resources() -> list[Resource]:
             """List available resources."""
             return [
@@ -583,7 +583,7 @@ class KuzuMemoryMCPServer:
                 )
             ]
 
-        @self.server.list_resource_templates()  # type: ignore[misc, unused-ignore]
+        @self.server.list_resource_templates()  # type: ignore[misc]
         async def handle_list_resource_templates() -> list[ResourceTemplate]:
             """List resource templates."""
             return [
