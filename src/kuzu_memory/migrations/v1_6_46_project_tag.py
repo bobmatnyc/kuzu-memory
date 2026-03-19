@@ -114,13 +114,19 @@ class ProjectTagMigration(SchemaMigration):
         )
 
     def _find_db_path(self) -> Path | None:
-        """Locate the project database file."""
-        candidate = self.project_root / ".kuzu-memory"
+        """Locate the project database file.
+
+        Returns the path to the memories.db file, not the parent directory.
+        Kuzu requires a file path; passing a directory raises
+        "Database path cannot be a directory".
+        """
+        # Current format: .kuzu-memory/memories.db
+        candidate = self.project_root / ".kuzu-memory" / "memories.db"
         if candidate.exists():
             return candidate
         # Legacy locations
         for legacy in ("kuzu-memories", ".kuzu-memories"):
-            p = self.project_root / legacy
+            p = self.project_root / legacy / "memories.db"
             if p.exists():
                 return p
         return None
