@@ -113,24 +113,58 @@ def init(
                         rich_print(f"   ⚠️  {warning}", style="yellow")
                 sys.exit(1)
 
-            rich_print(f"✅ Created memories directory: {memories_dir}")
+            # Show appropriate message based on whether directory was just created
+            if result.get("created", False):
+                rich_print(f"✅ Created memories directory: {memories_dir}")
+            else:
+                rich_print(f"📁 Using existing memories directory: {memories_dir}")
 
-            # Initialize database with project context using ServiceManager
-            with ServiceManager.memory_service(db_path) as memory:
-                # Store initial project context
-                project_context = get_project_context_summary(project_root_path)
-                if project_context:
-                    # Convert dict to string for memory content
-                    context_str = f"Project {project_context['project_name']} initialized at {project_context['project_root']}"
-                    memory.remember(
-                        context_str,
-                        source="project-initialization",
-                        metadata={
-                            "type": "project-context",
-                            "auto-generated": True,
-                            **project_context,
-                        },
+            # Initialize database with project context using ServiceManager.
+            # Database connection is established when the context manager is entered,
+            # so we wrap the entire block to catch kuzu errors (including EEXIST on
+            # older kuzu versions that fail when the parent dir already exists).
+            try:
+                with ServiceManager.memory_service(db_path) as memory:
+                    # Store initial project context
+                    project_context = get_project_context_summary(project_root_path)
+                    if project_context:
+                        # Convert dict to string for memory content
+                        context_str = (
+                            f"Project {project_context['project_name']} initialized at "
+                            f"{project_context['project_root']}"
+                        )
+                        memory.remember(
+                            context_str,
+                            source="project-initialization",
+                            metadata={
+                                "type": "project-context",
+                                "auto-generated": True,
+                                **project_context,
+                            },
+                        )
+            except Exception as db_err:
+                db_err_str = str(db_err)
+                if (
+                    "EEXIST" in db_err_str
+                    or "File exists" in db_err_str
+                    or "already exists" in db_err_str
+                ):
+                    rich_print(
+                        "❌ Database creation failed — the memories directory already exists "
+                        "but the database file could not be created inside it.",
+                        style="red",
                     )
+                    rich_print(
+                        "   This can happen when a previous setup was interrupted.",
+                        style="dim",
+                    )
+                    rich_print(
+                        "   Run: kuzu-memory init --force   to recreate the database.",
+                        style="yellow",
+                    )
+                else:
+                    rich_print(f"❌ Database initialization failed: {db_err}", style="red")
+                sys.exit(1)
 
             rich_print(f"✅ Initialized database: {db_path}")
 

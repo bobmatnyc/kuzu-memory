@@ -1520,25 +1520,31 @@ exec {kuzu_cmd} "$@"
             if not dry_run:
                 config_path.write_text(self._create_project_config())
 
-            # Initialize kuzu-memory database if not already done
+            # Initialize kuzu-memory database if not already done.
+            # _get_project_db_path() returns the .kuzu-memory DIRECTORY (not the file).
+            # We need to create the database FILE inside it.
             db_path = self._get_project_db_path()
-            if not db_path.exists():
+            db_file_path = db_path / "memories.db"
+            # Initialize when: (a) directory doesn't exist at all, OR
+            # (b) directory exists but memories.db is missing (partial init state).
+            db_needs_init = not db_path.exists() or (db_path.is_dir() and not db_file_path.exists())
+            if db_needs_init:
                 try:
                     logger.info(
-                        f"{'Would initialize' if dry_run else 'Initializing'} kuzu-memory database at {db_path}"
+                        f"{'Would initialize' if dry_run else 'Initializing'} kuzu-memory database at {db_file_path}"
                     )
                     if not dry_run:
-                        # Create database directory
+                        # Ensure database directory exists
                         db_path.mkdir(parents=True, exist_ok=True)
 
                         # Initialize database using Python API
                         from ..core.memory import KuzuMemory
 
-                        memory = KuzuMemory(db_path=db_path / "memories.db")
+                        memory = KuzuMemory(db_path=db_file_path)
                         memory.close()
 
-                        logger.info(f"Initialized kuzu-memory database at {db_path}")
-                    self.files_created.append(db_path / "memories.db")
+                        logger.info(f"Initialized kuzu-memory database at {db_file_path}")
+                    self.files_created.append(db_file_path)
                 except Exception as e:
                     self.warnings.append(f"Failed to initialize kuzu-memory database: {e}")
 

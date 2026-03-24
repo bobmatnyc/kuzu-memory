@@ -87,6 +87,8 @@ class KuzuConnectionPool:
 
     def _create_connection(self) -> Any:  # kuzu.Connection has no type stubs
         """Create a new Kuzu connection using the shared database instance."""
+        import errno as _errno_mod
+
         try:
             # Ensure parent directory exists
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -104,6 +106,19 @@ class KuzuConnectionPool:
 
             return connection
 
+        except OSError as e:
+            if e.errno == _errno_mod.EEXIST:
+                # Older kuzu versions (< 0.6) call mkdir() internally on the
+                # parent directory without exist_ok, so they raise EEXIST when
+                # the parent already exists.  Provide a clear, actionable error.
+                raise DatabaseError(
+                    f"Failed to initialize database at '{self.db_path}': "
+                    f"the parent directory '{self.db_path.parent}' already exists "
+                    f"but kuzu could not create the database inside it "
+                    f"(kuzu reported: {e}). "
+                    f"Run 'kuzu-memory init --force' to recreate the database."
+                )
+            raise DatabaseError(f"Failed to create Kuzu connection: {e}")
         except Exception as e:
             raise DatabaseError(f"Failed to create Kuzu connection: {e}")
 

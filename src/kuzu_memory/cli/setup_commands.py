@@ -178,13 +178,25 @@ def setup(
         # Honour the global --db-path flag when set; otherwise derive from project root.
         db_path = ctx.obj.get("db_path") or get_project_db_path(project_root)
 
-        # Check initialization status
+        # Check initialization status — three distinct states:
+        #   1. fully initialized: db_path exists (happy path)
+        #   2. partial init: memories_dir exists but db_path does not
+        #      (e.g. a previous interrupted setup created the directory but
+        #       kuzu never wrote the database file)
+        #   3. not initialized: neither exists
         already_initialized = db_path.exists()
+        partial_init = memories_dir.exists() and not already_initialized
 
         if already_initialized:
             rich_print(f"✅ Memory database already initialized: {db_path}", style="dim")
             if force:
                 rich_print("   Force flag set - will reinitialize", style="yellow")
+        elif partial_init:
+            rich_print(
+                f"⚠️  Memory directory exists but database is missing: {memories_dir}",
+                style="yellow",
+            )
+            rich_print("   Will reinitialize database in existing directory...")
         else:
             rich_print(f"📦 Memory database not found - will create: {db_path}")
 
@@ -195,13 +207,31 @@ def setup(
                 rich_print(f"  {db_path}", style="dim")
             else:
                 rich_print("\n⚙️  Initializing memory database...", style="cyan")
+                # Force init when in partial-init state so init doesn't skip
+                # the directory-creation step that would otherwise fail silently.
+                init_force = force or partial_init
                 try:
                     # Explicitly pass None for Path-typed options to avoid Sentinel error
-                    ctx.invoke(init, force=force, config_path=None, project_root=None)
-                except SystemExit:
-                    # init command may exit with code 1 if already exists
-                    if not force:
-                        rich_print("   Database already exists (use --force to overwrite)")
+                    ctx.invoke(init, force=init_force, config_path=None, project_root=None)
+                except SystemExit as _init_exit:
+                    # init command exited with non-zero; show a useful hint instead
+                    # of the former misleading "Database already exists" message.
+                    if _init_exit.code != 0:
+                        if partial_init:
+                            rich_print(
+                                "   ⚠️  Database initialization failed for the existing "
+                                f"directory {memories_dir}.",
+                                style="yellow",
+                            )
+                            rich_print(
+                                "      Run: kuzu-memory init --force   to recreate the database.",
+                                style="dim",
+                            )
+                        else:
+                            rich_print(
+                                "   ⚠️  Database initialization failed.",
+                                style="yellow",
+                            )
 
         # Verify database schema and optimization for both new and existing databases
         if not dry_run and db_path.exists():
@@ -677,9 +707,17 @@ def _install_integration(
             verbose=False,
         )
     except SystemExit as e:
-        # install_command may exit - capture and re-raise if non-zero
+        # install_command called sys.exit(); treat non-zero as a warning so
+        # the overall setup continues rather than aborting.
         if e.code != 0:
-            raise
+            rich_print(
+                "⚠️  Integration installation did not complete successfully.",
+                style="yellow",
+            )
+            rich_print(
+                f"   You can retry later with: kuzu-memory install {integration_name}",
+                style="dim",
+            )
     except Exception as e:
         rich_print(f"⚠️  Installation warning: {e}", style="yellow")
         rich_print("   You can manually install later with:", style="dim")
