@@ -93,6 +93,10 @@ trap 'rollback_version' ERR
 info "Step 3/7: Building package..."
 
 rm -rf dist/ build/ *.egg-info
+
+# Ensure all extras (including test deps like pytest) are installed
+uv sync --all-extras --no-progress 2>/dev/null || true
+
 uv build
 
 [[ -f "dist/kuzu_memory-${NEW_VERSION}.tar.gz" ]] || error "Build failed: tar.gz not found"
@@ -113,7 +117,7 @@ info "Step 5/7: Committing version bump..."
 
 # Sync uv.lock if pyproject.toml change dirtied it
 if [[ -n "$(git status --porcelain uv.lock 2>/dev/null)" ]]; then
-    uv sync --no-progress 2>/dev/null || true
+    uv sync --all-extras --no-progress 2>/dev/null || true
 fi
 
 git add VERSION pyproject.toml uv.lock src/kuzu_memory/__version__.py CHANGELOG.md
