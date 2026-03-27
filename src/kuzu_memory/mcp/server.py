@@ -874,33 +874,34 @@ class KuzuMemoryMCPServer:
             return _json.dumps({"available": False, "error": str(e)})
 
     def _get_db_path(self) -> Path:
-        """Get path to Kuzu database for current project.
+        """Get path to Kuzu database file for current project.
+
+        Runs migration opportunistically (kuzu-memories/ → .kuzu-memory/), then
+        delegates to get_project_db_path() which returns the memories.db file path
+        inside the canonical .kuzu-memory/ directory.
+
+        The only case not handled by get_project_db_path() is the alternative
+        hidden legacy directory .kuzu-memories/ (distinct from kuzu-memories/
+        which migrate_db_location handles). That path is checked explicitly before
+        delegating so no data is silently ignored.
 
         Search order:
-        1. .kuzu-memory/  — new canonical dotfile location
-        2. kuzu-memories/ — legacy location (backward compatibility)
-        3. .kuzu-memories/ — alternative hidden legacy location
+        1. .kuzu-memory/memories.db  — new canonical dotfile location
+        2. kuzu-memories/memories.db — legacy location (migrated by migrate_db_location)
+        3. .kuzu-memories/memories.db — alternative hidden legacy location
         """
-        from ..utils.project_setup import migrate_db_location
+        from ..utils.project_setup import get_project_db_path, migrate_db_location
 
         # Run migration opportunistically (no-op if already migrated)
         migrate_db_location(self.project_root)
 
-        new_path = self.project_root / ".kuzu-memory"
-        if new_path.exists():
-            return new_path
-
-        # Legacy fallbacks
-        legacy_path = self.project_root / "kuzu-memories"
-        if legacy_path.exists():
-            return legacy_path
-
+        # Alternative hidden legacy path not handled by migrate_db_location
         alt_legacy = self.project_root / ".kuzu-memories"
-        if alt_legacy.exists():
-            return alt_legacy
+        if alt_legacy.exists() and not (self.project_root / ".kuzu-memory").exists():
+            return alt_legacy / "memories.db"
 
-        # Default to new canonical path (will be created on first use)
-        return new_path
+        # Delegate to canonical helper which returns the .db file path
+        return get_project_db_path(self.project_root)
 
     async def _optimize(self, strategy: str, limit: int, dry_run: bool) -> str:
         """
