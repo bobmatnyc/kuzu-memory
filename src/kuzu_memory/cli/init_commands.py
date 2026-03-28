@@ -111,11 +111,27 @@ def init(
                 if result.get("warnings"):
                     for warning in result["warnings"]:
                         rich_print(f"   ⚠️  {warning}", style="yellow")
+                # Surface old-file migration hint when no --force was given
+                setup_result = result.get("structure", {})
+                if setup_result.get("error") and "regular file" in setup_result["error"]:
+                    rich_print(
+                        f"   ⚠️  {setup_result['error']}",
+                        style="yellow",
+                    )
                 sys.exit(1)
 
+            # Inform the user when an old single-file database was migrated
+            setup_result = result.get("structure", {})
+            if setup_result.get("migrated_from_file"):
+                rich_print(
+                    f"⚠️  Found old single-file database at {memories_dir} — "
+                    f"migrating to directory format...",
+                    style="yellow",
+                )
+
             # Show appropriate message based on whether directory was just created
-            if result.get("created", False):
-                rich_print(f"✅ Created memories directory: {memories_dir}")
+            if setup_result.get("created", False):
+                rich_print(f"📁 Created memories directory: {memories_dir}")
             else:
                 rich_print(f"📁 Using existing memories directory: {memories_dir}")
 

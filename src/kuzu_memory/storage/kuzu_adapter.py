@@ -89,6 +89,13 @@ class KuzuConnectionPool:
         """Create a new Kuzu connection using the shared database instance."""
         import errno as _errno_mod
 
+        if kuzu is None:
+            raise DatabaseError(
+                "Kuzu is not installed. Please install with: pip install kuzu>=0.4.0"
+            )
+
+        _kuzu = kuzu  # Local binding for type narrowing after None check
+
         try:
             # Ensure parent directory exists
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,21 +106,35 @@ class KuzuConnectionPool:
             # separate kuzu.Database object for the same path.
             with self._lock:
                 if self._database is None:
-                    self._database = kuzu.Database(str(self.db_path))
+                    self._database = _kuzu.Database(str(self.db_path))
 
             # Create connection using shared database
-            connection = kuzu.Connection(self._database)
+            connection = _kuzu.Connection(self._database)
 
             return connection
 
         except OSError as e:
             if e.errno == _errno_mod.EEXIST:
-                # Older kuzu versions (< 0.6) call mkdir() internally on the
-                # parent directory without exist_ok, so they raise EEXIST when
-                # the parent already exists.  Provide a clear, actionable error.
+                # Two distinct causes for EEXIST here:
+                #
+                # 1. The parent directory (.kuzu-memory/) is itself a regular
+                #    file — this is the old single-file kuzu database format.
+                #    Give a specific migration hint.
+                #
+                # 2. Older kuzu versions (< 0.6) call mkdir() internally on the
+                #    parent directory without exist_ok, so they raise EEXIST when
+                #    the parent already exists as a directory.
+                parent = self.db_path.parent
+                if parent.exists() and not parent.is_dir():
+                    raise DatabaseError(
+                        f"Failed to initialize database at '{self.db_path}': "
+                        f"'{parent}' exists as a regular file (possibly an old "
+                        f"single-file kuzu database). "
+                        f"Run 'kuzu-memory init --force' to migrate to the current format."
+                    )
                 raise DatabaseError(
                     f"Failed to initialize database at '{self.db_path}': "
-                    f"the parent directory '{self.db_path.parent}' already exists "
+                    f"the parent directory '{parent}' already exists "
                     f"but kuzu could not create the database inside it "
                     f"(kuzu reported: {e}). "
                     f"Run 'kuzu-memory init --force' to recreate the database."

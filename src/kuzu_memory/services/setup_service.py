@@ -209,6 +209,9 @@ class SetupService(BaseService):
                 "project_root": str(result.get("project_root", root)),
                 "memories_dir": str(result.get("memories_dir", "")),
                 "db_path": str(result.get("db_path", "")),
+                # Pass through migration and error fields from the raw result so
+                # callers (e.g. the CLI) can surface them to the user.
+                "structure": result,
             }
 
         except Exception as e:
@@ -354,7 +357,7 @@ class SetupService(BaseService):
             self.logger.error(f"Failed to ensure project structure: {e}")
             return False
 
-    def initialize_hooks(self, project_root: Path) -> bool:
+    def initialize_hooks(self, _project_root: Path) -> bool:
         """
         Initialize git hooks for automatic memory capture.
 
@@ -371,6 +374,7 @@ class SetupService(BaseService):
         - post-commit hook for automatic commit memory capture
         - Integration with existing git hooks if present
         """
+        _ = _project_root  # Parameter reserved for future git hook integration
         self.logger.warning("Git hook initialization not yet implemented")
 
         # Placeholder - future integration with GitSyncService

@@ -153,6 +153,13 @@ def get_project_memories_dir(project_root: Path | None = None) -> Path:
     Returns:
         Path to .kuzu-memory directory (or kuzu-memories/ if that is the only
         existing location)
+
+    Note:
+        The returned path might be a regular file rather than a directory when
+        an old single-file kuzu database exists at .kuzu-memory (pre-directory
+        format).  Callers that need to read files inside the directory MUST
+        check ``path.is_dir()`` before use.  ``create_project_memories_structure``
+        handles migration from that old format automatically.
     """
     root = project_root if project_root is not None else find_project_root()
     if root is None:
@@ -218,9 +225,30 @@ def create_project_memories_structure(
         "files_created": [],
     }
 
-    # Check if directory already exists
+    # Check if the path already exists
     if memories_dir.exists():
-        if not force:
+        if not memories_dir.is_dir():
+            # The path exists but is a regular file — this is the old single-file
+            # kuzu database format (kuzu < ~0.4 wrote the DB as a single file named
+            # .kuzu-memory rather than a directory).  We must migrate it.
+            if not force:
+                # Do NOT set existed=True here — the path is a file, not a valid
+                # directory structure, so this is an error state not "already set up".
+                result["error"] = (
+                    f"'{memories_dir}' is a regular file, not a directory. "
+                    f"This looks like an old single-file kuzu database. "
+                    f"Run 'kuzu-memory init --force' to migrate to the current format."
+                )
+                return result
+            else:
+                # --force: remove the old file so we can create the directory below
+                logger.info(
+                    f"Removing old single-file database at {memories_dir} "
+                    f"(migrating to directory format)"
+                )
+                memories_dir.unlink()
+                result["migrated_from_file"] = True
+        elif not force:
             result["existed"] = True
             return result
         else:
