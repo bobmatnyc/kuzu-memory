@@ -132,7 +132,23 @@ class KuzuConnection(IConnection):
 
             def _create_database() -> kuzu.Database:
                 # Note: Kuzu uses max_num_threads parameter name
-                return kuzu.Database(self.database_path, max_num_threads=self.num_threads)
+                try:
+                    return kuzu.Database(self.database_path, max_num_threads=self.num_threads)
+                except Exception as exc:
+                    msg = str(exc).lower()
+                    if "could not set lock" in msg or ("lock" in msg and "file" in msg):
+                        # Another OS process holds the write lock; fall back to
+                        # read-only so recall/enhance queries can still succeed.
+                        logger.warning(
+                            f"Database at '{self.database_path}' is locked by another "
+                            f"process; falling back to read-only mode."
+                        )
+                        return kuzu.Database(
+                            self.database_path,
+                            max_num_threads=self.num_threads,
+                            read_only=True,
+                        )
+                    raise
 
             db = await loop.run_in_executor(None, _create_database)
 

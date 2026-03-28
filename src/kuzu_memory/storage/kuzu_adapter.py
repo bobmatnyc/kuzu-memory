@@ -60,6 +60,45 @@ def create_kuzu_adapter(db_path: Path, config: KuzuMemoryConfig) -> KuzuAdapter:
         return KuzuAdapter(db_path, config)
 
 
+def _is_db_lock_error(exc: Exception) -> bool:
+    """Return True when *exc* looks like a cross-process kuzu file-lock error."""
+    msg = str(exc).lower()
+    return "could not set lock" in msg or ("lock" in msg and "file" in msg)
+
+
+def _lock_error_message(db_path: Path, original_exc: Exception) -> str:
+    """Build an actionable DatabaseLockError message, including lsof info when available."""
+    import shutil
+    import subprocess
+
+    hint = (
+        f"The database at '{db_path}' is locked by another process. "
+        "Reads and writes are unavailable until that process releases the lock.\n"
+        "Tip: use separate database paths for each application, or route all "
+        "access through a single MCP server process."
+    )
+
+    # Try to identify the lock holder via lsof (macOS/Linux)
+    if shutil.which("lsof"):
+        try:
+            result = subprocess.run(
+                ["lsof", str(db_path)],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            if result.stdout.strip():
+                lines = result.stdout.strip().splitlines()
+                # Second line onward are the actual processes
+                if len(lines) > 1:
+                    pids = {line.split()[1] for line in lines[1:] if line.split()}
+                    hint += f"\nLock holder PID(s): {', '.join(sorted(pids))}"
+        except Exception:
+            pass  # lsof unavailable or timed out — skip
+
+    return hint
+
+
 class KuzuConnectionPool:
     """
     Connection pool for Kuzu database connections.
@@ -84,6 +123,9 @@ class KuzuConnectionPool:
         self._lock = threading.RLock()
         self._initialized = False
         self._database: Any = None  # kuzu.Database has no type stubs
+        # Set to True when another process holds the write lock and we fall
+        # back to opening the database in read-only mode.
+        self.read_only: bool = False
 
     def _create_connection(self) -> Any:  # kuzu.Connection has no type stubs
         """Create a new Kuzu connection using the shared database instance."""
@@ -106,13 +148,31 @@ class KuzuConnectionPool:
             # separate kuzu.Database object for the same path.
             with self._lock:
                 if self._database is None:
-                    self._database = _kuzu.Database(str(self.db_path))
+                    try:
+                        self._database = _kuzu.Database(str(self.db_path))
+                    except Exception as open_exc:
+                        if _is_db_lock_error(open_exc):
+                            # Another OS process holds the write lock.  Try to
+                            # open in read-only mode so recall/enhance still work.
+                            logger.warning(
+                                f"Database at '{self.db_path}' is locked by another process; "
+                                f"falling back to read-only mode (writes will be rejected)."
+                            )
+                            try:
+                                self._database = _kuzu.Database(str(self.db_path), read_only=True)
+                                self.read_only = True
+                            except Exception:
+                                raise DatabaseLockError(_lock_error_message(self.db_path, open_exc))
+                        else:
+                            raise
 
             # Create connection using shared database
             connection = _kuzu.Connection(self._database)
 
             return connection
 
+        except DatabaseLockError:
+            raise
         except OSError as e:
             if e.errno == _errno_mod.EEXIST:
                 # Two distinct causes for EEXIST here:
@@ -391,6 +451,17 @@ class KuzuAdapter:
         timeout_ms = timeout_ms or self.config.storage.query_timeout_ms
 
         is_write = self._is_write_query(query)
+
+        # If the pool opened in read-only mode (another process holds the write
+        # lock), reject write operations immediately with a clear error rather
+        # than letting kuzu throw a raw RuntimeError.
+        if is_write and self._pool.read_only:
+            raise DatabaseLockError(
+                f"Cannot execute write query — the database at '{self.db_path}' "
+                f"is open in read-only mode because another process holds the "
+                f"write lock.  Stop the other process or use a separate database path."
+            )
+
         max_retries = self.config.storage.max_write_retries if is_write else 1
         backoff_s = self.config.storage.write_retry_backoff_ms / 1000.0
 

@@ -1430,13 +1430,28 @@ exec {kuzu_cmd} "$@"
                 existing_settings["hooks"][hook_type].extend(handlers)
 
             # Auto-fix invalid events during install (not just repair)
-            # Must run BEFORE validation so the warning only fires for unfixable events
             fixed_events, event_messages = self._migrate_legacy_events(existing_settings)
             if fixed_events:
                 for msg in event_messages:
                     logger.info(msg)
 
-            # Validate hook events after migration (only warns about truly unfixable events)
+            # Remove any remaining invalid event names written by third-party tools
+            # (e.g. claude-mpm writes WorktreeCreate, TaskCompleted, etc.).
+            # This runs AFTER migration so we don't clobber events that were just
+            # renamed from their legacy snake_case forms.
+            hooks_dict = existing_settings.get("hooks", {})
+            third_party_invalid = [
+                name for name in list(hooks_dict.keys()) if name not in VALID_CLAUDE_CODE_EVENTS
+            ]
+            for invalid_name in third_party_invalid:
+                del hooks_dict[invalid_name]
+                logger.info(
+                    f"Removed invalid hook event '{invalid_name}' "
+                    f"(not a valid Claude Code event — likely written by a third-party tool)"
+                )
+
+            # Validate after migration + cleanup so the warning only fires for
+            # events that genuinely couldn't be fixed (should be empty now).
             self._validate_hook_events(existing_settings)
 
             # Write hooks configuration to settings.local.json
