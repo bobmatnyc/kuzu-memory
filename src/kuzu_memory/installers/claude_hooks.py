@@ -95,7 +95,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         if "mcpServers" not in config["projects"][project_key]:
             config["projects"][project_key]["mcpServers"] = {}
 
-        db_path = self._get_project_db_path()
+        db_path = self._get_project_db_path() / "memories.db"
         config["projects"][project_key]["mcpServers"]["kuzu-memory"] = {
             "type": "stdio",
             "command": "kuzu-memory",
@@ -310,10 +310,17 @@ class ClaudeHooksInstaller(BaseInstaller):
 
     def _get_project_db_path(self) -> Path:
         """
-        Get the project-specific database path.
+        Get the project-specific database DIRECTORY path.
+
+        Returns the `.kuzu-memory` directory (or legacy `kuzu-memories` directory),
+        NOT the `memories.db` file inside it. Callers that need the database file
+        path must append ``/ "memories.db"`` themselves.
+
+        See also: ``utils/project_setup.py:get_project_db_path()`` which returns
+        the file path directly.
 
         Returns:
-            Path to project database directory
+            Path to project database directory (not the memories.db file)
         """
         new_path = self.project_root / ".kuzu-memory"
         legacy_path = self.project_root / "kuzu-memories"
@@ -560,7 +567,7 @@ class ClaudeHooksInstaller(BaseInstaller):
         Returns:
             Claude Code MCP server configuration dict
         """
-        db_path = self._get_project_db_path()
+        db_path = self._get_project_db_path() / "memories.db"
 
         # Get package version for comment
         try:

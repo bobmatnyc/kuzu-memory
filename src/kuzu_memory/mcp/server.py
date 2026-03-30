@@ -647,6 +647,8 @@ class KuzuMemoryMCPServer:
             return "Error: No prompt provided"
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 context = memory.attach_memories(prompt, max_memories=max_memories)
@@ -661,6 +663,8 @@ class KuzuMemoryMCPServer:
             return "Error: No content provided"
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             from ..async_memory.background_learner import get_background_learner
 
@@ -679,6 +683,8 @@ class KuzuMemoryMCPServer:
             return "Error: No query provided"
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 context = memory.attach_memories(query, max_memories=limit)
@@ -704,6 +710,8 @@ class KuzuMemoryMCPServer:
             return "Error: No content provided"
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 memory_id = memory.remember(
@@ -722,6 +730,8 @@ class KuzuMemoryMCPServer:
         from kuzu_memory.services import MemoryService  # lazy import breaks circular dep
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 total = memory.get_memory_count()
@@ -753,6 +763,8 @@ class KuzuMemoryMCPServer:
         from kuzu_memory.services import MemoryService
 
         db_path = self._get_db_path()
+        if db_path.is_dir():
+            db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 km = memory.kuzu_memory
@@ -1355,6 +1367,8 @@ class KuzuMemoryMCPServer:
 
             # Get target database path
             target_path = self._get_db_path()
+            if target_path.is_dir():
+                target_path = target_path / "memories.db"
             if not target_path.exists():
                 return json.dumps(
                     {
@@ -1809,6 +1823,8 @@ class KuzuMemoryMCPServer:
         try:
             root = Path(project_path) if project_path else self.project_root
             db_path = self._get_db_path()
+            if db_path.is_dir():
+                db_path = db_path / "memories.db"
             summary = export_shared(
                 db_path=db_path,
                 project_root=root,
@@ -1852,6 +1868,8 @@ class KuzuMemoryMCPServer:
         try:
             root = Path(project_path) if project_path else self.project_root
             db_path = self._get_db_path()
+            if db_path.is_dir():
+                db_path = db_path / "memories.db"
             summary = import_shared(
                 db_path=db_path,
                 project_root=root,

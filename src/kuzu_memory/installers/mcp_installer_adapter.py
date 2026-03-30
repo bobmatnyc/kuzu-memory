@@ -257,7 +257,7 @@ class MCPInstallerAdapter(BaseInstaller):
 
         # Add project root and database path to env
         env.setdefault("KUZU_MEMORY_PROJECT_ROOT", str(self.project_root))
-        env.setdefault("KUZU_MEMORY_DB", str(self.project_root / ".kuzu-memory"))
+        env.setdefault("KUZU_MEMORY_DB", str(self.project_root / ".kuzu-memory" / "memories.db"))
 
         # Convert scope string to Scope enum
         scope_enum = Scope.PROJECT if scope.lower() == "project" else Scope.GLOBAL
