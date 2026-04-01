@@ -384,6 +384,7 @@ class KuzuMemory:
         user_id: str | None = None,
         session_id: str | None = None,
         agent_id: str = DEFAULT_AGENT_ID,
+        apply_temporal_decay: bool = False,
     ) -> MemoryContext:
         """
         PRIMARY API METHOD 1: Retrieve relevant memories for a prompt.
@@ -395,6 +396,9 @@ class KuzuMemory:
             user_id: Optional user ID for filtering
             session_id: Optional session ID for filtering
             agent_id: Agent ID for filtering
+            apply_temporal_decay: When True, multiplies relevance scores by a temporal
+                decay factor (recent memories score higher).  Must be False for
+                hook-triggered recall paths.  Defaults to False.
 
         Returns:
             MemoryContext object containing:
@@ -435,6 +439,7 @@ class KuzuMemory:
                 user_id=user_id,
                 session_id=session_id,
                 agent_id=agent_id,
+                apply_temporal_decay=apply_temporal_decay,
             )
 
             # Update performance statistics
@@ -503,13 +508,16 @@ class KuzuMemory:
         if user_id is None and self._user_id is not None:
             user_id = self._user_id
 
-        # Resolve knowledge_type — callers can pass the string value of the enum
+        # Resolve knowledge_type — callers can pass the string value of the enum.
+        # If no explicit type (or type is the default "note"), auto-classify from content.
+        from .knowledge_classifier import classify_if_unset
+
+        resolved_kt_str = classify_if_unset(content, knowledge_type)
         kt: KnowledgeType = KnowledgeType.NOTE
-        if knowledge_type:
-            try:
-                kt = KnowledgeType(knowledge_type.lower())
-            except ValueError:
-                pass  # unknown value falls back to NOTE
+        try:
+            kt = KnowledgeType(resolved_kt_str.lower())
+        except ValueError:
+            pass  # unknown value falls back to NOTE
 
         memory = Memory(
             id=str(uuid.uuid4()),

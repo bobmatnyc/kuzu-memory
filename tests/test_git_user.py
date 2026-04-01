@@ -377,8 +377,9 @@ class TestGitSyncUserTagging:
 
         # Verify user_id is set to committer email (priority over author)
         assert memory.user_id == "jane@example.com"
-        assert memory.metadata["commit_author"] == "John Doe <john@example.com>"
-        assert memory.metadata["commit_committer"] == "Jane Smith <jane@example.com>"
+        # Slim metadata: author field uses format "Name <email>"; committer
+        # identity is reflected in user_id, not stored as a separate key
+        assert memory.metadata["author"] == "John Doe <john@example.com>"
 
 
 class TestMemoryStoreUserFiltering:

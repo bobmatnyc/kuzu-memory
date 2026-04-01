@@ -242,9 +242,10 @@ class TestGitSyncIntegration:
         assert "feat: test commit" in memory.content
         assert "test.py" in memory.content
         assert "commit_sha" in memory.metadata
-        assert "commit_author" in memory.metadata
-        assert "commit_timestamp" in memory.metadata
-        assert "Test User" in memory.metadata["commit_author"]
+        # Slim metadata: author stored under "author" key, timestamp under "timestamp"
+        assert "author" in memory.metadata
+        assert "timestamp" in memory.metadata
+        assert "Test User" in memory.metadata["author"]
 
     def test_sync_status(self, git_repo, config):
         """Test getting sync status."""

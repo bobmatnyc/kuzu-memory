@@ -305,6 +305,13 @@ class GitSyncManager:
         """
         Convert git commit to Memory object.
 
+        The ``content`` field includes the commit message and a short file
+        list (up to 10 entries) so it remains searchable.  The ``metadata``
+        field is intentionally kept slim — only essential scalar fields are
+        stored because the full changed_files list, per-file diff stats, and
+        category trees are never queried at recall time and were responsible
+        for ~80 % of the database size.
+
         Args:
             commit: Git commit object
 
@@ -314,7 +321,8 @@ class GitSyncManager:
         message = commit.message.strip()
         changed_files = self._get_changed_files(commit)
 
-        # Enhanced content format with searchable file list
+        # Enhanced content format with searchable file list (kept in content,
+        # NOT in metadata, so semantic search can find file names)
         if changed_files:
             files_list = "\n".join(f"- {file}" for file in changed_files[:10])
             if len(changed_files) > 10:
@@ -322,10 +330,6 @@ class GitSyncManager:
             content = f"{message}\n\nChanged files:\n{files_list}"
         else:
             content = message
-
-        # Get file statistics and categories
-        file_stats = self._get_file_stats(commit)
-        file_categories = self._categorize_files(changed_files)
 
         # Get branch name safely
         branch_name = "unknown"
@@ -350,6 +354,17 @@ class GitSyncManager:
         except Exception as e:
             logger.debug(f"Failed to extract user_id from commit: {e}")
 
+        # Slim metadata: only essential scalars — no full file lists, no diff
+        # stats, no category trees (those would account for ~20 KB per commit).
+        # File count is preserved as an integer for informational purposes.
+        slim_metadata: dict[str, Any] = {
+            "commit_sha": commit.hexsha,
+            "author": f"{commit.author.name} <{commit.author.email}>",
+            "timestamp": commit.committed_datetime.isoformat(),
+            "branch": branch_name,
+            "files_changed_count": len(changed_files),
+        }
+
         # Create memory with EPISODIC type (30-day retention)
         # Note: valid_to is auto-set by Memory model based on memory_type
         memory = Memory(
@@ -359,21 +374,7 @@ class GitSyncManager:
             user_id=user_id,  # Tag with commit author/committer
             session_id=None,
             valid_to=None,
-            metadata={
-                "commit_sha": commit.hexsha,
-                "commit_author": f"{commit.author.name} <{commit.author.email}>",
-                "commit_committer": (
-                    f"{commit.committer.name} <{commit.committer.email}>"
-                    if hasattr(commit, "committer")
-                    else None
-                ),
-                "commit_timestamp": commit.committed_datetime.isoformat(),
-                "branch": branch_name,
-                "changed_files": changed_files,
-                "parent_count": len(commit.parents),
-                "file_stats": file_stats,
-                "file_categories": file_categories,
-            },
+            metadata=slim_metadata,
         )
 
         # Override created_at with commit timestamp

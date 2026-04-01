@@ -303,6 +303,7 @@ class MemoryService(BaseService):
         prompt: str,
         max_memories: int = 10,
         strategy: str = "auto",
+        apply_temporal_decay: bool = False,
         **filters: Any,
     ) -> MemoryContext:
         """
@@ -315,6 +316,9 @@ class MemoryService(BaseService):
             prompt: The prompt to enhance with memories
             max_memories: Maximum number of memories to attach
             strategy: Recall strategy ("auto", "keyword", "entity", "temporal")
+            apply_temporal_decay: When True, multiplies relevance scores by a temporal
+                decay factor so that recent memories rank higher than old ones.
+                Must be False for hook-triggered recall paths.  Defaults to False.
             **filters: Additional filters (user_id, session_id, agent_id, etc.)
 
         Returns:
@@ -337,6 +341,7 @@ class MemoryService(BaseService):
             prompt=prompt,
             max_memories=max_memories,
             strategy=strategy,
+            apply_temporal_decay=apply_temporal_decay,
             **filters,
         )
 

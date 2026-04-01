@@ -19,11 +19,8 @@ from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, PerformanceThresholdError, RecallError
 from ..utils.validation import validate_text_input
-from .strategies import (
-    EntityRecallStrategy,
-    KeywordRecallStrategy,
-    TemporalRecallStrategy,
-)
+from .strategies import EntityRecallStrategy, KeywordRecallStrategy, TemporalRecallStrategy
+from .temporal_decay import TemporalDecayEngine
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +43,9 @@ class RecallCoordinator:
         """
         self.db_adapter = db_adapter
         self.config = config
+
+        # Temporal decay engine — used only when apply_temporal_decay=True
+        self._temporal_decay_engine = TemporalDecayEngine()
 
         # Initialize recall strategies
         self.strategies = {
@@ -81,6 +81,7 @@ class RecallCoordinator:
         user_id: str | None = None,
         session_id: str | None = None,
         agent_id: str = "default",
+        apply_temporal_decay: bool = False,
     ) -> MemoryContext:
         """
         Attach relevant memories to a prompt.
@@ -92,6 +93,10 @@ class RecallCoordinator:
             user_id: Optional user ID filter
             session_id: Optional session ID filter
             agent_id: Agent ID filter
+            apply_temporal_decay: When True, multiplies relevance scores by a temporal
+                decay factor so that recent memories rank higher than old ones.
+                Must be False for hook-triggered recall paths (pure graph traversal,
+                no scoring overhead). Defaults to False.
 
         Returns:
             MemoryContext with enhanced prompt and relevant memories
@@ -128,7 +133,9 @@ class RecallCoordinator:
                 strategy_used = strategy
 
             # Rank and filter memories
-            ranked_memories = self._rank_memories(memories, clean_prompt)
+            ranked_memories = self._rank_memories(
+                memories, clean_prompt, apply_temporal_decay=apply_temporal_decay
+            )
             final_memories = ranked_memories[:max_memories]
 
             # Track memory access for analytics (zero-latency)
@@ -248,13 +255,21 @@ class RecallCoordinator:
             prompt, max_memories, user_id, session_id, agent_id
         )
 
-    def _rank_memories(self, memories: list[Memory], prompt: str) -> list[Memory]:
+    def _rank_memories(
+        self,
+        memories: list[Memory],
+        prompt: str,
+        apply_temporal_decay: bool = False,
+    ) -> list[Memory]:
         """
         Rank memories by relevance to the prompt.
 
         Args:
             memories: List of memories to rank
             prompt: Original prompt for relevance scoring
+            apply_temporal_decay: When True, multiplies each relevance score by the
+                temporal decay factor from TemporalDecayEngine so that recent memories
+                rank higher than old ones.  Must remain False for hook-triggered paths.
 
         Returns:
             Ranked list of memories
@@ -280,6 +295,10 @@ class RecallCoordinator:
 
         for memory in memories:
             score = self._calculate_relevance_score(memory, prompt_lower)
+            if apply_temporal_decay:
+                # Multiply by decay factor: recent = ~1.0, very old = ~0.1
+                decay = self._temporal_decay_engine.calculate_temporal_score(memory)
+                score = score * decay
             scored_memories.append((memory, score))
 
         # Sort by score (highest first)

@@ -431,16 +431,21 @@ class TestMetadataIntegration:
             "tests/test_feature.py": {"insertions": 20, "deletions": 0},
         }
 
-        with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
-            with patch.object(git_sync_manager, "_get_file_stats", return_value=file_stats):
-                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
-                    memory = git_sync_manager._commit_to_memory(commit)
+        with patch.object(
+            git_sync_manager, "_get_changed_files", return_value=list(file_stats.keys())
+        ):
+            memory = git_sync_manager._commit_to_memory(commit)
 
-        assert "file_stats" in memory.metadata
-        assert memory.metadata["file_stats"] == file_stats
+        # Slim metadata: file count is preserved, but not per-file stats
+        assert "files_changed_count" in memory.metadata
+        assert memory.metadata["files_changed_count"] == len(file_stats)
 
     def test_metadata_includes_file_categories(self, git_sync_manager: GitSyncManager) -> None:
-        """Test that metadata includes file_categories field."""
+        """Test that metadata includes files_changed_count (slim metadata schema).
+
+        The original file_categories blob was removed in the storage optimization
+        to reduce DB size. File names are stored in memory.content for searchability.
+        """
         commit = Mock()
         commit.message = "feat: add feature"
         commit.hexsha = "abc123def456"
@@ -453,24 +458,16 @@ class TestMetadataIntegration:
         commit.committer.name = "Test Committer"
         commit.committer.email = "test@example.com"
 
-        # Mock file categories
-        file_categories = {
-            "source": ["src/feature.py"],
-            "tests": ["tests/test_feature.py"],
-            "docs": ["README.md"],
-        }
+        changed_files = ["src/feature.py", "tests/test_feature.py", "README.md"]
 
-        with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
-            with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(
-                    git_sync_manager,
-                    "_categorize_files",
-                    return_value=file_categories,
-                ):
-                    memory = git_sync_manager._commit_to_memory(commit)
+        with patch.object(git_sync_manager, "_get_changed_files", return_value=changed_files):
+            memory = git_sync_manager._commit_to_memory(commit)
 
-        assert "file_categories" in memory.metadata
-        assert memory.metadata["file_categories"] == file_categories
+        # Slim metadata: count preserved, category tree no longer stored
+        assert "files_changed_count" in memory.metadata
+        assert memory.metadata["files_changed_count"] == len(changed_files)
+        # File names are in content for search
+        assert "src/feature.py" in memory.content
 
     def test_metadata_preserves_existing_fields(self, git_sync_manager: GitSyncManager) -> None:
         """Test that new metadata fields don't break existing ones."""
@@ -488,21 +485,14 @@ class TestMetadataIntegration:
         commit.committer.email = "test@example.com"
 
         with patch.object(git_sync_manager, "_get_changed_files", return_value=[]):
-            with patch.object(git_sync_manager, "_get_file_stats", return_value={}):
-                with patch.object(git_sync_manager, "_categorize_files", return_value={}):
-                    memory = git_sync_manager._commit_to_memory(commit)
+            memory = git_sync_manager._commit_to_memory(commit)
 
-        # Verify all existing metadata fields are still present
+        # Slim metadata schema: only essential scalar fields stored
         assert memory.metadata["commit_sha"] == "abc123def456"
-        assert memory.metadata["commit_author"] == "Test Author <test@example.com>"
-        assert memory.metadata["commit_committer"] == "Test Committer <test@example.com>"
-        assert "commit_timestamp" in memory.metadata
+        assert memory.metadata["author"] == "Test Author <test@example.com>"
+        assert "timestamp" in memory.metadata
         assert memory.metadata["branch"] == "unknown"
-        assert "changed_files" in memory.metadata
-        assert "parent_count" in memory.metadata
-        # New fields
-        assert "file_stats" in memory.metadata
-        assert "file_categories" in memory.metadata
+        assert "files_changed_count" in memory.metadata
 
     def test_full_integration_example(self, git_sync_manager: GitSyncManager) -> None:
         """Test full integration with real-world example."""
@@ -527,45 +517,25 @@ class TestMetadataIntegration:
             "config/auth.yaml",
         ]
 
-        file_stats = {
-            "src/auth/login.py": {"insertions": 50, "deletions": 0},
-            "src/auth/register.py": {"insertions": 40, "deletions": 0},
-            "src/auth/utils.py": {"insertions": 20, "deletions": 5},
-            "tests/test_auth.py": {"insertions": 100, "deletions": 0},
-            "docs/auth.md": {"insertions": 30, "deletions": 0},
-            "config/auth.yaml": {"insertions": 10, "deletions": 0},
-        }
-
-        file_categories = {
-            "source": [
-                "src/auth/login.py",
-                "src/auth/register.py",
-                "src/auth/utils.py",
-            ],
-            "tests": ["tests/test_auth.py"],
-            "docs": ["docs/auth.md"],
-            "config": ["config/auth.yaml"],
-        }
+        # file_stats and file_categories are no longer stored in metadata
+        # after the git_sync metadata truncation optimization
 
         with patch.object(git_sync_manager, "_get_changed_files", return_value=changed_files):
-            with patch.object(git_sync_manager, "_get_file_stats", return_value=file_stats):
-                with patch.object(
-                    git_sync_manager,
-                    "_categorize_files",
-                    return_value=file_categories,
-                ):
-                    memory = git_sync_manager._commit_to_memory(commit)
+            memory = git_sync_manager._commit_to_memory(commit)
 
-        # Verify enhanced content
+        # Verify enhanced content — file names go into content for searchability
         assert memory.content.startswith("feat: implement user authentication")
         assert "- src/auth/login.py" in memory.content
         assert "- tests/test_auth.py" in memory.content
         assert "- config/auth.yaml" in memory.content
 
-        # Verify metadata
-        assert memory.metadata["file_stats"] == file_stats
-        assert memory.metadata["file_categories"] == file_categories
-        assert memory.metadata["changed_files"] == changed_files
+        # Verify slim metadata — no large blobs stored
+        assert memory.metadata["commit_sha"] == "abc123def456"
+        assert memory.metadata["author"] == "John Doe <john@example.com>"
+        assert memory.metadata["files_changed_count"] == len(changed_files)
+        assert "file_stats" not in memory.metadata
+        assert "file_categories" not in memory.metadata
+        assert "changed_files" not in memory.metadata
 
         # Verify memory properties
         assert memory.memory_type == MemoryType.EPISODIC

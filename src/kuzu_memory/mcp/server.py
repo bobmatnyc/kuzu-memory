@@ -280,10 +280,13 @@ class KuzuMemoryMCPServer:
                         "proactively when you notice redundant memories, stale content, or performance "
                         "degradation during conversations. "
                         "\n\nStrategies: "
+                        "\n- full_maintenance: Run all three storage passes in sequence "
+                        "(purge expired, deduplicate, trim oversized git metadata) — recommended first "
                         "\n- top_accessed: Refresh/consolidate most-used memories for faster recall "
                         "\n- stale_cleanup: Archive memories not accessed in 90+ days "
                         "\n- consolidate_similar: Merge similar memories into summaries "
                         "\n\nUse cases: "
+                        "\n- full_maintenance first to recover storage and remove noise "
                         "\n- During long sessions when context feels cluttered "
                         "\n- When recall returns redundant results "
                         "\n- Proactive maintenance before ending session "
@@ -296,6 +299,7 @@ class KuzuMemoryMCPServer:
                                 "type": "string",
                                 "description": "Optimization strategy to use",
                                 "enum": [
+                                    "full_maintenance",
                                     "top_accessed",
                                     "stale_cleanup",
                                     "consolidate_similar",
@@ -651,7 +655,9 @@ class KuzuMemoryMCPServer:
             db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
-                context = memory.attach_memories(prompt, max_memories=max_memories)
+                context = memory.attach_memories(
+                    prompt, max_memories=max_memories, apply_temporal_decay=True
+                )
             return context.enhanced_prompt or prompt
         except Exception as e:
             logger.error(f"MCP enhance failed: {e}")
@@ -667,9 +673,17 @@ class KuzuMemoryMCPServer:
             db_path = db_path / "memories.db"
         try:
             from ..async_memory.background_learner import get_background_learner
+            from ..core.knowledge_classifier import classify_knowledge_type
 
+            # Auto-classify so generated memories carry a meaningful knowledge_type.
+            # The classified value is forwarded via metadata to the background task.
+            auto_kt = classify_knowledge_type(content)
             learner = get_background_learner(db_path=db_path)
-            task_id = learner.learn_async(content=content, source=source)
+            task_id = learner.learn_async(
+                content=content,
+                source=source,
+                metadata={"knowledge_type": auto_kt},
+            )
             return f"Learning stored asynchronously (task {task_id[:8]}...)"
         except Exception as e:
             logger.error(f"MCP learn failed: {e}")
@@ -687,7 +701,9 @@ class KuzuMemoryMCPServer:
             db_path = db_path / "memories.db"
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
-                context = memory.attach_memories(query, max_memories=limit)
+                context = memory.attach_memories(
+                    query, max_memories=limit, apply_temporal_decay=True
+                )
             memories = context.memories
             if not memories:
                 return "No memories found"
@@ -936,7 +952,8 @@ class KuzuMemoryMCPServer:
         Execute memory optimization strategy.
 
         Args:
-            strategy: Optimization strategy (top_accessed, stale_cleanup, consolidate_similar)
+            strategy: Optimization strategy (top_accessed, stale_cleanup,
+                consolidate_similar, full_maintenance)
             limit: Maximum number of memories to process
             dry_run: If True, only analyze without making changes
 
@@ -975,6 +992,18 @@ class KuzuMemoryMCPServer:
             # Get access tracker
             tracker = get_access_tracker(db_path)
 
+            # Backfill knowledge_type for existing memories that are still "note".
+            # Runs before the selected strategy so downstream steps benefit from
+            # the reclassified types.  Always runs regardless of dry_run because
+            # it only updates memories that were incorrectly left as the default.
+            backfill_result = await self._backfill_knowledge_types(db_adapter, dry_run)
+            logger.info(
+                "knowledge_type backfill: updated=%d skipped=%d dry_run=%s",
+                backfill_result.get("updated", 0),
+                backfill_result.get("skipped", 0),
+                dry_run,
+            )
+
             # Execute optimization based on strategy
             if strategy == "top_accessed":
                 result = await self._optimize_top_accessed(db_adapter, tracker, limit, dry_run)
@@ -982,6 +1011,8 @@ class KuzuMemoryMCPServer:
                 result = await self._optimize_stale_cleanup(db_adapter, limit, dry_run)
             elif strategy == "consolidate_similar":
                 result = await self._optimize_consolidate_similar(db_adapter, limit, dry_run)
+            elif strategy == "full_maintenance":
+                result = await self._optimize_full_maintenance(db_adapter, dry_run)
             else:
                 result = {
                     "status": "error",
@@ -993,6 +1024,431 @@ class KuzuMemoryMCPServer:
         except Exception as e:
             logger.error(f"Optimization failed: {e}", exc_info=True)
             return json.dumps({"status": "error", "error": str(e)})
+
+    # ------------------------------------------------------------------
+    # Storage maintenance helpers (used by full_maintenance strategy)
+    # ------------------------------------------------------------------
+
+    async def _maintenance_purge_expired(self, db_adapter: Any, dry_run: bool) -> dict[str, Any]:
+        """
+        Delete memories whose valid_to is in the past.
+
+        Only memories with an explicit, non-NULL valid_to that is earlier than
+        the current timestamp are removed.  NULL valid_to means permanent (no
+        expiry) and is never touched.
+
+        Args:
+            db_adapter: Initialised KuzuAdapter
+            dry_run: When True analyse only — no deletes are performed.
+
+        Returns:
+            Step result dict with keys: purged_count, dry_run.
+        """
+        import datetime
+
+        now_iso = datetime.datetime.now().isoformat()
+
+        try:
+            # Count expired memories first (used for both dry-run and live run)
+            count_rows = db_adapter.execute_query(
+                """MATCH (m:Memory)
+                WHERE m.valid_to IS NOT NULL
+                  AND m.valid_to < TIMESTAMP($now)
+                RETURN count(m) AS cnt""",
+                {"now": now_iso},
+            )
+            expired_count: int = 0
+            if count_rows:
+                raw = count_rows[0].get("cnt", 0)
+                expired_count = int(raw) if raw is not None else 0
+
+            if not dry_run and expired_count > 0:
+                db_adapter.execute_query(
+                    """MATCH (m:Memory)
+                    WHERE m.valid_to IS NOT NULL
+                      AND m.valid_to < TIMESTAMP($now)
+                    DELETE m""",
+                    {"now": now_iso},
+                )
+                logger.info("Purged %d expired memories (valid_to < now)", expired_count)
+
+            return {"purged_count": expired_count, "dry_run": dry_run}
+
+        except Exception as e:
+            logger.error("purge_expired failed: %s", e, exc_info=True)
+            return {"purged_count": 0, "dry_run": dry_run, "error": str(e)}
+
+    async def _maintenance_dedup(self, db_adapter: Any, dry_run: bool) -> dict[str, Any]:
+        """
+        Deduplicate memories by content hash.
+
+        For every memory that lacks a content_hash, compute
+        SHA-256(content) and write it back.  Then find groups sharing the
+        same hash, keep the newest member of each group, and delete the
+        older duplicates.
+
+        Args:
+            db_adapter: Initialised KuzuAdapter
+            dry_run: When True analyse only — no writes/deletes are performed.
+
+        Returns:
+            Step result dict with keys: hashes_written, duplicates_removed, dry_run.
+        """
+        import hashlib
+
+        hashes_written = 0
+        duplicates_removed = 0
+
+        try:
+            # --- Step 1: back-fill missing content_hash values ---
+            missing_rows = db_adapter.execute_query(
+                """MATCH (m:Memory)
+                WHERE m.content_hash IS NULL OR m.content_hash = ''
+                RETURN m.id AS id, m.content AS content""",
+                {},
+            )
+
+            for row in missing_rows:
+                mem_id = row.get("id")
+                content = row.get("content") or ""
+                new_hash = hashlib.sha256(content.encode()).hexdigest()
+                if not dry_run and mem_id:
+                    try:
+                        db_adapter.execute_query(
+                            "MATCH (m:Memory {id: $id}) SET m.content_hash = $h",
+                            {"id": str(mem_id), "h": new_hash},
+                        )
+                        hashes_written += 1
+                    except Exception as e:
+                        logger.warning("Failed to set content_hash for %s: %s", mem_id, e)
+                else:
+                    hashes_written += 1  # count as would-be-written in dry-run
+
+            # --- Step 2: find duplicate groups ---
+            # Fetch all (id, content_hash, created_at) so we can group in Python.
+            # Kuzu does not support GROUP BY with aggregate keep-newest semantics
+            # easily, so we do it client-side.
+            all_rows = db_adapter.execute_query(
+                """MATCH (m:Memory)
+                WHERE m.content_hash IS NOT NULL AND m.content_hash <> ''
+                RETURN m.id AS id, m.content_hash AS h, m.created_at AS created_at""",
+                {},
+            )
+
+            from collections import defaultdict
+
+            groups: dict[str, list[tuple[str, Any]]] = defaultdict(list)
+            for row in all_rows:
+                h = str(row.get("h") or "")
+                mid = str(row.get("id") or "")
+                ts = row.get("created_at")
+                if h and mid:
+                    groups[h].append((mid, ts))
+
+            # For each group with > 1 member, delete all but the newest
+            ids_to_delete: list[str] = []
+            for _h, members in groups.items():
+                if len(members) < 2:
+                    continue
+
+                # Sort descending by created_at; keep first (newest)
+                def _ts_key(pair: tuple[str, Any]) -> Any:
+                    ts = pair[1]
+                    if ts is None:
+                        return ""
+                    return str(ts)
+
+                members.sort(key=_ts_key, reverse=True)
+                ids_to_delete.extend(mid for mid, _ in members[1:])
+
+            duplicates_removed = len(ids_to_delete)
+
+            if not dry_run and ids_to_delete:
+                # Delete in batches of 100 to avoid oversized queries
+                batch_size = 100
+                for i in range(0, len(ids_to_delete), batch_size):
+                    batch = ids_to_delete[i : i + batch_size]
+                    try:
+                        db_adapter.execute_query(
+                            "MATCH (m:Memory) WHERE m.id IN $ids DELETE m",
+                            {"ids": batch},
+                        )
+                    except Exception as e:
+                        logger.warning("Batch dedup delete failed: %s", e)
+
+                logger.info(
+                    "Dedup: wrote %d hashes, removed %d duplicates",
+                    hashes_written,
+                    duplicates_removed,
+                )
+
+            return {
+                "hashes_written": hashes_written,
+                "duplicates_removed": duplicates_removed,
+                "dry_run": dry_run,
+            }
+
+        except Exception as e:
+            logger.error("dedup failed: %s", e, exc_info=True)
+            return {
+                "hashes_written": hashes_written,
+                "duplicates_removed": duplicates_removed,
+                "dry_run": dry_run,
+                "error": str(e),
+            }
+
+    async def _maintenance_trim_git_metadata(
+        self, db_adapter: Any, dry_run: bool
+    ) -> dict[str, Any]:
+        """
+        Trim oversized metadata blobs on git_sync memories.
+
+        Each git_sync memory can store a full ``changed_files`` list (up to
+        146 items), per-file diff stats, and file category trees — all of
+        which are never queried at recall time.  This step replaces those
+        blobs with a slim subset:
+
+            commit_sha, author, timestamp, summary (first line of message),
+            files_changed_count (integer)
+
+        The commit message content remains untouched in the ``content``
+        column (that is what gets semantically searched).
+
+        Args:
+            db_adapter: Initialised KuzuAdapter
+            dry_run: When True analyse only — no writes are performed.
+
+        Returns:
+            Step result dict with keys: trimmed_count, bytes_saved_estimate, dry_run.
+        """
+        # Threshold: metadata strings larger than 1 KB are candidates
+        _METADATA_THRESHOLD = 1024
+
+        trimmed_count = 0
+        bytes_saved_estimate = 0
+
+        try:
+            rows = db_adapter.execute_query(
+                """MATCH (m:Memory)
+                WHERE m.source_type = 'git_sync'
+                  AND m.metadata IS NOT NULL
+                RETURN m.id AS id, m.metadata AS metadata""",
+                {},
+            )
+
+            for row in rows:
+                mem_id = str(row.get("id") or "")
+                raw_meta = row.get("metadata") or ""
+                if not mem_id or not raw_meta:
+                    continue
+
+                raw_str = str(raw_meta)
+                if len(raw_str) <= _METADATA_THRESHOLD:
+                    continue  # Already small enough
+
+                # Parse metadata blob
+                try:
+                    if isinstance(raw_meta, dict):
+                        meta: dict[str, Any] = raw_meta
+                    else:
+                        meta = json.loads(raw_str)
+                except (json.JSONDecodeError, TypeError):
+                    continue  # Can't parse — leave untouched
+
+                # Build slim replacement
+                slim: dict[str, Any] = {}
+                if "commit_sha" in meta:
+                    slim["commit_sha"] = meta["commit_sha"]
+                if "commit_author" in meta:
+                    slim["author"] = meta["commit_author"]
+                elif "author" in meta:
+                    slim["author"] = meta["author"]
+                if "commit_timestamp" in meta:
+                    slim["timestamp"] = meta["commit_timestamp"]
+                # files_changed_count: prefer existing int, else len(changed_files)
+                if "files_changed_count" in meta:
+                    slim["files_changed_count"] = int(meta["files_changed_count"])
+                elif "changed_files" in meta and isinstance(meta["changed_files"], list):
+                    slim["files_changed_count"] = len(meta["changed_files"])
+                # Preserve branch if present
+                if "branch" in meta:
+                    slim["branch"] = meta["branch"]
+
+                slim_str = json.dumps(slim)
+                old_size = len(raw_str)
+                new_size = len(slim_str)
+
+                if new_size >= old_size:
+                    continue  # Nothing to save
+
+                bytes_saved_estimate += old_size - new_size
+                trimmed_count += 1
+
+                if not dry_run:
+                    try:
+                        db_adapter.execute_query(
+                            "MATCH (m:Memory {id: $id}) SET m.metadata = $meta",
+                            {"id": mem_id, "meta": slim_str},
+                        )
+                    except Exception as e:
+                        logger.warning("Failed to trim metadata for %s: %s", mem_id, e)
+                        trimmed_count -= 1
+                        bytes_saved_estimate -= old_size - new_size
+
+            if not dry_run and trimmed_count > 0:
+                logger.info(
+                    "Trimmed git_sync metadata: %d records, ~%d bytes saved",
+                    trimmed_count,
+                    bytes_saved_estimate,
+                )
+
+            return {
+                "trimmed_count": trimmed_count,
+                "bytes_saved_estimate": bytes_saved_estimate,
+                "dry_run": dry_run,
+            }
+
+        except Exception as e:
+            logger.error("trim_git_metadata failed: %s", e, exc_info=True)
+            return {
+                "trimmed_count": trimmed_count,
+                "bytes_saved_estimate": bytes_saved_estimate,
+                "dry_run": dry_run,
+                "error": str(e),
+            }
+
+    async def _backfill_knowledge_types(self, db_adapter: Any, dry_run: bool) -> dict[str, Any]:
+        """
+        Backfill knowledge_type for existing memories stored as "note" or NULL.
+
+        Fetches memories with knowledge_type IN ('note', NULL), runs the
+        rule-based classifier on each content string, and updates those whose
+        classification changes to something more specific.
+
+        Args:
+            db_adapter: Open KuzuAdapter instance.
+            dry_run: When True, compute changes but do not write to DB.
+
+        Returns:
+            Dict with keys "updated" (int), "skipped" (int), "dry_run" (bool).
+        """
+        from ..core.knowledge_classifier import classify_knowledge_type
+
+        updated = 0
+        skipped = 0
+
+        try:
+            # Fetch all note/null memories — no limit; backfill should be exhaustive.
+            rows = db_adapter.execute_query(
+                """MATCH (m:Memory)
+                WHERE m.knowledge_type = 'note' OR m.knowledge_type IS NULL
+                RETURN m.id AS id, m.content AS content""",
+                {},
+            )
+
+            if not rows:
+                return {"updated": 0, "skipped": 0, "dry_run": dry_run}
+
+            for row in rows:
+                mem_id = str(row.get("id") or "")
+                content = str(row.get("content") or "")
+                if not mem_id or not content:
+                    skipped += 1
+                    continue
+
+                new_kt = classify_knowledge_type(content)
+                if new_kt == "note":
+                    # Classifier also returned note — nothing to change.
+                    skipped += 1
+                    continue
+
+                updated += 1
+                if not dry_run:
+                    try:
+                        db_adapter.execute_query(
+                            "MATCH (m:Memory {id: $id}) SET m.knowledge_type = $kt",
+                            {"id": mem_id, "kt": new_kt},
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Backfill: failed to update memory %s to %s: %s",
+                            mem_id,
+                            new_kt,
+                            exc,
+                        )
+                        updated -= 1
+                        skipped += 1
+
+        except Exception as exc:
+            logger.error("knowledge_type backfill failed: %s", exc, exc_info=True)
+
+        return {"updated": updated, "skipped": skipped, "dry_run": dry_run}
+
+    async def _optimize_full_maintenance(self, db_adapter: Any, dry_run: bool) -> dict[str, Any]:
+        """
+        Run all three storage maintenance passes in sequence.
+
+        Steps:
+        1. Purge expired memories (valid_to < now)
+        2. Deduplicate by content_hash (back-fill missing hashes, then delete dupes)
+        3. Trim oversized git_sync metadata blobs
+
+        Args:
+            db_adapter: Initialised KuzuAdapter
+            dry_run: When True analyse only — no database mutations.
+
+        Returns:
+            Combined result dict summarising all three steps.
+        """
+        purge_result = await self._maintenance_purge_expired(db_adapter, dry_run)
+        dedup_result = await self._maintenance_dedup(db_adapter, dry_run)
+        trim_result = await self._maintenance_trim_git_metadata(db_adapter, dry_run)
+
+        any_error = (
+            purge_result.get("error") or dedup_result.get("error") or trim_result.get("error")
+        )
+
+        suggestions: list[str] = []
+        purged = purge_result.get("purged_count", 0)
+        dupes = dedup_result.get("duplicates_removed", 0)
+        trimmed = trim_result.get("trimmed_count", 0)
+        saved = trim_result.get("bytes_saved_estimate", 0)
+
+        if purged:
+            suggestions.append(
+                f"{'Would remove' if dry_run else 'Removed'} {purged} expired memory record(s)"
+            )
+        if dupes:
+            suggestions.append(
+                f"{'Would remove' if dry_run else 'Removed'} {dupes} duplicate memory record(s)"
+            )
+        if trimmed:
+            saved_kb = saved // 1024
+            suggestions.append(
+                f"{'Would trim' if dry_run else 'Trimmed'} {trimmed} git_sync metadata blob(s)"
+                f" (~{saved_kb} KB)"
+            )
+        if not suggestions:
+            suggestions.append("Database is already clean — nothing to do.")
+
+        return {
+            "status": "completed",
+            "strategy": "full_maintenance",
+            "dry_run": dry_run,
+            "steps": {
+                "purge_expired": purge_result,
+                "dedup": dedup_result,
+                "trim_git_metadata": trim_result,
+            },
+            "summary": {
+                "expired_purged": purged,
+                "duplicates_removed": dupes,
+                "metadata_trimmed": trimmed,
+                "bytes_saved_estimate": saved,
+            },
+            "suggestions": suggestions,
+            **({"errors": any_error} if any_error else {}),
+        }
 
     async def _optimize_top_accessed(
         self, db_adapter: Any, tracker: Any, limit: int, dry_run: bool

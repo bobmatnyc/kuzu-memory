@@ -318,12 +318,11 @@ class TestGitSyncManager:
             assert memory.memory_type == MemoryType.EPISODIC
             assert memory.source_type == "git_sync"
             assert memory.metadata["commit_sha"] == "abc123def456"
-            assert "Test User" in memory.metadata["commit_author"]
-            assert memory.metadata["commit_timestamp"] == "2024-01-01T12:00:00"
+            assert "Test User" in memory.metadata["author"]
+            assert memory.metadata["timestamp"] == "2024-01-01T12:00:00"
             assert memory.created_at == datetime(2024, 1, 1, 12, 0, 0)
-            # Verify new fields
-            assert "file_stats" in memory.metadata
-            assert "file_categories" in memory.metadata
+            # Slim metadata: file counts preserved as integer, no large blobs
+            assert "files_changed_count" in memory.metadata
 
     def test_get_sync_status_not_available(self, manager_no_git):
         """Test sync status when git not available."""
