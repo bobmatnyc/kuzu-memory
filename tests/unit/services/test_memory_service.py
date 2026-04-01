@@ -194,7 +194,11 @@ class TestMemoryServiceDelegation:
 
         assert result == mock_context
         mock_kuzu_memory.attach_memories.assert_called_once_with(
-            prompt="test prompt", max_memories=5, strategy="auto", apply_temporal_decay=False
+            prompt="test prompt",
+            max_memories=5,
+            strategy="auto",
+            apply_temporal_decay=False,
+            use_semantic_search=False,
         )
 
     def test_attach_memories_with_strategy(self, memory_service, mock_kuzu_memory):
@@ -206,7 +210,11 @@ class TestMemoryServiceDelegation:
 
         assert result == mock_context
         mock_kuzu_memory.attach_memories.assert_called_once_with(
-            prompt="test prompt", max_memories=10, strategy="entity", apply_temporal_decay=False
+            prompt="test prompt",
+            max_memories=10,
+            strategy="entity",
+            apply_temporal_decay=False,
+            use_semantic_search=False,
         )
 
     def test_attach_memories_with_filters(self, memory_service, mock_kuzu_memory):
@@ -221,6 +229,7 @@ class TestMemoryServiceDelegation:
             max_memories=10,
             strategy="auto",
             apply_temporal_decay=False,
+            use_semantic_search=False,
             user_id="user-1",
             session_id="session-1",
         )

@@ -24,6 +24,99 @@ from .temporal_decay import TemporalDecayEngine
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Semantic scoring helper
+# ---------------------------------------------------------------------------
+
+try:
+    from sentence_transformers import SentenceTransformer
+
+    _SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SentenceTransformer = None  # type: ignore[assignment,misc,unused-ignore]
+    _SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logger.debug(
+        "sentence-transformers not available; semantic search will fall back to Jaccard scoring"
+    )
+
+
+class _SemanticScorer:
+    """
+    Thin wrapper around SentenceTransformer for in-process cosine similarity.
+
+    Lazily initialises the model on first use so that importing this module
+    does not trigger a heavy model load.  A module-level singleton is reused
+    across all RecallCoordinator instances so the model is only loaded once
+    per process.
+
+    Falls back gracefully to returning ``None`` when sentence-transformers is
+    unavailable, allowing callers to fall back to Jaccard scoring.
+    """
+
+    _instance: _SemanticScorer | None = None  # module-level singleton
+    _model: Any  # SentenceTransformer | None
+    # In-process embedding cache: content -> np.ndarray
+    _cache: dict[str, Any]
+
+    def __init__(self) -> None:
+        self._model = None
+        self._cache: dict[str, Any] = {}
+
+    @classmethod
+    def get(cls) -> _SemanticScorer:
+        """Return (and lazily create) the module-level singleton."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def _ensure_model(self) -> bool:
+        """Load the model if not already loaded. Returns True on success."""
+        if not _SENTENCE_TRANSFORMERS_AVAILABLE:
+            return False
+        if self._model is None:
+            try:
+                self._model = SentenceTransformer("all-MiniLM-L6-v2")  # type: ignore[misc,unused-ignore]
+                logger.debug("Loaded SentenceTransformer model for semantic recall")
+            except Exception as exc:
+                logger.warning("Failed to load SentenceTransformer model: %s", exc)
+                return False
+        return True
+
+    def embed(self, text: str) -> Any | None:
+        """
+        Return a unit-norm numpy embedding for *text*, or ``None`` on failure.
+
+        Results are cached by exact text so repeated calls within the same
+        recall session are free.
+        """
+        if not self._ensure_model():
+            return None
+        if text in self._cache:
+            return self._cache[text]
+        try:
+            import numpy as np
+
+            vec = self._model.encode(text, normalize_embeddings=True)
+            arr: Any = np.asarray(vec, dtype=np.float32)
+            self._cache[text] = arr
+            return arr
+        except Exception as exc:
+            logger.warning("Embedding failed for text: %s", exc)
+            return None
+
+    def cosine(self, a: Any, b: Any) -> float:
+        """
+        Cosine similarity between two *already-normalised* vectors.
+
+        Both vectors are assumed to have unit L2 norm (produced by
+        ``encode(normalize_embeddings=True)``), so the similarity is just the
+        dot product, clamped to [0, 1].
+        """
+        import numpy as np
+
+        result: float = float(np.dot(a, b))
+        return max(0.0, min(1.0, result))
+
 
 class RecallCoordinator:
     """
@@ -46,6 +139,9 @@ class RecallCoordinator:
 
         # Temporal decay engine — used only when apply_temporal_decay=True
         self._temporal_decay_engine = TemporalDecayEngine()
+
+        # Semantic scorer — used only when use_semantic_search=True (MCP paths only)
+        self._semantic_scorer = _SemanticScorer.get()
 
         # Initialize recall strategies
         self.strategies = {
@@ -82,6 +178,7 @@ class RecallCoordinator:
         session_id: str | None = None,
         agent_id: str = "default",
         apply_temporal_decay: bool = False,
+        use_semantic_search: bool = False,
     ) -> MemoryContext:
         """
         Attach relevant memories to a prompt.
@@ -97,6 +194,11 @@ class RecallCoordinator:
                 decay factor so that recent memories rank higher than old ones.
                 Must be False for hook-triggered recall paths (pure graph traversal,
                 no scoring overhead). Defaults to False.
+            use_semantic_search: When True, replaces Jaccard word-overlap scoring with
+                cosine similarity from sentence-transformers embeddings.  Must be False
+                for hook-triggered recall paths (pure graph traversal, no model overhead).
+                Falls back to Jaccard scoring when sentence-transformers is unavailable.
+                Defaults to False.
 
         Returns:
             MemoryContext with enhanced prompt and relevant memories
@@ -134,7 +236,10 @@ class RecallCoordinator:
 
             # Rank and filter memories
             ranked_memories = self._rank_memories(
-                memories, clean_prompt, apply_temporal_decay=apply_temporal_decay
+                memories,
+                clean_prompt,
+                apply_temporal_decay=apply_temporal_decay,
+                use_semantic_search=use_semantic_search,
             )
             final_memories = ranked_memories[:max_memories]
 
@@ -260,6 +365,7 @@ class RecallCoordinator:
         memories: list[Memory],
         prompt: str,
         apply_temporal_decay: bool = False,
+        use_semantic_search: bool = False,
     ) -> list[Memory]:
         """
         Rank memories by relevance to the prompt.
@@ -270,6 +376,10 @@ class RecallCoordinator:
             apply_temporal_decay: When True, multiplies each relevance score by the
                 temporal decay factor from TemporalDecayEngine so that recent memories
                 rank higher than old ones.  Must remain False for hook-triggered paths.
+            use_semantic_search: When True, uses cosine similarity from
+                sentence-transformers embeddings as the primary relevance signal.
+                Falls back to Jaccard scoring when sentence-transformers is
+                unavailable.  Must remain False for hook-triggered paths.
 
         Returns:
             Ranked list of memories
@@ -289,22 +399,66 @@ class RecallCoordinator:
 
         memories = list(unique_memories.values())
 
+        # Pre-compute query embedding once when semantic search is requested.
+        # If the model is unavailable, query_emb is None and we fall back to Jaccard.
+        query_emb: Any = None
+        if use_semantic_search:
+            query_emb = self._semantic_scorer.embed(prompt)
+            if query_emb is None:
+                logger.debug(
+                    "Semantic search requested but embedding unavailable; "
+                    "falling back to Jaccard scoring"
+                )
+
         # Calculate relevance scores
         scored_memories = []
         prompt_lower = prompt.lower()
 
         for memory in memories:
-            score = self._calculate_relevance_score(memory, prompt_lower)
+            if query_emb is not None:
+                # Semantic path: cosine similarity is the primary signal.
+                # We still blend in importance/confidence/type weights so that
+                # high-importance memories get a small boost when similarity is tied.
+                mem_emb = self._semantic_scorer.embed(memory.content)
+                if mem_emb is not None:
+                    semantic_sim = self._semantic_scorer.cosine(query_emb, mem_emb)
+                    # Blend: 70% semantic similarity + 30% structural score
+                    structural = (
+                        memory.importance * 0.15
+                        + memory.confidence * 0.10
+                        + self._type_boost(memory) * 0.05
+                    )
+                    score = semantic_sim * 0.70 + structural
+                else:
+                    # Embedding failed for this particular memory — fall back
+                    score = self._calculate_relevance_score(memory, prompt_lower)
+            else:
+                # Jaccard path (default, or fallback when model unavailable)
+                score = self._calculate_relevance_score(memory, prompt_lower)
+
             if apply_temporal_decay:
                 # Multiply by decay factor: recent = ~1.0, very old = ~0.1
                 decay = self._temporal_decay_engine.calculate_temporal_score(memory)
                 score = score * decay
+
             scored_memories.append((memory, score))
 
         # Sort by score (highest first)
         scored_memories.sort(key=lambda x: x[1], reverse=True)
 
         return [memory for memory, score in scored_memories]
+
+    def _type_boost(self, memory: Memory) -> float:
+        """Return the memory-type boost factor for a single memory (0-1 scale)."""
+        type_boosts = {
+            MemoryType.SEMANTIC: 0.9,
+            MemoryType.PREFERENCE: 0.8,
+            MemoryType.EPISODIC: 0.7,
+            MemoryType.PROCEDURAL: 0.8,
+            MemoryType.WORKING: 0.3,
+            MemoryType.SENSORY: 0.4,
+        }
+        return type_boosts.get(memory.memory_type, 0.5)
 
     def _calculate_relevance_score(self, memory: Memory, prompt_lower: str) -> float:
         """Calculate relevance score for a memory given the prompt."""

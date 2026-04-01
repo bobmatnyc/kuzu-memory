@@ -105,6 +105,7 @@ class RecallCoordinatorProtocol(Protocol):
         session_id: str | None = None,
         agent_id: str = "default",
         apply_temporal_decay: bool = False,
+        use_semantic_search: bool = False,
     ) -> Any:  # Returns MemoryContext; typed Any to preserve existing type: ignore in callers
         """Attach relevant memories to a prompt."""
         ...

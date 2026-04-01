@@ -304,6 +304,7 @@ class MemoryService(BaseService):
         max_memories: int = 10,
         strategy: str = "auto",
         apply_temporal_decay: bool = False,
+        use_semantic_search: bool = False,
         **filters: Any,
     ) -> MemoryContext:
         """
@@ -319,14 +320,17 @@ class MemoryService(BaseService):
             apply_temporal_decay: When True, multiplies relevance scores by a temporal
                 decay factor so that recent memories rank higher than old ones.
                 Must be False for hook-triggered recall paths.  Defaults to False.
+            use_semantic_search: When True, uses sentence-transformers cosine similarity
+                as the primary relevance signal instead of Jaccard word-overlap.
+                Must be False for hook-triggered recall paths.  Defaults to False.
             **filters: Additional filters (user_id, session_id, agent_id, etc.)
 
         Returns:
             MemoryContext with selected memories and metadata
 
         Performance:
-        - Target: <10ms for typical queries
-        - Complexity: O(log n) for semantic search, O(1) for filters
+        - Target: <10ms for Jaccard queries, <200ms for semantic queries
+        - Complexity: O(log n) for graph traversal, O(k) for embedding comparison
 
         Example:
             >>> context = service.attach_memories(
@@ -342,6 +346,7 @@ class MemoryService(BaseService):
             max_memories=max_memories,
             strategy=strategy,
             apply_temporal_decay=apply_temporal_decay,
+            use_semantic_search=use_semantic_search,
             **filters,
         )
 

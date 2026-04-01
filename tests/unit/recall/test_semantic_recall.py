@@ -1,0 +1,332 @@
+"""
+Unit tests for semantic search integration in RecallCoordinator.
+
+Covers:
+- use_semantic_search=True uses cosine similarity instead of Jaccard
+- use_semantic_search=False (default) uses Jaccard scoring
+- Graceful fallback to Jaccard when sentence-transformers is unavailable
+- temporal_decay combined with semantic scoring
+- _SemanticScorer singleton behaviour
+"""
+
+from __future__ import annotations
+
+import sys
+import types
+from datetime import datetime
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from kuzu_memory.core.config import KuzuMemoryConfig
+from kuzu_memory.core.models import Memory, MemoryType
+from kuzu_memory.recall.coordinator import RecallCoordinator, _SemanticScorer
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_memory(content: str, memory_id: str = "mem-1") -> Memory:
+    """Create a minimal Memory object for testing."""
+    return Memory(
+        id=memory_id,
+        content=content,
+        memory_type=MemoryType.SEMANTIC,
+        source_type="test",
+        importance=0.8,
+        confidence=0.9,
+        created_at=datetime.now(),
+    )
+
+
+def _make_coordinator() -> tuple[RecallCoordinator, MagicMock]:
+    """Return a RecallCoordinator wired to a mock db_adapter."""
+    mock_adapter = MagicMock()
+    mock_adapter.db_path = "/tmp/test.db"
+    config = KuzuMemoryConfig.default()
+    # Disable performance monitoring so slow test machines don't raise
+    config.performance.enable_performance_monitoring = False
+    coordinator = RecallCoordinator(db_adapter=mock_adapter, config=config)  # type: ignore[arg-type]
+    return coordinator, mock_adapter
+
+
+# ---------------------------------------------------------------------------
+# _SemanticScorer unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestSemanticScorer:
+    def setup_method(self) -> None:
+        # Reset singleton between tests
+        _SemanticScorer._instance = None
+
+    def test_singleton_returns_same_instance(self) -> None:
+        a = _SemanticScorer.get()
+        b = _SemanticScorer.get()
+        assert a is b
+
+    def test_embed_returns_none_when_sentence_transformers_unavailable(self) -> None:
+        """When ST is not importable, embed() must return None without raising."""
+        scorer = _SemanticScorer()
+        with patch("kuzu_memory.recall.coordinator._SENTENCE_TRANSFORMERS_AVAILABLE", False):
+            result = scorer.embed("hello world")
+        assert result is None
+
+    def test_embed_caches_result(self) -> None:
+        """Second call for same text must return cached array without calling model.encode."""
+        import numpy as np
+
+        scorer = _SemanticScorer()
+        fake_vec = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+
+        # Pre-populate cache and mock the model so _ensure_model() succeeds
+        scorer._cache["cached text"] = fake_vec
+        scorer._model = MagicMock()  # ensures _ensure_model returns True
+
+        with patch("kuzu_memory.recall.coordinator._SENTENCE_TRANSFORMERS_AVAILABLE", True):
+            result = scorer.embed("cached text")
+
+        assert result is not None
+        assert (result == fake_vec).all()
+        # model.encode must NOT have been called because cache was hit
+        scorer._model.encode.assert_not_called()
+
+    def test_cosine_identical_vectors(self) -> None:
+        import numpy as np
+
+        scorer = _SemanticScorer()
+        v = np.array([1.0, 0.0], dtype=np.float32)
+        assert scorer.cosine(v, v) == pytest.approx(1.0)
+
+    def test_cosine_orthogonal_vectors(self) -> None:
+        import numpy as np
+
+        scorer = _SemanticScorer()
+        a = np.array([1.0, 0.0], dtype=np.float32)
+        b = np.array([0.0, 1.0], dtype=np.float32)
+        assert scorer.cosine(a, b) == pytest.approx(0.0)
+
+    def test_cosine_clamps_negative(self) -> None:
+        """Cosine similarity must be clamped to [0, 1]."""
+        import numpy as np
+
+        scorer = _SemanticScorer()
+        a = np.array([1.0, 0.0], dtype=np.float32)
+        b = np.array([-1.0, 0.0], dtype=np.float32)
+        assert scorer.cosine(a, b) == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# RecallCoordinator._rank_memories — semantic vs Jaccard path
+# ---------------------------------------------------------------------------
+
+
+class TestRankMemoriesSemanticPath:
+    """Tests for _rank_memories with use_semantic_search=True/False."""
+
+    def setup_method(self) -> None:
+        _SemanticScorer._instance = None
+
+    def test_jaccard_path_by_default(self) -> None:
+        """With use_semantic_search=False the scorer must not be called."""
+        coordinator, _ = _make_coordinator()
+        coordinator._semantic_scorer = MagicMock()
+
+        memories = [_make_memory("python async patterns", "m1")]
+        coordinator._rank_memories(memories, "async patterns", use_semantic_search=False)
+
+        coordinator._semantic_scorer.embed.assert_not_called()
+
+    def test_semantic_path_calls_embed(self) -> None:
+        """With use_semantic_search=True the scorer.embed must be called."""
+        import numpy as np
+
+        coordinator, _ = _make_coordinator()
+
+        fake_q_emb = np.array([1.0, 0.0], dtype=np.float32)
+        fake_m_emb = np.array([0.9, 0.1], dtype=np.float32)
+
+        mock_scorer = MagicMock()
+        mock_scorer.embed.side_effect = [fake_q_emb, fake_m_emb]
+        mock_scorer.cosine.return_value = 0.85
+        coordinator._semantic_scorer = mock_scorer
+
+        memories = [_make_memory("relevant content", "m1")]
+        results = coordinator._rank_memories(memories, "relevant query", use_semantic_search=True)
+
+        assert mock_scorer.embed.call_count == 2  # once for query, once for memory
+        assert len(results) == 1
+
+    def test_semantic_score_ranks_better_semantic_match_higher(self) -> None:
+        """Memory semantically similar to query should rank above dissimilar one."""
+        import numpy as np
+
+        coordinator, _ = _make_coordinator()
+
+        # Query vector
+        q = np.array([1.0, 0.0], dtype=np.float32)
+        # m1 is very similar; m2 is orthogonal
+        m1_emb = np.array([0.99, 0.14], dtype=np.float32)
+        m1_emb = m1_emb / np.linalg.norm(m1_emb)
+        m2_emb = np.array([0.0, 1.0], dtype=np.float32)
+
+        embed_map = {
+            "async python patterns": q,
+            "asynchronous Python programming": m1_emb,
+            "unrelated database topic": m2_emb,
+        }
+
+        def fake_embed(text: str) -> Any:
+            return embed_map.get(text)
+
+        def fake_cosine(a: Any, b: Any) -> float:
+            return float(np.dot(a, b))
+
+        mock_scorer = MagicMock()
+        mock_scorer.embed.side_effect = fake_embed
+        mock_scorer.cosine.side_effect = fake_cosine
+        coordinator._semantic_scorer = mock_scorer
+
+        m1 = _make_memory("asynchronous Python programming", "m1")
+        m2 = _make_memory("unrelated database topic", "m2")
+
+        results = coordinator._rank_memories(
+            [m1, m2], "async python patterns", use_semantic_search=True
+        )
+
+        assert results[0].id == "m1", "Semantically similar memory should rank first"
+
+    def test_fallback_to_jaccard_when_query_embed_fails(self) -> None:
+        """When embed(query) returns None, scoring must fall back to Jaccard silently."""
+        coordinator, _ = _make_coordinator()
+
+        mock_scorer = MagicMock()
+        mock_scorer.embed.return_value = None  # simulate unavailable model
+        coordinator._semantic_scorer = mock_scorer
+
+        memories = [_make_memory("python async patterns", "m1")]
+        # Should not raise even though semantic path failed
+        results = coordinator._rank_memories(memories, "async python", use_semantic_search=True)
+
+        assert len(results) == 1
+        # cosine must never be called when query embedding is None
+        mock_scorer.cosine.assert_not_called()
+
+    def test_fallback_to_jaccard_when_memory_embed_fails(self) -> None:
+        """When embed(memory.content) returns None, that memory falls back gracefully."""
+        import numpy as np
+
+        coordinator, _ = _make_coordinator()
+
+        mock_scorer = MagicMock()
+        # First call (query) succeeds; second call (memory) fails
+        mock_scorer.embed.side_effect = [np.array([1.0, 0.0], dtype=np.float32), None]
+        coordinator._semantic_scorer = mock_scorer
+
+        memories = [_make_memory("content with failed embed", "m1")]
+        results = coordinator._rank_memories(memories, "query text", use_semantic_search=True)
+
+        assert len(results) == 1  # memory still included via Jaccard fallback
+        mock_scorer.cosine.assert_not_called()
+
+    def test_semantic_combined_with_temporal_decay(self) -> None:
+        """
+        When both use_semantic_search=True and apply_temporal_decay=True, the final
+        score must be semantic_score * decay_factor (both effects applied).
+        """
+        import numpy as np
+
+        coordinator, _ = _make_coordinator()
+
+        q_emb = np.array([1.0, 0.0], dtype=np.float32)
+        m_emb = np.array([1.0, 0.0], dtype=np.float32)
+
+        mock_scorer = MagicMock()
+        mock_scorer.embed.side_effect = [q_emb, m_emb]
+        mock_scorer.cosine.return_value = 1.0  # perfect similarity
+        coordinator._semantic_scorer = mock_scorer
+
+        # Make decay engine return 0.5 (memory is "old")
+        coordinator._temporal_decay_engine = MagicMock()
+        coordinator._temporal_decay_engine.calculate_temporal_score.return_value = 0.5
+
+        m1 = _make_memory("perfect match", "m1")
+        m2 = _make_memory("other memory", "m2")
+
+        # For m2 use a zero embedding so it scores 0 semantic similarity
+        mock_scorer.embed.side_effect = [
+            q_emb,  # query
+            m_emb,  # m1
+            np.array([0.0, 1.0], dtype=np.float32),  # m2
+        ]
+
+        def cosine_side(a: Any, b: Any) -> float:
+            return float(np.dot(a, b))
+
+        mock_scorer.cosine.side_effect = cosine_side
+
+        results = coordinator._rank_memories(
+            [m1, m2],
+            "perfect match",
+            apply_temporal_decay=True,
+            use_semantic_search=True,
+        )
+
+        # m1 still wins despite decay because semantic similarity is much higher
+        assert results[0].id == "m1"
+        # Decay was applied (called for each memory)
+        assert coordinator._temporal_decay_engine.calculate_temporal_score.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# attach_memories — parameter threading through coordinator
+# ---------------------------------------------------------------------------
+
+
+class TestAttachMemoriesParameterThreading:
+    """Verify use_semantic_search is forwarded correctly through the call stack."""
+
+    def setup_method(self) -> None:
+        _SemanticScorer._instance = None
+
+    def _make_coordinator_with_mock_strategies(
+        self,
+    ) -> tuple[RecallCoordinator, list[Memory]]:
+        coordinator, _ = _make_coordinator()
+
+        stub_memory = _make_memory("test content", "m1")
+        for strategy in coordinator.strategies.values():
+            strategy.recall = MagicMock(return_value=[stub_memory])  # type: ignore[method-assign]
+
+        return coordinator, [stub_memory]
+
+    def test_use_semantic_search_forwarded_to_rank_memories(self) -> None:
+        """attach_memories must pass use_semantic_search to _rank_memories."""
+        coordinator, _ = self._make_coordinator_with_mock_strategies()
+
+        with patch.object(
+            coordinator, "_rank_memories", wraps=coordinator._rank_memories
+        ) as mock_rank:
+            coordinator.attach_memories("test prompt", use_semantic_search=True)
+
+        call_kwargs = mock_rank.call_args
+        assert call_kwargs is not None
+        # Check either args or kwargs
+        if "use_semantic_search" in (call_kwargs.kwargs or {}):
+            assert call_kwargs.kwargs["use_semantic_search"] is True
+        else:
+            # positional: _rank_memories(memories, prompt, apply_temporal_decay, use_semantic_search)
+            positional = call_kwargs.args
+            assert len(positional) >= 4 or call_kwargs.kwargs.get("use_semantic_search") is True
+
+    def test_use_semantic_search_false_by_default(self) -> None:
+        """Default value of use_semantic_search must be False (hooks path safety)."""
+        coordinator, _ = self._make_coordinator_with_mock_strategies()
+        scorer_mock = MagicMock()
+        coordinator._semantic_scorer = scorer_mock
+
+        coordinator.attach_memories("test prompt")
+
+        scorer_mock.embed.assert_not_called()

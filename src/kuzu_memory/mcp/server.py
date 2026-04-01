@@ -656,7 +656,10 @@ class KuzuMemoryMCPServer:
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 context = memory.attach_memories(
-                    prompt, max_memories=max_memories, apply_temporal_decay=True
+                    prompt,
+                    max_memories=max_memories,
+                    apply_temporal_decay=True,
+                    use_semantic_search=True,
                 )
             return context.enhanced_prompt or prompt
         except Exception as e:
@@ -702,7 +705,10 @@ class KuzuMemoryMCPServer:
         try:
             with MemoryService(db_path=db_path, enable_git_sync=False) as memory:
                 context = memory.attach_memories(
-                    query, max_memories=limit, apply_temporal_decay=True
+                    query,
+                    max_memories=limit,
+                    apply_temporal_decay=True,
+                    use_semantic_search=True,
                 )
             memories = context.memories
             if not memories:

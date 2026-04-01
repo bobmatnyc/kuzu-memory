@@ -385,6 +385,7 @@ class KuzuMemory:
         session_id: str | None = None,
         agent_id: str = DEFAULT_AGENT_ID,
         apply_temporal_decay: bool = False,
+        use_semantic_search: bool = False,
     ) -> MemoryContext:
         """
         PRIMARY API METHOD 1: Retrieve relevant memories for a prompt.
@@ -399,6 +400,11 @@ class KuzuMemory:
             apply_temporal_decay: When True, multiplies relevance scores by a temporal
                 decay factor (recent memories score higher).  Must be False for
                 hook-triggered recall paths.  Defaults to False.
+            use_semantic_search: When True, uses sentence-transformers cosine similarity
+                as the primary relevance signal instead of Jaccard word-overlap.
+                Must be False for hook-triggered recall paths (pure graph traversal,
+                no model overhead).  Falls back to Jaccard when sentence-transformers
+                is unavailable.  Defaults to False.
 
         Returns:
             MemoryContext object containing:
@@ -407,12 +413,12 @@ class KuzuMemory:
                 - memories: List of relevant Memory objects
                 - confidence: Confidence score (0-1)
 
-        Performance Requirement: Must complete in <10ms
+        Performance Requirement: Must complete in <10ms (Jaccard) / <200ms (semantic)
 
         Raises:
             ValidationError: If input parameters are invalid
             RecallError: If memory recall fails
-            PerformanceError: If operation exceeds 10ms
+            PerformanceError: If operation exceeds time limit
         """
         start_time = time.time()
 
@@ -440,6 +446,7 @@ class KuzuMemory:
                 session_id=session_id,
                 agent_id=agent_id,
                 apply_temporal_decay=apply_temporal_decay,
+                use_semantic_search=use_semantic_search,
             )
 
             # Update performance statistics
