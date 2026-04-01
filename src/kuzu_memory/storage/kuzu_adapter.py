@@ -320,6 +320,10 @@ class KuzuAdapter:
             # keep DB init fast; they run via _check_migrations() on CLI invocation.
             self._run_schema_migrations()
 
+            # Run one-time data maintenance (purge expired, dedup, trim git metadata).
+            # Uses the already-open pool — no second kuzu.Database is opened.
+            self._run_data_maintenance()
+
             logger.info(f"Initialized Kuzu database at {self.db_path}")
 
         except Exception as e:
@@ -893,6 +897,59 @@ class KuzuAdapter:
         except Exception as e:
             logger.warning(f"Failed to parse memory from database: {e}")
             return None
+
+    def _run_data_maintenance(self) -> None:
+        """Run one-time data maintenance using the already-open connection pool.
+
+        Delegates to the three helper functions defined in
+        ``kuzu_memory.migrations.v1_9_0_data_maintenance``:
+
+        1. Purge memories whose ``valid_to`` is in the past.
+        2. Back-fill missing ``content_hash`` values and delete duplicates.
+        3. Trim oversized ``git_sync`` metadata blobs to a slim schema.
+
+        All steps are non-fatal — failures are logged as warnings and execution
+        continues.  The check is short-circuited when the database is already
+        clean so the overhead on subsequent startups is a handful of lightweight
+        count queries.
+
+        Uses ``self.execute_query`` so writes are serialised through
+        ``_write_lock`` and connection pool; no second ``kuzu.Database`` is
+        opened.
+        """
+        try:
+            from ..migrations.v1_9_0_data_maintenance import (
+                dedup_by_content_hash,
+                has_work_to_do,
+                purge_expired,
+                trim_git_metadata,
+            )
+
+            def _execute(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+                return self.execute_query(query, params or None)
+
+            if not has_work_to_do(_execute):
+                logger.debug("Data maintenance: nothing to do — skipping")
+                return
+
+            purged = purge_expired(_execute)
+            hashes_written, dupes = dedup_by_content_hash(_execute)
+            trimmed, saved = trim_git_metadata(_execute)
+
+            if purged or hashes_written or dupes or trimmed:
+                logger.info(
+                    "Data maintenance complete: purged=%d, hashes_written=%d, "
+                    "dupes_removed=%d, metadata_trimmed=%d (~%d bytes saved)",
+                    purged,
+                    hashes_written,
+                    dupes,
+                    trimmed,
+                    saved,
+                )
+
+        except Exception as exc:
+            # Non-fatal: a maintenance failure must never crash DB initialisation.
+            logger.warning("Data maintenance failed (non-fatal): %s", exc)
 
     def close(self) -> None:
         """Close the database adapter."""
