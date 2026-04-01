@@ -166,22 +166,51 @@ class QueryBuilder:
             self.query_stats["queries_executed"] += 1
             start_time = datetime.now()
 
+            # Fast content_hash dedup check — skip insert if an identical memory exists.
+            # Only applies to new inserts (not updates), and only when content_hash is set.
+            if not is_update and memory.content_hash:
+                dedup_check = self.db_adapter.execute_query(
+                    "MATCH (m:Memory {content_hash: $h}) RETURN m.id LIMIT 1",
+                    {"h": memory.content_hash},
+                )
+                if dedup_check:
+                    logger.debug(
+                        f"Skipping duplicate memory (content_hash={memory.content_hash[:12]}…): {memory.id}"
+                    )
+                    return
+
             # Prepare memory data for storage
             # For timestamps, Kuzu accepts ISO format strings
             memory_data = {
                 "id": memory.id,
                 "content": sanitize_for_database(memory.content),
+                "content_hash": memory.content_hash or "",
                 "source": memory.source_type,
                 "memory_type": memory.memory_type.value,
+                "knowledge_type": memory.knowledge_type.value,
+                "project_tag": memory.project_tag or "",
+                "importance": float(memory.importance),
+                "confidence": float(memory.confidence),
+                "access_count": int(memory.access_count),
                 "created_at": (
                     memory.created_at.isoformat()
                     if isinstance(memory.created_at, datetime)
                     else memory.created_at
                 ),
+                "valid_from": (
+                    memory.valid_from.isoformat()
+                    if memory.valid_from and isinstance(memory.valid_from, datetime)
+                    else memory.valid_from
+                ),
                 "expires_at": (
                     memory.valid_to.isoformat()
                     if memory.valid_to and isinstance(memory.valid_to, datetime)
                     else memory.valid_to
+                ),
+                "accessed_at": (
+                    memory.accessed_at.isoformat()
+                    if memory.accessed_at and isinstance(memory.accessed_at, datetime)
+                    else memory.accessed_at
                 ),
                 "user_id": memory.user_id,
                 "session_id": memory.session_id,
@@ -190,31 +219,44 @@ class QueryBuilder:
             }
 
             if is_update:
-                # Update existing memory
+                # Update existing memory — only update mutable fields
                 query = """
                 MATCH (m:Memory {id: $id})
                 SET m.content = $content,
+                    m.content_hash = $content_hash,
                     m.source_type = $source,
                     m.memory_type = $memory_type,
-                    m.valid_to = $expires_at,
+                    m.knowledge_type = $knowledge_type,
+                    m.project_tag = $project_tag,
+                    m.importance = $importance,
+                    m.confidence = $confidence,
+                    m.valid_to = CASE WHEN $expires_at IS NOT NULL THEN TIMESTAMP($expires_at) ELSE NULL END,
+                    m.accessed_at = CASE WHEN $accessed_at IS NOT NULL THEN TIMESTAMP($accessed_at) ELSE NULL END,
+                    m.access_count = $access_count,
                     m.user_id = $user_id,
                     m.session_id = $session_id,
                     m.agent_id = $agent_id,
-                    m.metadata = $metadata,
-                    m.updated_at = $updated_at
+                    m.metadata = $metadata
                 RETURN m
                 """
-                memory_data["updated_at"] = datetime.now().isoformat()
             else:
-                # Create new memory
+                # Create new memory — write all 17 schema fields
                 query = """
                 CREATE (m:Memory {
                     id: $id,
                     content: $content,
+                    content_hash: $content_hash,
                     source_type: $source,
                     memory_type: $memory_type,
+                    knowledge_type: $knowledge_type,
+                    project_tag: $project_tag,
+                    importance: $importance,
+                    confidence: $confidence,
+                    access_count: $access_count,
                     created_at: TIMESTAMP($created_at),
+                    valid_from: CASE WHEN $valid_from IS NOT NULL THEN TIMESTAMP($valid_from) ELSE NULL END,
                     valid_to: CASE WHEN $expires_at IS NOT NULL THEN TIMESTAMP($expires_at) ELSE NULL END,
+                    accessed_at: CASE WHEN $accessed_at IS NOT NULL THEN TIMESTAMP($accessed_at) ELSE NULL END,
                     user_id: $user_id,
                     session_id: $session_id,
                     agent_id: $agent_id,
@@ -756,19 +798,34 @@ class QueryBuilder:
             MERGE (m:Memory {id: mem.id})
             ON CREATE SET
                 m.content = mem.content,
+                m.content_hash = mem.content_hash,
                 m.source_type = mem.source,
                 m.memory_type = mem.memory_type,
+                m.knowledge_type = mem.knowledge_type,
+                m.project_tag = mem.project_tag,
+                m.importance = mem.importance,
+                m.confidence = mem.confidence,
+                m.access_count = mem.access_count,
                 m.created_at = TIMESTAMP(mem.created_at),
+                m.valid_from = CASE WHEN mem.valid_from IS NOT NULL THEN TIMESTAMP(mem.valid_from) ELSE NULL END,
                 m.valid_to = CASE WHEN mem.expires_at IS NOT NULL THEN TIMESTAMP(mem.expires_at) ELSE NULL END,
+                m.accessed_at = CASE WHEN mem.accessed_at IS NOT NULL THEN TIMESTAMP(mem.accessed_at) ELSE NULL END,
                 m.user_id = mem.user_id,
                 m.session_id = mem.session_id,
                 m.agent_id = mem.agent_id,
                 m.metadata = mem.metadata
             ON MATCH SET
                 m.content = mem.content,
+                m.content_hash = mem.content_hash,
                 m.source_type = mem.source,
                 m.memory_type = mem.memory_type,
+                m.knowledge_type = mem.knowledge_type,
+                m.project_tag = mem.project_tag,
+                m.importance = mem.importance,
+                m.confidence = mem.confidence,
                 m.valid_to = CASE WHEN mem.expires_at IS NOT NULL THEN TIMESTAMP(mem.expires_at) ELSE NULL END,
+                m.accessed_at = CASE WHEN mem.accessed_at IS NOT NULL THEN TIMESTAMP(mem.accessed_at) ELSE NULL END,
+                m.access_count = mem.access_count,
                 m.user_id = mem.user_id,
                 m.session_id = mem.session_id,
                 m.agent_id = mem.agent_id,
@@ -782,17 +839,33 @@ class QueryBuilder:
                 memory_data = {
                     "id": memory.id,
                     "content": sanitize_for_database(memory.content),
+                    "content_hash": memory.content_hash or "",
                     "source": memory.source_type,
                     "memory_type": memory.memory_type.value,
+                    "knowledge_type": memory.knowledge_type.value,
+                    "project_tag": memory.project_tag or "",
+                    "importance": float(memory.importance),
+                    "confidence": float(memory.confidence),
+                    "access_count": int(memory.access_count),
                     "created_at": (
                         memory.created_at.isoformat()
                         if isinstance(memory.created_at, datetime)
                         else memory.created_at
                     ),
+                    "valid_from": (
+                        memory.valid_from.isoformat()
+                        if memory.valid_from and isinstance(memory.valid_from, datetime)
+                        else memory.valid_from
+                    ),
                     "expires_at": (
                         memory.valid_to.isoformat()
                         if memory.valid_to and isinstance(memory.valid_to, datetime)
                         else memory.valid_to
+                    ),
+                    "accessed_at": (
+                        memory.accessed_at.isoformat()
+                        if memory.accessed_at and isinstance(memory.accessed_at, datetime)
+                        else memory.accessed_at
                     ),
                     "user_id": memory.user_id,
                     "session_id": memory.session_id,

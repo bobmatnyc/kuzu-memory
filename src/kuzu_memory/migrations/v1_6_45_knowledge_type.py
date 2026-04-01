@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import logging
 
+try:
+    import kuzu
+except ImportError:
+    kuzu = None  # type: ignore[assignment,unused-ignore]
+
 from .base import MigrationResult, MigrationType, SchemaMigration
 
 logger = logging.getLogger(__name__)
@@ -46,14 +51,16 @@ class KnowledgeTypeMigration(SchemaMigration):
         if not super().check_applicable():
             return False
 
-        try:
-            from ..core.memory import KuzuMemory
+        db_path = self._find_db_path()
+        if db_path is None:
+            return False
 
-            db_path = self.project_root / ".kuzu_memory.db"
-            with KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False) as memory:
-                memory.db_adapter.execute_query(
-                    "MATCH (m:Memory) RETURN m.knowledge_type LIMIT 1", {}
-                )
+        try:
+            if kuzu is None:
+                return False
+            db = kuzu.Database(str(db_path))
+            conn = kuzu.Connection(db)
+            conn.execute("MATCH (m:Memory) RETURN m.knowledge_type LIMIT 1")
             # Query succeeded → column already exists
             return False
         except Exception:
@@ -64,43 +71,52 @@ class KnowledgeTypeMigration(SchemaMigration):
         """Add knowledge_type column to Memory and, if present, ArchivedMemory."""
         changes: list[str] = []
 
+        db_path = self._find_db_path()
+        if db_path is None:
+            return MigrationResult(
+                success=False,
+                message="Database not found — cannot run knowledge_type migration",
+                changes=changes,
+            )
+
         try:
-            from ..core.memory import KuzuMemory
+            if kuzu is None:
+                return MigrationResult(
+                    success=False,
+                    message="kuzu package not available",
+                    changes=changes,
+                )
+            db = kuzu.Database(str(db_path))
+            conn = kuzu.Connection(db)
 
-            db_path = self.project_root / ".kuzu_memory.db"
-            with KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False) as memory:
-                # --- Memory table ---
-                try:
-                    memory.db_adapter.execute_query(
-                        "ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'", {}
-                    )
-                    changes.append("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
-                    logger.info("Added knowledge_type column to Memory table")
-                except Exception as exc:
-                    logger.warning("Could not alter Memory table: %s", exc)
-                    return MigrationResult(
-                        success=False,
-                        message=f"Failed to add knowledge_type to Memory: {exc}",
-                        changes=changes,
-                    )
+            # --- Memory table ---
+            try:
+                conn.execute("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
+                changes.append("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
+                logger.info("Added knowledge_type column to Memory table")
+            except Exception as exc:
+                logger.warning("Could not alter Memory table: %s", exc)
+                return MigrationResult(
+                    success=False,
+                    message=f"Failed to add knowledge_type to Memory: {exc}",
+                    changes=changes,
+                )
 
-                # --- ArchivedMemory table (optional — may not exist in all databases) ---
-                try:
-                    memory.db_adapter.execute_query(
-                        "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'", {}
-                    )
-                    changes.append(
-                        "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'"
-                    )
-                    logger.info("Added knowledge_type column to ArchivedMemory table")
-                except Exception as exc:
-                    # ArchivedMemory may not exist in older databases; treat as a warning
-                    logger.warning("Skipped ArchivedMemory (table may not exist): %s", exc)
-                    changes.append("Skipped ArchivedMemory: table absent or column already present")
+            # --- ArchivedMemory table (optional — may not exist in all databases) ---
+            try:
+                conn.execute("ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'")
+                changes.append(
+                    "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'"
+                )
+                logger.info("Added knowledge_type column to ArchivedMemory table")
+            except Exception as exc:
+                # ArchivedMemory may not exist in older databases; treat as a warning
+                logger.warning("Skipped ArchivedMemory (table may not exist): %s", exc)
+                changes.append("Skipped ArchivedMemory: table absent or column already present")
 
-                # NOTE: Kùzu does not support CREATE INDEX on non-primary-key properties.
-                # Columnar storage and vectorised execution provide equivalent performance
-                # for MATCH predicates on knowledge_type without an explicit index.
+            # NOTE: Kùzu does not support CREATE INDEX on non-primary-key properties.
+            # Columnar storage and vectorised execution provide equivalent performance
+            # for MATCH predicates on knowledge_type without an explicit index.
 
         except Exception as exc:
             logger.error("KnowledgeTypeMigration failed: %s", exc)

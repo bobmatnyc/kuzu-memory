@@ -207,6 +207,26 @@ class SchemaMigration(Migration):
 
     migration_type = MigrationType.SCHEMA
 
+    def _find_db_path(self) -> Path | None:
+        """Locate the project database file.
+
+        Returns the path to the memories.db file, not the parent directory.
+        Kuzu requires a file path; passing a directory raises
+        "Database path cannot be a directory".
+
+        Checks the canonical location first, then legacy locations.
+        """
+        # Canonical format: .kuzu-memory/memories.db
+        candidate = self.project_root / ".kuzu-memory" / "memories.db"
+        if candidate.exists():
+            return candidate
+        # Legacy locations
+        for legacy in ("kuzu-memories", ".kuzu-memories"):
+            p = self.project_root / legacy / "memories.db"
+            if p.exists():
+                return p
+        return None
+
     def check_applicable(self) -> bool:
         """
         Schema migrations apply if the database exists.
@@ -214,8 +234,7 @@ class SchemaMigration(Migration):
         Returns:
             True if database exists, False otherwise
         """
-        db_path = self.project_root / ".kuzu-memory" / "memories.db"
-        return db_path.exists()
+        return self._find_db_path() is not None
 
     def execute_cypher(self, query: str) -> bool:
         """
@@ -228,11 +247,15 @@ class SchemaMigration(Migration):
             True if successful, False otherwise
         """
         try:
-            from ..core.memory import KuzuMemory
+            import kuzu
 
-            db_path = self.project_root / ".kuzu_memory.db"
-            with KuzuMemory(db_path=db_path, enable_git_sync=False, auto_sync=False) as memory:
-                memory.db_adapter.execute_query(query, {})
+            db_path = self._find_db_path()
+            if db_path is None:
+                logger.warning("execute_cypher: database not found, skipping")
+                return False
+            db = kuzu.Database(str(db_path))
+            conn = kuzu.Connection(db)
+            conn.execute(query)
             return True
         except Exception as e:
             logger.error(f"Schema migration failed: {e}")

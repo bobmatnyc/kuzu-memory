@@ -313,10 +313,128 @@ class KuzuAdapter:
             # Check and initialize schema
             self._initialize_schema()
 
+            # Run any pending schema migrations (e.g. ALTER TABLE ADD COLUMN).
+            # This must happen after _initialize_schema() so the base tables exist,
+            # and must complete before any business queries execute.  Non-schema
+            # migrations (hooks, config, cleanup) are intentionally skipped here to
+            # keep DB init fast; they run via _check_migrations() on CLI invocation.
+            self._run_schema_migrations()
+
             logger.info(f"Initialized Kuzu database at {self.db_path}")
 
         except Exception as e:
             raise DatabaseError(f"Failed to initialize database: {e}")
+
+    def _run_schema_migrations(self) -> None:
+        """Run pending SCHEMA-type migrations against this database.
+
+        Called automatically on every DB initialisation so that ALTER TABLE
+        additions (knowledge_type, project_tag, etc.) are applied to existing
+        databases without requiring manual CLI intervention.
+
+        Uses the already-open connection pool to avoid opening a second Kuzu
+        Database instance.  Each column is probed with LIMIT 0 first; if the
+        column exists the ALTER TABLE is skipped, making this fully idempotent.
+
+        For brand-new databases just created by _create_schema(), all columns
+        are already present by definition — the probes succeed immediately.
+        """
+        # Each tuple: (column_name, alter_memory_ddl, alter_archived_ddl_or_None)
+        _columns: list[tuple[str, str, str | None]] = [
+            (
+                "knowledge_type",
+                "ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'",
+                "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'",
+            ),
+            (
+                "project_tag",
+                "ALTER TABLE Memory ADD project_tag STRING DEFAULT ''",
+                "ALTER TABLE ArchivedMemory ADD project_tag STRING DEFAULT ''",
+            ),
+            (
+                "content_hash",
+                "ALTER TABLE Memory ADD content_hash STRING DEFAULT ''",
+                "ALTER TABLE ArchivedMemory ADD content_hash STRING DEFAULT ''",
+            ),
+            (
+                "valid_from",
+                "ALTER TABLE Memory ADD valid_from TIMESTAMP",
+                None,
+            ),
+            (
+                "accessed_at",
+                "ALTER TABLE Memory ADD accessed_at TIMESTAMP",
+                None,
+            ),
+            (
+                "access_count",
+                "ALTER TABLE Memory ADD access_count INT32 DEFAULT 0",
+                None,
+            ),
+            (
+                "importance",
+                "ALTER TABLE Memory ADD importance FLOAT DEFAULT 0.5",
+                "ALTER TABLE ArchivedMemory ADD importance FLOAT DEFAULT 0.5",
+            ),
+            (
+                "confidence",
+                "ALTER TABLE Memory ADD confidence FLOAT DEFAULT 1.0",
+                "ALTER TABLE ArchivedMemory ADD confidence FLOAT DEFAULT 1.0",
+            ),
+        ]
+
+        try:
+            with self._pool.get_connection() as conn:
+                for col, mem_ddl, arch_ddl in _columns:
+                    # Probe Memory: try a LIMIT 0 projection to check column existence
+                    try:
+                        conn.execute(f"MATCH (m:Memory) RETURN m.{col} LIMIT 0")
+                        # Column exists — no ALTER TABLE needed
+                    except Exception as probe_exc:
+                        probe_msg = str(probe_exc).lower()
+                        if "cannot find property" in probe_msg or col.lower() in probe_msg:
+                            # Column absent — add it
+                            try:
+                                conn.execute(mem_ddl)
+                                logger.info("Schema migration applied: %s", mem_ddl)
+                            except Exception as alter_exc:
+                                logger.warning(
+                                    "Schema migration for Memory.%s failed (non-fatal): %s",
+                                    col,
+                                    alter_exc,
+                                )
+                        else:
+                            # Unexpected error (e.g. Memory table absent in some test fixtures)
+                            logger.debug(
+                                "Schema migration probe error for %s (skipping): %s",
+                                col,
+                                probe_exc,
+                            )
+                            continue
+
+                    # ArchivedMemory — best-effort; table may not exist in older DBs
+                    if arch_ddl:
+                        try:
+                            conn.execute(f"MATCH (m:ArchivedMemory) RETURN m.{col} LIMIT 0")
+                            # Column exists — skip
+                        except Exception as arch_probe_exc:
+                            arch_msg = str(arch_probe_exc).lower()
+                            if "cannot find property" in arch_msg or col.lower() in arch_msg:
+                                try:
+                                    conn.execute(arch_ddl)
+                                    logger.info("Schema migration applied: %s", arch_ddl)
+                                except Exception as arch_alter_exc:
+                                    logger.debug(
+                                        "Schema migration for ArchivedMemory.%s skipped: %s",
+                                        col,
+                                        arch_alter_exc,
+                                    )
+                            # else: table absent or other unexpected error — silently skip
+
+        except Exception as e:
+            # Non-fatal: log and continue — a missing column will surface as a
+            # query error later, which is easier to diagnose than a startup crash.
+            logger.warning("Schema migration check failed (non-fatal): %s", e)
 
     def _initialize_schema(self) -> None:
         """Initialize or verify database schema."""

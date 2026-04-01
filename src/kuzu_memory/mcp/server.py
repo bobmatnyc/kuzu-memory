@@ -816,7 +816,23 @@ class KuzuMemoryMCPServer:
                                     }
                                 )
                         return result
-                    except Exception:
+                    except Exception as exc:
+                        # Log a warning so schema issues surface rather than silently
+                        # returning empty results.  The most common cause is the
+                        # knowledge_type column being absent from an older database
+                        # that was not yet migrated.
+                        if (
+                            "knowledge_type" in str(exc).lower()
+                            or "cannot find property" in str(exc).lower()
+                        ):
+                            logger.warning(
+                                "knowledge_type column missing from Memory table (kt=%s). "
+                                "Schema migration may not have run yet. Error: %s",
+                                kt,
+                                exc,
+                            )
+                        else:
+                            logger.debug("_by_type query failed for kt=%s: %s", kt, exc)
                         return []
 
                 context = {

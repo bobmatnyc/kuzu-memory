@@ -153,18 +153,17 @@ class TestKnowledgeTypeMigration:
         self._create_fake_db(tmp_path)
         migration = self._make_migration(tmp_path)
 
-        # Mock KuzuMemory so that the test query raises RuntimeError (column absent)
-        mock_db_adapter = MagicMock()
-        mock_db_adapter.execute_query.side_effect = RuntimeError("Column knowledge_type not found")
-
-        mock_km_instance = MagicMock()
-        mock_km_instance.db_adapter = mock_db_adapter
-        mock_km_instance.__enter__ = MagicMock(return_value=mock_km_instance)
-        mock_km_instance.__exit__ = MagicMock(return_value=False)
+        # Mock kuzu so that the probe query raises RuntimeError (column absent)
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = RuntimeError("Column knowledge_type not found")
+        mock_db = MagicMock()
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.return_value = mock_db
+        mock_kuzu.Connection.return_value = mock_conn
 
         with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_km_instance,
+            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
+            mock_kuzu,
         ):
             assert migration.check_applicable() is True
 
@@ -173,18 +172,17 @@ class TestKnowledgeTypeMigration:
         self._create_fake_db(tmp_path)
         migration = self._make_migration(tmp_path)
 
-        # Mock KuzuMemory so that the test query succeeds (column present)
-        mock_db_adapter = MagicMock()
-        mock_db_adapter.execute_query.return_value = None
-
-        mock_km_instance = MagicMock()
-        mock_km_instance.db_adapter = mock_db_adapter
-        mock_km_instance.__enter__ = MagicMock(return_value=mock_km_instance)
-        mock_km_instance.__exit__ = MagicMock(return_value=False)
+        # Mock kuzu so that the test query succeeds (column present — no exception raised)
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value = None  # success means column exists
+        mock_db = MagicMock()
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.return_value = mock_db
+        mock_kuzu.Connection.return_value = mock_conn
 
         with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_km_instance,
+            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
+            mock_kuzu,
         ):
             assert migration.check_applicable() is False
 
@@ -197,15 +195,16 @@ class TestKnowledgeTypeMigration:
         self._create_fake_db(tmp_path)
         migration = self._make_migration(tmp_path)
 
-        mock_db_adapter = MagicMock()
-        mock_km_instance = MagicMock()
-        mock_km_instance.db_adapter = mock_db_adapter
-        mock_km_instance.__enter__ = MagicMock(return_value=mock_km_instance)
-        mock_km_instance.__exit__ = MagicMock(return_value=False)
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value = None  # all ALTER TABLE succeed
+        mock_db = MagicMock()
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.return_value = mock_db
+        mock_kuzu.Connection.return_value = mock_conn
 
         with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_km_instance,
+            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
+            mock_kuzu,
         ):
             result = migration.migrate()
 
@@ -225,32 +224,31 @@ class TestKnowledgeTypeMigration:
         # First call: both ALTER TABLE succeed
         call_count = {"n": 0}
 
-        def execute_query_side_effect(*_: object) -> None:
+        def execute_side_effect(stmt: str, *_: object) -> None:
             call_count["n"] += 1
             if call_count["n"] > 2:
                 # Simulate "column already exists" on a second migrate() run
                 raise RuntimeError("Column already exists")
 
-        mock_db_adapter = MagicMock()
-        mock_db_adapter.execute_query.side_effect = execute_query_side_effect
-
-        mock_km_instance = MagicMock()
-        mock_km_instance.db_adapter = mock_db_adapter
-        mock_km_instance.__enter__ = MagicMock(return_value=mock_km_instance)
-        mock_km_instance.__exit__ = MagicMock(return_value=False)
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = execute_side_effect
+        mock_db = MagicMock()
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.return_value = mock_db
+        mock_kuzu.Connection.return_value = mock_conn
 
         with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_km_instance,
+            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
+            mock_kuzu,
         ):
             result1 = migration.migrate()
 
         # Reset mock for second call (column now exists → ALTER TABLE raises)
-        call_count["n"] = 99  # Force immediate failure on all execute_query calls
+        call_count["n"] = 99  # Force immediate failure on all execute calls
 
         with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_km_instance,
+            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
+            mock_kuzu,
         ):
             result2 = migration.migrate()
 
