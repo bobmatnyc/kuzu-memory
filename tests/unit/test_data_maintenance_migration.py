@@ -430,7 +430,7 @@ class TestDataMaintenanceMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch("kuzu_memory.migrations.v1_9_0_data_maintenance.kuzu", mock_kuzu):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result = migration.check_applicable()
 
         assert result is True
@@ -450,7 +450,7 @@ class TestDataMaintenanceMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch("kuzu_memory.migrations.v1_9_0_data_maintenance.kuzu", mock_kuzu):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result = migration.check_applicable()
 
         assert result is False
@@ -504,7 +504,7 @@ class TestDataMaintenanceMigration:
         mock_kuzu.Database.return_value = mock_db_obj
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch("kuzu_memory.migrations.v1_9_0_data_maintenance.kuzu", mock_kuzu):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result = migration.migrate()
 
         assert result.success is True
@@ -553,7 +553,7 @@ class TestDataMaintenanceMigration:
         mock_kuzu.Database.return_value = mock_db_obj
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch("kuzu_memory.migrations.v1_9_0_data_maintenance.kuzu", mock_kuzu):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result = migration.migrate()
 
         assert result.success is True
@@ -605,7 +605,7 @@ class TestDataMaintenanceMigration:
         mock_kuzu.Database.return_value = mock_db_obj
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch("kuzu_memory.migrations.v1_9_0_data_maintenance.kuzu", mock_kuzu):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             first = migration.migrate()
             second = migration.migrate()
 
@@ -621,6 +621,32 @@ class TestDataMaintenanceMigration:
         result = migration.migrate()
         assert result.success is False
         assert "not found" in result.message.lower()
+
+    # --- lock error paths ---
+
+    def test_check_applicable_returns_false_when_db_locked(self, tmp_path: Path) -> None:
+        """When database is locked by another process, check_applicable returns False."""
+        migration = self._make_migration(tmp_path)
+        (tmp_path / ".kuzu-memory" / "memories.db").mkdir(parents=True, exist_ok=True)
+
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.side_effect = RuntimeError("IO exception: Could not set lock on file")
+
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
+            assert migration.check_applicable() is False
+
+    def test_migrate_returns_lock_result_when_db_locked(self, tmp_path: Path) -> None:
+        """When database is locked, migrate() returns graceful failure."""
+        migration = self._make_migration(tmp_path)
+        (tmp_path / ".kuzu-memory" / "memories.db").mkdir(parents=True, exist_ok=True)
+
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.side_effect = RuntimeError("IO exception: Could not set lock on file")
+
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
+            result = migration.migrate()
+            assert result.success is False
+            assert "locked by another process" in result.message.lower()
 
 
 # ---------------------------------------------------------------------------

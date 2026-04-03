@@ -4,11 +4,6 @@ from __future__ import annotations
 
 import logging
 
-try:
-    import kuzu
-except ImportError:
-    kuzu = None  # type: ignore[assignment,unused-ignore]
-
 from .base import MigrationResult, MigrationType, SchemaMigration
 
 logger = logging.getLogger(__name__)
@@ -56,15 +51,20 @@ class KnowledgeTypeMigration(SchemaMigration):
             return False
 
         try:
-            if kuzu is None:
+            result = self._open_database(db_path)
+            if result is None:
+                # Database locked — skip migration this run, retry on next startup
                 return False
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-            conn.execute("MATCH (m:Memory) RETURN m.knowledge_type LIMIT 1")
-            # Query succeeded → column already exists
-            return False
+            db, conn = result
+            try:
+                conn.execute("MATCH (m:Memory) RETURN m.knowledge_type LIMIT 1")
+                # Query succeeded → column already exists
+                return False
+            finally:
+                conn.close()
+                db.close()
         except Exception:
-            # Any error means the column is absent (or table does not exist)
+            # Any error (missing column, kuzu unavailable, etc.) → applicable
             return True
 
     def migrate(self) -> MigrationResult:
@@ -80,43 +80,48 @@ class KnowledgeTypeMigration(SchemaMigration):
             )
 
         try:
-            if kuzu is None:
+            result = self._open_database(db_path)
+            if result is None:
                 return MigrationResult(
                     success=False,
-                    message="kuzu package not available",
+                    message="Database locked by another process — migration will retry on next startup",
                     changes=changes,
                 )
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-
-            # --- Memory table ---
+            db, conn = result
             try:
-                conn.execute("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
-                changes.append("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
-                logger.info("Added knowledge_type column to Memory table")
-            except Exception as exc:
-                logger.warning("Could not alter Memory table: %s", exc)
-                return MigrationResult(
-                    success=False,
-                    message=f"Failed to add knowledge_type to Memory: {exc}",
-                    changes=changes,
-                )
+                # --- Memory table ---
+                try:
+                    conn.execute("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
+                    changes.append("ALTER TABLE Memory ADD knowledge_type STRING DEFAULT 'note'")
+                    logger.info("Added knowledge_type column to Memory table")
+                except Exception as exc:
+                    logger.warning("Could not alter Memory table: %s", exc)
+                    return MigrationResult(
+                        success=False,
+                        message=f"Failed to add knowledge_type to Memory: {exc}",
+                        changes=changes,
+                    )
 
-            # --- ArchivedMemory table (optional — may not exist in all databases) ---
-            try:
-                conn.execute("ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'")
-                changes.append(
-                    "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'"
-                )
-                logger.info("Added knowledge_type column to ArchivedMemory table")
-            except Exception as exc:
-                # ArchivedMemory may not exist in older databases; treat as a warning
-                logger.warning("Skipped ArchivedMemory (table may not exist): %s", exc)
-                changes.append("Skipped ArchivedMemory: table absent or column already present")
+                # --- ArchivedMemory table (optional — may not exist in all databases) ---
+                try:
+                    conn.execute(
+                        "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'"
+                    )
+                    changes.append(
+                        "ALTER TABLE ArchivedMemory ADD knowledge_type STRING DEFAULT 'note'"
+                    )
+                    logger.info("Added knowledge_type column to ArchivedMemory table")
+                except Exception as exc:
+                    # ArchivedMemory may not exist in older databases; treat as a warning
+                    logger.warning("Skipped ArchivedMemory (table may not exist): %s", exc)
+                    changes.append("Skipped ArchivedMemory: table absent or column already present")
 
-            # NOTE: Kùzu does not support CREATE INDEX on non-primary-key properties.
-            # Columnar storage and vectorised execution provide equivalent performance
-            # for MATCH predicates on knowledge_type without an explicit index.
+                # NOTE: Kùzu does not support CREATE INDEX on non-primary-key properties.
+                # Columnar storage and vectorised execution provide equivalent performance
+                # for MATCH predicates on knowledge_type without an explicit index.
+            finally:
+                conn.close()
+                db.close()
 
         except Exception as exc:
             logger.error("KnowledgeTypeMigration failed: %s", exc)

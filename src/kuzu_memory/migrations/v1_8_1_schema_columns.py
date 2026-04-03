@@ -82,14 +82,19 @@ class SchemaColumnsMigration(SchemaMigration):
             return False
 
         try:
-            import kuzu
-
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-            for col, _ in _MEMORY_COLUMNS:
-                if not self._column_exists(conn, "Memory", col):
-                    return True
-            return False
+            result = self._open_database(db_path)
+            if result is None:
+                # Database locked — skip migration this run, retry on next startup
+                return False
+            db, conn = result
+            try:
+                for col, _ in _MEMORY_COLUMNS:
+                    if not self._column_exists(conn, "Memory", col):
+                        return True
+                return False
+            finally:
+                conn.close()
+                db.close()
         except Exception as exc:
             logger.debug("check_applicable probe failed: %s", exc)
             # If we cannot open the DB, let migrate() handle the error gracefully
@@ -109,38 +114,46 @@ class SchemaColumnsMigration(SchemaMigration):
         warnings: list[str] = []
 
         try:
-            import kuzu
-
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-
-            for col, ddl in _MEMORY_COLUMNS:
-                if not self._column_exists(conn, "Memory", col):
-                    try:
-                        conn.execute(ddl)
-                        changes.append(ddl)
-                        logger.info("Applied: %s", ddl)
-                    except Exception as exc:
-                        # Column may have been added by a concurrent process; treat as warning
-                        warnings.append(f"Skipped {col} on Memory: {exc}")
-                        logger.warning("Could not add Memory.%s: %s", col, exc)
-                else:
-                    logger.debug("Column Memory.%s already present — skipping", col)
-
-            # ArchivedMemory is optional (may not exist in all deployments)
+            result = self._open_database(db_path)
+            if result is None:
+                return MigrationResult(
+                    success=False,
+                    message="Database locked by another process — migration will retry on next startup",
+                    changes=changes,
+                    warnings=warnings,
+                )
+            db, conn = result
             try:
-                for col, ddl in _ARCHIVED_COLUMNS:
-                    if not self._column_exists(conn, "ArchivedMemory", col):
+                for col, ddl in _MEMORY_COLUMNS:
+                    if not self._column_exists(conn, "Memory", col):
                         try:
                             conn.execute(ddl)
                             changes.append(ddl)
                             logger.info("Applied: %s", ddl)
                         except Exception as exc:
-                            warnings.append(f"Skipped {col} on ArchivedMemory: {exc}")
-                            logger.warning("Could not add ArchivedMemory.%s: %s", col, exc)
-            except Exception as exc:
-                warnings.append(f"ArchivedMemory column check skipped: {exc}")
-                logger.warning("ArchivedMemory probe failed (table may not exist): %s", exc)
+                            # Column may have been added by a concurrent process; treat as warning
+                            warnings.append(f"Skipped {col} on Memory: {exc}")
+                            logger.warning("Could not add Memory.%s: %s", col, exc)
+                    else:
+                        logger.debug("Column Memory.%s already present — skipping", col)
+
+                # ArchivedMemory is optional (may not exist in all deployments)
+                try:
+                    for col, ddl in _ARCHIVED_COLUMNS:
+                        if not self._column_exists(conn, "ArchivedMemory", col):
+                            try:
+                                conn.execute(ddl)
+                                changes.append(ddl)
+                                logger.info("Applied: %s", ddl)
+                            except Exception as exc:
+                                warnings.append(f"Skipped {col} on ArchivedMemory: {exc}")
+                                logger.warning("Could not add ArchivedMemory.%s: %s", col, exc)
+                except Exception as exc:
+                    warnings.append(f"ArchivedMemory column check skipped: {exc}")
+                    logger.warning("ArchivedMemory probe failed (table may not exist): %s", exc)
+            finally:
+                conn.close()
+                db.close()
 
         except Exception as exc:
             logger.error("SchemaColumnsMigration failed: %s", exc)

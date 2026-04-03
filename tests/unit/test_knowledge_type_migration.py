@@ -161,10 +161,7 @@ class TestKnowledgeTypeMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch(
-            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
-            mock_kuzu,
-        ):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             assert migration.check_applicable() is True
 
     def test_migration_check_not_applicable_column_present(self, tmp_path: Path) -> None:
@@ -180,10 +177,7 @@ class TestKnowledgeTypeMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch(
-            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
-            mock_kuzu,
-        ):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             assert migration.check_applicable() is False
 
     # ------------------------------------------------------------------
@@ -202,10 +196,7 @@ class TestKnowledgeTypeMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch(
-            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
-            mock_kuzu,
-        ):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result = migration.migrate()
 
         assert result.success is True
@@ -237,19 +228,13 @@ class TestKnowledgeTypeMigration:
         mock_kuzu.Database.return_value = mock_db
         mock_kuzu.Connection.return_value = mock_conn
 
-        with patch(
-            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
-            mock_kuzu,
-        ):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result1 = migration.migrate()
 
         # Reset mock for second call (column now exists → ALTER TABLE raises)
         call_count["n"] = 99  # Force immediate failure on all execute calls
 
-        with patch(
-            "kuzu_memory.migrations.v1_6_45_knowledge_type.kuzu",
-            mock_kuzu,
-        ):
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
             result2 = migration.migrate()
 
         # First run succeeded
@@ -257,6 +242,34 @@ class TestKnowledgeTypeMigration:
         # Second run failed cleanly (column already exists)
         assert result2.success is False
         assert "knowledge_type" in result2.message.lower() or "failed" in result2.message.lower()
+
+    # ------------------------------------------------------------------
+    # Lock error paths
+    # ------------------------------------------------------------------
+
+    def test_check_applicable_returns_false_when_db_locked(self, tmp_path: Path) -> None:
+        """When database is locked by another process, check_applicable returns False."""
+        migration = KnowledgeTypeMigration(project_root=tmp_path)
+        (tmp_path / ".kuzu-memory" / "memories.db").mkdir(parents=True, exist_ok=True)
+
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.side_effect = RuntimeError("IO exception: Could not set lock on file")
+
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
+            assert migration.check_applicable() is False
+
+    def test_migrate_returns_lock_result_when_db_locked(self, tmp_path: Path) -> None:
+        """When database is locked, migrate() returns graceful failure."""
+        migration = KnowledgeTypeMigration(project_root=tmp_path)
+        (tmp_path / ".kuzu-memory" / "memories.db").mkdir(parents=True, exist_ok=True)
+
+        mock_kuzu = MagicMock()
+        mock_kuzu.Database.side_effect = RuntimeError("IO exception: Could not set lock on file")
+
+        with patch("kuzu_memory.migrations.base._kuzu_module", mock_kuzu):
+            result = migration.migrate()
+            assert result.success is False
+            assert "locked by another process" in result.message.lower()
 
     # ------------------------------------------------------------------
     # Metadata
@@ -270,3 +283,22 @@ class TestKnowledgeTypeMigration:
         assert migration.to_version == "999.0.0"
         assert migration.priority == 50
         assert "knowledge_type" in migration.description().lower()
+
+
+# ---------------------------------------------------------------------------
+# _is_lock_error tests (standalone, not part of TestKnowledgeTypeMigration)
+# ---------------------------------------------------------------------------
+
+
+def test_is_lock_error_detection() -> None:
+    """Test _is_lock_error detects lock contention errors."""
+    from kuzu_memory.migrations.base import SchemaMigration
+
+    assert SchemaMigration._is_lock_error(
+        RuntimeError("IO exception: Could not set lock on file : /path/to/db")
+    )
+    assert SchemaMigration._is_lock_error(
+        RuntimeError("COULD NOT SET LOCK on file")  # case insensitive
+    )
+    assert not SchemaMigration._is_lock_error(RuntimeError("Column not found"))
+    assert not SchemaMigration._is_lock_error(ValueError("some other error"))

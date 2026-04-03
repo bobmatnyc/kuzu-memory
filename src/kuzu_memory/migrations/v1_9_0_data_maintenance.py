@@ -30,11 +30,6 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-try:
-    import kuzu  # type: ignore[import-untyped,unused-ignore]
-except ImportError:
-    kuzu = None  # type: ignore[assignment,unused-ignore]
-
 from .base import MigrationResult, MigrationType, SchemaMigration
 
 logger = logging.getLogger(__name__)
@@ -361,27 +356,30 @@ class DataMaintenanceMigration(SchemaMigration):
             return False
 
         try:
-            if kuzu is None:
-                logger.debug("kuzu not available — skipping data maintenance check")
+            open_result = self._open_database(db_path)
+            if open_result is None:
+                # Database locked — skip migration this run, retry on next startup
                 return False
+            db, conn = open_result
+            try:
 
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
+                def _execute(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+                    res = conn.execute(query, params) if params else conn.execute(query)
+                    rows: list[dict[str, Any]] = []
+                    while res.has_next():
+                        row = res.get_next()
+                        rows.append(
+                            {
+                                res.get_column_names()[i]: row[i]
+                                for i in range(len(res.get_column_names()))
+                            }
+                        )
+                    return rows
 
-            def _execute(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-                res = conn.execute(query, params) if params else conn.execute(query)
-                rows: list[dict[str, Any]] = []
-                while res.has_next():
-                    row = res.get_next()
-                    rows.append(
-                        {
-                            res.get_column_names()[i]: row[i]
-                            for i in range(len(res.get_column_names()))
-                        }
-                    )
-                return rows
-
-            return has_work_to_do(_execute)
+                return has_work_to_do(_execute)
+            finally:
+                conn.close()
+                db.close()
 
         except Exception as exc:
             logger.debug("DataMaintenanceMigration.check_applicable probe failed: %s", exc)
@@ -400,46 +398,51 @@ class DataMaintenanceMigration(SchemaMigration):
         warnings: list[str] = []
 
         try:
-            if kuzu is None:
+            open_result = self._open_database(db_path)
+            if open_result is None:
                 return MigrationResult(
                     success=False,
-                    message="kuzu not available — cannot run data_maintenance migration",
+                    message="Database locked by another process — migration will retry on next startup",
+                    changes=changes,
+                    warnings=warnings,
                 )
+            db, conn = open_result
+            try:
 
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
+                def _execute(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+                    res = conn.execute(query, params) if params else conn.execute(query)
+                    rows: list[dict[str, Any]] = []
+                    while res.has_next():
+                        row = res.get_next()
+                        rows.append(
+                            {
+                                res.get_column_names()[i]: row[i]
+                                for i in range(len(res.get_column_names()))
+                            }
+                        )
+                    return rows
 
-            def _execute(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-                res = conn.execute(query, params) if params else conn.execute(query)
-                rows: list[dict[str, Any]] = []
-                while res.has_next():
-                    row = res.get_next()
-                    rows.append(
-                        {
-                            res.get_column_names()[i]: row[i]
-                            for i in range(len(res.get_column_names()))
-                        }
+                # Step 1: purge expired
+                purged = purge_expired(_execute)
+                if purged > 0:
+                    changes.append(f"Purged {purged} expired memory record(s)")
+
+                # Step 2: dedup
+                hashes_written, dupes = dedup_by_content_hash(_execute)
+                if hashes_written > 0:
+                    changes.append(f"Back-filled {hashes_written} content_hash value(s)")
+                if dupes > 0:
+                    changes.append(f"Removed {dupes} duplicate memory record(s)")
+
+                # Step 3: trim git metadata
+                trimmed, saved = trim_git_metadata(_execute)
+                if trimmed > 0:
+                    changes.append(
+                        f"Trimmed {trimmed} git_sync metadata blob(s) (~{saved // 1024} KB saved)"
                     )
-                return rows
-
-            # Step 1: purge expired
-            purged = purge_expired(_execute)
-            if purged > 0:
-                changes.append(f"Purged {purged} expired memory record(s)")
-
-            # Step 2: dedup
-            hashes_written, dupes = dedup_by_content_hash(_execute)
-            if hashes_written > 0:
-                changes.append(f"Back-filled {hashes_written} content_hash value(s)")
-            if dupes > 0:
-                changes.append(f"Removed {dupes} duplicate memory record(s)")
-
-            # Step 3: trim git metadata
-            trimmed, saved = trim_git_metadata(_execute)
-            if trimmed > 0:
-                changes.append(
-                    f"Trimmed {trimmed} git_sync metadata blob(s) (~{saved // 1024} KB saved)"
-                )
+            finally:
+                conn.close()
+                db.close()
 
         except Exception as exc:
             logger.error("DataMaintenanceMigration.migrate failed: %s", exc, exc_info=True)

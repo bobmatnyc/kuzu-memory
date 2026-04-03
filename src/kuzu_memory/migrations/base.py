@@ -13,6 +13,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+try:
+    import kuzu as _kuzu_module  # type: ignore[import-untyped,unused-ignore]
+except ImportError:
+    _kuzu_module = None  # type: ignore[assignment,unused-ignore]
+
 
 class MigrationType(Enum):
     """Types of migrations."""
@@ -236,6 +241,53 @@ class SchemaMigration(Migration):
         """
         return self._find_db_path() is not None
 
+    @staticmethod
+    def _is_lock_error(exc: Exception) -> bool:
+        """Detect Kùzu single-writer lock contention.
+
+        Kùzu raises an IO exception with "Could not set lock on file"
+        when another process holds the database lock. Verified against
+        Kùzu 0.4.x-0.8.x. Uses case-insensitive matching for robustness
+        against future version changes.
+        """
+        return "could not set lock" in str(exc).lower()
+
+    def _open_database(self, db_path: Path) -> tuple[Any, Any] | None:
+        """Open a Kùzu database and return (db, conn), or None if locked.
+
+        When the database file is held by another process (e.g. the MCP server
+        in a concurrent Claude session) Kùzu raises an IO exception containing
+        "Could not set lock".  Callers should treat a None return as a graceful
+        skip and propagate a lock-specific MigrationResult rather than crashing.
+
+        Args:
+            db_path: Path to the Kùzu database file.
+
+        Returns:
+            (kuzu.Database, kuzu.Connection) tuple on success, None if locked.
+
+        Raises:
+            ImportError: If the kuzu package is not installed.
+            Any non-lock exception is re-raised so callers see unexpected errors.
+        """
+        # Use the module-level reference so tests can patch kuzu_memory.migrations.base._kuzu_module
+        kuzu = _kuzu_module
+        if kuzu is None:
+            raise ImportError("kuzu package is not installed")
+
+        try:
+            db = kuzu.Database(str(db_path))
+            conn = kuzu.Connection(db)
+            return (db, conn)
+        except Exception as exc:
+            if self._is_lock_error(exc):
+                logger.warning(
+                    "Database locked by another process (%s) — migration will retry on next startup",
+                    db_path,
+                )
+                return None
+            raise
+
     def execute_cypher(self, query: str) -> bool:
         """
         Execute a Cypher query against the database.
@@ -247,16 +299,21 @@ class SchemaMigration(Migration):
             True if successful, False otherwise
         """
         try:
-            import kuzu
-
             db_path = self._find_db_path()
             if db_path is None:
                 logger.warning("execute_cypher: database not found, skipping")
                 return False
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-            conn.execute(query)
-            return True
+            result = self._open_database(db_path)
+            if result is None:
+                # Database is locked by another process — treat as non-fatal skip
+                return False
+            db, conn = result
+            try:
+                conn.execute(query)
+                return True
+            finally:
+                conn.close()
+                db.close()
         except Exception as e:
             logger.error(f"Schema migration failed: {e}")
             return False

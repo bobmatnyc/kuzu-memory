@@ -105,6 +105,8 @@ def _check_migrations() -> None:
             for result in results:
                 if result.success:
                     logger.info(f"✓ {result.message}")
+                elif "locked by another process" in result.message:
+                    logger.debug(f"Migration skipped (DB locked): {result.message}")
                 else:
                     logger.warning(f"✗ {result.message}")
 

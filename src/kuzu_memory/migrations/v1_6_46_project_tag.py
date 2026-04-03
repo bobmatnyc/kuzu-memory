@@ -47,13 +47,18 @@ class ProjectTagMigration(SchemaMigration):
             return False
 
         try:
-            import kuzu
-
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-            # If project_tag doesn't exist this will raise
-            conn.execute("MATCH (m:Memory) RETURN m.project_tag LIMIT 1")
-            return False  # Column already exists — migration not needed
+            result = self._open_database(db_path)
+            if result is None:
+                # Database locked — skip migration this run, retry on next startup
+                return False
+            db, conn = result
+            try:
+                # If project_tag doesn't exist this will raise
+                conn.execute("MATCH (m:Memory) RETURN m.project_tag LIMIT 1")
+                return False  # Column already exists — migration not needed
+            finally:
+                conn.close()
+                db.close()
         except Exception:
             return True  # Column missing — migration needed
 
@@ -77,25 +82,33 @@ class ProjectTagMigration(SchemaMigration):
         warnings: list[str] = []
 
         try:
-            import kuzu
-
-            db = kuzu.Database(str(db_path))
-            conn = kuzu.Connection(db)
-
-            # Add to Memory table
-            conn.execute("ALTER TABLE Memory ADD project_tag STRING DEFAULT ''")
-            changes.append("ALTER TABLE Memory ADD project_tag STRING DEFAULT ''")
-            logger.info("Added project_tag to Memory table")
-
-            # Add to ArchivedMemory table (may not exist in all deployments)
+            result = self._open_database(db_path)
+            if result is None:
+                return MigrationResult(
+                    success=False,
+                    message="Database locked by another process — migration will retry on next startup",
+                    changes=changes,
+                    warnings=warnings,
+                )
+            db, conn = result
             try:
-                conn.execute("ALTER TABLE ArchivedMemory ADD project_tag STRING DEFAULT ''")
-                changes.append("ALTER TABLE ArchivedMemory ADD project_tag STRING DEFAULT ''")
-                logger.info("Added project_tag to ArchivedMemory table")
-            except Exception as e:
-                warning = f"ArchivedMemory migration skipped (table may not exist): {e}"
-                warnings.append(warning)
-                logger.warning(warning)
+                # Add to Memory table
+                conn.execute("ALTER TABLE Memory ADD project_tag STRING DEFAULT ''")
+                changes.append("ALTER TABLE Memory ADD project_tag STRING DEFAULT ''")
+                logger.info("Added project_tag to Memory table")
+
+                # Add to ArchivedMemory table (may not exist in all deployments)
+                try:
+                    conn.execute("ALTER TABLE ArchivedMemory ADD project_tag STRING DEFAULT ''")
+                    changes.append("ALTER TABLE ArchivedMemory ADD project_tag STRING DEFAULT ''")
+                    logger.info("Added project_tag to ArchivedMemory table")
+                except Exception as e:
+                    warning = f"ArchivedMemory migration skipped (table may not exist): {e}"
+                    warnings.append(warning)
+                    logger.warning(warning)
+            finally:
+                conn.close()
+                db.close()
 
         except Exception as e:
             logger.error(f"project_tag migration failed: {e}")
