@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Graceful handling of Kùzu single-writer database lock errors in migrations — when another process (e.g., MCP server) holds the database lock, migrations now skip with a non-fatal message instead of crashing with an IO exception traceback. Migrations retry automatically on next startup.
+- Resource cleanup (db/conn close) in all migration database access paths
+- Case-insensitive lock error detection for robustness across Kùzu versions
+
 <!-- towncrier release notes start -->
 
 ## [1.9.1] - 2026-04-03
