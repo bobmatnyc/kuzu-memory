@@ -655,3 +655,6 @@ Check `docs/` directory for:
 
 **Last Updated**: 2026-03-14
 **Version**: 1.8.0
+
+## KuzuMemory Configuration
+See [KUZU.md](./KUZU.md) for KuzuMemory project memory configuration.

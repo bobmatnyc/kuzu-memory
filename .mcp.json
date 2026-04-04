@@ -8,7 +8,7 @@
       ],
       "env": {
         "KUZU_MEMORY_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
-        "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/kuzu-memories"
+        "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/.kuzu-memory/memories.db"
       }
     },
     "mcp-vector-search": {
