@@ -940,14 +940,22 @@ class KuzuMemoryMCPServer:
         2. kuzu-memories/memories.db — legacy location (migrated by migrate_db_location)
         3. .kuzu-memories/memories.db — alternative hidden legacy location
         """
-        from ..utils.project_setup import get_project_db_path, migrate_db_location
+        from ..utils.project_setup import (
+            _migrate_single_file_db,
+            get_project_db_path,
+            migrate_db_location,
+        )
 
-        # Run migration opportunistically (no-op if already migrated)
+        # Run directory-rename migration opportunistically (no-op if already migrated)
         migrate_db_location(self.project_root)
+
+        # Auto-migrate old single-file .kuzu-memory to directory format.
+        kuzu_memory_path = self.project_root / ".kuzu-memory"
+        _migrate_single_file_db(kuzu_memory_path)
 
         # Alternative hidden legacy path not handled by migrate_db_location
         alt_legacy = self.project_root / ".kuzu-memories"
-        if alt_legacy.exists() and not (self.project_root / ".kuzu-memory").exists():
+        if alt_legacy.exists() and not kuzu_memory_path.exists():
             return alt_legacy / "memories.db"
 
         # Delegate to canonical helper which returns the .db file path

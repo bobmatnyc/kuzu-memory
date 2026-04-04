@@ -186,6 +186,22 @@ class KuzuConnectionPool:
                 #    the parent already exists as a directory.
                 parent = self.db_path.parent
                 if parent.exists() and not parent.is_dir():
+                    # Attempt auto-migration before giving up.
+                    from kuzu_memory.utils.project_setup import _migrate_single_file_db
+
+                    if _migrate_single_file_db(parent):
+                        # Migration succeeded — retry opening the database and
+                        # return a fresh connection.
+                        try:
+                            with self._lock:
+                                if self._database is None:
+                                    self._database = _kuzu.Database(str(self.db_path))
+                            return _kuzu.Connection(self._database)
+                        except Exception as retry_exc:
+                            raise DatabaseError(
+                                f"Failed to initialize database at '{self.db_path}' "
+                                f"after auto-migrating old single-file format: {retry_exc}"
+                            ) from retry_exc
                     raise DatabaseError(
                         f"Failed to initialize database at '{self.db_path}': "
                         f"'{parent}' exists as a regular file (possibly an old "

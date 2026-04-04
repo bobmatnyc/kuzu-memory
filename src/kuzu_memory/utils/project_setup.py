@@ -6,6 +6,7 @@ Handles creation of project-specific memory directories and git integration.
 
 import logging
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +140,40 @@ def migrate_db_location(project_root: Path) -> bool:
     return False
 
 
+def _migrate_single_file_db(kuzu_memory_path: Path) -> bool:
+    """Auto-migrate old single-file .kuzu-memory to directory format.
+
+    Old Kùzu versions stored the database as a single file. Modern Kùzu
+    uses a directory structure. This migrates the old format by:
+    1. Backing up the old file to .kuzu-memory.bak (or timestamped variant)
+    2. Creating the .kuzu-memory/ directory in its place
+    3. The old file is NOT a valid Kùzu directory DB, so a fresh database
+       will be created by Kùzu on next access.
+
+    Args:
+        kuzu_memory_path: Path to the .kuzu-memory entry (may be a file or dir)
+
+    Returns:
+        True if migration was performed, False otherwise.
+    """
+    if not kuzu_memory_path.exists() or kuzu_memory_path.is_dir():
+        return False
+
+    # It's a regular file — back it up and create directory structure.
+    backup = kuzu_memory_path.with_suffix(".bak")
+    if backup.exists():
+        backup = kuzu_memory_path.parent / f".kuzu-memory.bak.{int(time.time())}"
+
+    logger.warning(
+        "Auto-migrating old single-file .kuzu-memory to directory format. "
+        "Old file backed up to %s",
+        backup.name,
+    )
+    kuzu_memory_path.rename(backup)
+    kuzu_memory_path.mkdir(parents=True)
+    return True
+
+
 def get_project_memories_dir(project_root: Path | None = None) -> Path:
     """
     Get the project memories directory path.
@@ -167,6 +202,10 @@ def get_project_memories_dir(project_root: Path | None = None) -> Path:
 
     new_path = root / ".kuzu-memory"
     legacy_path = root / "kuzu-memories"
+
+    # Auto-migrate old single-file format before returning the path.
+    # This is safe to call even if new_path doesn't exist yet (no-op).
+    _migrate_single_file_db(new_path)
 
     # Prefer new canonical path; fall back to legacy only when it already exists
     # and the new path does not yet (pre-migration state).
