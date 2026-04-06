@@ -541,6 +541,7 @@ def hooks_enhance() -> None:
             logger.debug(f"Input keys: {list(input_data.keys())}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
+            input_data = {}
             _exit_hook_with_json()
 
         # Extract and validate prompt
@@ -557,12 +558,16 @@ def hooks_enhance() -> None:
 
         # Find project root and initialize memory
         try:
-            # Use cached project root for faster lookup
-            project_root = _get_cached_project_root()
-            if project_root is None:
-                project_root = find_project_root()
-                if project_root:
-                    _cache_project_root(project_root)
+            # Prefer cwd from hook event JSON for project isolation
+            cwd = input_data.get("cwd", "") if isinstance(input_data, dict) else ""
+            if cwd:
+                project_root = find_project_root(start_path=Path(cwd))
+            else:
+                project_root = _get_cached_project_root()
+                if project_root is None:
+                    project_root = find_project_root()
+                    if project_root:
+                        _cache_project_root(project_root)
 
             if project_root is None:
                 logger.info("Project root not found, skipping enhancement")
@@ -968,15 +973,19 @@ def _learn_async(logger: Any) -> None:
         # Serialize input data to pass to worker
         input_json = json.dumps(input_data)
 
-        # OPTIMIZATION 1: Use cached project root discovery (100ms → 5ms)
+        # OPTIMIZATION 1: Use cwd from hook event for project isolation, then cached root
         if debug_timing:
             cache_start = time.time()
 
-        project_root = _get_cached_project_root()
-        if project_root is None:
-            project_root = find_project_root()
-            if project_root:
-                _cache_project_root(project_root)
+        cwd = input_data.get("cwd", "") if isinstance(input_data, dict) else ""
+        if cwd:
+            project_root = find_project_root(start_path=Path(cwd))
+        else:
+            project_root = _get_cached_project_root()
+            if project_root is None:
+                project_root = find_project_root()
+                if project_root:
+                    _cache_project_root(project_root)
 
         if debug_timing:
             cache_time = (time.time() - cache_start) * 1000
@@ -1086,6 +1095,7 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
             logger.info(f"Hook event: {hook_event}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from stdin: {e}")
+            input_data = {}
             _exit_hook_with_json()
 
         # Get transcript path
@@ -1136,7 +1146,11 @@ def _learn_sync(logger: Any, log_dir: Path) -> None:
 
         # Store the memory with auto_sync=False to skip init sync
         try:
-            project_root = find_project_root()
+            cwd = input_data.get("cwd", "") if isinstance(input_data, dict) else ""
+            if cwd:
+                project_root = find_project_root(start_path=Path(cwd))
+            else:
+                project_root = find_project_root()
             if project_root is None:
                 logger.info("Project root not found, skipping learning")
                 _exit_hook_with_json()
