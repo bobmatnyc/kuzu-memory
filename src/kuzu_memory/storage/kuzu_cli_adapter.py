@@ -22,7 +22,6 @@ from ..utils.exceptions import (
     DatabaseError,
     DatabaseLockError,
     PerformanceError,
-    PerformanceThresholdError,
 )
 
 logger = logging.getLogger(__name__)
@@ -145,14 +144,15 @@ class KuzuCLIAdapter:
                 # Parse results
                 results = self._parse_output(result.stdout, output_format)
 
-                # Check performance
+                # Check performance — warn only, return results regardless
                 execution_time_ms = (time.time() - start_time) * 1000
                 if (
                     self.config.performance.enable_performance_monitoring
                     and execution_time_ms > timeout_ms
                 ):
-                    raise PerformanceThresholdError(
-                        "execute_query", execution_time_ms / 1000, timeout_ms / 1000
+                    logger.warning(
+                        f"execute_query exceeded threshold: {execution_time_ms:.1f}ms "
+                        f"> {timeout_ms:.0f}ms (results returned)"
                     )
 
                 return results
@@ -163,8 +163,9 @@ class KuzuCLIAdapter:
 
         except subprocess.TimeoutExpired:
             execution_time_ms = (time.time() - start_time) * 1000
-            raise PerformanceThresholdError(
-                "execute_query", execution_time_ms / 1000, timeout_ms / 1000
+            raise DatabaseError(
+                f"execute_query timed out after {execution_time_ms:.0f}ms "
+                f"(limit: {timeout_ms:.0f}ms)"
             )
         except Exception as e:
             if isinstance(e, DatabaseError | PerformanceError):

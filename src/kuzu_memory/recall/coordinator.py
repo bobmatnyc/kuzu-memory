@@ -17,7 +17,7 @@ from ..core.config import KuzuMemoryConfig
 from ..core.models import Memory, MemoryContext, MemoryType
 from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
-from ..utils.exceptions import PerformanceError, PerformanceThresholdError, RecallError
+from ..utils.exceptions import PerformanceError, RecallError
 from ..utils.validation import validate_text_input
 from .strategies import EntityRecallStrategy, KeywordRecallStrategy, TemporalRecallStrategy
 from .temporal_decay import TemporalDecayEngine
@@ -275,15 +275,16 @@ class RecallCoordinator:
             # Update statistics
             self._update_coordinator_stats(strategy_used, context.recall_time_ms)
 
-            # Check performance requirement
+            # Check performance requirement — warn only, never discard valid results
             if (
                 self.config.performance.enable_performance_monitoring
                 and context.recall_time_ms > self.config.performance.max_recall_time_ms
             ):
-                raise PerformanceThresholdError(
-                    operation="attach_memories",
-                    actual_time=context.recall_time_ms / 1000.0,  # Convert to seconds
-                    threshold=self.config.performance.max_recall_time_ms / 1000.0,
+                logger.warning(
+                    "attach_memories exceeded performance threshold: "
+                    f"{context.recall_time_ms:.1f}ms > "
+                    f"{self.config.performance.max_recall_time_ms:.0f}ms "
+                    "(results returned)"
                 )
 
             logger.debug(
