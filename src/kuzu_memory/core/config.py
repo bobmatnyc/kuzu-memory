@@ -7,6 +7,7 @@ for both programmatic and file-based configuration.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -92,7 +93,7 @@ class ExtractionConfig:
 class PerformanceConfig:
     """Performance monitoring and limits."""
 
-    max_recall_time_ms: float = 200.0
+    max_recall_time_ms: float = 5000.0
     max_generation_time_ms: float = 1000.0  # Increased to 1 second for async operations
     enable_performance_monitoring: bool = True
     log_slow_operations: bool = True
@@ -289,6 +290,14 @@ class KuzuMemoryConfig:
                 for key, value in performance_data.items():
                     if hasattr(performance_config, key):
                         setattr(performance_config, key, value)
+
+            # Allow environment variable override for max_recall_time_ms
+            env_threshold = os.environ.get("KUZU_MEMORY_MAX_RECALL_TIME_MS")
+            if env_threshold:
+                try:
+                    performance_config.max_recall_time_ms = float(env_threshold)
+                except ValueError:
+                    pass  # ignore malformed env var
 
             retention_config = RetentionConfig()
             if "retention" in validated_config:

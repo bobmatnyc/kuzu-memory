@@ -453,16 +453,13 @@ class KuzuMemory:
             execution_time_ms = (time.time() - start_time) * 1000
             self._update_attach_stats(execution_time_ms, len(context.memories))
 
-            # Check performance requirement
+            # Check performance requirement — warn only, never block valid results
             if execution_time_ms > self.config.performance.max_recall_time_ms:
-                if self.config.performance.enable_performance_monitoring:
-                    raise PerformanceError(
-                        f"attach_memories took {execution_time_ms:.1f}ms, exceeding target of {self.config.performance.max_recall_time_ms}ms"
-                    )
-                else:
-                    logger.warning(
-                        f"attach_memories took {execution_time_ms:.1f}ms (target: {self.config.performance.max_recall_time_ms}ms)"
-                    )
+                logger.warning(
+                    f"attach_memories took {execution_time_ms:.1f}ms, "
+                    f"exceeding threshold of {self.config.performance.max_recall_time_ms}ms "
+                    "(results returned)"
+                )
 
             logger.debug(
                 f"attach_memories completed in {execution_time_ms:.1f}ms with {len(context.memories)} memories"
@@ -610,16 +607,13 @@ class KuzuMemory:
             execution_time_ms = (time.time() - start_time) * 1000
             self._update_generate_stats(execution_time_ms, len(memory_ids))
 
-            # Check performance requirement
+            # Check performance requirement — warn only, never block valid results
             if execution_time_ms > self.config.performance.max_generation_time_ms:
-                if self.config.performance.enable_performance_monitoring:
-                    raise PerformanceError(
-                        f"generate_memories took {execution_time_ms:.1f}ms, exceeding target of {self.config.performance.max_generation_time_ms}ms"
-                    )
-                else:
-                    logger.warning(
-                        f"generate_memories took {execution_time_ms:.1f}ms (target: {self.config.performance.max_generation_time_ms}ms)"
-                    )
+                logger.warning(
+                    f"generate_memories took {execution_time_ms:.1f}ms, "
+                    f"exceeding threshold of {self.config.performance.max_generation_time_ms}ms "
+                    "(results returned)"
+                )
 
             logger.debug(
                 f"generate_memories completed in {execution_time_ms:.1f}ms with {len(memory_ids)} memories"
