@@ -121,7 +121,7 @@ def cached_method(
                         oldest = min(cache.items(), key=lambda x: x[1][1])[0]
                         del cache[oldest]
 
-                result = func(self, *args, **kwargs)
+                result = cast(Callable[..., R], func)(self, *args, **kwargs)
                 cache[key] = (result, now + ttl_seconds)
                 return result
 

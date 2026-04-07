@@ -282,7 +282,7 @@ class KeywordRecallStrategy(RecallStrategy):
         # Sort by frequency and return top keywords
         sorted_keywords = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
 
-        return [word for word, count in sorted_keywords[:10]]
+        return [word for word, _count in sorted_keywords[:10]]
 
 
 class EntityRecallStrategy(RecallStrategy):
