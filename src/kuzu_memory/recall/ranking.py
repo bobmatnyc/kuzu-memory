@@ -11,7 +11,7 @@ from collections import Counter
 from datetime import datetime
 from typing import Any
 
-from ..core.models import Memory, MemoryType
+from ..core.models import KnowledgeType, Memory, MemoryType
 from .temporal_decay import TemporalDecayEngine
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,10 @@ class MemoryRanker:
             ],  # Dynamic from decay engine
             "type_relevance": self.config.get("type_relevance_weight", 0.10),
             "access_frequency": self.config.get("access_frequency_weight", 0.05),
+            # knowledge_type and access_count boosts are additive (not weighted)
+            # and handled separately via _calculate_knowledge_type_boost /
+            # _calculate_access_count_boost to keep them independent of weight
+            # normalisation.
         }
 
         # Memory type relevance scores for different contexts
@@ -171,8 +175,13 @@ class MemoryRanker:
         if user_preferences:
             scores = self._apply_user_preferences(scores, memory, user_preferences)
 
-        # Calculate weighted final score
+        # Calculate weighted final score for the base components
         final_score = sum(scores[component] * self.weights[component] for component in scores)
+
+        # Additive boosts: knowledge_type and access_count together account for
+        # ~15-20% of the final score weight at average base scores (~0.5).
+        final_score += self._calculate_knowledge_type_boost(memory)
+        final_score += self._calculate_access_count_boost(memory)
 
         return float(min(final_score, 1.0))  # Cap at 1.0
 
@@ -286,6 +295,41 @@ class MemoryRanker:
 
         return 0.0
 
+    def _calculate_knowledge_type_boost(self, memory: Memory) -> float:
+        """Return an additive boost based on the memory's knowledge_type field.
+
+        Higher-signal knowledge types surface above generic notes during recall.
+        Uses getattr() with a safe default so memories that pre-date the
+        knowledge_type field degrade gracefully to 0.0.
+
+        Returns:
+            Boost value in range [0.0, 0.25].
+        """
+        knowledge_type_boosts: dict[KnowledgeType, float] = {
+            KnowledgeType.RULE: 0.25,
+            KnowledgeType.GOTCHA: 0.20,
+            KnowledgeType.ARCHITECTURE: 0.20,
+            KnowledgeType.PATTERN: 0.15,
+            KnowledgeType.CONVENTION: 0.10,
+            KnowledgeType.NOTE: 0.00,
+        }
+        kt = getattr(memory, "knowledge_type", None)
+        return knowledge_type_boosts.get(kt, 0.0)  # type: ignore[arg-type]
+
+    def _calculate_access_count_boost(self, memory: Memory) -> float:
+        """Return a log-scaled boost based on how many times the memory was accessed.
+
+        Frequently-retrieved memories are likely more useful. The boost is capped
+        at 0.15 to avoid overwhelming other scoring factors. Uses getattr() with
+        a safe default so memories that pre-date access_count tracking degrade
+        gracefully.
+
+        Returns:
+            Boost value in range [0.0, 0.15].
+        """
+        count = getattr(memory, "access_count", 0) or 0
+        return min(0.15, math.log1p(count) * 0.05)
+
     def _apply_user_preferences(
         self, scores: dict[str, float], memory: Memory, user_preferences: dict[str, Any]
     ) -> dict[str, float]:
@@ -333,7 +377,12 @@ class MemoryRanker:
             component: scores[component] * self.weights[component] for component in scores
         }
 
-        final_score = sum(weighted_scores.values())
+        base_score = sum(weighted_scores.values())
+
+        # Additive boosts (not subject to weight normalisation)
+        knowledge_type_boost = self._calculate_knowledge_type_boost(memory)
+        access_count_boost = self._calculate_access_count_boost(memory)
+        final_score = min(base_score + knowledge_type_boost + access_count_boost, 1.0)
 
         return {
             "memory_id": memory.id,
@@ -341,6 +390,8 @@ class MemoryRanker:
             "component_scores": scores,
             "weighted_contributions": weighted_scores,
             "weights_used": self.weights.copy(),
+            "knowledge_type_boost": knowledge_type_boost,
+            "access_count_boost": access_count_boost,
             "memory_type": memory.memory_type.value,
             "memory_age_days": (datetime.now() - memory.created_at).days,
             "access_count": memory.access_count,
