@@ -195,27 +195,15 @@ class KeywordRecallStrategy(RecallStrategy):
     ) -> list[Memory]:
         """Execute keyword-based recall.
 
-        Tries the graph-based TF-IDF path first (O(1) graph lookup via
-        HAS_KEYWORD edges).  Falls back to the legacy content scan if the
-        graph path fails or returns no results (e.g. enricher has not yet run).
+        TF-IDF graph path disabled: raw SUM(tfidf) scores are not normalized
+        against semantic similarity scores — causes ranking collapse (R@5: 89%→40%).
+        The Keyword/HAS_KEYWORD graph is still populated by TFIDFKeywordEnricher
+        for future use once scoring normalization is implemented.
         """
         keywords = self._extract_keywords(prompt)
         if not keywords:
             return []
 
-        # Graph-based path: O(1) lookup via HAS_KEYWORD edges.
-        try:
-            graph_results = self._recall_via_keyword_graph(
-                keywords, max_memories, user_id, session_id, agent_id
-            )
-            if graph_results:
-                return graph_results
-        except Exception as exc:
-            logger.debug(
-                "KeywordRecallStrategy graph path failed (falling back to content scan): %s", exc
-            )
-
-        # Legacy content-scan fallback (O(N)).
         return self._recall_via_content_scan(keywords, max_memories, user_id, session_id, agent_id)
 
     def _recall_via_keyword_graph(

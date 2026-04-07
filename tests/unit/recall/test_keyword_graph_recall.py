@@ -1,11 +1,19 @@
 """
-Unit tests for KeywordRecallStrategy graph-based path.
+Unit tests for KeywordRecallStrategy.
+
+The TF-IDF graph path (_recall_via_keyword_graph) is currently disabled because
+raw SUM(tfidf) scores are not normalized against semantic similarity scores,
+causing a ranking collapse (R@5: 89%→40% in v1.11.0).  The Keyword/HAS_KEYWORD
+graph is still populated by TFIDFKeywordEnricher for future use once scoring
+normalization is implemented.
+
+All recall now goes through the content scan path (_recall_via_content_scan).
 
 Coverage:
-- Graph path is used when HAS_KEYWORD edges exist (returns results)
-- Falls back to content scan when graph returns no results (empty Keyword table)
-- Falls back to content scan when graph query raises an exception
-- Results from graph path are ordered by TF-IDF relevance (descending)
+- Content scan is always the primary path (graph path never called)
+- Content scan returns results correctly
+- Empty content scan returns empty list (no error)
+- Results from content scan are returned in created_at/importance order
 """
 
 from __future__ import annotations
@@ -53,15 +61,11 @@ def _make_memory_row(mem_id: str, content: str = "test content") -> dict[str, An
 
 
 def _make_strategy(
-    graph_rows: list[dict[str, Any]],
     scan_rows: list[dict[str, Any]],
 ) -> tuple[KeywordRecallStrategy, dict[str, int]]:
     """Build a KeywordRecallStrategy with a mock adapter.
 
-    The adapter distinguishes graph vs. scan calls by query content:
-    - Graph query contains "HAS_KEYWORD"
-    - Scan query contains "LOWER(m.content)"
-
+    The adapter tracks whether graph vs. scan queries are executed.
     Returns (strategy, call_count_dict).
     """
     call_count: dict[str, int] = {"graph": 0, "scan": 0}
@@ -69,7 +73,7 @@ def _make_strategy(
     def _execute(query: str, params: dict | None = None) -> list[dict]:
         if "HAS_KEYWORD" in query:
             call_count["graph"] += 1
-            return list(graph_rows)
+            return []
         else:
             call_count["scan"] += 1
             return list(scan_rows)
@@ -83,26 +87,25 @@ def _make_strategy(
 
 
 # ---------------------------------------------------------------------------
-# Test: graph path used when keywords exist
+# Test: graph path is disabled — content scan is always used
 # ---------------------------------------------------------------------------
 
 
-class TestGraphPathUsed:
-    def test_graph_path_used_when_keywords_exist(self) -> None:
-        """When the graph query returns results, the graph path should be used."""
-        memory_data = _make_memory_row("m1", "python async programming")
-        graph_rows = [{"m": memory_data, "relevance": 0.75}]
+class TestGraphPathDisabled:
+    """TF-IDF graph path is disabled; content scan is always the primary path."""
 
-        strategy, call_count = _make_strategy(
-            graph_rows=graph_rows,
-            scan_rows=[],
-        )
+    def test_content_scan_used_not_graph(self) -> None:
+        """Graph path must not be called; content scan must always be used."""
+        memory_data = _make_memory_row("m1", "python async programming")
+        scan_rows = [{"m": memory_data}]
+
+        strategy, call_count = _make_strategy(scan_rows=scan_rows)
 
         with patch("kuzu_memory.storage.query_builder.QueryBuilder") as MockQB:
             mock_memory = MagicMock()
             MockQB.return_value._convert_db_result_to_memory.return_value = mock_memory
 
-            strategy._execute_recall(
+            memories = strategy._execute_recall(
                 prompt="python programming",
                 max_memories=5,
                 user_id=None,
@@ -110,35 +113,31 @@ class TestGraphPathUsed:
                 agent_id="default",
             )
 
-        assert call_count["graph"] >= 1, "Graph path was not attempted"
-        assert call_count["scan"] == 0, "Content scan should not run when graph returns results"
+        assert call_count["graph"] == 0, "Graph path must not be called while disabled"
+        assert call_count["scan"] >= 1, "Content scan must be used as primary path"
+        assert len(memories) == 1
 
-    def test_scan_not_called_when_graph_succeeds(self) -> None:
-        """Content scan must be skipped entirely when the graph path returns memories."""
-        memory_data = _make_memory_row("m1")
-        graph_rows = [{"m": memory_data, "relevance": 0.5}]
+    def test_graph_path_never_called_regardless_of_keywords(self) -> None:
+        """Even with keywords present, graph path must remain dormant."""
+        strategy, call_count = _make_strategy(scan_rows=[])
 
-        strategy, call_count = _make_strategy(graph_rows=graph_rows, scan_rows=[])
+        strategy._execute_recall("python async database", 5, None, None, "default")
 
-        with patch("kuzu_memory.storage.query_builder.QueryBuilder") as MockQB:
-            MockQB.return_value._convert_db_result_to_memory.return_value = MagicMock()
-            strategy._execute_recall("test query", 5, None, None, "default")
-
-        assert call_count["scan"] == 0
+        assert call_count["graph"] == 0, "Graph path must remain disabled"
 
 
 # ---------------------------------------------------------------------------
-# Test: fall back to content scan when no keywords in graph
+# Test: content scan always runs as primary path
 # ---------------------------------------------------------------------------
 
 
-class TestFallbackWhenNoKeywords:
-    def test_falls_back_to_content_scan_when_no_keywords(self) -> None:
-        """When graph returns empty (Keyword table unpopulated), content scan runs."""
+class TestContentScanPrimary:
+    def test_content_scan_returns_results(self) -> None:
+        """Content scan results are returned correctly."""
         memory_data = _make_memory_row("m2", "fallback content")
         scan_rows = [{"m": memory_data}]
 
-        strategy, call_count = _make_strategy(graph_rows=[], scan_rows=scan_rows)
+        strategy, call_count = _make_strategy(scan_rows=scan_rows)
 
         with patch("kuzu_memory.storage.query_builder.QueryBuilder") as MockQB:
             MockQB.return_value._convert_db_result_to_memory.return_value = MagicMock()
@@ -151,15 +150,14 @@ class TestFallbackWhenNoKeywords:
                 agent_id="default",
             )
 
-        assert call_count["graph"] >= 1, "Graph path should be attempted first"
-        assert call_count["scan"] >= 1, "Content scan should run when graph returns nothing"
+        assert call_count["scan"] >= 1, "Content scan must run as primary path"
 
-    def test_content_scan_results_returned_on_empty_graph(self) -> None:
-        """Results from content scan are returned when graph path yields nothing."""
+    def test_content_scan_results_returned(self) -> None:
+        """Results from content scan are correctly returned."""
         memory_data = _make_memory_row("m3", "python database")
         scan_rows = [{"m": memory_data}]
 
-        strategy, _ = _make_strategy(graph_rows=[], scan_rows=scan_rows)
+        strategy, _ = _make_strategy(scan_rows=scan_rows)
 
         fake_memory = MagicMock()
         with patch("kuzu_memory.storage.query_builder.QueryBuilder") as MockQB:
@@ -172,66 +170,47 @@ class TestFallbackWhenNoKeywords:
 
 
 # ---------------------------------------------------------------------------
-# Test: fall back on query error
+# Test: empty and error cases
 # ---------------------------------------------------------------------------
 
 
-class TestFallbackOnQueryError:
-    def test_falls_back_on_query_error(self) -> None:
-        """If the graph query raises, strategy must fall back to content scan silently."""
-        memory_data = _make_memory_row("m4")
-        scan_rows = [{"m": memory_data}]
-        call_count: dict[str, int] = {"graph": 0, "scan": 0}
-
-        def _execute(query: str, params: dict | None = None) -> list[dict]:
-            if "HAS_KEYWORD" in query:
-                call_count["graph"] += 1
-                raise RuntimeError("HAS_KEYWORD table does not exist")
-            else:
-                call_count["scan"] += 1
-                return list(scan_rows)
-
-        adapter = MagicMock()
-        adapter.execute_query.side_effect = _execute
-
-        strategy = KeywordRecallStrategy(adapter, _make_config())
-
-        with patch("kuzu_memory.storage.query_builder.QueryBuilder") as MockQB:
-            MockQB.return_value._convert_db_result_to_memory.return_value = MagicMock()
-            # Must not raise.
-            memories = strategy._execute_recall("database python", 5, None, None, "default")
-
-        assert call_count["graph"] >= 1, "Graph path should have been attempted"
-        assert call_count["scan"] >= 1, "Content scan should have been used as fallback"
-        assert isinstance(memories, list)
-
-    def test_no_results_returned_on_both_paths_empty(self) -> None:
-        """When both paths return empty, result is an empty list (no error)."""
-        strategy, _ = _make_strategy(graph_rows=[], scan_rows=[])
+class TestEmptyAndErrorCases:
+    def test_empty_scan_returns_empty_list(self) -> None:
+        """When content scan returns nothing, result is an empty list (no error)."""
+        strategy, _ = _make_strategy(scan_rows=[])
 
         memories = strategy._execute_recall("something", 5, None, None, "default")
         assert memories == []
 
+    def test_no_keywords_returns_empty(self) -> None:
+        """Prompts with only stop words produce no keywords and return empty list."""
+        strategy, call_count = _make_strategy(scan_rows=[])
+
+        # All stop words — _extract_keywords returns []
+        memories = strategy._execute_recall("the a an is are", 5, None, None, "default")
+
+        assert memories == []
+        assert call_count["scan"] == 0, "Scan must not run when no keywords extracted"
+        assert call_count["graph"] == 0
+
 
 # ---------------------------------------------------------------------------
-# Test: relevance ordering by TF-IDF
+# Test: content scan ordering
 # ---------------------------------------------------------------------------
 
 
-class TestRelevanceOrdering:
-    def test_relevance_ordering_by_tfidf(self) -> None:
-        """Memories returned from graph path should be in descending relevance order."""
-        # The adapter returns rows sorted by relevance DESC (as the query requests).
-        # We verify the strategy preserves that ordering.
+class TestContentScanOrdering:
+    def test_content_scan_results_preserve_order(self) -> None:
+        """Results from content scan are returned in the order the DB supplies them
+        (created_at DESC, importance DESC — enforced by the query itself)."""
         rows = [
-            {"m": _make_memory_row("high", "python async"), "relevance": 1.5},
-            {"m": _make_memory_row("mid", "python database"), "relevance": 0.8},
-            {"m": _make_memory_row("low", "database"), "relevance": 0.2},
+            {"m": _make_memory_row("first", "python async")},
+            {"m": _make_memory_row("second", "python database")},
+            {"m": _make_memory_row("third", "database")},
         ]
 
-        strategy, call_count = _make_strategy(graph_rows=rows, scan_rows=[])
+        strategy, call_count = _make_strategy(scan_rows=rows)
 
-        # Track order of convert calls.
         converted_ids: list[str] = []
 
         def _convert(mem_data: dict) -> MagicMock:
@@ -246,7 +225,8 @@ class TestRelevanceOrdering:
 
             memories = strategy._execute_recall("python async", 5, None, None, "default")
 
-        assert call_count["graph"] >= 1
-        # The order from the graph query (highest relevance first) must be preserved.
-        assert converted_ids == ["high", "mid", "low"]
-        assert [m.id for m in memories] == ["high", "mid", "low"]
+        assert call_count["graph"] == 0, "Graph path must remain disabled"
+        assert call_count["scan"] >= 1
+        # Order from content scan must be preserved
+        assert converted_ids == ["first", "second", "third"]
+        assert [m.id for m in memories] == ["first", "second", "third"]
