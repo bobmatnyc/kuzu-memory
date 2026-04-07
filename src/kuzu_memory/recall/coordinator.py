@@ -498,6 +498,25 @@ class RecallCoordinator:
         count = getattr(memory, "access_count", 0) or 0
         return min(0.15, math.log1p(count) * 0.05)
 
+    def _graph_score_boost(self, memory: Memory) -> float:
+        """Return a boost derived from the memory's graph_score centrality value.
+
+        ``graph_score`` is populated by :class:`~kuzu_memory.enrichment.CentralityEnricher`
+        and represents a normalised in-degree proxy (entity-mention count).
+        Memories with many entity connections are more likely to be relevant
+        and receive up to a 0.10 boost.
+
+        Uses ``getattr()`` with a default of ``None`` so memories that were
+        stored before the enricher ran degrade gracefully to 0.0.
+
+        Returns:
+            Boost value in range [0.0, 0.10].
+        """
+        score = getattr(memory, "graph_score", None)
+        if score is None:
+            return 0.0
+        return min(0.10, float(score) * 0.10)
+
     def _calculate_relevance_score(self, memory: Memory, prompt_lower: str) -> float:
         """Calculate relevance score for a memory given the prompt.
 
@@ -561,6 +580,10 @@ class RecallCoordinator:
         # Access-count boost: frequently-retrieved memories are more useful.
         # Log-scaled and capped at 0.15 to prevent dominating other signals.
         score += self._access_count_boost(memory)
+
+        # Graph-score boost: memories with high entity centrality are better connected.
+        # Populated by CentralityEnricher; degrades gracefully to 0.0 when absent.
+        score += self._graph_score_boost(memory)
 
         return min(score, 1.0)  # Cap at 1.0
 
