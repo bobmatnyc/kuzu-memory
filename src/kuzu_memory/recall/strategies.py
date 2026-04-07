@@ -282,7 +282,7 @@ class KeywordRecallStrategy(RecallStrategy):
         # Sort by frequency and return top keywords
         sorted_keywords = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
 
-        return [word for word, count in sorted_keywords[:10]]
+        return [word for word, _count in sorted_keywords[:10]]
 
 
 class EntityRecallStrategy(RecallStrategy):
@@ -292,6 +292,11 @@ class EntityRecallStrategy(RecallStrategy):
     Finds memories by matching entities extracted from the prompt
     with entities mentioned in stored memories.
     """
+
+    # Instrumentation hook used by tests to track call counts per query type.
+    # Production code never sets this attribute; it exists only to satisfy
+    # type-checkers when tests assign ``strategy._call_count = {...}``.
+    _call_count: dict[str, int]
 
     def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         super().__init__(db_adapter, config)
@@ -310,7 +315,17 @@ class EntityRecallStrategy(RecallStrategy):
         session_id: str | None,
         agent_id: str,
     ) -> list[Memory]:
-        """Execute entity-based recall."""
+        """Execute entity-based recall with optional 2-hop CO_OCCURS_WITH expansion.
+
+        Primary recall: finds memories directly mentioning entities extracted
+        from the prompt.
+
+        2-hop expansion: when primary results are sparse (fewer than
+        ``max_memories``), follows CO_OCCURS_WITH edges from the matched
+        entities to related entities and retrieves their memories.  Expanded
+        results are returned alongside primary results; the caller's ranker
+        applies any desired score penalty.
+        """
 
         # Extract entities from prompt
         entities = self.entity_extractor.extract_entities(prompt)
@@ -319,7 +334,6 @@ class EntityRecallStrategy(RecallStrategy):
             return []
 
         # Get entity names for matching
-        [entity.text for entity in entities]
         normalized_names = [entity.normalized_text for entity in entities]
 
         # Build query to find memories through entity relationships
@@ -329,7 +343,7 @@ class EntityRecallStrategy(RecallStrategy):
             AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "entity_names": normalized_names,
             "current_time": datetime.now().isoformat(),
             "limit": max_memories,
@@ -357,11 +371,11 @@ class EntityRecallStrategy(RecallStrategy):
             LIMIT $limit
         """
 
-        # Execute query
+        # Execute primary query
         results = self.db_adapter.execute_query(query, parameters)
 
         # Convert results to Memory objects using QueryBuilder
-        memories = []
+        memories: list[Memory] = []
         from ..storage.query_builder import QueryBuilder
 
         query_builder = QueryBuilder(self.db_adapter)
@@ -376,7 +390,100 @@ class EntityRecallStrategy(RecallStrategy):
                 logger.warning(f"Failed to parse memory from database: {e}")
                 continue
 
+        # 2-hop expansion via CO_OCCURS_WITH when primary results are sparse.
+        # This uses the enriched entity co-occurrence graph to surface memories
+        # that are indirectly related to the prompt entities.
+        if len(memories) < max_memories:
+            expanded = self._expand_via_cooccurrence(
+                normalized_names=normalized_names,
+                found_ids=[m.id for m in memories],
+                remaining=max_memories - len(memories),
+                user_id=user_id,
+                session_id=session_id,
+                agent_id=agent_id,
+                query_builder=query_builder,
+            )
+            memories.extend(expanded)
+
         return memories
+
+    def _expand_via_cooccurrence(
+        self,
+        normalized_names: list[str],
+        found_ids: list[str],
+        remaining: int,
+        user_id: str | None,
+        session_id: str | None,
+        agent_id: str,
+        query_builder: Any,
+    ) -> list[Memory]:
+        """Follow CO_OCCURS_WITH edges for 2-hop memory expansion.
+
+        Returns at most ``remaining`` additional memories not already in
+        ``found_ids``.  Returned memories are tagged with a reduced confidence
+        (0.7x) by the caller's ranker to distinguish them from primary hits.
+
+        If the CO_OCCURS_WITH relationship table does not yet exist (e.g. the
+        enricher has never run), the query will fail gracefully and an empty
+        list is returned — the primary results are never discarded.
+        """
+        if not normalized_names or remaining <= 0:
+            return []
+
+        params: dict[str, Any] = {
+            "entity_names": normalized_names,
+            "found_ids": found_ids,
+            "current_time": datetime.now().isoformat(),
+            "limit": remaining,
+        }
+
+        hop2_query = """
+            MATCH (e1:Entity)-[:CO_OCCURS_WITH]-(e2:Entity)<-[:MENTIONS]-(m:Memory)
+            WHERE e1.normalized_name IN $entity_names
+            AND NOT m.id IN $found_ids
+            AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
+        """
+
+        if user_id:
+            hop2_query += " AND m.user_id = $user_id"
+            params["user_id"] = user_id
+
+        if session_id:
+            hop2_query += " AND m.session_id = $session_id"
+            params["session_id"] = session_id
+
+        if agent_id and agent_id != "default":
+            hop2_query += " AND m.agent_id = $agent_id"
+            params["agent_id"] = agent_id
+
+        hop2_query += """
+            RETURN DISTINCT m
+            ORDER BY m.importance DESC, m.created_at DESC
+            LIMIT $limit
+        """
+
+        try:
+            rows = self.db_adapter.execute_query(hop2_query, params)
+        except Exception as exc:
+            # CO_OCCURS_WITH may not exist yet (enricher hasn't run) — silent fallback.
+            logger.debug("2-hop expansion query failed (non-fatal, table may not exist): %s", exc)
+            return []
+
+        expanded: list[Memory] = []
+        for row in rows:
+            try:
+                memory = query_builder._convert_db_result_to_memory(row["m"])
+                if memory:
+                    # Apply 0.7x confidence multiplier to mark as 2-hop result.
+                    memory.confidence *= 0.7
+                    expanded.append(memory)
+            except Exception as e:
+                logger.warning("Failed to parse 2-hop memory: %s", e)
+
+        if expanded:
+            logger.debug("2-hop expansion added %d memories", len(expanded))
+
+        return expanded
 
 
 class TemporalRecallStrategy(RecallStrategy):

@@ -56,6 +56,10 @@ logger = logging.getLogger(__name__)
 P = ParamSpec("P")
 R = TypeVar("R")
 
+# Trigger background enrichment every N writes to keep CO_OCCURS_WITH edges
+# and graph_score centrality up-to-date without blocking each ingestion call.
+_ENRICHMENT_INTERVAL = 50
+
 
 def cached_method(
     maxsize: int = DEFAULT_CACHE_SIZE, ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS
@@ -117,7 +121,7 @@ def cached_method(
                         oldest = min(cache.items(), key=lambda x: x[1][1])[0]
                         del cache[oldest]
 
-                result = func(self, *args, **kwargs)
+                result = cast(Callable[..., R], func)(self, *args, **kwargs)
                 cache[key] = (result, now + ttl_seconds)
                 return result
 
@@ -166,6 +170,10 @@ class KuzuMemory:
     _auto_sync: bool
     _initialized_at: datetime
     _performance_stats: dict[str, Any]
+    # Counter used to trigger periodic background enrichment.
+    # Enrichment fires every _ENRICHMENT_INTERVAL writes so it keeps up
+    # with a busy ingestion pipeline without running after every single write.
+    _writes_since_enrichment: int
 
     def __init__(
         self,
@@ -310,6 +318,9 @@ class KuzuMemory:
                 "total_memories_recalled": 0,
             }
 
+            # Write counter for periodic background enrichment.
+            self._writes_since_enrichment = 0
+
         except Exception as e:
             raise DatabaseError(f"Failed to initialize components: {e}") from e
 
@@ -374,6 +385,33 @@ class KuzuMemory:
         except Exception as e:
             # Don't let git sync failures block main operations
             logger.debug(f"Auto git sync failed ({trigger}): {e}")
+
+    def _maybe_enrich(self, writes: int = 1) -> None:
+        """Increment the write counter and trigger enrichment every N writes.
+
+        Enrichment is submitted to a background thread so it never blocks
+        the caller.  The counter is intentionally not thread-safe (no lock)
+        because occasional missed triggers are acceptable — the enricher is
+        idempotent and will catch up on the next trigger.
+
+        Args:
+            writes: How many memories were written in this operation (default 1).
+        """
+        self._writes_since_enrichment += writes
+        if self._writes_since_enrichment >= _ENRICHMENT_INTERVAL:
+            self._writes_since_enrichment = 0
+            try:
+                from ..enrichment import EnrichmentRunner
+
+                adapter = self.container.get_database_adapter()
+                EnrichmentRunner(adapter, self.config).run_background()  # type: ignore[arg-type]
+                logger.debug(
+                    "_maybe_enrich: background enrichment triggered after %d writes",
+                    _ENRICHMENT_INTERVAL,
+                )
+            except Exception as exc:
+                # Never let enrichment failure surface to the caller.
+                logger.debug("_maybe_enrich: enrichment submission failed (non-fatal): %s", exc)
 
     @cached_method()  # Uses default cache settings from constants
     def attach_memories(
@@ -542,6 +580,8 @@ class KuzuMemory:
         # Store directly in the database
         try:
             self.memory_store._store_memory_in_database(memory)
+            # Trigger periodic background enrichment after every N writes.
+            self._maybe_enrich(writes=1)
             return memory.id
         except Exception as e:
             logger.error(f"Failed to store memory: {e}")
@@ -621,6 +661,9 @@ class KuzuMemory:
 
             # Trigger auto-sync after generate (if enabled)
             self._auto_git_sync("learn")
+
+            # Trigger periodic background enrichment proportional to write count.
+            self._maybe_enrich(writes=len(memory_ids))
 
             return memory_ids  # List return type inferred as Any from store
 

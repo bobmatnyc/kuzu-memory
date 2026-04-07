@@ -1,0 +1,40 @@
+"""
+KuzuMemory graph enrichment subsystem.
+
+Provides background enrichers that populate derived graph structures from
+existing Memory and Entity nodes.  Enrichers are idempotent, write-lock
+compliant, and must never block recall or ingestion.
+
+Public API::
+
+    from kuzu_memory.enrichment import (
+        BaseEnricher,
+        EnrichmentResult,
+        EnrichmentRunner,
+        EntityCoOccurrenceEnricher,
+        CentralityEnricher,
+    )
+
+Typical usage::
+
+    from kuzu_memory.enrichment import EnrichmentRunner
+
+    # Fire-and-forget from _optimize_full_maintenance or post-ingestion:
+    EnrichmentRunner(adapter, config).run_background()
+
+    # Synchronous (tests, explicit kuzu_optimize tool):
+    results = EnrichmentRunner(adapter, config).run_all()
+"""
+
+from .base import BaseEnricher, EnrichmentResult
+from .centrality import CentralityEnricher
+from .entity_cooccurrence import EntityCoOccurrenceEnricher
+from .runner import EnrichmentRunner
+
+__all__ = [
+    "BaseEnricher",
+    "CentralityEnricher",
+    "EnrichmentResult",
+    "EnrichmentRunner",
+    "EntityCoOccurrenceEnricher",
+]

@@ -1445,6 +1445,25 @@ class KuzuMemoryMCPServer:
         if not suggestions:
             suggestions.append("Database is already clean — nothing to do.")
 
+        # Run graph enrichment in the background (fire-and-forget).
+        # Enrichment populates CO_OCCURS_WITH edges and graph_score centrality.
+        # It is skipped during dry-run to avoid mutating the graph for analysis-only calls.
+        enrichment_summary: dict[str, Any] = {}
+        if not dry_run:
+            try:
+                from ..enrichment import EnrichmentRunner
+
+                runner = EnrichmentRunner(db_adapter, db_adapter.config)
+                runner.run_background()
+                enrichment_summary = {"status": "submitted_background"}
+                suggestions.append("Graph enrichment submitted (background thread)")
+            except Exception as enrich_exc:
+                logger.warning(
+                    "_optimize_full_maintenance: enrichment submission failed (non-fatal): %s",
+                    enrich_exc,
+                )
+                enrichment_summary = {"status": "skipped", "error": str(enrich_exc)}
+
         return {
             "status": "completed",
             "strategy": "full_maintenance",
@@ -1460,6 +1479,7 @@ class KuzuMemoryMCPServer:
                 "metadata_trimmed": trimmed,
                 "bytes_saved_estimate": saved,
             },
+            "enrichment": enrichment_summary,
             "suggestions": suggestions,
             **({"errors": any_error} if any_error else {}),
         }
