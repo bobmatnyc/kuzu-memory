@@ -8,13 +8,14 @@ the final MemoryContext for the attach_memories() method.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
 from ..core.config import KuzuMemoryConfig
-from ..core.models import Memory, MemoryContext, MemoryType
+from ..core.models import KnowledgeType, Memory, MemoryContext, MemoryType
 from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
@@ -447,7 +448,7 @@ class RecallCoordinator:
         # Sort by score (highest first)
         scored_memories.sort(key=lambda x: x[1], reverse=True)
 
-        return [memory for memory, score in scored_memories]
+        return [memory for memory, _ in scored_memories]
 
     def _type_boost(self, memory: Memory) -> float:
         """Return the memory-type boost factor for a single memory (0-1 scale)."""
@@ -461,13 +462,60 @@ class RecallCoordinator:
         }
         return type_boosts.get(memory.memory_type, 0.5)
 
+    def _knowledge_type_boost(self, memory: Memory) -> float:
+        """Return a boost based on the memory's knowledge_type field.
+
+        Higher-signal knowledge types (rules, gotchas, architecture) receive
+        larger boosts so they surface above generic notes during graph-only recall.
+        Uses getattr() with a default so memories lacking the attribute degrade
+        gracefully to 0.0 rather than raising AttributeError.
+
+        Returns:
+            Boost value in range [0.0, 0.25].
+        """
+        knowledge_type_boosts: dict[KnowledgeType, float] = {
+            KnowledgeType.RULE: 0.25,
+            KnowledgeType.GOTCHA: 0.20,
+            KnowledgeType.ARCHITECTURE: 0.20,
+            KnowledgeType.PATTERN: 0.15,
+            KnowledgeType.CONVENTION: 0.10,
+            KnowledgeType.NOTE: 0.00,
+        }
+        kt = getattr(memory, "knowledge_type", None)
+        return knowledge_type_boosts.get(kt, 0.0)  # type: ignore[arg-type]
+
+    def _access_count_boost(self, memory: Memory) -> float:
+        """Return a log-scaled boost based on the memory's access_count field.
+
+        Memories that have been frequently retrieved are likely more useful.
+        The boost is capped at 0.15 to avoid overwhelming other scoring factors.
+        Uses getattr() with a default of 0 so memories lacking the attribute
+        degrade gracefully.
+
+        Returns:
+            Boost value in range [0.0, 0.15].
+        """
+        count = getattr(memory, "access_count", 0) or 0
+        return min(0.15, math.log1p(count) * 0.05)
+
     def _calculate_relevance_score(self, memory: Memory, prompt_lower: str) -> float:
-        """Calculate relevance score for a memory given the prompt."""
+        """Calculate relevance score for a memory given the prompt.
+
+        Scoring breakdown (approximate weights at 1.0 cap):
+        - importance:       0.25  (was 0.30; reduced slightly to make room)
+        - confidence:       0.15  (was 0.20; reduced slightly)
+        - memory_type:      0.15
+        - content overlap:  0.25
+        - entity match:     0.10 per hit (capped by overall 1.0 ceiling)
+        - recency:          0.08
+        - knowledge_type:   0.00-0.25 additive boost
+        - access_count:     0.00-0.15 additive boost
+        """
         score = 0.0
 
         # Base score from memory importance and confidence
-        score += memory.importance * 0.3
-        score += memory.confidence * 0.2
+        score += memory.importance * 0.25
+        score += memory.confidence * 0.15
 
         # Boost score for memory type relevance
         type_boosts = {
@@ -478,7 +526,7 @@ class RecallCoordinator:
             MemoryType.WORKING: 0.3,  # Current tasks (was STATUS)
             MemoryType.SENSORY: 0.4,  # Sensory descriptions
         }
-        score += type_boosts.get(memory.memory_type, 0.5) * 0.2
+        score += type_boosts.get(memory.memory_type, 0.5) * 0.15
 
         # Boost score for content similarity
         memory_content_lower = memory.content.lower()
@@ -491,7 +539,7 @@ class RecallCoordinator:
             overlap = len(prompt_words.intersection(memory_words))
             union = len(prompt_words.union(memory_words))
             similarity = overlap / union if union > 0 else 0
-            score += similarity * 0.3
+            score += similarity * 0.25
 
         # Boost for entity matches
         if memory.entities:
@@ -503,8 +551,16 @@ class RecallCoordinator:
 
         # Recency boost (more recent memories get slight boost)
         days_old = (datetime.now() - memory.created_at).days
-        recency_boost = max(0, (30 - days_old) / 30) * 0.1
+        recency_boost = max(0, (30 - days_old) / 30) * 0.08
         score += recency_boost
+
+        # Knowledge-type boost: rules/gotchas/architecture rank above generic notes.
+        # Accounts for ~0-15% of the final score when other factors are average.
+        score += self._knowledge_type_boost(memory)
+
+        # Access-count boost: frequently-retrieved memories are more useful.
+        # Log-scaled and capped at 0.15 to prevent dominating other signals.
+        score += self._access_count_boost(memory)
 
         return min(score, 1.0)  # Cap at 1.0
 
