@@ -17,13 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from kuzu_memory.core.config import KuzuMemoryConfig
-from kuzu_memory.enrichment import (
-    BaseEnricher,
-    CentralityEnricher,
-    EnrichmentResult,
-    EnrichmentRunner,
-    EntityCoOccurrenceEnricher,
-)
+from kuzu_memory.enrichment import CentralityEnricher, EnrichmentRunner, EntityCoOccurrenceEnricher
 from kuzu_memory.recall.coordinator import RecallCoordinator
 
 # ---------------------------------------------------------------------------
@@ -48,7 +42,7 @@ def _make_adapter(query_responses: dict[str, Any] | None = None) -> MagicMock:
             if key in query:
                 if isinstance(value, Exception):
                     raise value
-                return value
+                return list(value)
         return []
 
     adapter.execute_query.side_effect = _execute_query

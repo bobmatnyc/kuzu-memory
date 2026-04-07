@@ -293,6 +293,11 @@ class EntityRecallStrategy(RecallStrategy):
     with entities mentioned in stored memories.
     """
 
+    # Instrumentation hook used by tests to track call counts per query type.
+    # Production code never sets this attribute; it exists only to satisfy
+    # type-checkers when tests assign ``strategy._call_count = {...}``.
+    _call_count: dict[str, int]
+
     def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
         super().__init__(db_adapter, config)
         self.strategy_name = "entity"
@@ -329,7 +334,6 @@ class EntityRecallStrategy(RecallStrategy):
             return []
 
         # Get entity names for matching
-        [entity.text for entity in entities]
         normalized_names = [entity.normalized_text for entity in entities]
 
         # Build query to find memories through entity relationships
