@@ -272,6 +272,16 @@ class RecallCoordinator:
                 apply_temporal_decay=apply_temporal_decay,
                 use_semantic_search=use_semantic_search,
             )
+
+            # Optional LLM reranking pass (MCP path only, opt-in via config).
+            # Reranks the top-K candidates before the final slice so the LLM
+            # sees the best candidates rather than only the requested limit.
+            if self.config.recall.reranking.enabled:
+                from .reranker import LLMReranker  # lazy import — anthropic optional
+
+                reranker = LLMReranker(self.config.recall.reranking)
+                ranked_memories = reranker.rerank(clean_prompt, ranked_memories, max_memories)
+
             final_memories = ranked_memories[:max_memories]
 
             # Track memory access for analytics (zero-latency)

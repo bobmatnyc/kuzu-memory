@@ -42,6 +42,16 @@ class StorageConfig:
 
 
 @dataclass
+class RerankingConfig:
+    """Configuration for the optional LLM reranking pass (MCP path only)."""
+
+    enabled: bool = False
+    model: str = "claude-haiku-4-5"
+    top_k_to_rerank: int = 20
+    timeout_ms: int = 2000
+
+
+@dataclass
 class RecallConfig:
     """Memory recall configuration."""
 
@@ -55,6 +65,7 @@ class RecallConfig:
     enable_caching: bool = True
     cache_size: int = 1000
     cache_ttl_seconds: int = 300
+    reranking: RerankingConfig = field(default_factory=RerankingConfig)
 
 
 @dataclass
@@ -267,8 +278,18 @@ class KuzuMemoryConfig:
             if "recall" in validated_config:
                 recall_data = validated_config["recall"]
                 for key, value in recall_data.items():
-                    if hasattr(recall_config, key):
+                    if key == "reranking" and isinstance(value, dict):
+                        reranking_cfg = RerankingConfig()
+                        for rk, rv in value.items():
+                            if hasattr(reranking_cfg, rk):
+                                setattr(reranking_cfg, rk, rv)
+                        recall_config.reranking = reranking_cfg
+                    elif hasattr(recall_config, key):
                         setattr(recall_config, key, value)
+
+            # Allow environment variable override: KUZU_MEMORY_RERANK=1 enables reranking
+            if os.environ.get("KUZU_MEMORY_RERANK") == "1":
+                recall_config.reranking.enabled = True
 
             memory_config = MemoryConfig()
             if "memory" in validated_config:
@@ -424,6 +445,12 @@ class KuzuMemoryConfig:
                 "enable_caching": self.recall.enable_caching,
                 "cache_size": self.recall.cache_size,
                 "cache_ttl_seconds": self.recall.cache_ttl_seconds,
+                "reranking": {
+                    "enabled": self.recall.reranking.enabled,
+                    "model": self.recall.reranking.model,
+                    "top_k_to_rerank": self.recall.reranking.top_k_to_rerank,
+                    "timeout_ms": self.recall.reranking.timeout_ms,
+                },
             },
             "memory": {
                 "auto_tag_git_user": self.memory.auto_tag_git_user,

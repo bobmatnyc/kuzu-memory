@@ -2,6 +2,7 @@
 
 from .coordinator import RecallCoordinator
 from .ranking import MemoryRanker
+from .reranker import LLMReranker
 from .strategies import (
     EntityRecallStrategy,
     KeywordRecallStrategy,
@@ -12,6 +13,8 @@ from .strategies import (
 __all__ = [
     "EntityRecallStrategy",
     "KeywordRecallStrategy",
+    # Reranker
+    "LLMReranker",
     # Ranking
     "MemoryRanker",
     # Coordinator
