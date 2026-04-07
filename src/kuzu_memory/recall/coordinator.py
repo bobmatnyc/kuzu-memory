@@ -16,6 +16,7 @@ from typing import Any
 
 from ..core.config import KuzuMemoryConfig
 from ..core.models import KnowledgeType, Memory, MemoryContext, MemoryType
+from ..enrichment.hnsw_index import HNSW_INDEX_NAME
 from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
@@ -223,6 +224,16 @@ class RecallCoordinator:
                 else:
                     self._coordinator_stats["cache_misses"] += 1
 
+            # When semantic search is enabled (MCP path only), attempt to use the
+            # Kùzu native HNSW vector index.  On success the HNSW candidates are
+            # merged with graph-strategy candidates so structural signals (entity
+            # matches, temporal decay) can still influence the final ranking.
+            # On failure (index absent, column missing, model unavailable) we fall
+            # through to the pure graph-strategy path transparently.
+            hnsw_memories: list[Memory] | None = None
+            if use_semantic_search:
+                hnsw_memories = self._recall_with_hnsw(clean_prompt, max_memories)
+
             # Execute recall strategy
             if strategy == "auto":
                 memories = self._auto_recall(
@@ -234,6 +245,14 @@ class RecallCoordinator:
                     strategy, clean_prompt, max_memories, user_id, session_id, agent_id
                 )
                 strategy_used = strategy
+
+            # Merge HNSW candidates into the graph-strategy candidates so the
+            # ranking layer sees both.  HNSW results are inserted at the front
+            # so they are not dropped when deduplication runs; duplicates by ID
+            # are removed inside _rank_memories.
+            if hnsw_memories:
+                memories = hnsw_memories + memories
+                strategy_used = f"{strategy_used}+hnsw"
 
             # Rank and filter memories
             ranked_memories = self._rank_memories(
@@ -361,6 +380,61 @@ class RecallCoordinator:
         return self.strategies[strategy_name].recall(
             prompt, max_memories, user_id, session_id, agent_id
         )
+
+    def _recall_with_hnsw(self, query: str, limit: int) -> list[Memory] | None:
+        """Query the Kùzu native HNSW vector index for approximate nearest neighbours.
+
+        Replaces the brute-force O(N) NumPy cosine scan with an O(log N) index
+        look-up when the index is available and the embedding column is populated.
+
+        This method is MCP path ONLY (called only when use_semantic_search=True).
+        Hooks must never reach this code path.
+
+        Kùzu 0.11.3 confirmed QUERY_VECTOR_INDEX syntax::
+
+            CALL QUERY_VECTOR_INDEX("Memory", "memory_hnsw_idx", $embedding, $k)
+            RETURN node, distance
+
+        Args:
+            query: The recall prompt text to embed and search with.
+            limit: Maximum number of candidates to return (we over-fetch by 2x
+                   to give the ranking layer enough material).
+
+        Returns:
+            List of Memory objects sorted by ascending HNSW distance (most similar
+            first), or ``None`` if HNSW is unavailable / fails (signals fallback).
+        """
+        query_emb = self._semantic_scorer.embed(query)
+        if query_emb is None:
+            # sentence-transformers not available — signal fallback.
+            return None
+
+        try:
+            result_rows = self.db_adapter.execute_query(
+                f'CALL QUERY_VECTOR_INDEX("Memory", "{HNSW_INDEX_NAME}", $embedding, $k) '
+                "RETURN node, distance",
+                parameters={"embedding": query_emb.tolist(), "k": limit * 2},
+            )
+        except Exception as exc:
+            # Index absent, column missing, or any other HNSW error → fallback.
+            logger.debug("_recall_with_hnsw: HNSW query failed, will fall back to NumPy: %s", exc)
+            return None
+
+        if not result_rows:
+            return []
+
+        memories: list[Memory] = []
+        for row in result_rows:
+            node_data = row.get("node")
+            if node_data is None:
+                continue
+            try:
+                memory = Memory.from_dict(node_data)
+                memories.append(memory)
+            except Exception as parse_exc:
+                logger.debug("_recall_with_hnsw: failed to parse node: %s", parse_exc)
+
+        return memories
 
     def _rank_memories(
         self,
