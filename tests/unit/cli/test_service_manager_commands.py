@@ -360,3 +360,92 @@ class TestCustomDbPath:
                 result = runner.invoke(status, ["--db-path", "/custom/path/db"])
 
                 assert result.exit_code == 0
+
+
+class TestGroupLevelDbPath:
+    """Test that group-level --db-path is honoured when no local flag is provided."""
+
+    def test_status_uses_group_db_path(self, runner, mock_memory_service):
+        """status uses ctx.obj['db_path'] when no local --db-path is given."""
+        mock_memory_service.get_memory_count.return_value = 5
+        mock_memory_service.get_recent_memories.return_value = []
+
+        # Use a MagicMock path so .exists() returns True
+        group_db_path = MagicMock(spec=Path)
+        group_db_path.exists.return_value = True
+
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
+            mock_ctx.return_value.__enter__.return_value = mock_memory_service
+            with patch("kuzu_memory.cli.status_commands.get_project_db_path") as mock_default:
+                mock_default_path = MagicMock(spec=Path)
+                mock_default_path.exists.return_value = True
+                mock_default.return_value = mock_default_path
+
+                # Pass group-level db_path via obj (simulates --db-path at group level)
+                result = runner.invoke(status, [], obj={"db_path": group_db_path})
+
+                assert (
+                    result.exit_code == 0
+                ), f"Output: {result.output}\nException: {result.exception}"
+                # get_project_db_path should NOT have been called
+                mock_default.assert_not_called()
+                # ServiceManager should have been called with the group-level path
+                assert mock_ctx.called
+                call_args, call_kwargs = mock_ctx.call_args
+                resolved = call_kwargs.get("db_path") or (call_args[0] if call_args else None)
+                assert resolved is not None
+
+    def test_status_local_db_path_wins_over_group(self, runner, mock_memory_service):
+        """Local --db-path takes precedence over ctx.obj['db_path']."""
+        mock_memory_service.get_memory_count.return_value = 3
+        mock_memory_service.get_recent_memories.return_value = []
+
+        # Group path as a MagicMock to avoid filesystem hits
+        group_db_path = MagicMock(spec=Path)
+        group_db_path.exists.return_value = True
+        local_db_path = "/local/level/db"
+
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
+            mock_ctx.return_value.__enter__.return_value = mock_memory_service
+            with patch("kuzu_memory.cli.status_commands.Path") as mock_path_class:
+                mock_local_path = MagicMock(spec=Path)
+                mock_local_path.exists.return_value = True
+                mock_path_class.return_value = mock_local_path
+
+                result = runner.invoke(
+                    status,
+                    ["--db-path", local_db_path],
+                    obj={"db_path": group_db_path},
+                )
+
+                assert (
+                    result.exit_code == 0
+                ), f"Output: {result.output}\nException: {result.exception}"
+                # Path() was called with the local path string (local flag wins)
+                mock_path_class.assert_called_once_with(local_db_path)
+                # ServiceManager should have been called with the constructed local path
+                call_kwargs = mock_ctx.call_args[1]
+                assert call_kwargs["db_path"] is mock_local_path
+
+    def test_status_uses_default_when_no_db_path(self, runner, mock_memory_service):
+        """status falls back to get_project_db_path when no --db-path is set anywhere."""
+        mock_memory_service.get_memory_count.return_value = 0
+        mock_memory_service.get_recent_memories.return_value = []
+
+        with patch("kuzu_memory.cli.service_manager.ServiceManager.memory_service") as mock_ctx:
+            mock_ctx.return_value.__enter__.return_value = mock_memory_service
+            with patch("kuzu_memory.cli.status_commands.get_project_db_path") as mock_default:
+                mock_default_path = MagicMock(spec=Path)
+                mock_default_path.exists.return_value = True
+                mock_default.return_value = mock_default_path
+
+                # obj has no db_path key
+                result = runner.invoke(status, [], obj={})
+
+                assert (
+                    result.exit_code == 0
+                ), f"Output: {result.output}\nException: {result.exception}"
+                # Default path should have been used
+                mock_default.assert_called_once()
+                call_kwargs = mock_ctx.call_args[1]
+                assert call_kwargs["db_path"] == mock_default_path

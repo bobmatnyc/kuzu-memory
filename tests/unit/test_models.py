@@ -228,6 +228,72 @@ class TestMemory:
         assert memory_trailing.content == "Content with trailing CR"
 
 
+class TestMemoryProjectTagField:
+    """Test cases for the project_tag field on the Memory model."""
+
+    def test_memory_has_project_tag_field(self) -> None:
+        """Memory() must have a project_tag attribute defaulting to empty string."""
+        memory = Memory(content="Some content")
+        assert hasattr(memory, "project_tag")
+        assert memory.project_tag == ""
+
+    def test_memory_project_tag_explicit_value(self) -> None:
+        """project_tag can be set to an arbitrary non-empty string."""
+        memory = Memory(content="Cross-project memory", project_tag="my-project")
+        assert memory.project_tag == "my-project"
+
+    def test_memory_project_tag_in_to_dict(self) -> None:
+        """to_dict() must include project_tag as a string key."""
+        memory = Memory(content="Some content", project_tag="kuzu-memory")
+        d = memory.to_dict()
+        assert "project_tag" in d
+        assert d["project_tag"] == "kuzu-memory"
+
+    def test_memory_project_tag_empty_string_in_to_dict(self) -> None:
+        """to_dict() must include project_tag even when it is the default empty string."""
+        memory = Memory(content="Some content")
+        d = memory.to_dict()
+        assert "project_tag" in d
+        assert d["project_tag"] == ""
+
+    def test_memory_project_tag_from_dict(self) -> None:
+        """from_dict() must round-trip project_tag correctly."""
+        memory = Memory(content="Architecture note", project_tag="service-alpha")
+        d = memory.to_dict()
+        restored = Memory.from_dict(d)
+        assert restored.project_tag == "service-alpha"
+
+    def test_memory_project_tag_missing_from_dict_uses_default(self) -> None:
+        """Rows fetched from pre-migration databases have no project_tag — must default to ''."""
+        memory = Memory(content="Legacy memory without project_tag")
+        d = memory.to_dict()
+        del d["project_tag"]  # Simulate pre-migration row
+        restored = Memory.from_dict(d)
+        assert restored.project_tag == ""
+
+    def test_memory_project_tag_none_in_dict_uses_default(self) -> None:
+        """project_tag=None in a dict row must coerce to empty string (DB NULL → '')."""
+        memory = Memory(content="Memory with null project_tag")
+        d = memory.to_dict()
+        d["project_tag"] = None  # Simulate NULL value from old DB row
+        restored = Memory.from_dict(d)
+        assert restored.project_tag == ""
+
+    def test_memory_project_tag_independent_of_other_fields(self) -> None:
+        """project_tag is orthogonal to memory_type and knowledge_type."""
+        from kuzu_memory.core.models import KnowledgeType
+
+        memory = Memory(
+            content="Cross-project pattern",
+            memory_type=MemoryType.SEMANTIC,
+            knowledge_type=KnowledgeType.PATTERN,
+            project_tag="backend-api",
+        )
+        assert memory.project_tag == "backend-api"
+        assert memory.memory_type == MemoryType.SEMANTIC
+        assert memory.knowledge_type == KnowledgeType.PATTERN
+
+
 class TestMemoryContext:
     """Test cases for MemoryContext model."""
 

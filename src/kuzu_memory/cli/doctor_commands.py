@@ -615,8 +615,8 @@ def connection(
         config_service.initialize()
 
         try:
-            # Get database path for memory service
-            db_path = config_service.get_db_path()
+            # Get database path for memory service; honour group-level --db-path
+            db_path = (ctx.obj.get("db_path") if ctx.obj else None) or config_service.get_db_path()
 
             # Create memory service for database health check
             with (
@@ -682,9 +682,8 @@ def hooks(ctx: click.Context, verbose: bool, fix: bool, project_root: Path | Non
     """
     from ..services import ConfigService
 
+    console = Console()
     try:
-        console = Console()
-
         # Initialize config service
         project_path = project_root or Path.cwd()
         config_service = ConfigService(project_path)
@@ -1021,7 +1020,7 @@ def autotune(
             found_root = find_project_root()
             project_path = found_root if found_root else Path.cwd()
 
-        db_path = get_project_db_path(project_path)
+        db_path = (ctx.obj.get("db_path") if ctx.obj else None) or get_project_db_path(project_path)
 
         if not db_path.exists():
             rich_print("❌ Project not initialized. Run 'kuzu-memory init' first.", style="red")

@@ -233,7 +233,9 @@ def cli(
         # Check if project is initialized
         try:
             if ctx.obj["project_root"]:
-                db_path_check = get_project_db_path(ctx.obj["project_root"])
+                db_path_check = ctx.obj.get("db_path") or get_project_db_path(
+                    ctx.obj["project_root"]
+                )
                 if not db_path_check.exists():
                     rich_panel(
                         "Welcome to KuzuMemory! 🚀\n\n"
@@ -307,7 +309,7 @@ def quickstart(ctx: click.Context, skip_demo: bool) -> None:
             project_root = Path.cwd()
             rich_print(f"Using current directory: {project_root}")
 
-        db_path = get_project_db_path(project_root)
+        db_path = (ctx.obj.get("db_path") if ctx.obj else None) or get_project_db_path(project_root)
         if not db_path.exists():
             rich_print("Initializing KuzuMemory for this project...")
             ctx.invoke(init, force=False)

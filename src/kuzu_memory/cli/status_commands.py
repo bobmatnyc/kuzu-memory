@@ -16,11 +16,7 @@ from typing import Any, cast
 import click
 
 from ..utils.config_loader import get_config_loader
-from ..utils.project_setup import (
-    find_project_root,
-    get_project_db_path,
-    get_project_memories_dir,
-)
+from ..utils.project_setup import find_project_root, get_project_db_path, get_project_memories_dir
 from .cli_utils import rich_panel, rich_print
 from .enums import OutputFormat
 from .service_manager import ServiceManager
@@ -75,9 +71,10 @@ def status(
     try:
         # Resolve project root and database path
         project_root = (ctx.obj and ctx.obj.get("project_root")) or find_project_root()
-        db_path_obj: Path | None = None
         if db_path:
-            db_path_obj = Path(db_path)
+            db_path_obj: Path = Path(db_path)
+        elif ctx.obj and ctx.obj.get("db_path"):
+            db_path_obj = cast(Path, ctx.obj["db_path"])
         else:
             db_path_obj = get_project_db_path(project_root)
 
