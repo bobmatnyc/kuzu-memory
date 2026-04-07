@@ -194,10 +194,11 @@ class TestEnrichmentRunner:
         runner = EnrichmentRunner(adapter, _make_config())
         results = runner.run_all()
 
-        assert len(results) == 2
+        assert len(results) == 3
         names = {r.name for r in results}
         assert "entity_cooccurrence" in names
         assert "centrality" in names
+        assert "hnsw_index" in names
 
     def test_run_all_captures_enricher_exception_per_item(self) -> None:
         """A failure in one enricher must not prevent others from running."""
@@ -209,8 +210,8 @@ class TestEnrichmentRunner:
         runner = EnrichmentRunner(adapter, _make_config())
         results = runner.run_all()
 
-        # Should get 2 results (one per enricher), both failed.
-        assert len(results) == 2
+        # Should get 3 results (one per enricher), all failed.
+        assert len(results) == 3
         assert all(not r.success for r in results)
 
     def test_run_all_partial_failure_captured_separately(self) -> None:
@@ -253,7 +254,7 @@ class TestEnrichmentRunner:
         # Resolve the future (waits for background thread).
         results = future.result(timeout=10)
         assert isinstance(results, list)
-        assert len(results) == 2
+        assert len(results) == 3
 
 
 # ---------------------------------------------------------------------------

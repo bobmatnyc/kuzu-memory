@@ -1446,7 +1446,8 @@ class KuzuMemoryMCPServer:
             suggestions.append("Database is already clean — nothing to do.")
 
         # Run graph enrichment in the background (fire-and-forget).
-        # Enrichment populates CO_OCCURS_WITH edges and graph_score centrality.
+        # Enrichment populates CO_OCCURS_WITH edges, graph_score centrality,
+        # and ensures the HNSW vector index exists.
         # It is skipped during dry-run to avoid mutating the graph for analysis-only calls.
         enrichment_summary: dict[str, Any] = {}
         if not dry_run:
@@ -1464,6 +1465,35 @@ class KuzuMemoryMCPServer:
                 )
                 enrichment_summary = {"status": "skipped", "error": str(enrich_exc)}
 
+        # Back-fill embeddings for memories missing the HNSW embedding column.
+        # Runs in the background so it never blocks the optimize response.
+        backfill_summary: dict[str, Any] = {}
+        if not dry_run:
+            try:
+                import threading
+
+                from ..core.memory import KuzuMemory as _KuzuMemory
+
+                km = _KuzuMemory.__new__(_KuzuMemory)
+                km.db_adapter = db_adapter
+
+                def _bg_backfill() -> None:
+                    try:
+                        km._backfill_embeddings()
+                    except Exception as bf_exc:
+                        logger.debug("_backfill_embeddings background: %s", bf_exc)
+
+                t = threading.Thread(target=_bg_backfill, daemon=True)
+                t.start()
+                backfill_summary = {"status": "submitted_background"}
+                suggestions.append("Embedding back-fill submitted (background thread)")
+            except Exception as bf_start_exc:
+                logger.debug(
+                    "_optimize_full_maintenance: embedding back-fill submission failed (non-fatal): %s",
+                    bf_start_exc,
+                )
+                backfill_summary = {"status": "skipped", "error": str(bf_start_exc)}
+
         return {
             "status": "completed",
             "strategy": "full_maintenance",
@@ -1480,6 +1510,7 @@ class KuzuMemoryMCPServer:
                 "bytes_saved_estimate": saved,
             },
             "enrichment": enrichment_summary,
+            "embedding_backfill": backfill_summary,
             "suggestions": suggestions,
             **({"errors": any_error} if any_error else {}),
         }

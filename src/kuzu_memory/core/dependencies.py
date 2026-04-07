@@ -136,7 +136,9 @@ class DatabaseAdapterProtocol(Protocol):
     """Protocol defining the interface for database operations."""
 
     @abstractmethod
-    def execute_query(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def execute_query(
+        self, query: str, parameters: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Execute a database query with parameters."""
         ...
 

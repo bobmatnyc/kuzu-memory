@@ -413,6 +413,21 @@ class KuzuMemory:
                 # Never let enrichment failure surface to the caller.
                 logger.debug("_maybe_enrich: enrichment submission failed (non-fatal): %s", exc)
 
+            # Back-fill embeddings for any memories that missed the inline store
+            # (e.g. written before this feature was deployed).  Best-effort only.
+            try:
+                import threading
+
+                def _bg_backfill() -> None:
+                    try:
+                        self._backfill_embeddings()
+                    except Exception:
+                        pass
+
+                threading.Thread(target=_bg_backfill, daemon=True).start()
+            except Exception:
+                pass
+
     @cached_method()  # Uses default cache settings from constants
     def attach_memories(
         self,
@@ -580,6 +595,10 @@ class KuzuMemory:
         # Store directly in the database
         try:
             self.memory_store._store_memory_in_database(memory)
+            # Store the sentence-transformer embedding for HNSW index (MCP path only).
+            # This is a best-effort operation — failure is non-fatal and the system
+            # falls back gracefully to brute-force cosine recall when embedding is absent.
+            self._store_embedding_for_memory(memory.id, content)
             # Trigger periodic background enrichment after every N writes.
             self._maybe_enrich(writes=1)
             return memory.id
@@ -642,6 +661,13 @@ class KuzuMemory:
                 session_id=session_id,
                 agent_id=agent_id,
             )
+
+            # Store embeddings for HNSW index (MCP path only, best-effort).
+            # We embed the full content once and attach it to all memories generated
+            # from that content.  Failure is silently logged — no embedding means
+            # HNSW recall falls back to the brute-force NumPy cosine path.
+            if memory_ids:
+                self._store_embedding_for_memories(memory_ids, content)
 
             # Update performance statistics
             execution_time_ms = (time.time() - start_time) * 1000
@@ -1015,6 +1041,137 @@ class KuzuMemory:
         current_avg: float = self._performance_stats["avg_generate_time_ms"]
         new_avg = ((current_avg * (total_calls - 1)) + execution_time_ms) / total_calls
         self._performance_stats["avg_generate_time_ms"] = new_avg
+
+    # ------------------------------------------------------------------
+    # HNSW embedding helpers (MCP path only — hooks must never call these)
+    # ------------------------------------------------------------------
+
+    def _store_embedding_for_memory(self, memory_id: str, content: str) -> None:
+        """Compute and persist the sentence-transformer embedding for a single memory.
+
+        Called synchronously from ``remember()`` immediately after the Memory node
+        is written to the database.  Failure is non-fatal: if the embedding cannot
+        be computed or stored the memory is still usable; recall falls back to the
+        brute-force NumPy cosine path.
+
+        This method must NEVER be called from hook-triggered code paths.  Hooks use
+        pure graph traversal (use_semantic_search=False) and must remain fast.
+
+        Args:
+            memory_id: ID of the memory node to annotate.
+            content: Text to embed (the memory's content).
+        """
+        try:
+            from ..recall.coordinator import _SemanticScorer
+
+            scorer = _SemanticScorer.get()
+            vec = scorer.embed(content)
+            if vec is None:
+                return
+            self._write_embedding(memory_id, vec.tolist())
+        except Exception as exc:
+            logger.debug(
+                "_store_embedding_for_memory: non-fatal failure for %s: %s", memory_id, exc
+            )
+
+    def _store_embedding_for_memories(self, memory_ids: list[str], content: str) -> None:
+        """Compute one embedding for *content* and assign it to all given memory IDs.
+
+        Called from ``generate_memories()`` after the store layer has returned the
+        list of created IDs.  A single ``embed()`` call is amortised across all IDs
+        extracted from the same content chunk.
+
+        Args:
+            memory_ids: List of memory node IDs to annotate.
+            content: Source text from which all memories were extracted.
+        """
+        if not memory_ids:
+            return
+        try:
+            from ..recall.coordinator import _SemanticScorer
+
+            scorer = _SemanticScorer.get()
+            vec = scorer.embed(content)
+            if vec is None:
+                return
+            embedding_list = vec.tolist()
+            for mid in memory_ids:
+                try:
+                    self._write_embedding(mid, embedding_list)
+                except Exception as exc:
+                    logger.debug(
+                        "_store_embedding_for_memories: non-fatal failure for %s: %s", mid, exc
+                    )
+        except Exception as exc:
+            logger.debug(
+                "_store_embedding_for_memories: non-fatal failure (embedding step): %s", exc
+            )
+
+    def _write_embedding(self, memory_id: str, embedding: list[float]) -> None:
+        """Persist a pre-computed embedding list to the Memory node in Kùzu.
+
+        Runs a ``SET m.embedding = $embedding`` write through the adapter so the
+        Kùzu single-writer constraint is respected.
+
+        Args:
+            memory_id: ID of the Memory node.
+            embedding: List of 384 floats (all-MiniLM-L6-v2 output).
+        """
+        query = "MATCH (m:Memory {id: $memory_id}) SET m.embedding = $embedding"
+        self.db_adapter.execute_query(
+            query,
+            {"memory_id": memory_id, "embedding": embedding},
+        )
+
+    def _backfill_embeddings(self, batch_size: int = 50) -> int:
+        """Back-fill embeddings for Memory nodes whose ``embedding`` column is NULL.
+
+        Designed to be called from ``kuzu_optimize`` (explicit maintenance) or the
+        periodic ``_maybe_enrich`` background loop.  Processes at most *batch_size*
+        memories per invocation to avoid blocking the event loop.
+
+        Returns:
+            Number of memories whose embeddings were written.
+        """
+        try:
+            from ..recall.coordinator import _SemanticScorer
+
+            scorer = _SemanticScorer.get()
+            if scorer.embed("probe") is None:
+                # sentence-transformers not available — nothing to back-fill.
+                return 0
+
+            # Fetch memories with missing embeddings.
+            query = (
+                "MATCH (m:Memory) WHERE m.embedding IS NULL "
+                "RETURN m.id AS id, m.content AS content "
+                f"LIMIT {batch_size}"
+            )
+            rows = self.db_adapter.execute_query(query, {})
+            if not rows:
+                return 0
+
+            written = 0
+            for row in rows:
+                mid = row.get("id")
+                text = row.get("content")
+                if not mid or not text:
+                    continue
+                try:
+                    vec = scorer.embed(str(text))
+                    if vec is not None:
+                        self._write_embedding(str(mid), vec.tolist())
+                        written += 1
+                except Exception as exc:
+                    logger.debug("_backfill_embeddings: skip %s: %s", mid, exc)
+
+            if written:
+                logger.info("_backfill_embeddings: wrote %d embeddings", written)
+            return written
+
+        except Exception as exc:
+            logger.debug("_backfill_embeddings: non-fatal failure: %s", exc)
+            return 0
 
     def close(self) -> None:
         """

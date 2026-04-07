@@ -29,12 +29,16 @@ Typical usage::
 from .base import BaseEnricher, EnrichmentResult
 from .centrality import CentralityEnricher
 from .entity_cooccurrence import EntityCoOccurrenceEnricher
+from .hnsw_index import EMBEDDING_DIM, HNSW_INDEX_NAME, HNSWIndexEnricher
 from .runner import EnrichmentRunner
 
 __all__ = [
+    "EMBEDDING_DIM",
+    "HNSW_INDEX_NAME",
     "BaseEnricher",
     "CentralityEnricher",
     "EnrichmentResult",
     "EnrichmentRunner",
     "EntityCoOccurrenceEnricher",
+    "HNSWIndexEnricher",
 ]

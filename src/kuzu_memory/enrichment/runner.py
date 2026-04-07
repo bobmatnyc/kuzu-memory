@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from .base import EnrichmentResult
 from .centrality import CentralityEnricher
 from .entity_cooccurrence import EntityCoOccurrenceEnricher
+from .hnsw_index import HNSWIndexEnricher
 
 if TYPE_CHECKING:
     from ..core.config import KuzuMemoryConfig
@@ -63,6 +64,7 @@ class EnrichmentRunner:
         self._enrichers = [
             EntityCoOccurrenceEnricher(),
             CentralityEnricher(),
+            HNSWIndexEnricher(),
         ]
 
     def run_all(self) -> list[EnrichmentResult]:
