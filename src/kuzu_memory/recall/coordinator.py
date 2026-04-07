@@ -21,6 +21,7 @@ from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
 from ..utils.validation import validate_text_input
+from ._tokenizer import tokenize as _tokenize_for_boost
 from .strategies import (
     EntityRecallStrategy,
     GraphRelatedRecallStrategy,
@@ -272,6 +273,15 @@ class RecallCoordinator:
                 apply_temporal_decay=apply_temporal_decay,
                 use_semantic_search=use_semantic_search,
             )
+
+            # Apply TF-IDF multiplicative boost if weight > 0.
+            # Must run after _rank_memories (which deduplicates) and before
+            # LLM reranking so the reranker sees the keyword-boosted order.
+            tfidf_weight = self.config.recall.tfidf_boost_weight
+            if tfidf_weight > 0:
+                ranked_memories = self._apply_tfidf_boost(
+                    ranked_memories, clean_prompt, tfidf_weight
+                )
 
             # Optional LLM reranking pass (MCP path only, opt-in via config).
             # Reranks the top-K candidates before the final slice so the LLM
@@ -565,6 +575,94 @@ class RecallCoordinator:
         scored_memories.sort(key=lambda x: x[1], reverse=True)
 
         return [memory for memory, _ in scored_memories]
+
+    def _apply_tfidf_boost(
+        self,
+        memories: list[Memory],
+        query: str,
+        weight: float,
+    ) -> list[Memory]:
+        """Boost memory scores multiplicatively using per-query normalised TF-IDF.
+
+        Formula::
+
+            final_importance = min(1.0, importance * (1 + weight * normalised_tfidf))
+
+        where ``normalised_tfidf`` = ``tfidf_sum / max_tfidf_sum_in_set`` so it
+        is always in [0, 1].  A memory with no keyword match gets
+        ``normalised_tfidf = 0`` and its score is unchanged.  A memory with a
+        strong keyword match AND high semantic score benefits the most.
+
+        The boost is applied to ``memory.importance`` (used as a proxy for the
+        final relevance score) and the list is re-sorted by the boosted value.
+
+        Args:
+            memories: Ranked candidate list from ``_rank_memories()``.
+            query: The recall prompt text used to select relevant keywords.
+            weight: Boost weight in [0, 1].  0 = disabled.
+
+        Returns:
+            Re-sorted list with boosted importance values written back onto each
+            Memory object *in place*.  Callers should not rely on the original
+            importance after this call.
+        """
+        if weight == 0 or not memories:
+            return memories
+
+        # Tokenise query with the same vocabulary used when building the index.
+        keywords = list(set(_tokenize_for_boost(query)))
+        if not keywords:
+            return memories
+
+        memory_ids = [m.id for m in memories]
+
+        try:
+            rows = self.db_adapter.execute_query(
+                """
+                MATCH (m:Memory)-[hk:HAS_KEYWORD]->(k:Keyword)
+                WHERE m.id IN $memory_ids AND k.word IN $keywords
+                RETURN m.id AS memory_id, SUM(hk.tfidf) AS tfidf_sum
+                """,
+                parameters={"memory_ids": memory_ids, "keywords": keywords},
+            )
+        except Exception as exc:
+            logger.debug("_apply_tfidf_boost: DB query failed, skipping boost: %s", exc)
+            return memories
+
+        if not rows:
+            return memories
+
+        # Build {memory_id: tfidf_sum} map; guard against None values from SUM.
+        tfidf_map: dict[str, float] = {}
+        for row in rows:
+            mid = row.get("memory_id")
+            raw = row.get("tfidf_sum")
+            if mid is not None and raw is not None:
+                tfidf_map[str(mid)] = float(raw)
+
+        if not tfidf_map:
+            return memories
+
+        # Per-query normalisation: divide by the maximum sum in this result set.
+        max_tfidf = max(tfidf_map.values())
+        if max_tfidf == 0.0:
+            return memories
+
+        # Compute boosted importance for each memory and collect for re-sort.
+        scored: list[tuple[Memory, float]] = []
+        for m in memories:
+            raw_sum = tfidf_map.get(m.id, 0.0)
+            normalised = raw_sum / max_tfidf
+            boost_factor = 1.0 + weight * normalised
+            boosted = min(1.0, m.importance * boost_factor)
+            # Write back so downstream consumers (reranker, context builder) see
+            # the boosted value without needing a separate score field.
+            m.importance = boosted
+            scored.append((m, boosted))
+
+        # Stable sort: ties keep their original relative order from _rank_memories.
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [m for m, _ in scored]
 
     def _type_boost(self, memory: Memory) -> float:
         """Return the memory-type boost factor for a single memory (0-1 scale)."""

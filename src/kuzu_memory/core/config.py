@@ -66,6 +66,7 @@ class RecallConfig:
     cache_size: int = 1000
     cache_ttl_seconds: int = 300
     reranking: RerankingConfig = field(default_factory=RerankingConfig)
+    tfidf_boost_weight: float = 0.3  # 0 = disabled, 1 = full boost
 
 
 @dataclass
@@ -290,6 +291,14 @@ class KuzuMemoryConfig:
             # Allow environment variable override: KUZU_MEMORY_RERANK=1 enables reranking
             if os.environ.get("KUZU_MEMORY_RERANK") == "1":
                 recall_config.reranking.enabled = True
+
+            # Allow environment variable override for tfidf_boost_weight
+            env_tfidf_weight = os.environ.get("KUZU_MEMORY_TFIDF_BOOST_WEIGHT")
+            if env_tfidf_weight:
+                try:
+                    recall_config.tfidf_boost_weight = float(env_tfidf_weight)
+                except ValueError:
+                    pass  # ignore malformed env var
 
             memory_config = MemoryConfig()
             if "memory" in validated_config:
