@@ -670,6 +670,7 @@ class TestKuzuAdapterDataMaintenance:
             patch.object(adapter, "_pool") as mock_pool,
             patch.object(adapter, "_initialize_schema"),
             patch.object(adapter, "_run_schema_migrations"),
+            patch.object(adapter, "_ensure_hnsw_index"),
             patch.object(adapter, "_run_data_maintenance") as mock_maint,
         ):
             mock_pool.initialize.return_value = None

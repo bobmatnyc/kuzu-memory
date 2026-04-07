@@ -38,7 +38,8 @@ CREATE NODE TABLE IF NOT EXISTS Memory (
     agent_id STRING DEFAULT 'default',
     user_id STRING,
     session_id STRING,
-    metadata STRING DEFAULT '{}'
+    metadata STRING DEFAULT '{}',
+    embedding FLOAT[384]
 );
 
 CREATE NODE TABLE IF NOT EXISTS Entity (
@@ -119,7 +120,12 @@ CREATE NODE TABLE IF NOT EXISTS ArchivedMemory (
 # - CSR-based adjacency list indices for edges (automatic)
 # - Columnar storage with vectorized execution (automatic)
 # - Specialized indexes via function calls: CREATE_FTS_INDEX, CREATE_VECTOR_INDEX
-INDICES_DDL = ""
+#
+# The HNSW vector index is created idempotently here; "already exists" errors
+# are swallowed inside _create_schema() so repeated calls are safe.
+INDICES_DDL = """
+CALL CREATE_VECTOR_INDEX("Memory", "memory_hnsw_idx", "embedding")
+"""
 
 # Initial data insertion
 INITIAL_DATA_DDL = f"""

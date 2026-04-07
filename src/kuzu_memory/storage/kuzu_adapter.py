@@ -336,6 +336,10 @@ class KuzuAdapter:
             # keep DB init fast; they run via _check_migrations() on CLI invocation.
             self._run_schema_migrations()
 
+            # Ensure the HNSW vector index exists (idempotent — swallows
+            # "already exists" errors so this is safe to call on every startup).
+            self._ensure_hnsw_index()
+
             # Run one-time data maintenance (purge expired, dedup, trim git metadata).
             # Uses the already-open pool — no second kuzu.Database is opened.
             self._run_data_maintenance()
@@ -401,6 +405,11 @@ class KuzuAdapter:
                 "ALTER TABLE Memory ADD confidence FLOAT DEFAULT 1.0",
                 "ALTER TABLE ArchivedMemory ADD confidence FLOAT DEFAULT 1.0",
             ),
+            (
+                "embedding",
+                "ALTER TABLE Memory ADD embedding FLOAT[384]",
+                None,
+            ),
         ]
 
         try:
@@ -455,6 +464,28 @@ class KuzuAdapter:
             # Non-fatal: log and continue — a missing column will surface as a
             # query error later, which is easier to diagnose than a startup crash.
             logger.warning("Schema migration check failed (non-fatal): %s", e)
+
+    def _ensure_hnsw_index(self) -> None:
+        """Create the HNSW vector index on Memory.embedding if not already present.
+
+        Called after _run_schema_migrations() so the embedding column is
+        guaranteed to exist (either from schema DDL on new databases, or from
+        ALTER TABLE migration on existing ones).
+
+        Swallows "already exists" and index-related errors so this is fully
+        idempotent and safe to call on every startup.
+        """
+        create_query = 'CALL CREATE_VECTOR_INDEX("Memory", "memory_hnsw_idx", "embedding")'
+        try:
+            self.execute_query(create_query)
+            logger.info("HNSW vector index ensured: memory_hnsw_idx")
+        except Exception as exc:
+            exc_msg = str(exc).lower()
+            if "already exists" in exc_msg or "index" in exc_msg:
+                logger.debug("HNSW index already exists or not applicable: %s", exc)
+            else:
+                # Non-fatal: log but don't crash DB initialisation.
+                logger.warning("HNSW index creation failed (non-fatal): %s", exc)
 
     def _initialize_schema(self) -> None:
         """Initialize or verify database schema."""

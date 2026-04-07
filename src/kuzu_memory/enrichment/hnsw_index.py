@@ -10,7 +10,12 @@ Architecture constraints:
 - MCP recall path ONLY.  Hooks remain pure graph traversal — no embeddings.
 - All DB writes go through KuzuAdapter.execute_query() (_write_lock).
 - Background-only: never blocks recall or ingestion.
-- Idempotent: safe to run repeatedly (probe-then-alter / already-exists guard).
+- Idempotent: safe to run repeatedly (already-exists guard on index creation).
+
+Schema guarantee:
+- ``embedding FLOAT[384]`` is declared directly in the CREATE NODE TABLE Memory
+  DDL (schema.py), so the column is present from write #1.  The enricher no
+  longer needs to ALTER TABLE — its sole job is to ensure the HNSW index exists.
 """
 
 from __future__ import annotations
@@ -35,18 +40,22 @@ HNSW_INDEX_NAME = "memory_hnsw_idx"
 
 
 class HNSWIndexEnricher(BaseEnricher):
-    """Ensures the ``embedding`` FLOAT[384] column and HNSW index exist on Memory.
+    """Ensures the HNSW vector index exists on Memory.embedding.
+
+    The ``embedding FLOAT[384]`` column is guaranteed to exist because it is
+    declared in the CREATE NODE TABLE Memory DDL (schema.py) and is therefore
+    present from the very first write.  This enricher's only responsibility is
+    to create the HNSW index if it is missing (e.g. on databases created before
+    the index was added, or after a manual DROP).
 
     On every enrichment run:
-    1. Probes for ``m.embedding`` via a LIMIT 0 query; if absent, adds the
-       column via ALTER TABLE (same probe-then-alter pattern as CentralityEnricher).
-    2. Attempts to create the HNSW index via ``CALL CREATE_VECTOR_INDEX(...)``
-       (Kùzu 0.11.3 confirmed syntax).  An "already exists" error is silently
-       swallowed.
+    1. Attempts to create the HNSW index via ``CALL CREATE_VECTOR_INDEX(...)``
+       (Kùzu 0.11.3 confirmed syntax).
+    2. An "already exists" or index-related error is silently swallowed so that
+       repeated enrichment runs are idempotent.
 
     The enricher does NOT compute or store embeddings — that is done at ingestion
-    time inside ``KuzuMemory.remember()`` / ``generate_memories()``.  The enricher
-    is purely structural: column + index lifecycle management.
+    time inside ``KuzuMemory.remember()`` / ``generate_memories()``.
     """
 
     @property
@@ -58,7 +67,7 @@ class HNSWIndexEnricher(BaseEnricher):
         adapter: KuzuAdapter,
         config: KuzuMemoryConfig,
     ) -> EnrichmentResult:
-        """Ensure embedding column and HNSW index exist.
+        """Ensure the HNSW vector index exists on Memory.embedding.
 
         Returns:
             EnrichmentResult with timing metadata.
@@ -67,7 +76,6 @@ class HNSWIndexEnricher(BaseEnricher):
         result = EnrichmentResult(name=self.name)
 
         try:
-            self._ensure_embedding_column(adapter)
             self._ensure_hnsw_index(adapter)
         except Exception as exc:
             logger.warning(
@@ -84,34 +92,6 @@ class HNSWIndexEnricher(BaseEnricher):
             result.duration_ms,
         )
         return result
-
-    def _ensure_embedding_column(self, adapter: KuzuAdapter) -> None:
-        """Add ``embedding FLOAT[384]`` column to Memory table if absent.
-
-        Uses the probe-then-alter pattern established in
-        KuzuAdapter._run_schema_migrations() and CentralityEnricher:
-        attempt a LIMIT 0 read; if Kùzu raises "cannot find property",
-        execute the ALTER TABLE.
-        """
-        probe_query = "MATCH (m:Memory) RETURN m.embedding LIMIT 0"
-        try:
-            adapter.execute_query(probe_query)
-            # Column already present — nothing to do.
-        except Exception as probe_exc:
-            probe_msg = str(probe_exc).lower()
-            if "cannot find property" in probe_msg or "embedding" in probe_msg:
-                alter_query = f"ALTER TABLE Memory ADD embedding FLOAT[{EMBEDDING_DIM}]"
-                try:
-                    adapter.execute_query(alter_query)
-                    logger.info("Schema migration applied: %s", alter_query)
-                except Exception as alter_exc:
-                    logger.warning(
-                        "ALTER TABLE Memory ADD embedding failed (non-fatal): %s",
-                        alter_exc,
-                    )
-            else:
-                # Unexpected probe error — log and continue.
-                logger.debug("embedding column probe error (non-fatal): %s", probe_exc)
 
     def _ensure_hnsw_index(self, adapter: KuzuAdapter) -> None:
         """Create the HNSW vector index on Memory.embedding if not already present.

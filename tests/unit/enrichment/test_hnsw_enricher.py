@@ -2,19 +2,23 @@
 Unit tests for HNSWIndexEnricher.
 
 Covers:
-- ALTER TABLE is issued when the embedding column is missing
-- ALTER TABLE is skipped when the embedding column already exists
 - HNSW index creation is attempted via CALL CREATE_VECTOR_INDEX(...)
 - "already exists" index error is silently swallowed (idempotent)
+- Any error message containing "index" is swallowed (broad compatibility)
 - Unexpected errors during index creation are re-raised
 - EnrichmentResult.error is set on unexpected failures
 - _store_embedding via KuzuMemory._write_embedding runs the correct SET query
+
+NOTE: The embedding column (FLOAT[384]) is now declared directly in the
+CREATE NODE TABLE Memory DDL (schema.py) and is present from write #1.
+The enricher no longer needs to ALTER TABLE; tests for _ensure_embedding_column
+have been removed accordingly.
 """
 
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -57,46 +61,6 @@ def _make_adapter(query_side_effects: dict[str, Any] | None = None) -> MagicMock
 
 
 # ---------------------------------------------------------------------------
-# HNSWIndexEnricher._ensure_embedding_column
-# ---------------------------------------------------------------------------
-
-
-class TestEnsureEmbeddingColumn:
-    def test_no_alter_when_column_exists(self) -> None:
-        """Probe succeeds → no ALTER TABLE issued."""
-        adapter = _make_adapter()  # probe returns [] — no error
-        enricher = HNSWIndexEnricher()
-        enricher._ensure_embedding_column(adapter)
-
-        # Only the probe query should have been called, never an ALTER TABLE
-        calls_made = [str(c.args[0]) for c in adapter.execute_query.call_args_list]
-        assert any("m.embedding" in q for q in calls_made), "Probe query expected"
-        assert not any("ALTER" in q for q in calls_made), "ALTER TABLE must NOT be issued"
-
-    def test_alter_issued_when_column_missing(self) -> None:
-        """Probe raises 'cannot find property' → ALTER TABLE ADD embedding is issued."""
-        probe_error = RuntimeError("cannot find property embedding")
-        adapter = _make_adapter({"m.embedding LIMIT 0": probe_error})
-        enricher = HNSWIndexEnricher()
-        enricher._ensure_embedding_column(adapter)
-
-        calls_made = [str(c.args[0]) for c in adapter.execute_query.call_args_list]
-        alter_calls = [q for q in calls_made if "ALTER" in q]
-        assert len(alter_calls) == 1
-        assert f"FLOAT[{EMBEDDING_DIM}]" in alter_calls[0]
-        assert "Memory" in alter_calls[0]
-
-    def test_unexpected_probe_error_logged_not_raised(self) -> None:
-        """An unexpected probe error does NOT propagate — it is logged at DEBUG level."""
-        unexpected_err = RuntimeError("network failure")
-        # Key does NOT include 'embedding' so the error message won't trigger ALTER TABLE
-        adapter = _make_adapter({"m.embedding LIMIT 0": unexpected_err})
-        enricher = HNSWIndexEnricher()
-        # Should not raise
-        enricher._ensure_embedding_column(adapter)
-
-
-# ---------------------------------------------------------------------------
 # HNSWIndexEnricher._ensure_hnsw_index
 # ---------------------------------------------------------------------------
 
@@ -135,15 +99,27 @@ class TestEnsureHNSWIndex:
         with pytest.raises(RuntimeError, match="database locked"):
             enricher._ensure_hnsw_index(adapter)
 
+    def test_no_alter_table_issued(self) -> None:
+        """The enricher never issues ALTER TABLE — the column is in the schema DDL."""
+        adapter = _make_adapter()
+        enricher = HNSWIndexEnricher()
+        enricher.enrich(adapter, _make_config())
+
+        calls_made = [str(c.args[0]) for c in adapter.execute_query.call_args_list]
+        assert not any("ALTER" in q for q in calls_made), (
+            "HNSWIndexEnricher must not issue ALTER TABLE — "
+            "embedding column is declared in schema.py CREATE TABLE"
+        )
+
 
 # ---------------------------------------------------------------------------
-# HNSWIndexEnricher.enrich (integration of both helpers)
+# HNSWIndexEnricher.enrich (integration of helper)
 # ---------------------------------------------------------------------------
 
 
 class TestHNSWIndexEnricherEnrich:
     def test_enrich_success(self) -> None:
-        """Happy path: enrich() runs both helpers and returns success result."""
+        """Happy path: enrich() runs _ensure_hnsw_index and returns success result."""
         adapter = _make_adapter()
         enricher = HNSWIndexEnricher()
         result = enricher.enrich(adapter, _make_config())
@@ -165,6 +141,16 @@ class TestHNSWIndexEnricherEnrich:
 
         assert not result.success
         assert result.error is not None
+
+    def test_enrich_success_when_index_already_exists(self) -> None:
+        """enrich() returns success even when the index already exists."""
+        already_exists = RuntimeError("index already exists")
+        adapter = _make_adapter({"CREATE_VECTOR_INDEX": already_exists})
+        enricher = HNSWIndexEnricher()
+        result = enricher.enrich(adapter, _make_config())
+
+        assert result.success
+        assert result.error is None
 
 
 # ---------------------------------------------------------------------------
