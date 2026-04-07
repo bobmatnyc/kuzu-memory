@@ -32,6 +32,7 @@ from .entity_cooccurrence import EntityCoOccurrenceEnricher
 from .hnsw_index import EMBEDDING_DIM, HNSW_INDEX_NAME, HNSWIndexEnricher
 from .relates_to import RelatesToEnricher
 from .runner import EnrichmentRunner
+from .tfidf_keyword import TFIDFKeywordEnricher
 
 __all__ = [
     "EMBEDDING_DIM",
@@ -43,4 +44,5 @@ __all__ = [
     "EntityCoOccurrenceEnricher",
     "HNSWIndexEnricher",
     "RelatesToEnricher",
+    "TFIDFKeywordEnricher",
 ]

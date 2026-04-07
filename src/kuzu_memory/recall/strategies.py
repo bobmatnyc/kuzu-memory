@@ -193,24 +193,68 @@ class KeywordRecallStrategy(RecallStrategy):
         session_id: str | None,
         agent_id: str,
     ) -> list[Memory]:
-        """Execute keyword-based recall."""
+        """Execute keyword-based recall.
 
-        # Extract important keywords from prompt
+        Tries the graph-based TF-IDF path first (O(1) graph lookup via
+        HAS_KEYWORD edges).  Falls back to the legacy content scan if the
+        graph path fails or returns no results (e.g. enricher has not yet run).
+        """
         keywords = self._extract_keywords(prompt)
-
         if not keywords:
             return []
 
-        # Build query with keyword matching
-        parameters = {"current_time": datetime.now().isoformat(), "limit": max_memories}
+        # Graph-based path: O(1) lookup via HAS_KEYWORD edges.
+        try:
+            graph_results = self._recall_via_keyword_graph(
+                keywords, max_memories, user_id, session_id, agent_id
+            )
+            if graph_results:
+                return graph_results
+        except Exception as exc:
+            logger.debug(
+                "KeywordRecallStrategy graph path failed (falling back to content scan): %s", exc
+            )
 
-        # Base query
+        # Legacy content-scan fallback (O(N)).
+        return self._recall_via_content_scan(keywords, max_memories, user_id, session_id, agent_id)
+
+    def _recall_via_keyword_graph(
+        self,
+        keywords: list[str],
+        max_memories: int,
+        user_id: str | None,
+        session_id: str | None,
+        agent_id: str,
+    ) -> list[Memory]:
+        """Recall memories via HAS_KEYWORD graph edges ordered by TF-IDF sum.
+
+        Args:
+            keywords: Pre-extracted keyword tokens from the query.
+            max_memories: Maximum number of results to return.
+            user_id: Optional user-ID filter.
+            session_id: Optional session-ID filter.
+            agent_id: Agent-ID filter (skipped when "default").
+
+        Returns:
+            List of Memory objects ordered by descending relevance (TF-IDF sum).
+            Returns empty list when the Keyword table is empty (enricher not run).
+
+        Raises:
+            Exception: Propagated from execute_query on unexpected DB errors.
+        """
+        now = datetime.now().isoformat()
+        parameters: dict[str, Any] = {
+            "keywords": keywords,
+            "current_time": now,
+            "limit": max_memories,
+        }
+
         query = """
-            MATCH (m:Memory)
-            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
+            MATCH (m:Memory)-[hk:HAS_KEYWORD]->(k:Keyword)
+            WHERE k.word IN $keywords
+              AND (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
         """
 
-        # Add user/session/agent filters
         if user_id:
             query += " AND m.user_id = $user_id"
             parameters["user_id"] = user_id
@@ -219,41 +263,101 @@ class KeywordRecallStrategy(RecallStrategy):
             query += " AND m.session_id = $session_id"
             parameters["session_id"] = session_id
 
-        # Only filter by agent_id if it's not the default value
-        # This allows recall to work across all agent contexts when not specified
         if agent_id and agent_id != "default":
             query += " AND m.agent_id = $agent_id"
             parameters["agent_id"] = agent_id
 
-        # Add keyword conditions with case-insensitive matching
+        query += """
+            RETURN DISTINCT m, SUM(hk.tfidf) AS relevance
+            ORDER BY relevance DESC
+            LIMIT $limit
+        """
+
+        rows = self.db_adapter.execute_query(query, parameters)
+        if not rows:
+            # Keyword table is empty — enricher has not run yet.
+            return []
+
+        memories: list[Memory] = []
+        from ..storage.query_builder import QueryBuilder
+
+        query_builder = QueryBuilder(self.db_adapter)
+        for row in rows:
+            try:
+                memory = query_builder._convert_db_result_to_memory(row["m"])
+                if memory:
+                    memories.append(memory)
+            except Exception as e:
+                logger.warning("Failed to parse memory from graph keyword recall: %s", e)
+
+        return memories
+
+    def _recall_via_content_scan(
+        self,
+        keywords: list[str],
+        max_memories: int,
+        user_id: str | None,
+        session_id: str | None,
+        agent_id: str,
+    ) -> list[Memory]:
+        """Legacy O(N) content-scan fallback.
+
+        Used when the HAS_KEYWORD graph has not been populated yet, or when the
+        graph query fails unexpectedly.
+
+        Args:
+            keywords: Pre-extracted keyword tokens from the query.
+            max_memories: Maximum number of results to return.
+            user_id: Optional user-ID filter.
+            session_id: Optional session-ID filter.
+            agent_id: Agent-ID filter (skipped when "default").
+
+        Returns:
+            List of Memory objects matched by content substring.
+        """
+        parameters: dict[str, Any] = {
+            "current_time": datetime.now().isoformat(),
+            "limit": max_memories,
+        }
+
+        query = """
+            MATCH (m:Memory)
+            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
+        """
+
+        if user_id:
+            query += " AND m.user_id = $user_id"
+            parameters["user_id"] = user_id
+
+        if session_id:
+            query += " AND m.session_id = $session_id"
+            parameters["session_id"] = session_id
+
+        if agent_id and agent_id != "default":
+            query += " AND m.agent_id = $agent_id"
+            parameters["agent_id"] = agent_id
+
         keyword_conditions = []
-        for i, keyword in enumerate(keywords[:5]):  # Limit to top 5 keywords
+        for i, keyword in enumerate(keywords[:5]):
             param_name = f"keyword_{i}"
-            # Use LOWER() for case-insensitive matching
             keyword_conditions.append(f"LOWER(m.content) CONTAINS LOWER(${param_name})")
             parameters[param_name] = keyword
 
         if keyword_conditions:
             query += f" AND ({' OR '.join(keyword_conditions)})"
 
-        # Order by a combination of recency and importance
-        # Balance recency with importance - recent memories should be prioritized
-        # but still consider importance for relevance
         query += """
             RETURN m
             ORDER BY m.created_at DESC, m.importance DESC
             LIMIT $limit
         """
 
-        # Execute query
         results = self.db_adapter.execute_query(query, parameters)
 
-        # Convert results to Memory objects using QueryBuilder
-        memories = []
+        memories: list[Memory] = []
         from ..storage.query_builder import QueryBuilder
 
         query_builder = QueryBuilder(self.db_adapter)
-
         for result in results:
             try:
                 memory_data = result["m"]
@@ -262,7 +366,6 @@ class KeywordRecallStrategy(RecallStrategy):
                     memories.append(memory)
             except Exception as e:
                 logger.warning(f"Failed to parse memory from database: {e}")
-                continue
 
         return memories
 

@@ -340,6 +340,10 @@ class KuzuAdapter:
             # "already exists" errors so this is safe to call on every startup).
             self._ensure_hnsw_index()
 
+            # Ensure Keyword node table and HAS_KEYWORD rel table exist
+            # (idempotent — swallows "already exists" errors).
+            self._ensure_keyword_tables()
+
             # Run one-time data maintenance (purge expired, dedup, trim git metadata).
             # Uses the already-open pool — no second kuzu.Database is opened.
             self._run_data_maintenance()
@@ -527,6 +531,33 @@ class KuzuAdapter:
             else:
                 # Non-fatal: log but don't crash DB initialisation.
                 logger.warning("HNSW index creation failed (non-fatal): %s", exc)
+
+    def _ensure_keyword_tables(self) -> None:
+        """Create Keyword node table and HAS_KEYWORD rel table if not already present.
+
+        Called after _ensure_hnsw_index() during initialize().  Swallows
+        "already exists" and related errors so this is fully idempotent
+        and safe to call on every startup.
+        """
+        keyword_node_ddl = (
+            "CREATE NODE TABLE IF NOT EXISTS Keyword ("
+            "word STRING, idf FLOAT DEFAULT 0.0, "
+            "total_mentions INT64 DEFAULT 0, PRIMARY KEY (word))"
+        )
+        keyword_rel_ddl = (
+            "CREATE REL TABLE IF NOT EXISTS HAS_KEYWORD ("
+            "FROM Memory TO Keyword, tf FLOAT DEFAULT 0.0, tfidf FLOAT DEFAULT 0.0)"
+        )
+        for ddl in (keyword_node_ddl, keyword_rel_ddl):
+            try:
+                self.execute_query(ddl)
+                logger.debug("Keyword table ensured: %s", ddl.split("(")[0].strip())
+            except Exception as exc:
+                exc_msg = str(exc).lower()
+                if "already exists" in exc_msg or "exist" in exc_msg:
+                    logger.debug("Keyword table already exists: %s", exc)
+                else:
+                    logger.warning("Keyword table creation failed (non-fatal): %s", exc)
 
     def _initialize_schema(self) -> None:
         """Initialize or verify database schema."""

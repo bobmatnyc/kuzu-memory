@@ -292,8 +292,8 @@ class TestRunnerHasFourEnrichers:
         adapter.config = _make_config()
         runner = EnrichmentRunner(adapter, _make_config())
 
-        assert len(runner._enrichers) == 4, (
-            f"Expected 4 enrichers, got {len(runner._enrichers)}: "
+        assert len(runner._enrichers) == 5, (
+            f"Expected 5 enrichers, got {len(runner._enrichers)}: "
             f"{[e.name for e in runner._enrichers]}"
         )
 
@@ -321,4 +321,5 @@ class TestRunnerHasFourEnrichers:
             "centrality",
             "hnsw_index",
             "relates_to",
+            "tfidf_keyword",
         ], f"Unexpected enricher order: {names}"

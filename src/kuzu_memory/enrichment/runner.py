@@ -25,6 +25,7 @@ from .centrality import CentralityEnricher
 from .entity_cooccurrence import EntityCoOccurrenceEnricher
 from .hnsw_index import HNSWIndexEnricher
 from .relates_to import RelatesToEnricher
+from .tfidf_keyword import TFIDFKeywordEnricher
 
 if TYPE_CHECKING:
     from ..core.config import KuzuMemoryConfig
@@ -67,6 +68,7 @@ class EnrichmentRunner:
             CentralityEnricher(),
             HNSWIndexEnricher(),
             RelatesToEnricher(),
+            TFIDFKeywordEnricher(),
         ]
 
     def run_all(self) -> list[EnrichmentResult]:
