@@ -448,7 +448,7 @@ class RecallCoordinator:
         # Sort by score (highest first)
         scored_memories.sort(key=lambda x: x[1], reverse=True)
 
-        return [memory for memory, score in scored_memories]
+        return [memory for memory, _ in scored_memories]
 
     def _type_boost(self, memory: Memory) -> float:
         """Return the memory-type boost factor for a single memory (0-1 scale)."""

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -49,6 +48,9 @@ def _make_memory(
         importance=importance,
         confidence=confidence,
         created_at=datetime.now(),
+        valid_to=None,
+        user_id=None,
+        session_id=None,
     )
 
 
@@ -74,8 +76,10 @@ def _make_ranker() -> MemoryRanker:
 class TestCoordinatorKnowledgeTypeBoost:
     """Verify _knowledge_type_boost returns the correct value for every type."""
 
+    coordinator: RecallCoordinator
+
     @pytest.fixture(autouse=True)
-    def coordinator(self) -> RecallCoordinator:
+    def _setup_coordinator(self) -> RecallCoordinator:
         self.coordinator = _make_coordinator()
         return self.coordinator
 
@@ -116,8 +120,10 @@ class TestCoordinatorKnowledgeTypeBoost:
 class TestCoordinatorAccessCountBoost:
     """Verify _access_count_boost log-scaling behaviour."""
 
+    coordinator: RecallCoordinator
+
     @pytest.fixture(autouse=True)
-    def coordinator(self) -> RecallCoordinator:
+    def _setup_coordinator(self) -> RecallCoordinator:
         self.coordinator = _make_coordinator()
         return self.coordinator
 
@@ -160,8 +166,10 @@ class TestCoordinatorAccessCountBoost:
 class TestCoordinatorRelevanceScoreIntegration:
     """Verify that the boosts are additive with existing score components."""
 
+    coordinator: RecallCoordinator
+
     @pytest.fixture(autouse=True)
-    def coordinator(self) -> RecallCoordinator:
+    def _setup_coordinator(self) -> RecallCoordinator:
         self.coordinator = _make_coordinator()
         return self.coordinator
 
@@ -287,8 +295,10 @@ class TestCoordinatorRelevanceScoreIntegration:
 class TestRankerKnowledgeTypeBoost:
     """Verify MemoryRanker's knowledge_type boost is consistent with coordinator."""
 
+    ranker: MemoryRanker
+
     @pytest.fixture(autouse=True)
-    def ranker(self) -> MemoryRanker:
+    def _setup_ranker(self) -> MemoryRanker:
         self.ranker = _make_ranker()
         return self.ranker
 
@@ -325,8 +335,10 @@ class TestRankerKnowledgeTypeBoost:
 class TestRankerAccessCountBoost:
     """Verify MemoryRanker's access_count boost is consistent with coordinator."""
 
+    ranker: MemoryRanker
+
     @pytest.fixture(autouse=True)
-    def ranker(self) -> MemoryRanker:
+    def _setup_ranker(self) -> MemoryRanker:
         self.ranker = _make_ranker()
         return self.ranker
 
@@ -363,8 +375,10 @@ class TestRankerAccessCountBoost:
 class TestRankerIntegration:
     """Verify boosts are applied in the full rank_memories pipeline."""
 
+    ranker: MemoryRanker
+
     @pytest.fixture(autouse=True)
-    def ranker(self) -> MemoryRanker:
+    def _setup_ranker(self) -> MemoryRanker:
         self.ranker = _make_ranker()
         return self.ranker
 
