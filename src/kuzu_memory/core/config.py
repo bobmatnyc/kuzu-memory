@@ -362,6 +362,22 @@ class KuzuMemoryConfig:
                     if hasattr(user_config, key):
                         setattr(user_config, key, value)
 
+            # Environment variable overrides for user config
+            env_mode = os.environ.get("KUZU_MEMORY_MODE")
+            if env_mode:
+                user_config.mode = env_mode
+
+            env_user_db_path = os.environ.get("KUZU_MEMORY_USER_DB_PATH")
+            if env_user_db_path:
+                user_config.user_db_path = env_user_db_path
+
+            env_min_importance = os.environ.get("KUZU_MEMORY_PROMOTION_MIN_IMPORTANCE")
+            if env_min_importance:
+                try:
+                    user_config.promotion_min_importance = float(env_min_importance)
+                except ValueError:
+                    pass  # ignore malformed env var
+
             # Create main configuration
             return cls(
                 storage=storage_config,
@@ -513,6 +529,13 @@ class KuzuMemoryConfig:
                 "batch_interval": self.analytics.batch_interval,
                 "batch_size": self.analytics.batch_size,
                 "stale_threshold_days": self.analytics.stale_threshold_days,
+            },
+            "user": {
+                "mode": self.user.mode,
+                "user_db_path": self.user.user_db_path,
+                "promotion_min_importance": self.user.promotion_min_importance,
+                "promotion_knowledge_types": self.user.promotion_knowledge_types,
+                "project_tag": self.user.project_tag,
             },
         }
 
