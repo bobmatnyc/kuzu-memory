@@ -465,6 +465,47 @@ class KuzuAdapter:
             # query error later, which is easier to diagnose than a startup crash.
             logger.warning("Schema migration check failed (non-fatal): %s", e)
 
+        # Edge-table migrations: RELATES_TO.weight and RELATES_TO.relationship_type
+        # These columns are used by RelatesToEnricher and GraphRelatedRecallStrategy.
+        # Probe by querying a LIMIT 0 result with the column; ALTER TABLE if absent.
+        _rel_columns: list[tuple[str, str]] = [
+            (
+                "weight",
+                "ALTER TABLE RELATES_TO ADD weight FLOAT DEFAULT 1.0",
+            ),
+            (
+                "relationship_type",
+                "ALTER TABLE RELATES_TO ADD relationship_type STRING DEFAULT 'shared_entity'",
+            ),
+        ]
+        try:
+            with self._pool.get_connection() as conn:
+                for col, rel_ddl in _rel_columns:
+                    try:
+                        conn.execute(f"MATCH ()-[r:RELATES_TO]->() RETURN r.{col} LIMIT 0")
+                        # Column exists — no ALTER TABLE needed
+                    except Exception as probe_exc:
+                        probe_msg = str(probe_exc).lower()
+                        if "cannot find property" in probe_msg or col.lower() in probe_msg:
+                            try:
+                                conn.execute(rel_ddl)
+                                logger.info("Schema migration applied: %s", rel_ddl)
+                            except Exception as alter_exc:
+                                logger.warning(
+                                    "Schema migration for RELATES_TO.%s failed (non-fatal): %s",
+                                    col,
+                                    alter_exc,
+                                )
+                        else:
+                            # Table absent or unexpected error — silently skip
+                            logger.debug(
+                                "Schema migration probe error for RELATES_TO.%s (skipping): %s",
+                                col,
+                                probe_exc,
+                            )
+        except Exception as e:
+            logger.warning("RELATES_TO schema migration check failed (non-fatal): %s", e)
+
     def _ensure_hnsw_index(self) -> None:
         """Create the HNSW vector index on Memory.embedding if not already present.
 

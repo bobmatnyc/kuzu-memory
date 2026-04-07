@@ -73,8 +73,9 @@ CREATE REL TABLE IF NOT EXISTS MENTIONS (
 
 CREATE REL TABLE IF NOT EXISTS RELATES_TO (
     FROM Memory TO Memory,
-    relationship_type STRING,
+    relationship_type STRING DEFAULT 'shared_entity',
     strength FLOAT DEFAULT 1.0,
+    weight FLOAT DEFAULT 1.0,
     created_at TIMESTAMP
 );
 

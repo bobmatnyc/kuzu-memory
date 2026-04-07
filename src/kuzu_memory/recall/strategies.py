@@ -486,6 +486,116 @@ class EntityRecallStrategy(RecallStrategy):
         return expanded
 
 
+class GraphRelatedRecallStrategy(RecallStrategy):
+    """2-hop recall via RELATES_TO edges from seed memories.
+
+    Finds a small set of seed memories using keyword matching, then traverses
+    RELATES_TO edges to surface related memories that may not share keywords
+    with the original query.
+
+    Confidence scoring:
+    - Base: 0.5 * (min(total_weight, 5.0) / 5.0)
+    - kt_affinity bonus: +0.15 for edges marked with relationship_type='kt_affinity'
+    - Overall cap: 1.0
+
+    This strategy is intended for graph-only recall paths (use_semantic_search=False).
+    When HNSW is active, it is skipped in the coordinator to avoid redundancy.
+    """
+
+    # Maximum number of seed memories to use for graph traversal.
+    _MAX_SEEDS = 5
+
+    def __init__(self, db_adapter: KuzuAdapter, config: KuzuMemoryConfig) -> None:
+        super().__init__(db_adapter, config)
+        self.strategy_name = "graph_related"
+
+        # Reuse keyword extraction logic from KeywordRecallStrategy.
+        self._keyword_strategy = KeywordRecallStrategy(db_adapter, config)
+
+    def _execute_recall(
+        self,
+        prompt: str,
+        max_memories: int,
+        user_id: str | None,
+        session_id: str | None,
+        agent_id: str,
+    ) -> list[Memory]:
+        """Execute 2-hop graph traversal recall.
+
+        Step 1: find seed memories via keyword search on the prompt.
+        Step 2: traverse RELATES_TO edges from those seeds.
+        Step 3: score related memories by edge weight and relationship type.
+        """
+        # Step 1: seed memories via keyword match (up to _MAX_SEEDS).
+        seed_memories = self._keyword_strategy._execute_recall(
+            prompt, self._MAX_SEEDS, user_id, session_id, agent_id
+        )
+        if not seed_memories:
+            return []
+
+        seed_ids = [m.id for m in seed_memories]
+
+        # Step 2: traverse RELATES_TO edges from seeds.
+        traversal_query = """
+            MATCH (seed:Memory)-[r:RELATES_TO]->(related:Memory)
+            WHERE seed.id IN $seed_ids
+              AND related.id NOT IN $seed_ids
+            RETURN DISTINCT related,
+                   SUM(r.weight) AS total_weight,
+                   MAX(r.relationship_type) AS rel_type
+            ORDER BY total_weight DESC
+            LIMIT $limit
+        """
+        params: dict[str, Any] = {
+            "seed_ids": seed_ids,
+            "limit": max_memories,
+        }
+
+        try:
+            rows = self.db_adapter.execute_query(traversal_query, params)
+        except Exception as exc:
+            # RELATES_TO may not exist yet (enricher hasn't run) — silent fallback.
+            logger.debug(
+                "GraphRelatedRecallStrategy traversal failed (non-fatal, table may not exist): %s",
+                exc,
+            )
+            return []
+
+        # Step 3: convert rows to Memory objects with weighted confidence.
+        memories: list[Memory] = []
+        from ..storage.query_builder import QueryBuilder
+
+        query_builder = QueryBuilder(self.db_adapter)
+
+        for row in rows:
+            try:
+                memory = query_builder._convert_db_result_to_memory(row["related"])
+                if memory is None:
+                    continue
+
+                total_weight = float(row.get("total_weight") or 1.0)
+                rel_type = row.get("rel_type") or ""
+
+                # Confidence: 0.5 base scaled by capped weight, plus kt_affinity bonus.
+                confidence = 0.5 * (min(total_weight, 5.0) / 5.0)
+                if rel_type == "kt_affinity":
+                    confidence += 0.15
+
+                memory.confidence = min(confidence, 1.0)
+                memories.append(memory)
+            except Exception as parse_exc:
+                logger.warning("GraphRelatedRecallStrategy: failed to parse row: %s", parse_exc)
+
+        if memories:
+            logger.debug(
+                "GraphRelatedRecallStrategy: %d related memories via %d seeds",
+                len(memories),
+                len(seed_ids),
+            )
+
+        return memories
+
+
 class TemporalRecallStrategy(RecallStrategy):
     """
     Temporal-based memory recall strategy.

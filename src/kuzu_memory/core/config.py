@@ -530,7 +530,7 @@ class KuzuMemoryConfig:
         if not self.recall.strategies:
             raise ConfigurationError("recall.strategies cannot be empty")
 
-        valid_strategies = {"keyword", "entity", "temporal", "auto"}
+        valid_strategies = {"keyword", "entity", "temporal", "graph_related", "auto"}
         for strategy in self.recall.strategies:
             if strategy not in valid_strategies:
                 raise ConfigurationError(f"Invalid recall strategy: {strategy}")

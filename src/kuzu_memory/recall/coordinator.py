@@ -21,7 +21,12 @@ from ..storage.cache import MemoryCache
 from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
 from ..utils.validation import validate_text_input
-from .strategies import EntityRecallStrategy, KeywordRecallStrategy, TemporalRecallStrategy
+from .strategies import (
+    EntityRecallStrategy,
+    GraphRelatedRecallStrategy,
+    KeywordRecallStrategy,
+    TemporalRecallStrategy,
+)
 from .temporal_decay import TemporalDecayEngine
 
 logger = logging.getLogger(__name__)
@@ -150,6 +155,7 @@ class RecallCoordinator:
             "keyword": KeywordRecallStrategy(db_adapter, config),
             "entity": EntityRecallStrategy(db_adapter, config),
             "temporal": TemporalRecallStrategy(db_adapter, config),
+            "graph_related": GraphRelatedRecallStrategy(db_adapter, config),
         }
 
         # Initialize cache
@@ -237,7 +243,12 @@ class RecallCoordinator:
             # Execute recall strategy
             if strategy == "auto":
                 memories = self._auto_recall(
-                    clean_prompt, max_memories, user_id, session_id, agent_id
+                    clean_prompt,
+                    max_memories,
+                    user_id,
+                    session_id,
+                    agent_id,
+                    use_semantic_search=use_semantic_search,
                 )
                 strategy_used = "auto"
             else:
@@ -325,14 +336,35 @@ class RecallCoordinator:
         user_id: str | None,
         session_id: str | None,
         agent_id: str,
+        use_semantic_search: bool = False,
     ) -> list[Memory]:
-        """Execute automatic strategy selection and combination."""
+        """Execute automatic strategy selection and combination.
 
+        When ``use_semantic_search=True`` the ``graph_related`` strategy is
+        skipped because the HNSW index already surfaces semantically related
+        memories — running graph traversal on top would produce redundant results
+        with higher latency.
+        """
         all_memories = []
         strategy_weights = self.config.recall.strategy_weights
 
-        # Run all enabled strategies in parallel
-        for strategy_name in self.config.recall.strategies:
+        # Build the effective strategy list for this call.
+        # graph_related runs only on graph-only paths (HNSW inactive).
+        effective_strategies = list(self.config.recall.strategies)
+        if not use_semantic_search and "graph_related" not in effective_strategies:
+            # Append graph_related after entity so it has seeds to traverse.
+            # Insert after "entity" if present, otherwise append at end.
+            try:
+                insert_pos = effective_strategies.index("entity") + 1
+            except ValueError:
+                insert_pos = len(effective_strategies)
+            effective_strategies.insert(insert_pos, "graph_related")
+
+        # Run all enabled strategies
+        for strategy_name in effective_strategies:
+            # Skip graph_related when HNSW is active (redundant + slower).
+            if strategy_name == "graph_related" and use_semantic_search:
+                continue
             if strategy_name in self.strategies:
                 try:
                     strategy_memories = self.strategies[strategy_name].recall(

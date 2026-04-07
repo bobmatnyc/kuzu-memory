@@ -30,6 +30,7 @@ from .base import BaseEnricher, EnrichmentResult
 from .centrality import CentralityEnricher
 from .entity_cooccurrence import EntityCoOccurrenceEnricher
 from .hnsw_index import EMBEDDING_DIM, HNSW_INDEX_NAME, HNSWIndexEnricher
+from .relates_to import RelatesToEnricher
 from .runner import EnrichmentRunner
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "EnrichmentRunner",
     "EntityCoOccurrenceEnricher",
     "HNSWIndexEnricher",
+    "RelatesToEnricher",
 ]

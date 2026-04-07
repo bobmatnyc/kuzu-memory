@@ -24,6 +24,7 @@ from .base import EnrichmentResult
 from .centrality import CentralityEnricher
 from .entity_cooccurrence import EntityCoOccurrenceEnricher
 from .hnsw_index import HNSWIndexEnricher
+from .relates_to import RelatesToEnricher
 
 if TYPE_CHECKING:
     from ..core.config import KuzuMemoryConfig
@@ -65,6 +66,7 @@ class EnrichmentRunner:
             EntityCoOccurrenceEnricher(),
             CentralityEnricher(),
             HNSWIndexEnricher(),
+            RelatesToEnricher(),
         ]
 
     def run_all(self) -> list[EnrichmentResult]:
