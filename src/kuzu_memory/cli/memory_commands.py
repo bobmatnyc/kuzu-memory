@@ -398,8 +398,9 @@ def recall(
                     rich_print(
                         f"   Source: {getattr(mem, 'source_type', 'unknown')} | Created: {mem.created_at.strftime('%Y-%m-%d %H:%M')}"
                     )
-                    if hasattr(mem, "relevance_score"):
-                        rich_print(f"   Relevance: {mem.relevance_score:.3f}")
+                    relevance_score = getattr(mem, "relevance_score", None)
+                    if relevance_score is not None:
+                        rich_print(f"   Relevance: {relevance_score:.3f}")
                     rich_print("")  # Empty line
 
                 # Show performance stats
@@ -432,14 +433,16 @@ def recall(
                         f"Created: {mem.created_at.strftime('%Y-%m-%d %H:%M')}",
                     ]
 
-                    if hasattr(mem, "relevance_score"):
-                        metadata_parts.append(f"Relevance: {mem.relevance_score:.3f}")
+                    relevance_score = getattr(mem, "relevance_score", None)
+                    if relevance_score is not None:
+                        metadata_parts.append(f"Relevance: {relevance_score:.3f}")
 
                     rich_print(f"   {' | '.join(metadata_parts)}", style="dim")
 
                     # Show ranking explanation if requested
-                    if explain_ranking and hasattr(mem, "ranking_explanation"):
-                        rich_print(f"   🎯 Ranking: {mem.ranking_explanation}", style="cyan")
+                    ranking_explanation = getattr(mem, "ranking_explanation", None)
+                    if explain_ranking and ranking_explanation is not None:
+                        rich_print(f"   🎯 Ranking: {ranking_explanation}", style="cyan")
 
                     rich_print("")  # Empty line
 
@@ -1384,6 +1387,7 @@ def merge(
                 return
 
         # Backup target database if requested
+        backup_path: Path | None = None
         if backup:
             rich_print("\n💾 Creating backup...", style="cyan")
             import shutil
@@ -1624,6 +1628,75 @@ def merge(
         if ctx.obj and ctx.obj.get("debug"):
             raise
         rich_print(f"❌ Merge failed: {e}", style="red")
+        sys.exit(1)
+
+
+@memory.command("export")
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output directory (default: .kuzu-backups/ next to the database)",
+)
+@click.option(
+    "--include-archived",
+    is_flag=True,
+    help="Also export archived memories",
+)
+@click.option(
+    "--format",
+    "output_format",
+    default="json",
+    type=click.Choice(["json"]),
+    help="Export format",
+)
+@click.pass_context
+def export_memories(
+    ctx: click.Context,
+    output: str | None,
+    include_archived: bool,
+    output_format: str,  # reserved for future formats
+) -> None:
+    """
+    Export all memories to a JSON backup file.
+
+    Creates a timestamped backup of all memories. Run before migrations
+    or when you want to preserve a snapshot of your memory state.
+
+    \b
+    Examples:
+      kuzu-memory memory export
+      kuzu-memory memory export --output ~/backups/
+      kuzu-memory memory export --include-archived
+    """
+    from ..utils.memory_exporter import export_memories_to_json
+    from ..utils.project_setup import find_project_root
+
+    project_root = (ctx.obj and ctx.obj.get("project_root")) or find_project_root()
+    db_path_obj: Path | None = (ctx.obj and ctx.obj.get("db_path")) or None
+    if db_path_obj is None:
+        db_path_obj = get_project_db_path(project_root)
+
+    backup_dir = Path(output) if output else db_path_obj.parent / ".kuzu-backups"
+
+    try:
+        with ServiceManager.memory_service(db_path=db_path_obj, enable_git_sync=False) as svc:
+            # Access the underlying KuzuAdapter through the KuzuMemory instance.
+            adapter = svc.kuzu_memory.db_adapter
+
+            result = export_memories_to_json(adapter, backup_dir, include_archived=include_archived)
+
+        rich_panel(
+            f"Memories exported: {result['memories']}\n" f"Backup file: {result['path']}",
+            title="Export Complete",
+            style="green",
+        )
+
+    except Exception as e:
+        if ctx.obj and ctx.obj.get("debug"):
+            raise
+        rich_print(f"❌ Export failed: {e}", style="red")
         sys.exit(1)
 
 
