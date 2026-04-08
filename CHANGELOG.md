@@ -16,68 +16,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.12.2] - 2026-04-08
 
-### Changed
-- Version bump
+### Fixed
+- Pure cosine similarity ranking when `use_semantic_search=True` — removed structural blend (importance/confidence/type_boost weights) that added constant noise for default-value memories. Pure cosine is strictly better.
+- TF-IDF multiplicative boost now correctly enhances semantic ranking instead of overriding it — `_apply_tfidf_boost()` now uses the semantic similarity score as the base rather than `memory.importance` (which was always 0.5 for default memories, making TF-IDF the sole sorting factor)
 
 ## [1.12.1] - 2026-04-08
 
-### Changed
-- Version bump
+### Fixed
+- TF-IDF boost was silently inactive: `_ENRICHMENT_INTERVAL=50` meant `TFIDFKeywordEnricher` never fired in environments with fewer than 50 stored memories, so `HAS_KEYWORD` edges were never written. Lowered to 5.
+- Silent failures in `_apply_tfidf_boost()` now log at `WARNING` instead of `DEBUG`
+- Added integration test to verify Kùzu `IN $list` and `UNWIND $list` parameter syntax
 
 ## [1.12.0] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- TF-IDF multiplicative boost for semantic recall: `final_score = semantic_score × (1 + tfidf_weight × normalized_tfidf)`. TF-IDF can only raise a score, never displace a high-semantic-score memory.
+- `RecallConfig.tfidf_boost_weight` (default: 0.3) and `KUZU_MEMORY_TFIDF_BOOST_WEIGHT` env var
+- Shared `_tokenizer.py` module with `tokenize()` and `STOPWORDS` (avoids circular imports)
+- `RecallCoordinator._apply_tfidf_boost()`: per-query normalization (divide by max in result set), graceful fallback on DB error
 
 ## [1.11.1] - 2026-04-07
 
-### Changed
-- Version bump
+### Fixed
+- Critical ranking regression from v1.11.0: disabled `KeywordRecallStrategy._recall_via_keyword_graph()` which returned raw `SUM(hk.tfidf)` scores on an incompatible scale with cosine/confidence scores, collapsing R@5 from 89% to 40%. Graph path preserved for future use once normalization is implemented.
 
-## [1.11.0] - 2026-04-07
+## [1.11.0] - 2026-04-07 *(regression — do not use)*
 
-### Changed
-- Version bump
+### Added
+- Keyword node table with TF-IDF scores for graph-native recall (#43): `TFIDFKeywordEnricher` tokenizes content, computes TF/IDF, MERGEs `Keyword` nodes and `HAS_KEYWORD` edges in batches of 50. Registered as 5th enricher.
+- `Keyword` node table and `HAS_KEYWORD` rel table in schema (new DBs + migration)
+- `KeywordRecallStrategy` with graph path (HAS_KEYWORD SUM tfidf) falling back to CONTAINS scan
+
+*Note: contained a ranking regression fixed in v1.11.1*
 
 ## [1.10.0] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- User-level memory epic complete (#25, #27-#31): `UserConfig` sub-config with `mode`/`user_db_path`/promotion thresholds, env vars (`KUZU_MEMORY_MODE`, `KUZU_MEMORY_USER_DB_PATH`, `KUZU_MEMORY_PROMOTION_MIN_IMPORTANCE`), `UserMemoryService` with promote/promote_batch/deduplication, session-end promotion hook (background thread, non-blocking), MCP tools `kuzu_project_context` and `kuzu_user_context`, CLI commands `kuzu-memory user setup/status/promote/disable`
+- `UserConfig` section added to `to_dict()` for YAML round-trip persistence
+- 46 new tests covering all user-mode components
+
+### Fixed
+- `--db-path` group option now propagates correctly to all subcommands (priority: local flag > ctx.obj > default) (#37)
+- `project_tag` field added to Memory schema with 20 new migration tests (#26)
 
 ## [1.9.10] - 2026-04-07
 
-### Changed
-- Version bump
+### Fixed
+- Schema migration: `project_tag` field on Memory and ArchivedMemory nodes (#26, part of #25 user-level memory epic)
 
 ## [1.9.9] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- Optional LLM reranking pass for MCP recall (#45): `RerankingConfig` (enabled=False, model=claude-haiku-4-5, top_k_to_rerank=20, timeout_ms=2000), `LLMReranker` with lazy anthropic import, ThreadPoolExecutor timeout guard, structured prompt, partial response handling. Enabled via `KUZU_MEMORY_RERANK=1`. Falls back to original order on any failure.
 
 ## [1.9.8] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- `RELATES_TO` relationship edges via `RelatesToEnricher` (#42): shared-entity MERGE (m1.id < m2.id guard), knowledge-type affinity edges for gotcha→pattern and rule→architecture pairs (weight=2.0)
+- `GraphRelatedRecallStrategy`: 2-hop RELATES_TO traversal with confidence scoring
+- `weight` and `relationship_type` fields on RELATES_TO rel table
 
 ## [1.9.7] - 2026-04-07
 
-### Changed
-- Version bump
+### Fixed
+- HNSW silent NULL writes: `embedding FLOAT[384]` column was missing from schema DDL, causing embeddings to fail silently on first write. Added to DDL and ensured via `_ensure_hnsw_index()` at startup.
 
 ## [1.9.6] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- Kùzu native HNSW vector index replacing brute-force NumPy cosine scan (#44): `HNSWIndexEnricher` creates `CALL CREATE_VECTOR_INDEX` idempotently, `_recall_with_hnsw()` uses `CALL QUERY_VECTOR_INDEX` with NumPy fallback. Embeddings stored at ingestion time. Backfill triggered from `kuzu_optimize`. Graph-score centrality boost added to ranking pipeline.
 
 ## [1.9.5] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- `CO_OCCURS_WITH` relationship edges via `EntityCooccurrenceEnricher` and `CentralityEnricher` (#41): entity co-occurrence graph, PageRank-style centrality scores, async enrichment module
+- `graph_score` centrality boost in recall ranking pipeline
 
 ## [1.9.4] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- `knowledge_type` boost and `access_count` factor in graph recall ranking
 
 ## [1.9.3] - 2026-04-06
 
