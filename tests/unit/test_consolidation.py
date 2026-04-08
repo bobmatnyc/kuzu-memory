@@ -104,6 +104,7 @@ def store_memory(db_adapter: KuzuAdapter, memory: Memory) -> None:
         confidence: $confidence,
         source_type: $source_type,
         agent_id: $agent_id,
+        source_speaker: $source_speaker,
         user_id: $user_id,
         session_id: $session_id,
         metadata: $metadata
