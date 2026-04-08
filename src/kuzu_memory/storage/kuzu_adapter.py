@@ -66,7 +66,7 @@ def _is_db_lock_error(exc: Exception) -> bool:
     return "could not set lock" in msg or ("lock" in msg and "file" in msg)
 
 
-def _lock_error_message(db_path: Path, _original_exc: Exception) -> str:
+def _lock_error_message(db_path: Path, __original_exc: Exception) -> str:
     """Build an actionable DatabaseLockError message, including lsof info when available."""
     import shutil
     import subprocess
