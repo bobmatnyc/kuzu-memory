@@ -281,6 +281,109 @@ class TestRankMemoriesSemanticPath:
 
 
 # ---------------------------------------------------------------------------
+# Full-corpus cosine scan fallback (issue #49)
+# ---------------------------------------------------------------------------
+
+
+class TestFullCorpusFallback:
+    """
+    Regression tests for issue #49: keyword pre-filter drops candidates before
+    cosine ranking when HNSW is unavailable and use_semantic_search=True.
+
+    When HNSW returns None (index absent) and semantic search is requested,
+    attach_memories must fall back to _recall_all_memories() (full corpus) instead
+    of relying on keyword-filtered candidates from graph strategies.
+    """
+
+    def setup_method(self) -> None:
+        _SemanticScorer._instance = None
+
+    def test_full_corpus_fallback_called_when_hnsw_unavailable(self) -> None:
+        """
+        When _recall_with_hnsw returns None, _recall_all_memories must be called
+        and its results used as the candidate pool.
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        corpus_memory = _make_memory("full corpus content", "corpus-1")
+
+        with (
+            patch.object(coordinator, "_recall_with_hnsw", return_value=None),
+            patch.object(
+                coordinator, "_recall_all_memories", return_value=[corpus_memory]
+            ) as mock_all,
+            patch.object(coordinator, "_rank_memories", return_value=[corpus_memory]) as mock_rank,
+        ):
+            coordinator.attach_memories("what did you recommend?", use_semantic_search=True)
+
+        mock_all.assert_called_once()
+        # _rank_memories must be called with the full-corpus candidates
+        rank_call_memories = mock_rank.call_args[0][0]
+        assert any(m.id == "corpus-1" for m in rank_call_memories)
+
+    def test_full_corpus_fallback_not_called_when_hnsw_succeeds(self) -> None:
+        """
+        When HNSW returns a non-empty result, _recall_all_memories must NOT be called.
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        hnsw_memory = _make_memory("hnsw result", "hnsw-1")
+
+        with (
+            patch.object(coordinator, "_recall_with_hnsw", return_value=[hnsw_memory]),
+            patch.object(coordinator, "_recall_all_memories") as mock_all,
+            patch.object(coordinator, "_rank_memories", return_value=[hnsw_memory]),
+        ):
+            coordinator.attach_memories("test query", use_semantic_search=True)
+
+        mock_all.assert_not_called()
+
+    def test_full_corpus_fallback_not_called_when_semantic_search_disabled(self) -> None:
+        """
+        When use_semantic_search=False, HNSW is never attempted and
+        _recall_all_memories must not be called (normal Jaccard path).
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        stub_memory = _make_memory("test content", "m1")
+        for strategy in coordinator.strategies.values():
+            strategy.recall = MagicMock(return_value=[stub_memory])  # type: ignore[method-assign]
+
+        with (
+            patch.object(coordinator, "_recall_with_hnsw") as mock_hnsw,
+            patch.object(coordinator, "_recall_all_memories") as mock_all,
+        ):
+            coordinator.attach_memories("test query", use_semantic_search=False)
+
+        mock_hnsw.assert_not_called()
+        mock_all.assert_not_called()
+
+    def test_recall_all_memories_fetches_without_keyword_filter(self) -> None:
+        """
+        _recall_all_memories must issue a query with no keyword conditions —
+        confirmed by verifying the Cypher does not contain 'CONTAINS'.
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        # Capture the query sent to execute_query
+        captured_queries: list[str] = []
+
+        def capture_query(query: str, params: dict) -> list:  # type: ignore[type-arg]
+            captured_queries.append(query)
+            return []
+
+        mock_adapter.execute_query.side_effect = capture_query
+
+        coordinator._recall_all_memories(user_id=None, session_id=None, agent_id="default")
+
+        assert len(captured_queries) == 1
+        assert (
+            "CONTAINS" not in captured_queries[0]
+        ), "_recall_all_memories must not apply any keyword pre-filter (CONTAINS clause found)"
+        assert "MATCH (m:Memory)" in captured_queries[0]
+
+
+# ---------------------------------------------------------------------------
 # attach_memories — parameter threading through coordinator
 # ---------------------------------------------------------------------------
 

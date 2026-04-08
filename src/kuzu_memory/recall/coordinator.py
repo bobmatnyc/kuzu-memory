@@ -267,13 +267,38 @@ class RecallCoordinator:
                 )
                 strategy_used = strategy
 
-            # Merge HNSW candidates into the graph-strategy candidates so the
-            # ranking layer sees both.  HNSW results are inserted at the front
-            # so they are not dropped when deduplication runs; duplicates by ID
-            # are removed inside _rank_memories.
+            # Merge / replace candidates depending on HNSW availability.
+            #
+            # Case 1: HNSW succeeded — use HNSW candidates as the primary pool,
+            # merged with graph-strategy candidates so structural signals still
+            # influence ranking.  HNSW results go at the front so deduplication
+            # keeps the HNSW-scored copy when IDs collide.
+            #
+            # Case 2: HNSW unavailable (None) AND semantic search requested —
+            # the keyword pre-filter in the graph strategies only surfaces sessions
+            # that share ≤5 query keywords.  For SSA questions the answer lives in
+            # assistant turns (not indexed), so the correct session is frequently
+            # excluded before cosine ranking runs.  Fix: replace the keyword-filtered
+            # pool with a full-corpus scan so cosine similarity can rank ALL sessions.
+            # (issue #49)
+            #
+            # Case 3: HNSW unavailable AND semantic search NOT requested — keep
+            # the graph-strategy candidates unchanged (existing Jaccard path).
             if hnsw_memories:
                 memories = hnsw_memories + memories
                 strategy_used = f"{strategy_used}+hnsw"
+            elif use_semantic_search and hnsw_memories is None:
+                # HNSW not available — full-corpus cosine scan.
+                # Replaces keyword-filtered candidates with all non-expired memories.
+                all_corpus = self._recall_all_memories(user_id, session_id, agent_id)
+                if all_corpus:
+                    memories = all_corpus
+                    strategy_used = f"{strategy_used}+full_scan"
+                    logger.debug(
+                        "_recall_with_hnsw unavailable; falling back to full-corpus "
+                        "cosine scan over %d memories",
+                        len(all_corpus),
+                    )
 
             # Rank and filter memories
             ranked_memories = self._rank_memories(
@@ -520,6 +545,72 @@ class RecallCoordinator:
                 memories.append(memory)
             except Exception as parse_exc:
                 logger.debug("_recall_with_hnsw: failed to parse node: %s", parse_exc)
+
+        return memories
+
+    def _recall_all_memories(
+        self,
+        user_id: str | None,
+        session_id: str | None,
+        agent_id: str,
+    ) -> list[Memory]:
+        """Fetch all non-expired memories without a keyword pre-filter.
+
+        Used as the candidate pool for full-corpus cosine scan when the HNSW
+        index is unavailable and ``use_semantic_search=True``.  The keyword
+        pre-filter in graph strategies limits candidates to sessions that share
+        query keywords, which excludes SSA questions where the correct session's
+        answer vocabulary lives only in assistant turns (not indexed).
+
+        For typical project DBs (tens to low hundreds of memories) this is
+        fast enough to keep recall latency under the 50ms target.
+
+        Args:
+            user_id: Optional user scope filter.
+            session_id: Optional session scope filter.
+            agent_id: Agent scope filter (skipped when "default").
+
+        Returns:
+            All non-expired Memory objects within the current scope.
+        """
+        from datetime import datetime
+
+        from ..storage.query_builder import QueryBuilder
+
+        parameters: dict[str, object] = {
+            "current_time": datetime.now().isoformat(),
+        }
+        query = """
+            MATCH (m:Memory)
+            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
+        """
+        if user_id:
+            query += " AND m.user_id = $user_id"
+            parameters["user_id"] = user_id
+        if session_id:
+            query += " AND m.session_id = $session_id"
+            parameters["session_id"] = session_id
+        if agent_id and agent_id != "default":
+            query += " AND m.agent_id = $agent_id"
+            parameters["agent_id"] = agent_id
+
+        query += " RETURN m"
+
+        try:
+            results = self.db_adapter.execute_query(query, parameters)
+        except Exception as exc:
+            logger.warning("_recall_all_memories: DB query failed: %s", exc)
+            return []
+
+        query_builder = QueryBuilder(self.db_adapter)
+        memories: list[Memory] = []
+        for row in results:
+            try:
+                memory = query_builder._convert_db_result_to_memory(row["m"])
+                if memory:
+                    memories.append(memory)
+            except Exception as parse_exc:
+                logger.debug("_recall_all_memories: failed to parse row: %s", parse_exc)
 
         return memories
 
