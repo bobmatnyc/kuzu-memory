@@ -21,6 +21,10 @@ KuzuMemory provides fast, offline memory capabilities for chatbots and AI system
 - **🔧 MCP Ready** - Native Claude Desktop integration with async learning support
 - **🤖 Hook System** - Automatic Claude Code integration using hooks (`UserPromptSubmit`, `Stop`)
 - **👤 User-Level Memory** - Cross-project `~/.kuzu-memory/user.db` automatically aggregates your best patterns and rules across all projects
+- **⚡ HNSW Vector Search** — Kùzu-native approximate nearest-neighbour index (O(log N)) replaces brute-force NumPy cosine scan; embeddings stored at ingestion time
+- **🔤 TF-IDF Keyword Boost** — multiplicative scoring: `final_score = semantic_score × (1 + weight × normalized_tfidf)`, configurable via `KUZU_MEMORY_TFIDF_BOOST_WEIGHT`
+- **🕸️ Graph Enrichment Pipeline** — 5 enrichers: entity co-occurrence, centrality (PageRank-style), HNSW index, RELATES_TO edges (knowledge-type affinity), TF-IDF keyword index
+- **🤖 LLM Reranking** (opt-in) — Haiku reranking pass after recall, enabled via `KUZU_MEMORY_RERANK=1`
 
 ## 🚀 Quick Start
 
@@ -37,7 +41,7 @@ pip install kuzu-memory
 pip install kuzu-memory[dev]
 ```
 
-**Now available on PyPI!** KuzuMemory v1.7.0 is published and ready for production use.
+**Now available on PyPI!** KuzuMemory v1.12.2 is published and ready for production use.
 
 ### Smart Setup (Recommended - ONE Command!)
 
@@ -390,6 +394,12 @@ kuzu-memory user disable
 ```
 
 **At session start**, the MCP server merges relevant user-level patterns into your project context automatically via the `kuzu_user_context` tool — so the lesson you learned in `my-api` is available when you start work on `my-worker`.
+
+**MCP context tools for session start:**
+
+**`kuzu_project_context`** — Returns recent project memories grouped by knowledge_type (rules, patterns, gotchas, architecture). Use at session start to inject project context. Parameters: `days_back` (default 14), `max_per_type` (default 5).
+
+**`kuzu_user_context`** — Returns high-quality memories promoted from all projects (user mode only). Complements `kuzu_project_context` for cross-project knowledge. Returns `{"available": false}` in project mode.
 
 ### Scope Comparison
 

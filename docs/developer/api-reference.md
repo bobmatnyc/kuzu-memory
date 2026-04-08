@@ -396,6 +396,49 @@ kuzu-memory auggie [COMMAND]
 
 ---
 
+## 🛠️ **MCP Tool Reference**
+
+Tools exposed by the KuzuMemory MCP server (`kuzu-memory mcp start`).
+
+### `kuzu_remember`
+Store a memory synchronously. Returns immediately with the stored memory ID.
+
+### `kuzu_learn`
+Store a memory asynchronously (fire-and-forget). Use for project-local observations that don't need cross-project promotion.
+
+### `kuzu_recall`
+Query memories by semantic similarity.
+
+### `kuzu_enhance`
+Enhance a prompt with relevant memories.
+
+### `kuzu_stats`
+Return database statistics.
+
+### `kuzu_project_context`
+
+Returns recent project memories grouped by knowledge_type for session-start context injection.
+
+**Parameters:**
+- `days_back` (int, default: 14) — How many days back to look for memories
+- `max_per_type` (int, default: 5) — Maximum memories per knowledge_type
+
+**Returns:** Formatted string grouped by type (rules, patterns, gotchas, architecture, conventions, notes)
+
+**Usage:** Call at the start of every session before any other tool to inject project context.
+
+### `kuzu_user_context`
+
+Returns high-quality memories promoted from all projects (user mode only). Complements `kuzu_project_context`.
+
+**Parameters:**
+- `days_back` (int, default: 14)
+- `max_per_type` (int, default: 3)
+
+**Returns:** Cross-project context string, or `{"available": false}` when `mode=project`
+
+---
+
 ## 🐍 **Python API**
 
 ### **Core Classes**
@@ -524,6 +567,46 @@ result = await cli_adapter.enhance_prompt(
     use_cache=True
 )
 ```
+
+---
+
+## ⚙️ **Configuration Reference**
+
+### RecallConfig
+
+Controls how memories are retrieved and ranked during recall and enhance operations.
+
+| Field | Type | Default | Env Var |
+|-------|------|---------|---------|
+| `limit` | int | 10 | — |
+| `min_relevance` | float | 0.0 | — |
+| `tfidf_boost_weight` | float | 0.3 | `KUZU_MEMORY_TFIDF_BOOST_WEIGHT` |
+| `reranking` | RerankingConfig | (see below) | — |
+
+#### `tfidf_boost_weight` (float, default: 0.3)
+TF-IDF multiplicative boost weight. Formula: `final_score = semantic_score × (1 + weight × normalized_tfidf)`.
+Set to 0 to disable. Override with `KUZU_MEMORY_TFIDF_BOOST_WEIGHT` env var.
+
+#### `reranking` (RerankingConfig)
+Optional LLM reranking pass after recall.
+
+- `enabled` (bool, default: False) — Enable reranking. Override with `KUZU_MEMORY_RERANK=1`
+- `model` (str, default: "claude-haiku-4-5") — Model for reranking
+- `top_k_to_rerank` (int, default: 20) — Candidates passed to reranker
+- `timeout_ms` (int, default: 2000) — Hard timeout; falls back to original order on timeout
+
+### UserConfig
+
+Controls cross-project memory sharing (user mode).
+
+| Field | Type | Default | Env Var |
+|-------|------|---------|---------|
+| `mode` | str | `"project"` | `KUZU_MEMORY_MODE` |
+| `user_db_path` | str | `~/.kuzu-memory/user.db` | `KUZU_MEMORY_USER_DB_PATH` |
+| `promotion_min_importance` | float | 0.8 | `KUZU_MEMORY_PROMOTION_MIN_IMPORTANCE` |
+| `promotion_knowledge_types` | list | `["rule","pattern","gotcha","architecture"]` | — |
+
+Memories are promoted asynchronously at session end when `mode=user` and importance ≥ threshold.
 
 ---
 
