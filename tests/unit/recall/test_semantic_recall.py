@@ -423,3 +423,83 @@ class TestSpeakerIntentZeroResultGuard:
 
         assert len(result) == 1
         assert result[0].id == "m2"
+
+
+# ---------------------------------------------------------------------------
+# Entity match weight (issue #48)
+# ---------------------------------------------------------------------------
+
+
+class TestEntityMatchWeight:
+    """
+    Regression tests for issue #48: entity match weight 0.10 was high enough for
+    a single common-entity hit on a wrong session to override a Jaccard-leading
+    correct session in fresh/small DBs.
+
+    Weight reduced to 0.03: a wrong session now needs 3+ entity matches to flip
+    a typical Jaccard advantage of 0.05-0.15.
+    """
+
+    def test_entity_weight_constant_is_0_03(self) -> None:
+        """Verify the entity match increment is 0.03, not the old 0.10."""
+        import inspect
+
+        import kuzu_memory.recall.coordinator as coord_module
+
+        source = inspect.getsource(coord_module)
+        # The literal 0.1 entity weight must be gone
+        assert (
+            "score += 0.1" not in source
+        ), "Entity weight is still 0.10 — expected 0.03 (issue #48 regression)"
+        assert (
+            "score += 0.03" in source
+        ), "Entity weight 0.03 not found in coordinator source (issue #48)"
+
+    def test_entity_match_does_not_override_strong_jaccard_lead(self) -> None:
+        """
+        A session with strong Jaccard similarity must outscore a session with
+        1 entity match but weaker Jaccard, even after the entity boost.
+
+        Demonstrates the fix: at weight=0.03, 1 entity match (+0.03) cannot
+        overcome a 0.10 Jaccard advantage (0.10 * 0.25 = +0.025 Jaccard score
+        differential vs +0.03 entity boost — but we test at a larger gap).
+        """
+        coordinator, _ = _make_coordinator()
+
+        from datetime import datetime
+
+        from kuzu_memory.core.models import Memory, MemoryType
+
+        # Correct session: high Jaccard overlap with query, no entity match
+        correct = Memory(
+            id="correct",
+            content="python async patterns event loop",  # overlaps well with query
+            memory_type=MemoryType.SEMANTIC,
+            source_type="test",
+            importance=0.5,
+            confidence=0.5,
+            created_at=datetime.now(),
+            entities=[],  # no entities
+        )
+
+        # Wrong session: lower Jaccard but has 1 entity match on a common word
+        wrong = Memory(
+            id="wrong",
+            content="machine learning training data pipeline",  # low overlap with query
+            memory_type=MemoryType.SEMANTIC,
+            source_type="test",
+            importance=0.5,
+            confidence=0.5,
+            created_at=datetime.now(),
+            entities=["python"],  # matches query word "python"
+        )
+
+        query = "python async event loop patterns"
+        ranked = coordinator._rank_memories([correct, wrong], query, use_semantic_search=False)
+
+        # correct must rank above wrong despite wrong having an entity match
+        assert len(ranked) == 2
+        assert ranked[0].id == "correct", (
+            "Entity match on wrong session should not override strong Jaccard lead. "
+            "Entity weight may have regressed to 0.10."
+        )

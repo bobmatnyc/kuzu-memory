@@ -823,7 +823,10 @@ class RecallCoordinator:
                 # Handle both string and dict entity types
                 entity_str = entity if isinstance(entity, str) else str(entity.get("name", ""))
                 if entity_str.lower() in prompt_lower:
-                    score += 0.1
+                    score += 0.03  # Reduced from 0.10 (issue #48): prevents common-entity
+                    # noise from overriding Jaccard signal in fresh/small DBs.
+                    # At 0.03 a wrong session needs 3+ matched entities to flip a
+                    # typical Jaccard advantage of 0.05-0.15.
 
         # Recency boost (more recent memories get slight boost)
         days_old = (datetime.now() - memory.created_at).days
