@@ -699,10 +699,11 @@ class RecallCoordinator:
         if kt_raw is None:
             return 0.0
         try:
-            kt = KnowledgeType(kt_raw)
+            kt = KnowledgeType(kt_raw) if not isinstance(kt_raw, KnowledgeType) else kt_raw
+            boost = knowledge_type_boosts.get(kt, 0.0)
         except ValueError:
-            return 0.0
-        return knowledge_type_boosts.get(kt, 0.0)
+            boost = 0.0
+        return boost
 
     def _access_count_boost(self, memory: Memory) -> float:
         """Return a log-scaled boost based on the memory's access_count field.

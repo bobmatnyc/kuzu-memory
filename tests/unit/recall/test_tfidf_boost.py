@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kuzu_memory.core.config import KuzuMemoryConfig, RecallConfig
+from kuzu_memory.core.config import KuzuMemoryConfig
 from kuzu_memory.core.models import KnowledgeType, Memory, MemoryType
 from kuzu_memory.recall.coordinator import RecallCoordinator
 
