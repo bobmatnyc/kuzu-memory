@@ -353,6 +353,27 @@ class KuzuAdapter:
         except Exception as e:
             raise DatabaseError(f"Failed to initialize database: {e}")
 
+    def _column_exists(self, table: str, column: str) -> bool:
+        """Return True when *column* exists on *table*.
+
+        Uses a lightweight LIMIT 0 probe query to check column existence
+        without reading any rows.  Returns False on any exception (table
+        absent, column absent, etc.) so callers can treat False as "needs
+        migration".
+        """
+        probe = f"MATCH (m:{table}) RETURN m.{column} LIMIT 0"
+        try:
+            with self._pool.get_connection() as conn:
+                conn.execute(probe)
+            return True
+        except Exception as exc:
+            msg = str(exc).lower()
+            if "cannot find property" in msg or column.lower() in msg:
+                return False
+            # Table absent or unexpected error — treat as absent
+            logger.debug("Column existence probe for %s.%s failed: %s", table, column, exc)
+            return False
+
     def _run_schema_migrations(self) -> None:
         """Run pending SCHEMA-type migrations against this database.
 
@@ -366,6 +387,12 @@ class KuzuAdapter:
 
         For brand-new databases just created by _create_schema(), all columns
         are already present by definition — the probes succeed immediately.
+
+        Pre-migration backup: when at least one column migration is pending,
+        a JSON snapshot of all Memory rows is written to
+        ``<db_parent>/.kuzu-backups/`` before any ALTER TABLE executes.  The
+        backup is best-effort — a failure is logged as a warning but does not
+        block the migration (ALTER TABLE ADD … DEFAULT is non-destructive).
         """
         # Each tuple: (column_name, alter_memory_ddl, alter_archived_ddl_or_None)
         _columns: list[tuple[str, str, str | None]] = [
@@ -420,6 +447,29 @@ class KuzuAdapter:
                 None,
             ),
         ]
+
+        # Detect which Memory-column migrations are actually pending (column absent).
+        # We run these probes outside the main migration loop so we can decide
+        # whether to take a backup before any ALTER TABLE is executed.
+        pending_columns = [
+            col for col, _mem, _arch in _columns if not self._column_exists("Memory", col)
+        ]
+
+        if pending_columns:
+            from ..utils.memory_exporter import export_memories_to_json
+
+            backup_dir = self.db_path.parent / ".kuzu-backups"
+            try:
+                result = export_memories_to_json(self, backup_dir)
+                logger.info(
+                    "Pre-migration backup: %d memories → %s",
+                    result["memories"],
+                    result["path"],
+                )
+            except Exception as backup_exc:
+                # Best-effort: log and continue — ALTER TABLE ADD … DEFAULT is
+                # non-destructive so migration is safe even without a backup.
+                logger.warning("Pre-migration backup failed (non-fatal): %s", backup_exc)
 
         try:
             with self._pool.get_connection() as conn:

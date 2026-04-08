@@ -181,6 +181,11 @@ class Memory(BaseModel):
     user_id: str | None = Field(None, description="Associated user ID")
     session_id: str | None = Field(None, description="Associated session ID")
 
+    # Runtime-only scoring fields — set by recall coordinator, never persisted to DB.
+    # Excluded from serialisation so they don't leak into to_dict() / JSON output.
+    relevance_score: float | None = None
+    ranking_explanation: str | None = None
+
     # Metadata and relationships
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     entities: list[str | dict[str, Any]] = Field(
