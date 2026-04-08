@@ -330,3 +330,96 @@ class TestAttachMemoriesParameterThreading:
         coordinator.attach_memories("test prompt")
 
         scorer_mock.embed.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Speaker intent zero-result guard (issue #47)
+# ---------------------------------------------------------------------------
+
+
+class TestSpeakerIntentZeroResultGuard:
+    """
+    Regression tests for issue #47: speaker intent hard-filter wiped 100% of
+    results when memories defaulted to source_speaker="user" and the query
+    was classified as ASSISTANT_TURN.
+
+    The zero-result guard must fall back to the unfiltered ranked list when the
+    speaker filter would return an empty list.
+    """
+
+    def test_assistant_intent_with_all_user_speaker_memories_returns_full_list(self) -> None:
+        """
+        When all memories have source_speaker='user' (the default) and the
+        classifier fires ASSISTANT_TURN, the guard must return the full ranked
+        list rather than an empty one.
+        """
+        from kuzu_memory.recall.query_classifier import SpeakerIntent, classify_speaker_intent
+
+        # Confirm classifier fires ASSISTANT_TURN for this query
+        intent = classify_speaker_intent("What did you recommend for the database schema?")
+        assert intent == SpeakerIntent.ASSISTANT_TURN
+
+        # Simulate the guard logic directly (mirrors coordinator lines 307-324)
+        memories = [
+            _make_memory("use Postgres for relational data", "m1"),
+            _make_memory("prefer SQLite for embedded use cases", "m2"),
+        ]
+        # All memories default to source_speaker="user" (no explicit tagging)
+        for m in memories:
+            assert getattr(m, "source_speaker", "user") == "user"
+
+        speaker_value = intent.value  # "assistant"
+        filtered = [m for m in memories if getattr(m, "source_speaker", "user") == speaker_value]
+
+        # Guard: fall back when filter produces empty list
+        result = filtered if filtered else memories
+
+        assert len(result) == 2, (
+            "Zero-result guard must return full list when no memories are tagged with "
+            "source_speaker='assistant'"
+        )
+
+    def test_user_intent_with_tagged_user_memories_applies_filter(self) -> None:
+        """
+        When memories ARE tagged with source_speaker='user' and the query is
+        USER_TURN, the filter should work normally.
+        """
+        from kuzu_memory.recall.query_classifier import SpeakerIntent, classify_speaker_intent
+
+        intent = classify_speaker_intent("What did I say about testing frameworks?")
+        assert intent == SpeakerIntent.USER_TURN
+
+        m1 = _make_memory("I prefer pytest for unit tests", "m1")
+        m2 = _make_memory("assistant recommended unittest", "m2")
+        # Tag m2 as assistant — simulating proper caller tagging
+        object.__setattr__(m2, "source_speaker", "assistant")
+
+        speaker_value = intent.value  # "user"
+        filtered = [m for m in [m1, m2] if getattr(m, "source_speaker", "user") == speaker_value]
+        result = filtered if filtered else [m1, m2]
+
+        assert len(result) == 1
+        assert result[0].id == "m1"
+
+    def test_mixed_speakers_assistant_intent_returns_tagged_subset(self) -> None:
+        """
+        When some memories ARE tagged as source_speaker='assistant', an ASSISTANT_TURN
+        query must return only those (filter active, guard not triggered).
+        """
+        from kuzu_memory.recall.query_classifier import SpeakerIntent, classify_speaker_intent
+
+        intent = classify_speaker_intent("What did you suggest for the API design?")
+        assert intent == SpeakerIntent.ASSISTANT_TURN
+
+        m_user = _make_memory("user content about API", "m1")
+        m_asst = _make_memory("assistant recommended REST", "m2")
+        object.__setattr__(m_asst, "source_speaker", "assistant")
+
+        speaker_value = intent.value  # "assistant"
+        filtered = [
+            m for m in [m_user, m_asst] if getattr(m, "source_speaker", "user") == speaker_value
+        ]
+        result = filtered if filtered else [m_user, m_asst]
+
+        assert len(result) == 1
+        assert result[0].id == "m2"

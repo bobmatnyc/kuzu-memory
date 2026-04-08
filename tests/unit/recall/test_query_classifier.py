@@ -108,3 +108,20 @@ class TestCaseInsensitivity:
 
     def test_mixed_case(self) -> None:
         assert classify_speaker_intent("What Did You Recommend?") == SpeakerIntent.ASSISTANT_TURN
+
+
+class TestSpeakerIntentEnum:
+    """Verify enum values match source_speaker field values stored in Memory nodes."""
+
+    def test_user_turn_value(self) -> None:
+        assert SpeakerIntent.USER_TURN.value == "user"
+
+    def test_assistant_turn_value(self) -> None:
+        assert SpeakerIntent.ASSISTANT_TURN.value == "assistant"
+
+    def test_unspecified_value(self) -> None:
+        assert SpeakerIntent.UNSPECIFIED.value == "unspecified"
+
+    def test_all_values_distinct(self) -> None:
+        values = [si.value for si in SpeakerIntent]
+        assert len(values) == len(set(values)), "SpeakerIntent values must be distinct"

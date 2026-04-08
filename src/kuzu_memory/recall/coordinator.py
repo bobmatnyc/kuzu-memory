@@ -304,13 +304,28 @@ class RecallCoordinator:
             # Filter by speaker intent when clearly specified.
             # Applied post-ranking so scoring quality is not degraded.
             # When UNSPECIFIED no filtering occurs — existing behaviour is preserved.
+            #
+            # Zero-result guard (issue #47): memories stored via km.remember() default to
+            # source_speaker="user". If the filter would wipe 100% of candidates (because
+            # callers haven't opted in to tagging assistant turns), fall back to the full
+            # ranked list rather than returning nothing. This preserves correct semantic
+            # ranking until proper source_speaker tagging is adopted by callers.
             if speaker_intent != SpeakerIntent.UNSPECIFIED:
                 speaker_value = speaker_intent.value  # "user" or "assistant"
-                ranked_memories = [
+                filtered = [
                     m
                     for m in ranked_memories
                     if getattr(m, "source_speaker", "user") == speaker_value
                 ]
+                if filtered:
+                    ranked_memories = filtered
+                else:
+                    logger.debug(
+                        "Speaker intent filter (%s) produced 0 results — "
+                        "falling back to full ranked list. "
+                        "Set source_speaker on stored memories to enable hard filtering.",
+                        speaker_value,
+                    )
 
             final_memories = ranked_memories[:max_memories]
 
