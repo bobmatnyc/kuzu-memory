@@ -350,6 +350,22 @@ class KuzuMemory:
 - Background workers process queue
 - Status monitoring for operation tracking
 
+### Enrichment Pipeline (src/kuzu_memory/core/enrichment/)
+
+**Primary Responsibility**: Background graph enrichment and vector indexing after memory writes
+
+The `EnrichmentRunner` executes 5 enrichers in order in a single-threaded background executor:
+
+| # | Enricher | Purpose |
+|---|----------|---------|
+| 1 | `EntityCooccurrenceEnricher` | Builds `CO_OCCURS_WITH` edges between memories sharing named entities |
+| 2 | `CentralityEnricher` | Computes PageRank-style `graph_score` centrality for each memory node |
+| 3 | `HNSWIndexEnricher` | Creates and maintains the HNSW vector index (`CALL CREATE_VECTOR_INDEX`) |
+| 4 | `RelatesToEnricher` | Creates `RELATES_TO` edges via shared entities (m1.id < m2.id guard) and knowledge-type affinity (gotcha→pattern, rule→architecture, weight=2.0) |
+| 5 | `TFIDFKeywordEnricher` | Tokenizes content, computes TF/IDF, MERGEs `Keyword` nodes and `HAS_KEYWORD` edges |
+
+Enrichment fires every 5 writes (configurable via `_ENRICHMENT_INTERVAL`). All enrichers are idempotent (MERGE semantics).
+
 ### CLI Interface (src/kuzu_memory/cli/)
 
 **Primary Responsibility**: Command-line interface for all operations
@@ -472,6 +488,42 @@ CREATE REL TABLE CO_OCCURS_WITH (
     FROM Entity TO Entity,
     co_occurrence_count INT32,      // How often entities appear together
     last_co_occurrence TIMESTAMP   // Most recent co-occurrence
+);
+```
+
+**New node tables (added v1.9.5–v1.12.2)**:
+
+```cypher
+// TF-IDF vocabulary for keyword indexing
+CREATE NODE TABLE Keyword (
+    word STRING PRIMARY KEY,         // Normalized term
+    idf FLOAT,                       // Inverse document frequency
+    total_mentions INT64             // Corpus-wide mention count
+);
+```
+
+**New relationship tables (added v1.9.5–v1.12.2)**:
+
+```cypher
+// Memory-level entity co-occurrence (populated by EntityCooccurrenceEnricher)
+CREATE REL TABLE CO_OCCURS_WITH (
+    FROM Memory TO Memory,
+    weight FLOAT                     // Shared-entity co-occurrence weight
+);
+
+// Semantic and structural memory relationships (populated by RelatesToEnricher)
+// Includes knowledge-type affinity scoring: gotcha→pattern, rule→architecture (weight=2.0)
+CREATE REL TABLE RELATES_TO (
+    FROM Memory TO Memory,
+    weight FLOAT,                    // Relationship strength
+    relationship_type STRING         // Affinity type or "shared_entity"
+);
+
+// TF-IDF term index (populated by TFIDFKeywordEnricher)
+CREATE REL TABLE HAS_KEYWORD (
+    FROM Memory TO Keyword,
+    tf FLOAT,                        // Term frequency in this memory
+    tfidf FLOAT                      // TF-IDF score
 );
 ```
 
@@ -656,6 +708,20 @@ def calculate_confidence(
     final_confidence = base_confidence + entity_boost + intent_boost - length_penalty
     return max(0.0, min(1.0, final_confidence))
 ```
+
+### Semantic Recall (MCP Path Only)
+
+When `use_semantic_search=True` (MCP path), recall uses a multi-stage pipeline:
+
+1. **HNSW vector index** (`CALL QUERY_VECTOR_INDEX`) — O(log N) approximate nearest-neighbour lookup using 384-dim sentence-transformer embeddings stored on Memory nodes. Falls back to brute-force NumPy cosine on any failure.
+2. **Graph strategies** — entity match, temporal, and content scan results are merged with HNSW candidates.
+3. **Ranking** — pure cosine similarity (`score = semantic_sim`) for memories at default importance values; no structural blend unless importance has been boosted.
+4. **TF-IDF boost** — multiplicative: `final_score = semantic_sim × (1 + weight × normalized_tfidf)`
+5. **LLM reranking** (opt-in) — Haiku reranking of top-K candidates.
+
+Hook-triggered paths (git hooks, Claude Code `Stop`/`UserPromptSubmit` hooks) never load sentence-transformers — they use pure graph traversal only, ensuring fast non-blocking execution.
+
+The HNSW index is created and maintained by `HNSWIndexEnricher` (enricher #3). If the index does not yet exist (e.g., on a fresh database before the first enrichment cycle), the recall layer automatically falls back to brute-force cosine similarity over all stored embeddings.
 
 ---
 
