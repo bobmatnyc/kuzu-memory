@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.12.5] - 2026-04-08
+
+### Fixed
+- Speaker intent filter zero-result guard (issue #47) — when all memories use the default
+  `source_speaker="user"` and the classifier fires `ASSISTANT_TURN`, the filter no longer
+  wipes 100% of candidates. Falls back to the full ranked list until callers opt in to
+  tagging assistant turns. Recovers 15 LongMemEval SSA regressions (R@10: 39.3% → ~62%).
+
 ## [1.12.4] - 2026-04-07
 
 ### Added
@@ -1344,7 +1352,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...HEAD
+[1.12.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.1...v1.12.2
