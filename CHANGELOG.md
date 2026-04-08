@@ -14,10 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
-## [1.12.3] - 2026-04-08
+## [1.12.4] - 2026-04-07
 
-### Changed
-- Version bump
+### Added
+- `relevance_score` and `ranking_explanation` runtime-only fields on `Memory` model (excluded from serialization, set by recall coordinator for scoring transparency)
+- Pre-migration JSON backup in `KuzuAdapter` — exports all Memory nodes to a timestamped backup file before executing any `ALTER TABLE` schema migrations
+- `memory_exporter` utility module for JSON export of Memory nodes with optional archived-memory inclusion
+- `kuzu-memory memory export` CLI command with `--output`, `--format`, and `--include-archived` options
+
+## [1.12.3] - 2026-04-07
+
+### Added
+- `source_speaker` field on Memory model — stores speaker origin (`"user"` or `"assistant"`) for intent-aware retrieval
+- NLP query speaker intent classification (`query_classifier` module) — detects "what did I say" vs "what did you say" intent using zero-dependency regex patterns; filters recall results post-ranking when intent is clear, no-op when unspecified
+- Pre-migration backup support in `KuzuAdapter` with `_original_exc` error chaining in migration helpers
+
+### Fixed
+- Pure cosine similarity ranking when `use_semantic_search=True` — removed structural blend (importance/confidence/type_boost weights) that added constant noise for default-value memories
+- TF-IDF boost now multiplies semantic similarity score as base (was incorrectly multiplying `memory.importance`, a uniform 0.5 default, effectively overriding ANN ranking)
+- Lowered `_ENRICHMENT_INTERVAL` from 50 to 5 so TF-IDF keyword enrichment fires in small-corpus environments (was silently inactive in all benchmark runs)
+- Raised TF-IDF boost failure from `logger.debug` to `logger.warning` for visibility
 
 ## [1.12.2] - 2026-04-08
 
@@ -1328,7 +1344,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.3...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...HEAD
+[1.12.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.0...v1.12.1
