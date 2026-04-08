@@ -30,9 +30,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Batch size for processing memories.  Larger batches reduce query round-trips
-# at the cost of higher peak memory usage.
-_BATCH_SIZE = 50
+# Batch size for UNWIND edge merge batches.  With UNWIND, each batch is a
+# single query, so larger batches dramatically reduce round-trips.  5000
+# edges per batch handles even the largest haystack (500 sessions x ~50
+# unique keywords) in 1-2 queries.
+_BATCH_SIZE = 5000
 
 # Minimum token length and stopword list.  Kept here (not in config) to keep
 # this module self-contained and avoid coupling to ExtractionConfig changes.
@@ -279,34 +281,54 @@ class TFIDFKeywordEnricher(BaseEnricher):
     ) -> int:
         """MERGE Keyword nodes with updated idf and total_mentions.
 
+        Uses a single UNWIND query to batch all keyword nodes in one DB
+        round-trip, replacing the previous per-keyword loop.
+
         Args:
             adapter: KuzuAdapter for query execution.
             idf_map: word -> IDF score.
             df_map: word -> document frequency (total_mentions).
 
         Returns:
-            Number of keywords merged (len of idf_map).
+            Number of keywords submitted for merge (len of idf_map).
         """
-        merge_keyword_query = (
-            "MERGE (k:Keyword {word: $word}) "
-            "SET k.idf = $idf, k.total_mentions = $total_mentions"
-        )
-        merged = 0
-        for word, idf_val in idf_map.items():
-            try:
-                adapter.execute_query(
-                    merge_keyword_query,
-                    {
-                        "word": word,
-                        "idf": float(idf_val),
-                        "total_mentions": int(df_map.get(word, 0)),
-                    },
-                )
-                merged += 1
-            except Exception as exc:
-                logger.debug("Failed to merge Keyword node '%s': %s", word, exc)
+        if not idf_map:
+            return 0
 
-        return merged
+        keywords = [
+            {
+                "word": word,
+                "idf": float(idf_val),
+                "total_mentions": int(df_map.get(word, 0)),
+            }
+            for word, idf_val in idf_map.items()
+        ]
+
+        # Single UNWIND query — one write-lock acquisition for all keywords.
+        bulk_keyword_query = (
+            "UNWIND $keywords AS kw "
+            "MERGE (k:Keyword {word: kw.word}) "
+            "SET k.idf = kw.idf, k.total_mentions = kw.total_mentions"
+        )
+        try:
+            adapter.execute_query(bulk_keyword_query, {"keywords": keywords})
+        except Exception as exc:
+            logger.warning("Bulk Keyword MERGE failed, falling back to per-item: %s", exc)
+            # Per-item fallback so partial failures don't abort everything.
+            count = 0
+            for kw in keywords:
+                try:
+                    adapter.execute_query(
+                        "MERGE (k:Keyword {word: $word}) "
+                        "SET k.idf = $idf, k.total_mentions = $total_mentions",
+                        kw,
+                    )
+                    count += 1
+                except Exception as exc2:
+                    logger.debug("Failed to merge Keyword node '%s': %s", kw["word"], exc2)
+            return count
+
+        return len(keywords)
 
     def _merge_keyword_edges(
         self,
@@ -314,7 +336,11 @@ class TFIDFKeywordEnricher(BaseEnricher):
         tf_map: dict[str, dict[str, float]],
         idf_map: dict[str, float],
     ) -> int:
-        """MERGE HAS_KEYWORD edges in batches of _BATCH_SIZE memories.
+        """MERGE HAS_KEYWORD edges in batches of _BATCH_SIZE edges.
+
+        Uses UNWIND to batch multiple (memory, keyword) edge MERGEs into a
+        single write-lock acquisition per batch, replacing the previous
+        per-edge query loop.
 
         Args:
             adapter: KuzuAdapter for query execution.
@@ -324,39 +350,59 @@ class TFIDFKeywordEnricher(BaseEnricher):
         Returns:
             Total number of edges merged.
         """
-        merge_edge_query = (
-            "MATCH (m:Memory {id: $memory_id}), (k:Keyword {word: $word}) "
+        # Flatten all (memory_id, word, tf, tfidf) tuples into a single list.
+        all_edges: list[dict[str, object]] = []
+        for mem_id, word_tf in tf_map.items():
+            for word, tf_val in word_tf.items():
+                idf_val = idf_map.get(word, 0.0)
+                all_edges.append(
+                    {
+                        "memory_id": mem_id,
+                        "word": word,
+                        "tf": float(tf_val),
+                        "tfidf": float(tf_val * idf_val),
+                    }
+                )
+
+        if not all_edges:
+            return 0
+
+        bulk_edge_query = (
+            "UNWIND $edges AS e "
+            "MATCH (m:Memory {id: e.memory_id}), (k:Keyword {word: e.word}) "
             "MERGE (m)-[hk:HAS_KEYWORD]->(k) "
-            "SET hk.tf = $tf, hk.tfidf = $tfidf"
+            "SET hk.tf = e.tf, hk.tfidf = e.tfidf"
         )
 
-        mem_ids = list(tf_map.keys())
         edge_count = 0
-
-        for batch_start in range(0, len(mem_ids), _BATCH_SIZE):
-            batch = mem_ids[batch_start : batch_start + _BATCH_SIZE]
-            for mem_id in batch:
-                word_tf = tf_map[mem_id]
-                for word, tf_val in word_tf.items():
-                    idf_val = idf_map.get(word, 0.0)
-                    tfidf_val = tf_val * idf_val
+        for batch_start in range(0, len(all_edges), _BATCH_SIZE):
+            batch = all_edges[batch_start : batch_start + _BATCH_SIZE]
+            try:
+                adapter.execute_query(bulk_edge_query, {"edges": batch})
+                edge_count += len(batch)
+            except Exception as exc:
+                logger.warning(
+                    "Bulk HAS_KEYWORD MERGE failed for batch starting at %d, "
+                    "falling back to per-item writes: %s",
+                    batch_start,
+                    exc,
+                )
+                # Per-item fallback for this batch.
+                per_item_query = (
+                    "MATCH (m:Memory {id: $memory_id}), (k:Keyword {word: $word}) "
+                    "MERGE (m)-[hk:HAS_KEYWORD]->(k) "
+                    "SET hk.tf = $tf, hk.tfidf = $tfidf"
+                )
+                for edge in batch:
                     try:
-                        adapter.execute_query(
-                            merge_edge_query,
-                            {
-                                "memory_id": mem_id,
-                                "word": word,
-                                "tf": float(tf_val),
-                                "tfidf": float(tfidf_val),
-                            },
-                        )
+                        adapter.execute_query(per_item_query, edge)
                         edge_count += 1
-                    except Exception as exc:
+                    except Exception as exc2:
                         logger.debug(
                             "Failed to merge HAS_KEYWORD edge m=%s w=%s: %s",
-                            mem_id,
-                            word,
-                            exc,
+                            edge["memory_id"],
+                            edge["word"],
+                            exc2,
                         )
 
         return edge_count

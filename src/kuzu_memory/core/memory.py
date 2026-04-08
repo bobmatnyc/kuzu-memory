@@ -56,9 +56,11 @@ logger = logging.getLogger(__name__)
 P = ParamSpec("P")
 R = TypeVar("R")
 
-# Trigger background enrichment every N writes to keep CO_OCCURS_WITH edges
-# and graph_score centrality up-to-date without blocking each ingestion call.
-_ENRICHMENT_INTERVAL = 50
+# Trigger background enrichment every N writes to keep CO_OCCURS_WITH edges,
+# graph_score centrality, and HAS_KEYWORD TF-IDF edges up-to-date.
+# Lowered from 50 to 5 so TF-IDF index is populated early enough for the
+# boost to have effect in small-corpus scenarios.
+_ENRICHMENT_INTERVAL = 5
 
 
 def cached_method(

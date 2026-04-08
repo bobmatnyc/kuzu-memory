@@ -124,6 +124,9 @@ class TestTFIDFComputed:
         IDF("python") = log(2 / (1+2)) = log(2/3) < 0  -> tfidf(python,doc1) = (2/3)*log(2/3)
         IDF("async")  = log(2 / (1+1)) = log(1.0) = 0.0
         IDF("memory") = log(2 / (1+1)) = log(1.0) = 0.0
+
+        The enricher uses UNWIND bulk queries: one call with {"keywords": [...]}
+        for keyword nodes and one call with {"edges": [...]} for HAS_KEYWORD edges.
         """
         memory_rows = [
             {"id": "doc1", "content": "python async python"},
@@ -135,13 +138,22 @@ class TestTFIDFComputed:
 
         assert result.success, f"Enricher failed: {result.error}"
 
-        # Collect all MERGE Keyword calls to verify IDF values.
-        keyword_calls = [
+        # Find the UNWIND bulk keyword MERGE call: params={"keywords": [...]}
+        keyword_bulk_calls = [
             c
             for c in adapter.execute_query.call_args_list
-            if c.args and "MERGE (k:Keyword" in c.args[0]
+            if c.args
+            and "MERGE (k:Keyword" in c.args[0]
+            and c.args[1] is not None
+            and "keywords" in c.args[1]
         ]
-        keyword_params = {c.args[1]["word"]: c.args[1] for c in keyword_calls}
+        assert keyword_bulk_calls, "Expected at least one UNWIND bulk Keyword MERGE call"
+
+        # Flatten the list-of-dicts into a lookup by word.
+        keyword_params: dict[str, Any] = {}
+        for call_obj in keyword_bulk_calls:
+            for kw in call_obj.args[1]["keywords"]:
+                keyword_params[kw["word"]] = kw
 
         assert "python" in keyword_params
         assert "async" in keyword_params
@@ -166,7 +178,10 @@ class TestTFIDFComputed:
 
 class TestMergeKeywordNodes:
     def test_merge_keyword_nodes_created(self) -> None:
-        """MERGE (k:Keyword ...) must be called for each distinct token."""
+        """MERGE (k:Keyword ...) must be called for each distinct token.
+
+        The enricher uses a single UNWIND bulk query with params={"keywords": [...]}.
+        """
         memory_rows = [
             {"id": "m1", "content": "python async programming"},
             {"id": "m2", "content": "memory graph database"},
@@ -177,12 +192,20 @@ class TestMergeKeywordNodes:
 
         assert result.success, result.error
 
-        keyword_merge_calls = [
+        # The UNWIND bulk call has params={"keywords": [{"word": ..., "idf": ..., ...}, ...]}
+        keyword_bulk_calls = [
             c
             for c in adapter.execute_query.call_args_list
-            if c.args and "MERGE (k:Keyword" in c.args[0]
+            if c.args
+            and "MERGE (k:Keyword" in c.args[0]
+            and c.args[1] is not None
+            and "keywords" in c.args[1]
         ]
-        merged_words = {c.args[1]["word"] for c in keyword_merge_calls}
+        assert keyword_bulk_calls, "Expected at least one UNWIND bulk Keyword MERGE call"
+
+        merged_words = {
+            kw["word"] for call_obj in keyword_bulk_calls for kw in call_obj.args[1]["keywords"]
+        }
 
         # Expected tokens after tokenisation and stopword removal
         assert "python" in merged_words
@@ -210,7 +233,11 @@ class TestMergeKeywordNodes:
 
 class TestMergeHasKeywordEdges:
     def test_merge_has_keyword_edges_created(self) -> None:
-        """MERGE (m)-[hk:HAS_KEYWORD]->(k) must be called for each (memory, word) pair."""
+        """MERGE (m)-[hk:HAS_KEYWORD]->(k) must produce one edge per (memory, word) pair.
+
+        The enricher uses a single UNWIND bulk query with params={"edges": [...]},
+        where each element is {"memory_id": ..., "word": ..., "tf": ..., "tfidf": ...}.
+        """
         memory_rows = [{"id": "m1", "content": "python async programming"}]
         adapter = _make_adapter(memory_rows)
         enricher = TFIDFKeywordEnricher()
@@ -218,22 +245,30 @@ class TestMergeHasKeywordEdges:
 
         assert result.success, result.error
 
-        edge_calls = [
+        # The UNWIND bulk call has params={"edges": [...]}
+        edge_bulk_calls = [
             c
             for c in adapter.execute_query.call_args_list
-            if c.args and "MERGE (m)-[hk:HAS_KEYWORD]" in c.args[0]
+            if c.args
+            and "MERGE (m)-[hk:HAS_KEYWORD]" in c.args[0]
+            and c.args[1] is not None
+            and "edges" in c.args[1]
         ]
-        # One edge per (memory, word) pair.
-        assert len(edge_calls) == 3  # python, async, programming
+        assert edge_bulk_calls, "Expected at least one UNWIND bulk HAS_KEYWORD MERGE call"
 
-        for ec in edge_calls:
-            params = ec.args[1]
-            assert params["memory_id"] == "m1"
-            assert "word" in params
-            assert "tf" in params
-            assert "tfidf" in params
-            assert isinstance(params["tf"], float)
-            assert isinstance(params["tfidf"], float)
+        # Collect all edge dicts across all bulk calls.
+        all_edges = [e for call_obj in edge_bulk_calls for e in call_obj.args[1]["edges"]]
+
+        # One edge per (memory, word) pair: python, async, programming
+        assert len(all_edges) == 3
+
+        for edge in all_edges:
+            assert edge["memory_id"] == "m1"
+            assert "word" in edge
+            assert "tf" in edge
+            assert "tfidf" in edge
+            assert isinstance(edge["tf"], float)
+            assert isinstance(edge["tfidf"], float)
 
     def test_edges_created_count(self) -> None:
         memory_rows = [

@@ -626,7 +626,7 @@ class RecallCoordinator:
                 parameters={"memory_ids": memory_ids, "keywords": keywords},
             )
         except Exception as exc:
-            logger.debug("_apply_tfidf_boost: DB query failed, skipping boost: %s", exc)
+            logger.warning("_apply_tfidf_boost: DB query failed, TF-IDF boost disabled: %s", exc)
             return memories
 
         if not rows:
