@@ -76,7 +76,8 @@ class TestMemoryKnowledgeTypeField:
     def test_memory_knowledge_type_in_to_dict(self) -> None:
         """to_dict() must include knowledge_type as a string value."""
         memory = Memory(
-            content="Use ServiceManager context manager", knowledge_type=KnowledgeType.PATTERN
+            content="Use ServiceManager context manager",
+            knowledge_type=KnowledgeType.PATTERN,
         )
         d = memory.to_dict()
         assert "knowledge_type" in d

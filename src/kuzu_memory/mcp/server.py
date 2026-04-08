@@ -514,7 +514,7 @@ class KuzuMemoryMCPServer:
                 result = await self._remember(
                     str(content) if content is not None else "",
                     str(memory_type) if memory_type is not None else "identity",
-                    knowledge_type=str(knowledge_type) if knowledge_type is not None else None,
+                    knowledge_type=(str(knowledge_type) if knowledge_type is not None else None),
                     importance=float(importance) if importance is not None else None,
                 )
             elif name == "kuzu_stats":
@@ -858,7 +858,7 @@ class KuzuMemoryMCPServer:
                         return []
 
                 context = {
-                    "recent_work": " ".join(recent_summaries[:3]) if recent_summaries else "",
+                    "recent_work": (" ".join(recent_summaries[:3]) if recent_summaries else ""),
                     "gotchas": _by_type(KnowledgeType.GOTCHA.value),
                     "architecture": _by_type(KnowledgeType.ARCHITECTURE.value),
                     "patterns": _by_type(KnowledgeType.PATTERN.value),
@@ -888,7 +888,10 @@ class KuzuMemoryMCPServer:
 
         if config.user.mode != "user":
             return _json.dumps(
-                {"available": False, "reason": "Not in user mode. Set mode: user in config."}
+                {
+                    "available": False,
+                    "reason": "Not in user mode. Set mode: user in config.",
+                }
             )
 
         try:
@@ -903,7 +906,11 @@ class KuzuMemoryMCPServer:
 
                 def _filter_by_type(kt: KnowledgeType) -> list[dict[str, object]]:
                     return [
-                        {"content": m.content, "importance": m.importance, "project": m.project_tag}
+                        {
+                            "content": m.content,
+                            "importance": m.importance,
+                            "project": m.project_tag,
+                        }
                         for m in cross_project
                         if m.knowledge_type == kt
                     ][:max_per_type]

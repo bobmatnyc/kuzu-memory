@@ -277,10 +277,14 @@ class TestCoordinatorRelevanceScoreIntegration:
         """In _rank_memories, RULE knowledge_type memories should rank above NOTE ones."""
         coordinator = self.coordinator
         rule_mem = _make_memory(
-            content="same words here", knowledge_type=KnowledgeType.RULE, memory_id="rule"
+            content="same words here",
+            knowledge_type=KnowledgeType.RULE,
+            memory_id="rule",
         )
         note_mem = _make_memory(
-            content="same words here", knowledge_type=KnowledgeType.NOTE, memory_id="note"
+            content="same words here",
+            knowledge_type=KnowledgeType.NOTE,
+            memory_id="note",
         )
 
         results = coordinator._rank_memories([note_mem, rule_mem], "same words here")
@@ -384,17 +388,24 @@ class TestRankerIntegration:
 
     def test_rule_ranks_above_note(self) -> None:
         rule_mem = _make_memory(
-            content="common content", knowledge_type=KnowledgeType.RULE, memory_id="rule"
+            content="common content",
+            knowledge_type=KnowledgeType.RULE,
+            memory_id="rule",
         )
         note_mem = _make_memory(
-            content="common content", knowledge_type=KnowledgeType.NOTE, memory_id="note"
+            content="common content",
+            knowledge_type=KnowledgeType.NOTE,
+            memory_id="note",
         )
         ranked = self.ranker.rank_memories([note_mem, rule_mem], "common content")
         assert ranked[0][0].id == "rule"
 
     def test_high_access_count_ranks_higher(self) -> None:
         low_mem = _make_memory(
-            content="content", knowledge_type=KnowledgeType.NOTE, access_count=0, memory_id="low"
+            content="content",
+            knowledge_type=KnowledgeType.NOTE,
+            access_count=0,
+            memory_id="low",
         )
         high_mem = _make_memory(
             content="content",

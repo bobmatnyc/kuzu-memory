@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing project memories")
 @click.option(
-    "--config-path", type=click.Path(), help="Write an example configuration JSON file to this path"
+    "--config-path",
+    type=click.Path(),
+    help="Write an example configuration JSON file to this path",
 )
 @click.option("--project-root", type=click.Path(), help="Project root path (optional)")
 @click.pass_context

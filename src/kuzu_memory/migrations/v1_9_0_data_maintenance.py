@@ -118,7 +118,9 @@ def dedup_by_content_hash(execute: Any) -> tuple[int, int]:
                     hashes_written += 1
                 except Exception as exc:
                     logger.warning(
-                        "Data maintenance: failed to set content_hash for %s: %s", mem_id, exc
+                        "Data maintenance: failed to set content_hash for %s: %s",
+                        mem_id,
+                        exc,
                     )
 
         # Step 2: find duplicate groups (grouped in Python — Kuzu lacks keep-newest GROUP BY)
@@ -142,7 +144,10 @@ def dedup_by_content_hash(execute: Any) -> tuple[int, int]:
             if len(members) < 2:
                 continue
             # Sort descending by created_at; keep first (newest)
-            members.sort(key=lambda pair: str(pair[1]) if pair[1] is not None else "", reverse=True)
+            members.sort(
+                key=lambda pair: str(pair[1]) if pair[1] is not None else "",
+                reverse=True,
+            )
             ids_to_delete.extend(mid for mid, _ in members[1:])
 
         duplicates_removed = len(ids_to_delete)

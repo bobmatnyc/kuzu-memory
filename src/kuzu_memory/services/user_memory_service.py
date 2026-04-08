@@ -109,7 +109,7 @@ class UserMemoryService:
                         if memory.created_at
                         else datetime.datetime.now().isoformat()
                     ),
-                    "valid_to": memory.valid_to.isoformat() if memory.valid_to else None,
+                    "valid_to": (memory.valid_to.isoformat() if memory.valid_to else None),
                     "accessed_at": (
                         memory.accessed_at.isoformat()
                         if memory.accessed_at

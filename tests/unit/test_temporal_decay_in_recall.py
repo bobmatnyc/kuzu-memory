@@ -135,7 +135,7 @@ class TestTemporalDecayWiredIntoRankMemories:
         for i in range(len(scores) - 1):
             assert scores[i] >= scores[i + 1], (
                 f"Expected decay score to decrease with age: age={ages[i]} score={scores[i]:.4f} "
-                f">= age={ages[i+1]} score={scores[i+1]:.4f}"
+                f">= age={ages[i + 1]} score={scores[i + 1]:.4f}"
             )
 
     def test_recent_memories_approximate_expected_range(self) -> None:

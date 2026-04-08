@@ -1073,7 +1073,9 @@ class KuzuMemory:
             self._write_embedding(memory_id, vec.tolist())
         except Exception as exc:
             logger.debug(
-                "_store_embedding_for_memory: non-fatal failure for %s: %s", memory_id, exc
+                "_store_embedding_for_memory: non-fatal failure for %s: %s",
+                memory_id,
+                exc,
             )
 
     def _store_embedding_for_memories(self, memory_ids: list[str], content: str) -> None:
@@ -1102,11 +1104,14 @@ class KuzuMemory:
                     self._write_embedding(mid, embedding_list)
                 except Exception as exc:
                     logger.debug(
-                        "_store_embedding_for_memories: non-fatal failure for %s: %s", mid, exc
+                        "_store_embedding_for_memories: non-fatal failure for %s: %s",
+                        mid,
+                        exc,
                     )
         except Exception as exc:
             logger.debug(
-                "_store_embedding_for_memories: non-fatal failure (embedding step): %s", exc
+                "_store_embedding_for_memories: non-fatal failure (embedding step): %s",
+                exc,
             )
 
     def _write_embedding(self, memory_id: str, embedding: list[float]) -> None:

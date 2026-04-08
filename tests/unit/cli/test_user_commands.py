@@ -64,15 +64,19 @@ class TestUserSetupCommand:
         ctx_obj = _mock_ctx_obj()
         mock_svc = _make_user_svc_mock()
 
-        with patch(
-            "kuzu_memory.services.user_memory_service.UserMemoryService", return_value=mock_svc
-        ), patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"), patch(
-            "kuzu_memory.cli.user_commands._install_user_hooks", return_value="ok"
-        ), patch("kuzu_memory.cli.user_commands._write_mpm_skill", return_value="ok"), patch.object(
-            Path, "mkdir", return_value=None
-        ), patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_svc,
+        with (
+            patch(
+                "kuzu_memory.services.user_memory_service.UserMemoryService",
+                return_value=mock_svc,
+            ),
+            patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"),
+            patch("kuzu_memory.cli.user_commands._install_user_hooks", return_value="ok"),
+            patch("kuzu_memory.cli.user_commands._write_mpm_skill", return_value="ok"),
+            patch.object(Path, "mkdir", return_value=None),
+            patch(
+                "kuzu_memory.core.memory.KuzuMemory",
+                return_value=mock_svc,
+            ),
         ):
             result = runner.invoke(user, ["setup"], obj=ctx_obj)
 
@@ -83,15 +87,19 @@ class TestUserSetupCommand:
         ctx_obj = _mock_ctx_obj()
         mock_svc = _make_user_svc_mock()
 
-        with patch(
-            "kuzu_memory.services.user_memory_service.UserMemoryService", return_value=mock_svc
-        ), patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"), patch(
-            "kuzu_memory.cli.user_commands._install_user_hooks", return_value="ok"
-        ), patch("kuzu_memory.cli.user_commands._write_mpm_skill", return_value="ok"), patch.object(
-            Path, "mkdir", return_value=None
-        ), patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_svc,
+        with (
+            patch(
+                "kuzu_memory.services.user_memory_service.UserMemoryService",
+                return_value=mock_svc,
+            ),
+            patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"),
+            patch("kuzu_memory.cli.user_commands._install_user_hooks", return_value="ok"),
+            patch("kuzu_memory.cli.user_commands._write_mpm_skill", return_value="ok"),
+            patch.object(Path, "mkdir", return_value=None),
+            patch(
+                "kuzu_memory.core.memory.KuzuMemory",
+                return_value=mock_svc,
+            ),
         ):
             result = runner.invoke(user, ["setup"], obj=ctx_obj)
 
@@ -111,9 +119,11 @@ class TestUserStatusCommand:
         ctx_obj = _mock_ctx_obj()
         mock_svc = _make_user_svc_mock(total_memories=5)
 
-        with patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_svc), patch.object(
-            Path, "exists", return_value=True
-        ), patch.object(Path, "mkdir", return_value=None):
+        with (
+            patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_svc),
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "mkdir", return_value=None),
+        ):
             result = runner.invoke(user, ["status"], obj=ctx_obj)
 
         assert result.exit_code == 0, result.output
@@ -124,11 +134,15 @@ class TestUserStatusCommand:
         mock_svc = _make_user_svc_mock(total_memories=7)
 
         # Patch UserMemoryService at its definition site so the with-block uses our mock
-        with patch(
-            "kuzu_memory.services.user_memory_service.UserMemoryService", return_value=mock_svc
-        ), patch.object(Path, "exists", return_value=True), patch.object(
-            Path, "mkdir", return_value=None
-        ), patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_svc):
+        with (
+            patch(
+                "kuzu_memory.services.user_memory_service.UserMemoryService",
+                return_value=mock_svc,
+            ),
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "mkdir", return_value=None),
+            patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_svc),
+        ):
             result = runner.invoke(user, ["status"], obj=ctx_obj)
 
         assert result.exit_code == 0
@@ -162,12 +176,17 @@ class TestUserPromoteCommand:
         mock_mem_svc.kuzu_memory.db_adapter.execute_query = Mock(return_value=[])
 
         # MemoryService and get_project_db_path are lazy imports inside promote()
-        with patch(
-            "kuzu_memory.services.memory_service.KuzuMemory", return_value=mock_mem_svc
-        ), patch(
-            "kuzu_memory.utils.project_setup.get_project_db_path",
-            return_value=Path("/tmp/fake-project/.kuzu-memory/memories.db"),
-        ), patch.object(Path, "exists", return_value=True):
+        with (
+            patch(
+                "kuzu_memory.services.memory_service.KuzuMemory",
+                return_value=mock_mem_svc,
+            ),
+            patch(
+                "kuzu_memory.utils.project_setup.get_project_db_path",
+                return_value=Path("/tmp/fake-project/.kuzu-memory/memories.db"),
+            ),
+            patch.object(Path, "exists", return_value=True),
+        ):
             result = runner.invoke(user, ["promote"], obj=ctx_obj)
 
         assert result.exit_code == 0, result.output
@@ -195,13 +214,18 @@ class TestUserPromoteCommand:
 
         mock_user_svc = _make_user_svc_mock()
 
-        with patch(
-            "kuzu_memory.services.memory_service.KuzuMemory", return_value=mock_mem_svc
-        ), patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_user_svc), patch(
-            "kuzu_memory.utils.project_setup.get_project_db_path",
-            return_value=Path("/tmp/fake-project/.kuzu-memory/memories.db"),
-        ), patch.object(Path, "exists", return_value=True), patch.object(
-            Path, "mkdir", return_value=None
+        with (
+            patch(
+                "kuzu_memory.services.memory_service.KuzuMemory",
+                return_value=mock_mem_svc,
+            ),
+            patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_user_svc),
+            patch(
+                "kuzu_memory.utils.project_setup.get_project_db_path",
+                return_value=Path("/tmp/fake-project/.kuzu-memory/memories.db"),
+            ),
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "mkdir", return_value=None),
         ):
             result = runner.invoke(user, ["promote", "--dry-run"], obj=ctx_obj)
 
@@ -220,9 +244,10 @@ class TestUserDisableCommand:
         """user disable exits 0 and saves config."""
         ctx_obj = _mock_ctx_obj(mode="user")
 
-        with patch(
-            "kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"
-        ) as mock_save, patch.object(Path, "mkdir", return_value=None):
+        with (
+            patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file") as mock_save,
+            patch.object(Path, "mkdir", return_value=None),
+        ):
             result = runner.invoke(user, ["disable"], obj=ctx_obj)
 
         assert result.exit_code == 0, result.output
@@ -232,8 +257,9 @@ class TestUserDisableCommand:
         """user disable output indicates mode was changed to project."""
         ctx_obj = _mock_ctx_obj(mode="user")
 
-        with patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"), patch.object(
-            Path, "mkdir", return_value=None
+        with (
+            patch("kuzu_memory.core.config.KuzuMemoryConfig.save_to_file"),
+            patch.object(Path, "mkdir", return_value=None),
         ):
             result = runner.invoke(user, ["disable"], obj=ctx_obj)
 
@@ -248,9 +274,13 @@ class TestUserDisableCommand:
         def capture_save(path: Path) -> None:
             saved_paths.append(Path(path))
 
-        with patch(
-            "kuzu_memory.core.config.KuzuMemoryConfig.save_to_file", side_effect=capture_save
-        ), patch.object(Path, "mkdir", return_value=None):
+        with (
+            patch(
+                "kuzu_memory.core.config.KuzuMemoryConfig.save_to_file",
+                side_effect=capture_save,
+            ),
+            patch.object(Path, "mkdir", return_value=None),
+        ):
             runner.invoke(user, ["disable"], obj=ctx_obj)
 
         assert len(saved_paths) == 1

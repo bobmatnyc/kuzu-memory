@@ -482,9 +482,11 @@ class MemoryStore:
                     SKIP $offset LIMIT $limit
                 """
                 params: dict[str, Any] = {
-                    "memory_type": str(memory_type.value)
-                    if hasattr(memory_type, "value")
-                    else str(memory_type),
+                    "memory_type": (
+                        str(memory_type.value)
+                        if hasattr(memory_type, "value")
+                        else str(memory_type)
+                    ),
                     "now": datetime.now(),
                     "offset": offset,
                     "limit": limit,

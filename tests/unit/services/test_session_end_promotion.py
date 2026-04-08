@@ -98,12 +98,15 @@ class TestSessionEndPromotion:
         mock_user_svc.__exit__ = Mock(return_value=None)
         mock_user_svc.promote_batch = Mock(return_value=0)
 
-        with patch(
-            "kuzu_memory.services.memory_service.KuzuMemory",
-            return_value=mock_kuzu_memory,
-        ), patch(
-            "kuzu_memory.services.user_memory_service.UserMemoryService",
-            return_value=mock_user_svc,
+        with (
+            patch(
+                "kuzu_memory.services.memory_service.KuzuMemory",
+                return_value=mock_kuzu_memory,
+            ),
+            patch(
+                "kuzu_memory.services.user_memory_service.UserMemoryService",
+                return_value=mock_user_svc,
+            ),
         ):
             service = MemoryService(
                 db_path=Path("/tmp/test.db"),

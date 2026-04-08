@@ -113,7 +113,11 @@ class FakeDB:
         # --- Select all (id, content_hash, created_at) ---
         if "content_hash IS NOT NULL" in q and "RETURN m.id" in q:
             rows = [
-                {"id": m["id"], "h": m.get("content_hash"), "created_at": m.get("created_at")}
+                {
+                    "id": m["id"],
+                    "h": m.get("content_hash"),
+                    "created_at": m.get("created_at"),
+                }
                 for m in self.memories
                 if m.get("content_hash")
             ]

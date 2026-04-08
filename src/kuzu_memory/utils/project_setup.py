@@ -165,8 +165,7 @@ def _migrate_single_file_db(kuzu_memory_path: Path) -> bool:
         backup = kuzu_memory_path.parent / f".kuzu-memory.bak.{int(time.time())}"
 
     logger.warning(
-        "Auto-migrating old single-file .kuzu-memory to directory format. "
-        "Old file backed up to %s",
+        "Auto-migrating old single-file .kuzu-memory to directory format. Old file backed up to %s",
         backup.name,
     )
     kuzu_memory_path.rename(backup)

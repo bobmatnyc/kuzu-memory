@@ -68,8 +68,9 @@ def user_service(mock_kuzu_memory: MagicMock) -> UserMemoryService:
     svc = UserMemoryService(config)
 
     # KuzuMemory is imported lazily inside __enter__, so patch the source module
-    with patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_kuzu_memory), patch.object(
-        Path, "mkdir", return_value=None
+    with (
+        patch("kuzu_memory.core.memory.KuzuMemory", return_value=mock_kuzu_memory),
+        patch.object(Path, "mkdir", return_value=None),
     ):
         # Enter the context manager to set up svc._memory
         svc.__enter__()
@@ -89,10 +90,13 @@ class TestContextManagerLifecycle:
         svc = UserMemoryService(config)
 
         # KuzuMemory is a lazy import inside __enter__; patch the source module
-        with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_kuzu_memory,
-        ), patch.object(Path, "mkdir", return_value=None):
+        with (
+            patch(
+                "kuzu_memory.core.memory.KuzuMemory",
+                return_value=mock_kuzu_memory,
+            ),
+            patch.object(Path, "mkdir", return_value=None),
+        ):
             assert svc._memory is None
             result = svc.__enter__()
             assert result is svc
@@ -105,10 +109,13 @@ class TestContextManagerLifecycle:
         """with UserMemoryService(...) pattern works end-to-end."""
         config = _make_config()
 
-        with patch(
-            "kuzu_memory.core.memory.KuzuMemory",
-            return_value=mock_kuzu_memory,
-        ), patch.object(Path, "mkdir", return_value=None):
+        with (
+            patch(
+                "kuzu_memory.core.memory.KuzuMemory",
+                return_value=mock_kuzu_memory,
+            ),
+            patch.object(Path, "mkdir", return_value=None),
+        ):
             with UserMemoryService(config) as svc:
                 assert svc._memory is not None
             assert svc._memory is None
