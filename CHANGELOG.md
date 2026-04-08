@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.12.7] - 2026-04-08
+
+### Fixed
+- Full-corpus cosine scan when HNSW index unavailable (issue #49) — when
+  `use_semantic_search=True` and the HNSW index is absent, the keyword pre-filter
+  in graph strategies (OR over 5 query keywords) excluded sessions whose answer
+  vocabulary only appears in assistant turns (not indexed). All 15 SSA misses had
+  recall@50=1.0, confirming data was present but dropped before cosine ranking ran.
+  Fix: replace keyword-filtered candidates with a no-filter full-corpus scan so
+  cosine similarity can rank all sessions. Expected SSA R@10 improvement: 62.5% -> 88-91%.
+
 ## [1.12.6] - 2026-04-08
 
 ### Fixed
@@ -1361,7 +1372,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.6...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.7...HEAD
+[1.12.7]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.3...v1.12.4
