@@ -39,7 +39,8 @@ CREATE NODE TABLE IF NOT EXISTS Memory (
     user_id STRING,
     session_id STRING,
     metadata STRING DEFAULT '{}',
-    embedding FLOAT[384]
+    embedding FLOAT[384],
+    source_speaker STRING DEFAULT 'user'
 );
 
 CREATE NODE TABLE IF NOT EXISTS Entity (

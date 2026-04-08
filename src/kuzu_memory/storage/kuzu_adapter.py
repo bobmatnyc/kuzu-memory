@@ -414,6 +414,11 @@ class KuzuAdapter:
                 "ALTER TABLE Memory ADD embedding FLOAT[384]",
                 None,
             ),
+            (
+                "source_speaker",
+                "ALTER TABLE Memory ADD source_speaker STRING DEFAULT 'user'",
+                None,
+            ),
         ]
 
         try:

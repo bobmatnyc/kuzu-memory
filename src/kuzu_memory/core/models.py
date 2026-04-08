@@ -173,6 +173,10 @@ class Memory(BaseModel):
 
     # Source tracking
     source_type: str = Field(default="conversation", description="Source of the memory")
+    source_speaker: str = Field(
+        default="user",
+        description="Speaker who produced this memory ('user' or 'assistant')",
+    )
     agent_id: str = Field(default="default", description="Agent that created the memory")
     user_id: str | None = Field(None, description="Associated user ID")
     session_id: str | None = Field(None, description="Associated session ID")
@@ -298,6 +302,7 @@ class Memory(BaseModel):
             "importance": self.importance,
             "confidence": self.confidence,
             "source_type": self.source_type,
+            "source_speaker": self.source_speaker,
             "agent_id": self.agent_id,
             "user_id": self.user_id,
             "session_id": self.session_id,
@@ -336,6 +341,10 @@ class Memory(BaseModel):
         # project_tag: default to empty string for old rows without the field
         if data.get("project_tag") is None:
             data["project_tag"] = ""
+
+        # source_speaker: default to 'user' for old rows without the field
+        if data.get("source_speaker") is None:
+            data["source_speaker"] = "user"
 
         return cls(**data)
 
