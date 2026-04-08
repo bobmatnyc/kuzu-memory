@@ -550,13 +550,14 @@ class RecallCoordinator:
                 mem_emb = self._semantic_scorer.embed(memory.content)
                 if mem_emb is not None:
                     semantic_sim = self._semantic_scorer.cosine(query_emb, mem_emb)
-                    # Blend: 70% semantic similarity + 30% structural score
-                    structural = (
-                        memory.importance * 0.15
-                        + memory.confidence * 0.10
-                        + self._type_boost(memory) * 0.05
+                    # Pure cosine: structural blend (importance/confidence/type)
+                    # adds constant noise when memories have default values.
+                    # Write back so _apply_tfidf_boost multiplies the semantic
+                    # score rather than the raw importance field.
+                    score = semantic_sim
+                    memory.importance = (
+                        score  # intentional mutation; callers don't rely on original
                     )
-                    score = semantic_sim * 0.70 + structural
                 else:
                     # Embedding failed for this particular memory — fall back
                     score = self._calculate_relevance_score(memory, prompt_lower)
