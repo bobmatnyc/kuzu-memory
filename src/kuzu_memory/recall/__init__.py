@@ -1,6 +1,7 @@
 """Recall components for KuzuMemory."""
 
 from .coordinator import RecallCoordinator
+from .query_classifier import SpeakerIntent, classify_speaker_intent
 from .ranking import MemoryRanker
 from .reranker import LLMReranker
 from .strategies import (
@@ -13,13 +14,11 @@ from .strategies import (
 __all__ = [
     "EntityRecallStrategy",
     "KeywordRecallStrategy",
-    # Reranker
     "LLMReranker",
-    # Ranking
     "MemoryRanker",
-    # Coordinator
     "RecallCoordinator",
-    # Strategies
     "RecallStrategy",
+    "SpeakerIntent",
     "TemporalRecallStrategy",
+    "classify_speaker_intent",
 ]

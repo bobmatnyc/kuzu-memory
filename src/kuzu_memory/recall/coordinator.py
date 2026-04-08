@@ -22,6 +22,7 @@ from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
 from ..utils.validation import validate_text_input
 from ._tokenizer import tokenize as _tokenize_for_boost
+from .query_classifier import SpeakerIntent, classify_speaker_intent
 from .strategies import (
     EntityRecallStrategy,
     GraphRelatedRecallStrategy,
@@ -222,6 +223,11 @@ class RecallCoordinator:
             # Validate input
             clean_prompt = validate_text_input(prompt, "attach_memories_prompt")
 
+            # Classify query speaker intent for recall routing.
+            # Done here (before cache check) so the intent label is available
+            # after the cache path as well as the live-recall path.
+            speaker_intent = classify_speaker_intent(clean_prompt)
+
             # Check cache first
             if self.cache:
                 cached_context = self.cache.get_recall_result(clean_prompt, strategy, max_memories)
@@ -291,6 +297,17 @@ class RecallCoordinator:
 
                 reranker = LLMReranker(self.config.recall.reranking)
                 ranked_memories = reranker.rerank(clean_prompt, ranked_memories, max_memories)
+
+            # Filter by speaker intent when clearly specified.
+            # Applied post-ranking so scoring quality is not degraded.
+            # When UNSPECIFIED no filtering occurs — existing behaviour is preserved.
+            if speaker_intent != SpeakerIntent.UNSPECIFIED:
+                speaker_value = speaker_intent.value  # "user" or "assistant"
+                ranked_memories = [
+                    m
+                    for m in ranked_memories
+                    if getattr(m, "source_speaker", "user") == speaker_value
+                ]
 
             final_memories = ranked_memories[:max_memories]
 
