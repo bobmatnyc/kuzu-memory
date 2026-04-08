@@ -165,7 +165,7 @@ class TFIDFKeywordEnricher(BaseEnricher):
     def enrich(
         self,
         adapter: KuzuAdapter,
-        config: KuzuMemoryConfig,
+        _config: KuzuMemoryConfig,
     ) -> EnrichmentResult:
         """Run the TF-IDF keyword enricher.
 

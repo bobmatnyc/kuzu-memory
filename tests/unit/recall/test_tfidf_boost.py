@@ -292,7 +292,7 @@ class TestTfidfBoostIntegration:
 
     def test_boost_called_when_weight_positive(self) -> None:
         """With tfidf_boost_weight > 0, _apply_tfidf_boost should be invoked."""
-        coordinator, mock_adapter = _make_coordinator(tfidf_boost_weight=0.3)
+        coordinator, _mock_adapter = _make_coordinator(tfidf_boost_weight=0.3)
 
         # Make recall strategies return no memories so we stay out of DB paths
         for strategy in coordinator.strategies.values():
@@ -307,7 +307,7 @@ class TestTfidfBoostIntegration:
 
     def test_boost_not_called_when_weight_zero(self) -> None:
         """With tfidf_boost_weight=0, _apply_tfidf_boost should NOT be invoked."""
-        coordinator, mock_adapter = _make_coordinator(tfidf_boost_weight=0.0)
+        coordinator, _mock_adapter = _make_coordinator(tfidf_boost_weight=0.0)
 
         for strategy in coordinator.strategies.values():
             strategy.recall = MagicMock(return_value=[])  # type: ignore[method-assign]

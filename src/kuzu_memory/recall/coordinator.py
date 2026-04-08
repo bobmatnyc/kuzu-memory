@@ -695,8 +695,14 @@ class RecallCoordinator:
             KnowledgeType.CONVENTION: 0.10,
             KnowledgeType.NOTE: 0.00,
         }
-        kt = getattr(memory, "knowledge_type", None)
-        return knowledge_type_boosts.get(kt, 0.0)  # type: ignore[arg-type]
+        kt_raw = getattr(memory, "knowledge_type", None)
+        if kt_raw is None:
+            return 0.0
+        try:
+            kt = KnowledgeType(kt_raw)
+        except ValueError:
+            return 0.0
+        return knowledge_type_boosts.get(kt, 0.0)
 
     def _access_count_boost(self, memory: Memory) -> float:
         """Return a log-scaled boost based on the memory's access_count field.

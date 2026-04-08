@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import math
 from typing import Any
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -42,7 +42,7 @@ def _make_adapter(memory_rows: list[dict[str, Any]] | None = None) -> MagicMock:
 
     rows = memory_rows if memory_rows is not None else []
 
-    def _execute(query: str, params: dict | None = None) -> list[dict]:
+    def _execute(query: str, _params: dict | None = None) -> list[dict]:
         # Memory fetch query contains "m.content AS content"
         if "m.content AS content" in query:
             return list(rows)
@@ -372,7 +372,7 @@ class TestRunnerIntegration:
         adapter = MagicMock()
         adapter.config = _make_config()
 
-        def _execute(query: str, params: dict | None = None) -> list[dict]:
+        def _execute(query: str, _params: dict | None = None) -> list[dict]:
             if "m.content AS content" in query:
                 return []
             if "CO_OCCURS_WITH]->()":
