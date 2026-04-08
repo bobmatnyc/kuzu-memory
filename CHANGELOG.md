@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.12.6] - 2026-04-08
+
+### Fixed
+- Entity match weight reduced 0.10 -> 0.03 (issue #48) — at weight 0.10 a single common-entity
+  hit on a wrong session could override a Jaccard-leading correct session in fresh/small DBs
+  (effective formula: score = 0.365 + jaccard*0.25 + entity_hits*0.10). At 0.03 a wrong
+  session needs 3+ entity matches to flip a typical Jaccard advantage. Expected improvement:
+  SSA R@10 ~62.5% -> ~80-84%.
+
 ## [1.12.5] - 2026-04-08
 
 ### Fixed
@@ -1352,7 +1361,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.6...HEAD
+[1.12.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.2...v1.12.3
