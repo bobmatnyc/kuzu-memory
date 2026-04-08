@@ -22,7 +22,10 @@ from ..storage.kuzu_adapter import KuzuAdapter
 from ..utils.exceptions import PerformanceError, RecallError
 from ..utils.validation import validate_text_input
 from ._tokenizer import tokenize as _tokenize_for_boost
-from .query_classifier import SpeakerIntent, classify_speaker_intent
+from .query_classifier import (  # pyright: ignore[reportUnusedImport]
+    SpeakerIntent,
+    classify_speaker_intent,
+)
 from .strategies import (
     EntityRecallStrategy,
     GraphRelatedRecallStrategy,

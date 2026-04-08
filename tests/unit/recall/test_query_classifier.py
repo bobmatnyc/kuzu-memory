@@ -1,7 +1,5 @@
 """Tests for query speaker intent classifier."""
 
-import pytest
-
 from kuzu_memory.recall.query_classifier import SpeakerIntent, classify_speaker_intent
 
 

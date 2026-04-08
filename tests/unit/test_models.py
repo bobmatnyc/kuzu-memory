@@ -143,6 +143,8 @@ class TestMemory:
         memory.update_access()
 
         assert memory.access_count == initial_count + 1
+        assert memory.accessed_at is not None
+        assert initial_access_time is not None
         assert memory.accessed_at > initial_access_time
 
     def test_memory_serialization(self):
