@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.12.9] - 2026-04-08
+
+### Fixed
+- Remove `valid_to` expiry filter from `_recall_all_memories` (issue #51) — EPISODIC memories
+  default to `valid_to = created_at + 30 days`. Sessions stored at historical timestamps are
+  all "expired" by wall-clock time, so the `WHERE valid_to > now` guard returned 0 rows,
+  silently blocking the full-corpus cosine scan introduced in #49/#50. The expiry filter is
+  an operational retention policy, not a search-relevance filter — removed from the full-corpus
+  path. Scope filters (user_id, session_id, agent_id) are retained.
+
 ## [1.12.8] - 2026-04-08
 
 ### Fixed
@@ -1381,7 +1391,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.8...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.9...HEAD
+[1.12.9]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.8...v1.12.9
 [1.12.8]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.7...v1.12.8
 [1.12.7]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...v1.12.6
