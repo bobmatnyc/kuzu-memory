@@ -40,13 +40,16 @@ logger = logging.getLogger(__name__)
 # Semantic scoring helper
 # ---------------------------------------------------------------------------
 
-try:
-    from sentence_transformers import SentenceTransformer
 
-    _SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SentenceTransformer = None  # type: ignore[assignment,misc,unused-ignore]
-    _SENTENCE_TRANSFORMERS_AVAILABLE = False
+def _check_sentence_transformers_available() -> bool:
+    """Check availability without importing (avoids tokenizers thread pool at module load)."""
+    import importlib.util
+
+    return importlib.util.find_spec("sentence_transformers") is not None
+
+
+_SENTENCE_TRANSFORMERS_AVAILABLE = _check_sentence_transformers_available()
+if not _SENTENCE_TRANSFORMERS_AVAILABLE:
     logger.debug(
         "sentence-transformers not available; semantic search will fall back to Jaccard scoring"
     )
@@ -87,6 +90,8 @@ class _SemanticScorer:
             return False
         if self._model is None:
             try:
+                from sentence_transformers import SentenceTransformer  # lazy import
+
                 self._model = SentenceTransformer("all-MiniLM-L6-v2")  # type: ignore[misc,unused-ignore]
                 logger.debug("Loaded SentenceTransformer model for semantic recall")
             except Exception as exc:

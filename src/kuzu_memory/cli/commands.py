@@ -17,6 +17,9 @@ from ..__version__ import __version__
 from ..core.config import KuzuMemoryConfig
 from ..utils.config_loader import get_config_loader
 from ..utils.project_setup import find_project_root, get_project_db_path
+from . import (
+    _env_setup as _env_setup,  # pyright: ignore[reportAttributeAccessIssue]  # sets TOKENIZERS_PARALLELISM before heavy imports
+)
 
 # Import top-level command groups (14 total with migrations, analytics, cleanup, and consolidate)
 from .analytics_commands import analytics
