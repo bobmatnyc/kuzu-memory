@@ -412,6 +412,37 @@ class TestFullCorpusFallback:
         ), "_recall_all_memories must not apply any keyword pre-filter (CONTAINS clause found)"
         assert "MATCH (m:Memory)" in captured_queries[0]
 
+    def test_recall_all_memories_no_valid_to_filter(self) -> None:
+        """
+        Regression for issue #51: EPISODIC memories default to valid_to=created_at+30d.
+        Benchmark sessions stored at historical timestamps are all "expired" by wall-clock
+        time, so a `valid_to > now` filter returns 0 rows — blocking the full-corpus scan.
+
+        _recall_all_memories must NOT apply a valid_to expiry filter. Expiry is an
+        operational retention policy, not a search-relevance filter.
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        captured_queries: list[str] = []
+
+        def capture_query(query: str, params: dict) -> list:  # type: ignore[type-arg]
+            captured_queries.append(query)
+            return []
+
+        mock_adapter.execute_query.side_effect = capture_query
+
+        coordinator._recall_all_memories(user_id=None, session_id=None, agent_id="default")
+
+        assert len(captured_queries) == 1
+        q = captured_queries[0]
+        assert "valid_to" not in q.lower(), (
+            "_recall_all_memories must not filter by valid_to — "
+            "episodic memories with historical timestamps would be excluded (issue #51)"
+        )
+        assert (
+            "current_time" not in q.lower()
+        ), "_recall_all_memories must not use $current_time expiry check (issue #51)"
+
 
 # ---------------------------------------------------------------------------
 # attach_memories — parameter threading through coordinator

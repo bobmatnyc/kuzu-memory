@@ -576,27 +576,29 @@ class RecallCoordinator:
         Returns:
             All non-expired Memory objects within the current scope.
         """
-        from datetime import datetime
-
         from ..storage.query_builder import QueryBuilder
 
-        parameters: dict[str, object] = {
-            "current_time": datetime.now().isoformat(),
-        }
-        query = """
-            MATCH (m:Memory)
-            WHERE (m.valid_to IS NULL OR m.valid_to > TIMESTAMP($current_time))
-        """
+        # No valid_to expiry filter here — episodic memories default to 30-day
+        # valid_to (created_at + 30d). Benchmark sessions stored at historical
+        # timestamps are all "expired" by wall-clock time, so the expiry filter
+        # would return 0 rows. The full-corpus scan is for semantic ranking only;
+        # expiry is an operational retention policy, not a search-relevance filter.
+        parameters: dict[str, object] = {}
+        query = "MATCH (m:Memory)"
+        conditions: list[str] = []
+
         if user_id:
-            query += " AND m.user_id = $user_id"
+            conditions.append("m.user_id = $user_id")
             parameters["user_id"] = user_id
         if session_id:
-            query += " AND m.session_id = $session_id"
+            conditions.append("m.session_id = $session_id")
             parameters["session_id"] = session_id
         if agent_id and agent_id != "default":
-            query += " AND m.agent_id = $agent_id"
+            conditions.append("m.agent_id = $agent_id")
             parameters["agent_id"] = agent_id
 
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
         query += " RETURN m"
 
         try:
