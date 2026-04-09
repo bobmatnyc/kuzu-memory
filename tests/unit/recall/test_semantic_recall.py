@@ -298,10 +298,10 @@ class TestFullCorpusFallback:
     def setup_method(self) -> None:
         _SemanticScorer._instance = None
 
-    def test_full_corpus_fallback_called_when_hnsw_unavailable(self) -> None:
+    def test_full_corpus_fallback_called_when_hnsw_returns_none(self) -> None:
         """
-        When _recall_with_hnsw returns None, _recall_all_memories must be called
-        and its results used as the candidate pool.
+        When _recall_with_hnsw returns None (HNSW index unavailable / exception),
+        _recall_all_memories must be called and its results used as the candidate pool.
         """
         coordinator, mock_adapter = _make_coordinator()
 
@@ -320,6 +320,36 @@ class TestFullCorpusFallback:
         # _rank_memories must be called with the full-corpus candidates
         rank_call_memories = mock_rank.call_args[0][0]
         assert any(m.id == "corpus-1" for m in rank_call_memories)
+
+    def test_full_corpus_fallback_called_when_hnsw_returns_empty_list(self) -> None:
+        """
+        Regression for issue #50: _recall_with_hnsw returns [] (not None) when the
+        HNSW query succeeds but finds zero neighbours. The fallback condition must
+        treat [] the same as None — `[] is None` is False, which silently blocked
+        the full-corpus path in v1.12.7.
+
+        Fix: condition changed from `hnsw_memories is None` to `not hnsw_memories`
+        so both [] and None trigger the full-corpus scan.
+        """
+        coordinator, mock_adapter = _make_coordinator()
+
+        corpus_memory = _make_memory("full corpus content", "corpus-empty-hnsw")
+
+        with (
+            patch.object(coordinator, "_recall_with_hnsw", return_value=[]),  # empty, not None
+            patch.object(
+                coordinator, "_recall_all_memories", return_value=[corpus_memory]
+            ) as mock_all,
+            patch.object(coordinator, "_rank_memories", return_value=[corpus_memory]) as mock_rank,
+        ):
+            coordinator.attach_memories("what did you say?", use_semantic_search=True)
+
+        (
+            mock_all.assert_called_once(),
+            ("Full-corpus fallback must fire when HNSW returns [] (issue #50 regression)"),
+        )
+        rank_call_memories = mock_rank.call_args[0][0]
+        assert any(m.id == "corpus-empty-hnsw" for m in rank_call_memories)
 
     def test_full_corpus_fallback_not_called_when_hnsw_succeeds(self) -> None:
         """

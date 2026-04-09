@@ -287,7 +287,10 @@ class RecallCoordinator:
             if hnsw_memories:
                 memories = hnsw_memories + memories
                 strategy_used = f"{strategy_used}+hnsw"
-            elif use_semantic_search and hnsw_memories is None:
+            elif use_semantic_search and not hnsw_memories:
+                # Covers both None (HNSW unavailable/exception) and [] (HNSW returned
+                # empty results). Issue #50: `[] is None` evaluates False, silently
+                # blocking the full-corpus fallback introduced in #49.
                 # HNSW not available — full-corpus cosine scan.
                 # Replaces keyword-filtered candidates with all non-expired memories.
                 all_corpus = self._recall_all_memories(user_id, session_id, agent_id)
