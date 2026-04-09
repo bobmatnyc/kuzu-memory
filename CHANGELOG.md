@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [1.12.8] - 2026-04-08
+
+### Fixed
+- Full-corpus fallback now fires when HNSW returns `[]` as well as `None` (issue #50) —
+  `_recall_with_hnsw()` returns `[]` when the query succeeds but finds zero neighbours.
+  The fallback condition `hnsw_memories is None` was False for `[]`, silently blocking
+  the full-corpus cosine scan introduced in #49 (v1.12.7 SSA R@10 unchanged at 62.5%).
+  Fix: condition changed to `not hnsw_memories` covering both falsy cases.
+
 ## [1.12.7] - 2026-04-08
 
 ### Fixed
@@ -1372,7 +1381,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NLP Support**: Advanced text processing and classification
 - **Testing**: Comprehensive test coverage with benchmarks
 
-[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.7...HEAD
+[Unreleased]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.8...HEAD
+[1.12.8]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.7...v1.12.8
 [1.12.7]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/kuzu-memory/kuzu-memory/compare/v1.12.4...v1.12.5
