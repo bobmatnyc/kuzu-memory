@@ -994,6 +994,9 @@ def _learn_async(logger: Any) -> None:
     try:
         # Measure timing if DEBUG env var is set
         debug_timing = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
+        start_time = 0.0
+        cache_start = 0.0
+        spawn_start = 0.0
         if debug_timing:
             start_time = time.time()
 
