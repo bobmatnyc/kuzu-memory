@@ -333,6 +333,11 @@ class RecallCoordinator:
 
                 reranker = LLMReranker(self.config.recall.reranking)
                 ranked_memories = reranker.rerank(clean_prompt, ranked_memories, max_memories)
+            elif self.config.recall.local_llm.enabled:
+                from .local_reranker import LocalLLMReranker  # lazy import — optional
+
+                reranker_local = LocalLLMReranker(self.config.recall.local_llm)
+                ranked_memories = reranker_local.rerank(clean_prompt, ranked_memories, max_memories)
 
             # Filter by speaker intent when clearly specified.
             # Applied post-ranking so scoring quality is not degraded.

@@ -771,10 +771,80 @@ class KuzuMemoryMCPServer:
                 stats.append("Avg Recall Time: N/A")
                 stats.append("Cache Hit Rate: N/A")
 
+            # Include local LLM detection status
+            try:
+                from kuzu_memory.integrations.local_llm import detect_local_llm
+
+                llm_info = detect_local_llm()
+                if llm_info.available:
+                    stats.append(f"Local LLM: {llm_info.provider} ({llm_info.default_model})")
+                    stats.append(f"Local LLM Models: {', '.join(llm_info.models[:5])}")
+                else:
+                    stats.append("Local LLM: not detected")
+            except Exception:
+                pass  # Local LLM detection is best-effort
+
             return "\n".join(stats)
         except Exception as e:
             logger.error(f"MCP stats failed: {e}")
             return f"Error: {e}"
+
+    async def _local_chat(
+        self,
+        prompt: str,
+        system: str | None = None,
+        model: str | None = None,
+        max_tokens: int = 1024,
+    ) -> dict[str, Any]:
+        """Route a chat completion through the detected local LLM.
+
+        Args:
+            prompt: User message to send.
+            system: Optional system prompt.
+            model: Override model name (uses detected default if omitted).
+            max_tokens: Maximum response tokens (default 1024).
+
+        Returns:
+            Dict with 'available', 'provider', 'model', and 'response' keys on
+            success, or 'available' and 'error' keys on failure.
+        """
+        from kuzu_memory.integrations.local_llm import chat_completion, detect_local_llm
+
+        info = detect_local_llm()
+        if not info.available:
+            return {
+                "available": False,
+                "error": (
+                    "No local LLM detected. " "Install Ollama (https://ollama.ai) or LM Studio."
+                ),
+            }
+
+        selected_model = model or info.default_model
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            content = chat_completion(
+                endpoint=info.endpoint,
+                model=selected_model,
+                messages=messages,
+                max_tokens=max_tokens,
+            )
+            return {
+                "available": True,
+                "provider": info.provider,
+                "model": selected_model,
+                "response": content,
+            }
+        except Exception as e:
+            return {
+                "available": True,
+                "error": str(e),
+                "provider": info.provider,
+                "model": selected_model,
+            }
 
     async def _project_context(self, days_back: int = 14, max_per_type: int = 5) -> str:
         """Return structured project context bundle from the current project DB."""

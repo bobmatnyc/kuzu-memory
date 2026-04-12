@@ -52,6 +52,19 @@ class RerankingConfig:
 
 
 @dataclass
+class LocalLLMConfig:
+    """Configuration for local LLM inference (Ollama, LM Studio)."""
+
+    enabled: bool = False
+    auto_detect: bool = True  # probe on startup
+    endpoint: str = "http://localhost:11434"
+    model: str = ""  # empty = use detected default
+    provider: str = "ollama"  # "ollama" | "lm_studio" | "custom"
+    timeout_ms: int = 30000
+    max_tokens: int = 512
+
+
+@dataclass
 class RecallConfig:
     """Memory recall configuration."""
 
@@ -66,6 +79,7 @@ class RecallConfig:
     cache_size: int = 1000
     cache_ttl_seconds: int = 300
     reranking: RerankingConfig = field(default_factory=RerankingConfig)
+    local_llm: LocalLLMConfig = field(default_factory=LocalLLMConfig)
     tfidf_boost_weight: float = 0.3  # 0 = disabled, 1 = full boost
 
 
@@ -248,7 +262,7 @@ class KuzuMemoryConfig:
     log_level: str = "INFO"
 
     @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> KuzuMemoryConfig:
+    def from_dict(cls, config_dict: object) -> KuzuMemoryConfig:
         """
         Create configuration from dictionary.
 
@@ -265,7 +279,7 @@ class KuzuMemoryConfig:
             # Basic validation of the configuration dictionary
             if not isinstance(config_dict, dict):
                 raise ValueError("Configuration must be a dictionary")
-            validated_config = config_dict
+            validated_config: dict[str, Any] = config_dict
 
             # Create sub-configurations
             storage_config = StorageConfig()
@@ -285,8 +299,18 @@ class KuzuMemoryConfig:
                             if hasattr(reranking_cfg, rk):
                                 setattr(reranking_cfg, rk, rv)
                         recall_config.reranking = reranking_cfg
+                    elif key == "local_llm" and isinstance(value, dict):
+                        local_llm_cfg = LocalLLMConfig()
+                        for lk, lv in value.items():
+                            if hasattr(local_llm_cfg, lk):
+                                setattr(local_llm_cfg, lk, lv)
+                        recall_config.local_llm = local_llm_cfg
                     elif hasattr(recall_config, key):
                         setattr(recall_config, key, value)
+
+            # Allow environment variable override: KUZU_MEMORY_LOCAL_LLM=1 enables local LLM
+            if os.environ.get("KUZU_MEMORY_LOCAL_LLM") == "1":
+                recall_config.local_llm.enabled = True
 
             # Allow environment variable override: KUZU_MEMORY_RERANK=1 enables reranking
             if os.environ.get("KUZU_MEMORY_RERANK") == "1":
@@ -475,6 +499,15 @@ class KuzuMemoryConfig:
                     "model": self.recall.reranking.model,
                     "top_k_to_rerank": self.recall.reranking.top_k_to_rerank,
                     "timeout_ms": self.recall.reranking.timeout_ms,
+                },
+                "local_llm": {
+                    "enabled": self.recall.local_llm.enabled,
+                    "auto_detect": self.recall.local_llm.auto_detect,
+                    "endpoint": self.recall.local_llm.endpoint,
+                    "model": self.recall.local_llm.model,
+                    "provider": self.recall.local_llm.provider,
+                    "timeout_ms": self.recall.local_llm.timeout_ms,
+                    "max_tokens": self.recall.local_llm.max_tokens,
                 },
             },
             "memory": {

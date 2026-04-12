@@ -465,6 +465,37 @@ class MCPProtocolHandler:
                     },
                 },
             },
+            {
+                "name": "kuzu_local_chat",
+                "description": (
+                    "Route a chat completion through a locally-running LLM (Ollama/LM Studio). "
+                    "Returns available=false if no local model detected. "
+                    "Use for memory operations that don't need Anthropic API."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "User message to send",
+                        },
+                        "system": {
+                            "type": "string",
+                            "description": "Optional system prompt",
+                        },
+                        "model": {
+                            "type": "string",
+                            "description": "Override model name (uses detected default if omitted)",
+                        },
+                        "max_tokens": {
+                            "type": "integer",
+                            "description": "Max response tokens (default 1024)",
+                            "default": 1024,
+                        },
+                    },
+                    "required": ["prompt"],
+                },
+            },
         ]
 
         return tool_definitions
