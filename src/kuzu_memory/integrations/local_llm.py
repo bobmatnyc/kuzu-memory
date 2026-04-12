@@ -14,6 +14,19 @@ OLLAMA_DEFAULT_HOST = "localhost"
 OLLAMA_DEFAULT_PORT = 11434
 LM_STUDIO_DEFAULT_PORT = 1234
 
+# Embedding-only models that don't support chat completions — excluded from detection.
+# These models answer /api/tags but return errors on /v1/chat/completions.
+_EMBEDDING_ONLY_PATTERNS = (
+    "all-minilm",
+    "nomic-embed",
+    "mxbai-embed",
+    "snowflake-arctic-embed",
+    "bge-",
+    "gte-",
+    "e5-",
+    "text-embedding",
+)
+
 
 @dataclass
 class LocalLLMInfo:
@@ -88,27 +101,39 @@ def detect_local_llm() -> LocalLLMInfo:
             )
 
         if models:
-            # Prefer gemma3 > gemma2 > gemma > llama3.2 > qwen > phi (align with
-            # mcp-vector-search model preference ordering)
-            preferred = next(
-                (
-                    m
-                    for m in models
-                    if any(
-                        s in m.lower()
-                        for s in ("gemma3", "gemma2", "gemma", "llama3.2", "qwen", "phi")
-                    )
-                ),
-                models[0],
-            )
-            logger.info("Detected Ollama at %s with %d models", ollama_url, len(models))
-            return LocalLLMInfo(
-                available=True,
-                provider="ollama",
-                endpoint=ollama_url,
-                models=models,
-                default_model=preferred,
-            )
+            # Filter out embedding-only models (no chat completion support)
+            chat_models = [
+                m for m in models if not any(p in m.lower() for p in _EMBEDDING_ONLY_PATTERNS)
+            ]
+            if not chat_models:
+                logger.debug("Ollama running but only embedding models found — skipping")
+            else:
+                # Prefer gemma3 > gemma2 > gemma > llama3.2 > qwen > phi (align with
+                # mcp-vector-search model preference ordering)
+                preferred = next(
+                    (
+                        m
+                        for m in chat_models
+                        if any(
+                            s in m.lower()
+                            for s in ("gemma3", "gemma2", "gemma", "llama3.2", "qwen", "phi")
+                        )
+                    ),
+                    chat_models[0],
+                )
+                logger.info(
+                    "Detected Ollama at %s: %d chat models (%d total)",
+                    ollama_url,
+                    len(chat_models),
+                    len(models),
+                )
+                return LocalLLMInfo(
+                    available=True,
+                    provider="ollama",
+                    endpoint=ollama_url,
+                    models=chat_models,
+                    default_model=preferred,
+                )
 
     # Check LM Studio
     lm_url = os.environ.get("LM_STUDIO_URL", f"http://localhost:{LM_STUDIO_DEFAULT_PORT}")
