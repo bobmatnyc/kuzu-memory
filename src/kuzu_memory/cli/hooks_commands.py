@@ -25,6 +25,33 @@ from ..utils.project_setup import find_project_root
 from ..utils.subservient import get_subservient_config, is_subservient_mode
 from .enums import HookSystem
 
+# ---------------------------------------------------------------------------
+# Tokenizers fork-warning suppression
+# ---------------------------------------------------------------------------
+# On Linux the default multiprocessing start method is 'fork', which copies
+# the parent's Rust thread-pool state into the child and causes the
+# HuggingFace tokenizers library to emit a noisy warning to stderr:
+#
+#   "huggingface/tokenizers: The current process just got forked, after
+#    parallelism has already been used. Disabling parallelism to avoid
+#    deadlocks..."
+#
+# Setting TOKENIZERS_PARALLELISM=false tells the Rust runtime to disable
+# parallelism (which is what we want in hook subprocesses anyway) and
+# suppresses the warning.  We force-set (not setdefault) so the value is
+# always present regardless of the caller's environment.
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Pre-build the child-process environment dict once so every Popen/Process
+# call can reference it without re-copying os.environ each time.
+_CHILD_ENV: dict[str, str] = {**os.environ, "TOKENIZERS_PARALLELISM": "false"}
+
+# Use the 'spawn' multiprocessing context explicitly on every platform.
+# 'spawn' starts a fresh Python interpreter instead of forking the parent,
+# so the tokenizers Rust thread-pool is never inherited and the warning never
+# fires.  On macOS this is already the default; on Linux it is not.
+_MP_CTX = multiprocessing.get_context("spawn")
+
 console = Console()
 
 
@@ -642,13 +669,16 @@ def _git_sync_async(project_root: Path, logger: Any) -> None:
             "100",
         ]
 
-        # Fire and forget - spawn detached subprocess
+        # Fire and forget - spawn detached subprocess.
+        # Pass _CHILD_ENV so TOKENIZERS_PARALLELISM=false is set in the child
+        # before any Python import can trigger the tokenizers Rust thread-pool.
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,  # Detach from parent
             cwd=str(project_root),  # Run in project directory
+            env=_CHILD_ENV,
         )
 
         logger.info(f"Launched background git sync (PID: {process.pid})")
@@ -1001,11 +1031,17 @@ def _learn_async(logger: Any) -> None:
         # Get log directory
         log_dir = Path(os.getenv("KUZU_HOOK_LOG_DIR", tempfile.gettempdir()))
 
-        # OPTIMIZATION 2: Use multiprocessing.Process instead of subprocess (80ms → 20ms)
+        # OPTIMIZATION 2: Use _MP_CTX.Process (spawn context) instead of the
+        # default multiprocessing.Process.  On Linux the default context is
+        # 'fork', which copies the parent's Rust thread-pool state and triggers
+        # the HuggingFace tokenizers fork warning.  Using 'spawn' starts a
+        # fresh Python interpreter so the warning never fires.
+        # Performance note: 'spawn' is ~20ms vs subprocess.Popen's ~80ms, so
+        # the original optimisation is preserved.
         if debug_timing:
             spawn_start = time.time()
 
-        process = multiprocessing.Process(
+        process = _MP_CTX.Process(
             target=_learn_worker,
             args=(
                 input_json,

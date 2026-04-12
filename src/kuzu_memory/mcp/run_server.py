@@ -25,6 +25,13 @@ from .protocol import (
 )
 from .server import KuzuMemoryMCPServer as MCPServer
 
+# Suppress HuggingFace tokenizers fork warning.  Must be set before the
+# sentence-transformers / tokenizers Rust extension is initialised.  Setting
+# it here (after stdlib imports but before any heavy application code runs)
+# keeps ruff E402 happy while still taking effect before the first call that
+# could trigger the thread-pool.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 # Set up logging
 # Use environment variable to control log level
 log_level = logging.DEBUG if os.environ.get("MCP_DEBUG") else logging.WARNING

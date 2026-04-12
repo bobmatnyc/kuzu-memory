@@ -1688,7 +1688,7 @@ def export_memories(
             result = export_memories_to_json(adapter, backup_dir, include_archived=include_archived)
 
         rich_panel(
-            f"Memories exported: {result['memories']}\n" f"Backup file: {result['path']}",
+            f"Memories exported: {result['memories']}\nBackup file: {result['path']}",
             title="Export Complete",
             style="green",
         )
