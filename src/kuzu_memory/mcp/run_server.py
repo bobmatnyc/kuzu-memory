@@ -466,6 +466,47 @@ class MCPProtocolHandler:
                 },
             },
             {
+                "name": "kuzu_optimize",
+                "description": (
+                    "Memory optimization: compact and improve memory quality. "
+                    "Strategies: full_maintenance, top_accessed, stale_cleanup, "
+                    "consolidate_similar. "
+                    "llm_optimize uses a local LLM (Ollama/LM Studio) to reclassify "
+                    "NOTE memories and re-score default-importance memories — "
+                    "runs in background, no-op if no local LLM detected."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "strategy": {
+                            "type": "string",
+                            "description": (
+                                "Optimization strategy to use. "
+                                "llm_optimize uses local LLM to reclassify and rescore memories."
+                            ),
+                            "enum": [
+                                "top_accessed",
+                                "stale_cleanup",
+                                "consolidate_similar",
+                                "full_maintenance",
+                                "llm_optimize",
+                            ],
+                            "default": "top_accessed",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of memories to process",
+                            "default": 20,
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "description": "If true, only analyze without making changes",
+                            "default": True,
+                        },
+                    },
+                },
+            },
+            {
                 "name": "kuzu_local_chat",
                 "description": (
                     "Route a chat completion through a locally-running LLM (Ollama/LM Studio). "

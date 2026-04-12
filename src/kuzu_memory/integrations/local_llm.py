@@ -74,13 +74,30 @@ def detect_local_llm() -> LocalLLMInfo:
 
     if _tcp_probe(ollama_hostname, ollama_port):
         models = _ollama_list_models(ollama_url)
+
+        # Honour explicit model override before doing any preference logic
+        explicit_model = os.environ.get("OLLAMA_MODEL", "")
+        if explicit_model:
+            logger.info("Using OLLAMA_MODEL override %r at %s", explicit_model, ollama_url)
+            return LocalLLMInfo(
+                available=True,
+                provider="ollama",
+                endpoint=ollama_url,
+                models=models if models else [explicit_model],
+                default_model=explicit_model,
+            )
+
         if models:
-            # Prefer smaller/faster models for memory ops
+            # Prefer gemma3 > gemma2 > gemma > llama3.2 > qwen > phi (align with
+            # mcp-vector-search model preference ordering)
             preferred = next(
                 (
                     m
                     for m in models
-                    if any(s in m.lower() for s in ("phi", "llama3.2", "qwen", "gemma"))
+                    if any(
+                        s in m.lower()
+                        for s in ("gemma3", "gemma2", "gemma", "llama3.2", "qwen", "phi")
+                    )
                 ),
                 models[0],
             )

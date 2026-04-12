@@ -285,6 +285,9 @@ class KuzuMemoryMCPServer:
                         "\n- top_accessed: Refresh/consolidate most-used memories for faster recall "
                         "\n- stale_cleanup: Archive memories not accessed in 90+ days "
                         "\n- consolidate_similar: Merge similar memories into summaries "
+                        "\n- llm_optimize: Use local LLM (Ollama/LM Studio) to reclassify "
+                        "NOTE memories and re-score default-importance memories — runs in "
+                        "background, no-op if no local LLM detected "
                         "\n\nUse cases: "
                         "\n- full_maintenance first to recover storage and remove noise "
                         "\n- During long sessions when context feels cluttered "
@@ -303,6 +306,7 @@ class KuzuMemoryMCPServer:
                                     "top_accessed",
                                     "stale_cleanup",
                                     "consolidate_similar",
+                                    "llm_optimize",
                                 ],
                                 "default": "top_accessed",
                             },
@@ -1104,6 +1108,10 @@ class KuzuMemoryMCPServer:
                 result = await self._optimize_consolidate_similar(db_adapter, limit, dry_run)
             elif strategy == "full_maintenance":
                 result = await self._optimize_full_maintenance(db_adapter, dry_run)
+            elif strategy == "llm_optimize":
+                result = await self._optimize_llm(
+                    db_adapter=db_adapter, limit=limit, dry_run=dry_run
+                )
             else:
                 result = {
                     "status": "error",
@@ -1115,6 +1123,52 @@ class KuzuMemoryMCPServer:
         except Exception as e:
             logger.error(f"Optimization failed: {e}", exc_info=True)
             return json.dumps({"status": "error", "error": str(e)})
+
+    async def _optimize_llm(
+        self, db_adapter: Any, limit: int = 50, dry_run: bool = False
+    ) -> dict[str, Any]:
+        """Run LLM-powered memory optimization in a background thread."""
+        import asyncio
+        import os
+
+        from kuzu_memory.integrations.local_llm import detect_local_llm
+        from kuzu_memory.nlp.llm_optimizer import LLMOptimizer
+
+        info = detect_local_llm()
+        if not info.available:
+            return {
+                "success": False,
+                "error": (
+                    "No local LLM detected. Install Ollama (https://ollama.ai) and pull a model."
+                ),
+                "strategy": "llm_optimize",
+            }
+
+        # Respect OLLAMA_MODEL env var (align with mcp-vector-search convention)
+        model = os.environ.get("OLLAMA_MODEL", info.default_model)
+        optimizer = LLMOptimizer(
+            adapter=db_adapter,
+            endpoint=info.endpoint,
+            model=model,
+            timeout_ms=30000,
+        )
+
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None, lambda: optimizer.run_all_passes(limit=limit, dry_run=dry_run)
+        )
+
+        return {
+            "success": result.success,
+            "strategy": "llm_optimize",
+            "model": result.model_used,
+            "provider": result.provider,
+            "dry_run": result.dry_run,
+            "memories_reclassified": result.memories_reclassified,
+            "memories_rescored": result.memories_rescored,
+            "execution_time_ms": result.execution_time_ms,
+            "details": result.details[:20],  # Cap output
+        }
 
     # ------------------------------------------------------------------
     # Storage maintenance helpers (used by full_maintenance strategy)
