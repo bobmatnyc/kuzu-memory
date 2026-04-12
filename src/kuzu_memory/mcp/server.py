@@ -1132,7 +1132,9 @@ class KuzuMemoryMCPServer:
         import os
 
         from kuzu_memory.integrations.local_llm import detect_local_llm
-        from kuzu_memory.nlp.llm_optimizer import LLMOptimizer
+        from kuzu_memory.nlp.llm_optimizer import (
+            LLMOptimizer,  # pyright: ignore[reportMissingImports]
+        )
 
         info = detect_local_llm()
         if not info.available:
