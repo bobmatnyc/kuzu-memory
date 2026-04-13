@@ -122,15 +122,25 @@ def detect_local_llm() -> LocalLLMInfo:
             if not chat_models:
                 logger.debug("Ollama running but only embedding models found — skipping")
             else:
-                # Prefer gemma3 > gemma2 > gemma > llama3.2 > qwen > phi (align with
-                # mcp-vector-search model preference ordering)
+                # Prefer gemma4 > qwen > gemma3 > gemma2 > gemma > llama3.2 > phi
+                # Aligned with mcp-vector-search benchmarks: qwen2.5-coder:7b is the
+                # best speed/quality trade-off; gemma4 (MoE, ~4B active) slots above it
+                # when available.
                 preferred = next(
                     (
                         m
                         for m in chat_models
                         if any(
                             s in m.lower()
-                            for s in ("gemma3", "gemma2", "gemma", "llama3.2", "qwen", "phi")
+                            for s in (
+                                "gemma4",
+                                "qwen",
+                                "gemma3",
+                                "gemma2",
+                                "gemma",
+                                "llama3.2",
+                                "phi",
+                            )
                         )
                     ),
                     chat_models[0],
