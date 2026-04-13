@@ -122,10 +122,10 @@ def detect_local_llm() -> LocalLLMInfo:
             if not chat_models:
                 logger.debug("Ollama running but only embedding models found — skipping")
             else:
-                # Prefer gemma4 > qwen > gemma3 > gemma2 > gemma > llama3.2 > phi
-                # Aligned with mcp-vector-search benchmarks: qwen2.5-coder:7b is the
-                # best speed/quality trade-off; gemma4 (MoE, ~4B active) slots above it
-                # when available.
+                # Prefer qwen > gemma3 > gemma4 > gemma2 > gemma > llama3.2 > phi
+                # Cross-project benchmark (kuzu-memory + mcp-vector-search) confirms
+                # qwen2.5-coder:7b-instruct has the best speed/quality for memory ops.
+                # gemma4 benchmarked below qwen despite MoE architecture.
                 preferred = next(
                     (
                         m
@@ -133,9 +133,9 @@ def detect_local_llm() -> LocalLLMInfo:
                         if any(
                             s in m.lower()
                             for s in (
-                                "gemma4",
                                 "qwen",
                                 "gemma3",
+                                "gemma4",
                                 "gemma2",
                                 "gemma",
                                 "llama3.2",
