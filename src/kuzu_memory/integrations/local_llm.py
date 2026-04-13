@@ -1,4 +1,14 @@
-"""Local LLM detection and client for kuzu-memory."""
+"""Local LLM detection and client for kuzu-memory.
+
+Canonical local-LLM interface for kuzu-memory projects.
+Supports Ollama and LM Studio via OpenAI-compatible /v1/chat/completions.
+Both sync (chat_completion) and streaming (stream_chat_completion) variants.
+
+Env vars:
+  OLLAMA_HOST       Override Ollama base URL (default http://localhost:11434)
+  OLLAMA_MODEL      Force a specific model, skipping preference selection
+  LM_STUDIO_URL     Override LM Studio base URL (default http://localhost:1234)
+"""
 from __future__ import annotations
 
 import json
@@ -7,6 +17,10 @@ import os
 import socket
 import urllib.request
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +171,33 @@ def detect_local_llm() -> LocalLLMInfo:
     return LocalLLMInfo(available=False, provider="none", endpoint="", models=[], default_model="")
 
 
+def _build_request(
+    endpoint: str,
+    model: str,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    stream: bool,
+    temperature: float = 0.1,
+) -> urllib.request.Request:
+    """Build an OpenAI-compatible /v1/chat/completions request."""
+    url = f"{endpoint.rstrip('/')}/v1/chat/completions"
+    payload = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": stream,
+        }
+    ).encode()
+    return urllib.request.Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+
+
 def chat_completion(
     endpoint: str,
     model: str,
@@ -166,6 +207,9 @@ def chat_completion(
 ) -> str:
     """
     Call OpenAI-compatible /v1/chat/completions (works for Ollama and LM Studio).
+
+    Blocks until the full response is received. Use stream_chat_completion()
+    for interactive/display use cases where time-to-first-token matters.
 
     Args:
         endpoint: Base URL of the local LLM server (e.g. http://localhost:11434).
@@ -181,23 +225,82 @@ def chat_completion(
         urllib.error.URLError: On connection failure.
         KeyError: If the response format is unexpected.
     """
-    url = f"{endpoint.rstrip('/')}/v1/chat/completions"
-    payload = json.dumps(
-        {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": 0.1,
-            "stream": False,
-        }
-    ).encode()
-
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
-        method="POST",
-    )
+    req = _build_request(endpoint, model, messages, max_tokens, stream=False)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode())
     return str(data["choices"][0]["message"]["content"])
+
+
+def stream_chat_completion(
+    endpoint: str,
+    model: str,
+    messages: list[dict[str, str]],
+    timeout: float = 60.0,
+    max_tokens: int = 2048,
+) -> Generator[str, None, None]:
+    """
+    Stream an OpenAI-compatible /v1/chat/completions response token-by-token.
+
+    Yields text chunks as they arrive (Server-Sent Events, ``data: {...}`` lines).
+    Stops cleanly on ``data: [DONE]``. Safe to break out of early — the HTTP
+    connection is closed when the generator is garbage-collected or explicitly
+    closed.
+
+    Usage::
+
+        for chunk in stream_chat_completion(endpoint, model, messages):
+            print(chunk, end="", flush=True)
+        print()  # final newline
+
+    Args:
+        endpoint: Base URL (e.g. ``http://localhost:11434``).
+        model: Model name.
+        messages: Conversation messages.
+        timeout: Socket read timeout in seconds (applied per-read, not total).
+        max_tokens: Maximum tokens to generate.
+
+    Yields:
+        Token/chunk strings as they stream from the model.
+
+    Raises:
+        urllib.error.URLError: On connection failure before streaming starts.
+    """
+    req = _build_request(endpoint, model, messages, max_tokens, stream=True)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        for raw_line in resp:
+            line: str = raw_line.decode("utf-8").rstrip("\n\r")
+            if not line.startswith("data:"):
+                continue
+            payload = line[len("data:") :].strip()
+            if payload == "[DONE]":
+                return
+            try:
+                chunk = json.loads(payload)
+                delta = chunk["choices"][0].get("delta", {})
+                text = delta.get("content")
+                if text:
+                    yield text
+            except (json.JSONDecodeError, KeyError, IndexError):
+                continue
+
+
+def stream_chat_completion_full(
+    endpoint: str,
+    model: str,
+    messages: list[dict[str, str]],
+    timeout: float = 60.0,
+    max_tokens: int = 2048,
+) -> str:
+    """
+    Convenience wrapper: stream internally, return the full concatenated text.
+
+    Useful when you want streaming's faster time-to-first-token behaviour at
+    the HTTP level (avoids Ollama's non-streaming response buffering) but still
+    need a single string result.
+
+    Args: same as stream_chat_completion.
+
+    Returns:
+        Full assistant response as a single string.
+    """
+    return "".join(stream_chat_completion(endpoint, model, messages, timeout, max_tokens))

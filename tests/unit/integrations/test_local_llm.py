@@ -12,6 +12,8 @@ from kuzu_memory.integrations.local_llm import (
     _tcp_probe,
     chat_completion,
     detect_local_llm,
+    stream_chat_completion,
+    stream_chat_completion_full,
 )
 
 # ---------------------------------------------------------------------------
@@ -311,3 +313,159 @@ def test_chat_completion_failure_propagates() -> None:
             model="llama3.2:3b",
             messages=[{"role": "user", "content": "hello"}],
         )
+
+
+# ---------------------------------------------------------------------------
+# stream_chat_completion
+# ---------------------------------------------------------------------------
+
+
+def _make_sse_response(chunks: list[str], finish: bool = True) -> MagicMock:
+    """Build a mock urllib response that yields SSE lines."""
+    lines: list[bytes] = []
+    for text in chunks:
+        payload = json.dumps({"choices": [{"delta": {"content": text}, "finish_reason": None}]})
+        lines.append(f"data: {payload}\n".encode())
+    if finish:
+        lines.append(b"data: [DONE]\n")
+    mock_resp = MagicMock()
+    mock_resp.__iter__ = MagicMock(return_value=iter(lines))
+    mock_resp.__enter__ = lambda s: s
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    return mock_resp
+
+
+def test_stream_yields_chunks_in_order() -> None:
+    """stream_chat_completion yields each delta content chunk in arrival order."""
+    resp = _make_sse_response(["Hello", ", ", "world", "!"])
+
+    with patch("urllib.request.urlopen", return_value=resp):
+        chunks = list(
+            stream_chat_completion(
+                endpoint="http://localhost:11434",
+                model="gemma3:4b",
+                messages=[{"role": "user", "content": "hi"}],
+            )
+        )
+
+    assert chunks == ["Hello", ", ", "world", "!"]
+
+
+def test_stream_stops_at_done() -> None:
+    """stream_chat_completion stops cleanly when [DONE] sentinel is received."""
+    resp = _make_sse_response(["token1", "token2"], finish=True)
+
+    with patch("urllib.request.urlopen", return_value=resp):
+        chunks = list(
+            stream_chat_completion(
+                "http://localhost:11434", "gemma3:4b", [{"role": "user", "content": "x"}]
+            )
+        )
+
+    assert len(chunks) == 2
+
+
+def test_stream_skips_non_data_lines() -> None:
+    """stream_chat_completion ignores SSE comment/event lines (no 'data:' prefix)."""
+    lines = [
+        b": keep-alive\n",
+        b"event: message\n",
+        b'data: {"choices":[{"delta":{"content":"hi"},"finish_reason":null}]}\n',
+        b"data: [DONE]\n",
+    ]
+    mock_resp = MagicMock()
+    mock_resp.__iter__ = MagicMock(return_value=iter(lines))
+    mock_resp.__enter__ = lambda s: s
+    mock_resp.__exit__ = MagicMock(return_value=False)
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        chunks = list(
+            stream_chat_completion(
+                "http://localhost:11434", "gemma3:4b", [{"role": "user", "content": "x"}]
+            )
+        )
+
+    assert chunks == ["hi"]
+
+
+def test_stream_skips_malformed_json() -> None:
+    """stream_chat_completion silently skips lines with invalid JSON."""
+    lines = [
+        b"data: not-json\n",
+        b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":null}]}\n',
+        b"data: [DONE]\n",
+    ]
+    mock_resp = MagicMock()
+    mock_resp.__iter__ = MagicMock(return_value=iter(lines))
+    mock_resp.__enter__ = lambda s: s
+    mock_resp.__exit__ = MagicMock(return_value=False)
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        chunks = list(
+            stream_chat_completion(
+                "http://localhost:11434", "gemma3:4b", [{"role": "user", "content": "x"}]
+            )
+        )
+
+    assert chunks == ["ok"]
+
+
+def test_stream_skips_empty_delta_content() -> None:
+    """stream_chat_completion skips delta chunks with no 'content' key (role-only deltas)."""
+    lines = [
+        b'data: {"choices":[{"delta":{"role":"assistant"},"finish_reason":null}]}\n',
+        b'data: {"choices":[{"delta":{"content":"text"},"finish_reason":null}]}\n',
+        b"data: [DONE]\n",
+    ]
+    mock_resp = MagicMock()
+    mock_resp.__iter__ = MagicMock(return_value=iter(lines))
+    mock_resp.__enter__ = lambda s: s
+    mock_resp.__exit__ = MagicMock(return_value=False)
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        chunks = list(
+            stream_chat_completion(
+                "http://localhost:11434", "gemma3:4b", [{"role": "user", "content": "x"}]
+            )
+        )
+
+    assert chunks == ["text"]
+
+
+def test_stream_sends_stream_true_in_payload() -> None:
+    """stream_chat_completion passes stream=true to the server."""
+    captured: list[dict] = []
+    resp = _make_sse_response(["ok"])
+
+    original_request = __import__("urllib.request", fromlist=["Request"]).Request
+
+    def capture(url: str, data: bytes, **kw: object) -> object:
+        captured.append(json.loads(data.decode()))
+        return original_request(url, data, **kw)
+
+    with (
+        patch("urllib.request.Request", side_effect=capture),
+        patch("urllib.request.urlopen", return_value=resp),
+    ):
+        list(
+            stream_chat_completion(
+                "http://localhost:11434", "gemma3:4b", [{"role": "user", "content": "x"}]
+            )
+        )
+
+    assert captured[0]["stream"] is True
+    assert captured[0]["model"] == "gemma3:4b"
+
+
+def test_stream_chat_completion_full_concatenates() -> None:
+    """stream_chat_completion_full joins all chunks into a single string."""
+    resp = _make_sse_response(["The ", "answer ", "is 42."])
+
+    with patch("urllib.request.urlopen", return_value=resp):
+        result = stream_chat_completion_full(
+            "http://localhost:11434",
+            "gemma3:4b",
+            [{"role": "user", "content": "What is the answer?"}],
+        )
+
+    assert result == "The answer is 42."
