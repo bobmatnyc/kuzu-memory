@@ -513,6 +513,84 @@ class TestClaudeHooksInstaller:
         assert success is False
         assert any("Failed to repair" in msg for msg in messages)
 
+    def test_install_skips_when_claude_mpm_detected_in_settings(self, tmp_path, monkeypatch):
+        """Test install() returns early without writing when claude-hook-fast.sh is in settings.local.json."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # Create .claude/settings.local.json with claude-mpm hook dispatcher
+        claude_dir = project_path / ".claude"
+        claude_dir.mkdir()
+        settings_path = claude_dir / "settings.local.json"
+        settings = {
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "*",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "/usr/local/bin/claude-hook-fast.sh",
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+        with open(settings_path, "w") as f:
+            json.dump(settings, f, indent=2)
+
+        original_content = settings_path.read_text()
+
+        installer = ClaudeHooksInstaller(project_path)
+        result = installer.install()
+
+        # Should return success=True with the conflict warning
+        assert result.success is True
+        assert "claude-mpm" in result.message.lower()
+        assert result.files_created == []
+        assert result.files_modified == []
+
+        # settings.local.json must not have been modified
+        assert settings_path.read_text() == original_content
+
+    def test_install_proceeds_normally_when_no_claude_mpm_in_settings(self, tmp_path, monkeypatch):
+        """Test install() proceeds normally when settings.local.json has no claude-mpm hooks."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # Create .claude/settings.local.json WITHOUT claude-mpm hooks
+        claude_dir = project_path / ".claude"
+        claude_dir.mkdir()
+        settings_path = claude_dir / "settings.local.json"
+        settings: dict = {"hooks": {}}
+        with open(settings_path, "w") as f:
+            json.dump(settings, f, indent=2)
+
+        installer = ClaudeHooksInstaller(project_path)
+        result = installer.install()
+
+        # Should NOT return the claude-mpm conflict message
+        assert "claude-mpm detected" not in result.message.lower()
+
+    def test_install_skips_when_no_settings_local_json_does_not_apply(self, tmp_path, monkeypatch):
+        """Test install() proceeds normally when settings.local.json does not exist."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        # No .claude directory at all — settings.local.json does not exist
+        installer = ClaudeHooksInstaller(project_path)
+        result = installer.install()
+
+        # Should NOT return the claude-mpm conflict message
+        assert "claude-mpm detected" not in result.message.lower()
+
     def test_test_installation_with_auto_repair(self, tmp_path, monkeypatch):
         """Test that _test_installation runs auto-repair when needed."""
         project_path = tmp_path / "project"
