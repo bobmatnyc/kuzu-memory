@@ -4,6 +4,7 @@ Profile service layer overhead for migrated commands.
 
 Measures baseline vs. service layer execution time to verify <5% overhead target.
 """
+
 import statistics
 
 # Add project to path
@@ -52,7 +53,9 @@ def profile_memory_service_overhead() -> dict[str, float]:
     service_mean, service_std = measure_execution_time(service_layer, iterations=20)
 
     overhead_ms = (service_mean - baseline_mean) * 1000
-    overhead_pct = ((service_mean - baseline_mean) / baseline_mean) * 100 if baseline_mean > 0 else 0
+    overhead_pct = (
+        ((service_mean - baseline_mean) / baseline_mean) * 100 if baseline_mean > 0 else 0
+    )
 
     return {
         "baseline_ms": baseline_mean * 1000,
@@ -66,16 +69,16 @@ def profile_memory_service_overhead() -> dict[str, float]:
 
 def print_results(service_name: str, results: dict[str, float]):
     """Print formatted results."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"{service_name} Service Overhead Analysis")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Baseline:     {results['baseline_ms']:>8.3f} ± {results['baseline_std_ms']:>6.3f} ms")
     print(f"Service:      {results['service_ms']:>8.3f} ± {results['service_std_ms']:>6.3f} ms")
     print(f"Overhead:     {results['overhead_ms']:>8.3f} ms ({results['overhead_pct']:>6.2f}%)")
 
-    if results['overhead_pct'] < 5.0:
+    if results["overhead_pct"] < 5.0:
         status = "✅ PASS"
-    elif results['overhead_pct'] < 10.0:
+    elif results["overhead_pct"] < 10.0:
         status = "⚠️  ACCEPTABLE"
     else:
         status = "❌ NEEDS OPTIMIZATION"
@@ -96,11 +99,11 @@ def main():
     print_results("Memory", memory_results)
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Summary")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
-    overhead_pct = memory_results['overhead_pct']
+    overhead_pct = memory_results["overhead_pct"]
 
     print(f"Measured overhead: {overhead_pct:.2f}%")
     print()
@@ -133,6 +136,7 @@ def main():
 
     # Cleanup
     import shutil
+
     test_db = Path("/tmp/kuzu_profile_test")
     if test_db.exists():
         shutil.rmtree(test_db)

@@ -63,7 +63,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class Colors:
@@ -84,7 +84,7 @@ class HomeInstaller:
     def __init__(
         self,
         mode: str = "auto",
-        backup_dir: Optional[Path] = None,
+        backup_dir: Path | None = None,
         force: bool = False,
         dry_run: bool = False,
         verbose: bool = False,
@@ -118,8 +118,8 @@ class HomeInstaller:
         self.claude_config_path = self._get_claude_config_path()
 
         # System installation detection
-        self.system_python: Optional[str] = None
-        self.system_package_path: Optional[Path] = None
+        self.system_python: str | None = None
+        self.system_package_path: Path | None = None
 
     def _log(self, message: str, level: str = "info") -> None:
         """Print colored log message."""
@@ -155,17 +155,11 @@ class HomeInstaller:
             appdata = os.getenv("APPDATA")
             if appdata:
                 return Path(appdata) / "Claude" / "claude_desktop_config.json"
-            return (
-                Path.home()
-                / "AppData"
-                / "Roaming"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
+            return Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
         else:
             raise OSError(f"Unsupported operating system: {system}")
 
-    def _find_system_installation(self) -> tuple[Optional[str], Optional[Path]]:
+    def _find_system_installation(self) -> tuple[str | None, Path | None]:
         """
         Find system installation of kuzu-memory.
 
@@ -229,9 +223,7 @@ class HomeInstaller:
 
                     if pkg_result.returncode == 0:
                         package_path = Path(pkg_result.stdout.strip()).parent
-                        self._log(
-                            f"Found pipx installation: {package_path}", "success"
-                        )
+                        self._log(f"Found pipx installation: {package_path}", "success")
                         return str(python_path), package_path
 
         except (subprocess.SubprocessError, json.JSONDecodeError, FileNotFoundError):
@@ -412,7 +404,7 @@ performance:
         self._log(f"Installation version: {version}", "info")
         self._log(f"Installation type: {installation_type}", "info")
 
-    def _backup_config(self, config_path: Path) -> Optional[Path]:
+    def _backup_config(self, config_path: Path) -> Path | None:
         """Create a backup of the existing configuration."""
         if not config_path.exists():
             return None
@@ -755,21 +747,11 @@ Examples:
         type=Path,
         help="Directory for backups (default: ~/.kuzu-memory-backups)",
     )
-    parser.add_argument(
-        "--force", action="store_true", help="Force installation even if exists"
-    )
-    parser.add_argument(
-        "--update", action="store_true", help="Update existing installation"
-    )
-    parser.add_argument(
-        "--uninstall", action="store_true", help="Remove installation"
-    )
-    parser.add_argument(
-        "--validate", action="store_true", help="Validate installation"
-    )
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Show what would be done"
-    )
+    parser.add_argument("--force", action="store_true", help="Force installation even if exists")
+    parser.add_argument("--update", action="store_true", help="Update existing installation")
+    parser.add_argument("--uninstall", action="store_true", help="Remove installation")
+    parser.add_argument("--validate", action="store_true", help="Validate installation")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     args = parser.parse_args()

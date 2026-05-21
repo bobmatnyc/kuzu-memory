@@ -19,10 +19,7 @@ def check_installation():
     # 1. Check if kuzu-memory CLI is accessible
     try:
         result = subprocess.run(
-            ["kuzu-memory", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["kuzu-memory", "--version"], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             successes.append(f"✓ CLI installed: {result.stdout.strip()}")
@@ -34,10 +31,7 @@ def check_installation():
         errors.append(f"✗ CLI error: {e}")
 
     # 2. Check if database is initialized
-    db_paths = [
-        Path.cwd() / "kuzu-memories",
-        Path.cwd() / ".kuzu-memory"
-    ]
+    db_paths = [Path.cwd() / "kuzu-memories", Path.cwd() / ".kuzu-memory"]
     db_found = False
     for db_path in db_paths:
         if db_path.exists():
@@ -100,7 +94,7 @@ def check_installation():
             ["kuzu-memory", "enhance", "test", "--format", "plain"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         if result.returncode == 0:
             successes.append("✓ Memory enhance working")
@@ -145,6 +139,7 @@ def check_installation():
     else:
         print("Status: ✅ Installation complete and verified!")
         return 0
+
 
 if __name__ == "__main__":
     sys.exit(check_installation())

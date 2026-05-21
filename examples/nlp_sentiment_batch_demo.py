@@ -56,6 +56,7 @@ def demonstrate_batch_processing():
 
     # Process all at once
     import time
+
     start_time = time.time()
     batch_results = classifier.classify_batch(memories)
     batch_time = time.time() - start_time
@@ -67,11 +68,11 @@ def demonstrate_batch_processing():
 
     print(f"Batch processing time: {batch_time:.3f}s")
     print(f"Individual processing time: {individual_time:.3f}s")
-    print(f"Speedup: {individual_time/batch_time:.2f}x\n")
+    print(f"Speedup: {individual_time / batch_time:.2f}x\n")
 
     # Show results
     for i, (content, result) in enumerate(zip(memories, batch_results)):
-        print(f"{i+1}. {content[:40]}...")
+        print(f"{i + 1}. {content[:40]}...")
         print(f"   Type: {result.memory_type.value}")
         print(f"   Confidence: {result.confidence:.2f}")
         print(f"   Batch processed: {result.metadata.get('batch_processed', False)}")
@@ -89,17 +90,17 @@ def demonstrate_sentiment_impact_on_importance():
         {
             "content": "This authentication system is absolutely brilliant! Best design ever!",
             "type": MemoryType.PROCEDURAL,  # Solutions are instructions
-            "description": "Very positive solution"
+            "description": "Very positive solution",
         },
         {
             "content": "The authentication system handles user login.",
             "type": MemoryType.PROCEDURAL,  # Solutions are instructions
-            "description": "Neutral solution"
+            "description": "Neutral solution",
         },
         {
             "content": "This authentication system is terrible and completely broken!",
             "type": MemoryType.PROCEDURAL,  # Solutions are instructions
-            "description": "Very negative solution"
+            "description": "Very negative solution",
         },
     ]
 
@@ -119,17 +120,17 @@ def demonstrate_sentiment_impact_on_importance():
 
 def main():
     """Run all demonstrations."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("KuzuMemory NLP: Sentiment Analysis & Batch Processing Demo")
-    print("="*60)
+    print("=" * 60)
 
     demonstrate_sentiment_analysis()
     demonstrate_batch_processing()
     demonstrate_sentiment_impact_on_importance()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Demo complete!")
-    print("="*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":

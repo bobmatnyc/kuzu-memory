@@ -4,6 +4,7 @@ Batch fix type annotations across the codebase for mypy --strict compliance.
 
 This script automates common type annotation patterns.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -26,7 +27,7 @@ def fix_file(file_path: Path) -> tuple[int, int]:
             content = content.replace(
                 "from pathlib import Path\n",
                 "from pathlib import Path\nfrom typing import Any\n",
-                1
+                1,
             )
         elif "import " in content:
             # Add after first import block
@@ -35,7 +36,11 @@ def fix_file(file_path: Path) -> tuple[int, int]:
                 if line.startswith("import ") or line.startswith("from "):
                     # Find end of import block
                     j = i
-                    while j < len(lines) and (lines[j].startswith("import ") or lines[j].startswith("from ") or not lines[j].strip()):
+                    while j < len(lines) and (
+                        lines[j].startswith("import ")
+                        or lines[j].startswith("from ")
+                        or not lines[j].strip()
+                    ):
                         j += 1
                     lines.insert(j, "from typing import Any")
                     content = "\n".join(lines)
@@ -44,17 +49,9 @@ def fix_file(file_path: Path) -> tuple[int, int]:
     # Fix 2: Add click.Context type to ctx parameters
     if "import click" in content:
         # def func(ctx, ...) -> def func(ctx: click.Context, ...)
-        content = re.sub(
-            r'\bdef (\w+)\(ctx,',
-            r'def \1(ctx: click.Context,',
-            content
-        )
+        content = re.sub(r"\bdef (\w+)\(ctx,", r"def \1(ctx: click.Context,", content)
         # def func(ctx) -> def func(ctx: click.Context)
-        content = re.sub(
-            r'\bdef (\w+)\(ctx\):',
-            r'def \1(ctx: click.Context):',
-            content
-        )
+        content = re.sub(r"\bdef (\w+)\(ctx\):", r"def \1(ctx: click.Context):", content)
 
     # Fix 3: Add return type -> None to functions that don't return
     # This is tricky with decorators, so we'll be conservative
@@ -76,43 +73,43 @@ def fix_file(file_path: Path) -> tuple[int, int]:
 
     # Fix 4: Add common parameter types for CLI commands
     common_params = [
-        (r', debug(?=[,)])', r', debug: bool'),
-        (r', verbose(?=[,)])', r', verbose: bool'),
-        (r', force(?=[,)])', r', force: bool'),
-        (r', quiet(?=[,)])', r', quiet: bool'),
-        (r', detailed(?=[,)])', r', detailed: bool'),
-        (r', advanced(?=[,)])', r', advanced: bool'),
-        (r', skip_demo(?=[,)])', r', skip_demo: bool'),
-        (r', validate(?=[,)])', r', validate: bool'),
-        (r', show_project(?=[,)])', r', show_project: bool'),
-        (r', enable_cli(?=[,)])', r', enable_cli: bool'),
-        (r', disable_cli(?=[,)])', r', disable_cli: bool'),
-        (r', explain_ranking(?=[,)])', r', explain_ranking: bool'),
-        (r', use_sync(?=[,)])', r', use_sync: bool'),
-        (r', config(?=[,)])', r', config: str | None'),
-        (r', db_path(?=[,)])', r', db_path: str | None'),
-        (r', project_root(?=[,)])', r', project_root: str | None'),
-        (r', config_path(?=[,)])', r', config_path: str | None'),
-        (r', source(?=[,)])', r', source: str'),
-        (r', metadata(?=[,)])', r', metadata: str | None'),
-        (r', session_id(?=[,)])', r', session_id: str | None'),
-        (r', agent_id(?=[,)])', r', agent_id: str'),
-        (r', user_id(?=[,)])', r', user_id: str'),
-        (r', prompt(?=[,)])', r', prompt: str'),
-        (r', content(?=[,)])', r', content: str'),
-        (r', response(?=[,)])', r', response: str'),
-        (r', feedback(?=[,)])', r', feedback: str | None'),
-        (r', topic(?=[,)])', r', topic: str | None'),
-        (r', max_memories(?=[,)])', r', max_memories: int'),
-        (r', recent(?=[,)])', r', recent: int'),
-        (r', limit(?=[,)])', r', limit: int'),
-        (r', strategy(?=[,)])', r', strategy: str'),
-        (r', memory_id(?=[,)])', r', memory_id: str | None'),
-        (r', memory_type(?=[,)])', r', memory_type: str | None'),
-        (r', output_format(?=[,)])', r', output_format: str'),
-        (r', project(?=[,)])', r', project: str | None'),
-        (r', ai_system(?=[,)])', r', ai_system: str'),
-        (r', confirm(?=[,)])', r', confirm: bool'),
+        (r", debug(?=[,)])", r", debug: bool"),
+        (r", verbose(?=[,)])", r", verbose: bool"),
+        (r", force(?=[,)])", r", force: bool"),
+        (r", quiet(?=[,)])", r", quiet: bool"),
+        (r", detailed(?=[,)])", r", detailed: bool"),
+        (r", advanced(?=[,)])", r", advanced: bool"),
+        (r", skip_demo(?=[,)])", r", skip_demo: bool"),
+        (r", validate(?=[,)])", r", validate: bool"),
+        (r", show_project(?=[,)])", r", show_project: bool"),
+        (r", enable_cli(?=[,)])", r", enable_cli: bool"),
+        (r", disable_cli(?=[,)])", r", disable_cli: bool"),
+        (r", explain_ranking(?=[,)])", r", explain_ranking: bool"),
+        (r", use_sync(?=[,)])", r", use_sync: bool"),
+        (r", config(?=[,)])", r", config: str | None"),
+        (r", db_path(?=[,)])", r", db_path: str | None"),
+        (r", project_root(?=[,)])", r", project_root: str | None"),
+        (r", config_path(?=[,)])", r", config_path: str | None"),
+        (r", source(?=[,)])", r", source: str"),
+        (r", metadata(?=[,)])", r", metadata: str | None"),
+        (r", session_id(?=[,)])", r", session_id: str | None"),
+        (r", agent_id(?=[,)])", r", agent_id: str"),
+        (r", user_id(?=[,)])", r", user_id: str"),
+        (r", prompt(?=[,)])", r", prompt: str"),
+        (r", content(?=[,)])", r", content: str"),
+        (r", response(?=[,)])", r", response: str"),
+        (r", feedback(?=[,)])", r", feedback: str | None"),
+        (r", topic(?=[,)])", r", topic: str | None"),
+        (r", max_memories(?=[,)])", r", max_memories: int"),
+        (r", recent(?=[,)])", r", recent: int"),
+        (r", limit(?=[,)])", r", limit: int"),
+        (r", strategy(?=[,)])", r", strategy: str"),
+        (r", memory_id(?=[,)])", r", memory_id: str | None"),
+        (r", memory_type(?=[,)])", r", memory_type: str | None"),
+        (r", output_format(?=[,)])", r", output_format: str"),
+        (r", project(?=[,)])", r", project: str | None"),
+        (r", ai_system(?=[,)])", r", ai_system: str"),
+        (r", confirm(?=[,)])", r", confirm: bool"),
     ]
 
     for pattern, replacement in common_params:
@@ -120,14 +117,14 @@ def fix_file(file_path: Path) -> tuple[int, int]:
 
     # Fix 5: Fix ending parameters (no comma after)
     ending_params = [
-        (r', debug\)', r', debug: bool)'),
-        (r', verbose\)', r', verbose: bool)'),
-        (r', force\)', r', force: bool)'),
-        (r', quiet\)', r', quiet: bool)'),
-        (r', detailed\)', r', detailed: bool)'),
-        (r', topic\)', r', topic: str | None)'),
-        (r', output_format\)', r', output_format: str)'),
-        (r', confirm\)', r', confirm: bool)'),
+        (r", debug\)", r", debug: bool)"),
+        (r", verbose\)", r", verbose: bool)"),
+        (r", force\)", r", force: bool)"),
+        (r", quiet\)", r", quiet: bool)"),
+        (r", detailed\)", r", detailed: bool)"),
+        (r", topic\)", r", topic: str | None)"),
+        (r", output_format\)", r", output_format: str)"),
+        (r", confirm\)", r", confirm: bool)"),
     ]
 
     for pattern, replacement in ending_params:
@@ -166,7 +163,9 @@ def main() -> None:
             print(f"  Fixed: {rel_path}")
 
     print(f"\nModified {modified_count} files")
-    print("\nRun 'mypy src/kuzu_memory --strict --ignore-missing-imports' to check remaining errors")
+    print(
+        "\nRun 'mypy src/kuzu_memory --strict --ignore-missing-imports' to check remaining errors"
+    )
 
 
 if __name__ == "__main__":

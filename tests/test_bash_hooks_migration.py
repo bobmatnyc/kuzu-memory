@@ -119,9 +119,9 @@ def test_bash_hook_script_exists():
         if script_path.exists():
             import stat
 
-            assert (
-                script_path.stat().st_mode & stat.S_IXUSR
-            ), f"Script not executable: {script_path}"
+            assert script_path.stat().st_mode & stat.S_IXUSR, (
+                f"Script not executable: {script_path}"
+            )
 
 
 def test_bash_hook_script_syntax():

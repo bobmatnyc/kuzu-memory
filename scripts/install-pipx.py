@@ -15,11 +15,7 @@ def run_command(cmd, description, check=True, capture_output=True):
     print(f"🔄 {description}...")
     try:
         result = subprocess.run(
-            cmd,
-            shell=True,
-            check=check,
-            capture_output=capture_output,
-            text=True
+            cmd, shell=True, check=check, capture_output=capture_output, text=True
         )
         if result.returncode == 0:
             print(f"✅ {description} completed")
@@ -31,6 +27,7 @@ def run_command(cmd, description, check=True, capture_output=True):
     except subprocess.CalledProcessError as e:
         print(f"❌ {description} failed: {e}")
         return False, str(e)
+
 
 def check_python_version():
     """Check if Python version is compatible."""
@@ -45,6 +42,7 @@ def check_python_version():
     print(f"✅ Python {version.major}.{version.minor}.{version.micro} is compatible")
     return True
 
+
 def check_pipx():
     """Check if pipx is installed."""
     print("🔍 Checking for pipx...")
@@ -56,6 +54,7 @@ def check_pipx():
     else:
         print("❌ pipx not found")
         return False
+
 
 def install_pipx():
     """Install pipx if not available."""
@@ -71,7 +70,9 @@ def install_pipx():
         success, output = run_command(cmd, desc, check=False)
         if success:
             # Ensure pipx is in PATH
-            success, _ = run_command("python -m pipx ensurepath", "Adding pipx to PATH", check=False)
+            success, _ = run_command(
+                "python -m pipx ensurepath", "Adding pipx to PATH", check=False
+            )
             return True
 
     print("❌ Failed to install pipx")
@@ -81,6 +82,7 @@ def install_pipx():
     print("   - Windows: python -m pip install --user pipx")
     return False
 
+
 def uninstall_existing():
     """Uninstall existing KuzuMemory installation."""
     print("🗑️  Checking for existing installation...")
@@ -88,13 +90,16 @@ def uninstall_existing():
     success, output = run_command("pipx list", "Checking pipx installations", check=False)
     if success and "kuzu-memory" in output:
         print("🔄 Uninstalling existing KuzuMemory...")
-        success, _ = run_command("pipx uninstall kuzu-memory", "Uninstalling existing version", check=False)
+        success, _ = run_command(
+            "pipx uninstall kuzu-memory", "Uninstalling existing version", check=False
+        )
         if success:
             print("✅ Existing installation removed")
         else:
             print("⚠️  Could not remove existing installation")
     else:
         print("✅ No existing installation found")
+
 
 def install_kuzu_memory(source="pypi"):
     """Install KuzuMemory via pipx."""
@@ -114,6 +119,7 @@ def install_kuzu_memory(source="pypi"):
 
     success, output = run_command(cmd, desc, check=False)
     return success, output
+
 
 def test_installation():
     """Test the KuzuMemory installation."""
@@ -135,13 +141,16 @@ def test_installation():
 
     # Test demo command
     print("🎮 Testing demo command...")
-    success, output = run_command("kuzu-memory demo", "Running demo", check=False, capture_output=False)
+    success, output = run_command(
+        "kuzu-memory demo", "Running demo", check=False, capture_output=False
+    )
     if success:
         print("✅ Demo command working")
     else:
         print("⚠️  Demo command had issues (may be normal)")
 
     return True
+
 
 def show_usage_info():
     """Show usage information."""
@@ -173,6 +182,7 @@ def show_usage_info():
   pipx uninstall kuzu-memory   # Remove installation
 """
     print(usage_info)
+
 
 def main():
     """Main installation workflow."""
@@ -240,6 +250,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Installation failed: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

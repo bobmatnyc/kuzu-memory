@@ -91,7 +91,9 @@ class AIFramework:
         if context.memories:
             print("   Relevant context:")
             for memory in context.memories[:3]:  # Show first 3
-                preview = memory.content[:60] + "..." if len(memory.content) > 60 else memory.content
+                preview = (
+                    memory.content[:60] + "..." if len(memory.content) > 60 else memory.content
+                )
                 print(f"     - {preview}")
 
         # Simulate LLM response (replace with your actual LLM call)
@@ -128,14 +130,18 @@ class AIFramework:
 
         # 1. Store some initial memories
         print("\n1️⃣  Storing domain knowledge...")
-        await self.memory.learn("The user prefers Python for backend development", source="preference")
+        await self.memory.learn(
+            "The user prefers Python for backend development", source="preference"
+        )
         await self.memory.learn("The user is working on a FastAPI project", source="context")
         await self.memory.learn("The user follows TDD (Test-Driven Development)", source="practice")
         print("✅ Stored 3 initial memories")
 
         # 2. Query memories
         print("\n2️⃣  Querying memories...")
-        memories = await self.memory.recall("What programming language does the user prefer?", max_memories=3)
+        memories = await self.memory.recall(
+            "What programming language does the user prefer?", max_memories=3
+        )
         print(f"✅ Found {len(memories)} relevant memories:")
         for memory in memories:
             print(f"   - {memory.content}")
@@ -174,7 +180,9 @@ async def main():
         print("=" * 60 + "\n")
 
         # Setup framework
-        framework = await AIFramework.setup(project_root=project_root, framework_name="example-framework")
+        framework = await AIFramework.setup(
+            project_root=project_root, framework_name="example-framework"
+        )
 
         try:
             # Demonstrate memory operations

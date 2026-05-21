@@ -356,9 +356,9 @@ class TestEntityRecallStrategy2Hop:
                 agent_id="default",
             )
 
-        assert (
-            strategy._call_count["hop2"] >= 1
-        ), "2-hop CO_OCCURS_WITH query was not issued when primary results were sparse"
+        assert strategy._call_count["hop2"] >= 1, (
+            "2-hop CO_OCCURS_WITH query was not issued when primary results were sparse"
+        )
 
     def test_2hop_query_not_issued_when_primary_results_sufficient(self) -> None:
         """When primary returns enough results, 2-hop should not execute."""
@@ -387,9 +387,9 @@ class TestEntityRecallStrategy2Hop:
             )
 
         # 2-hop should NOT have fired — primary produced enough results.
-        assert (
-            strategy._call_count["hop2"] == 0
-        ), "2-hop query was issued despite sufficient primary results"
+        assert strategy._call_count["hop2"] == 0, (
+            "2-hop query was issued despite sufficient primary results"
+        )
 
     def test_2hop_failure_is_non_fatal(self) -> None:
         """If CO_OCCURS_WITH query raises (table not yet populated), recall must not fail."""

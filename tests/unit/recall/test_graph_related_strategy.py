@@ -146,9 +146,9 @@ class TestFindsRelatedViaRelatesToEdges:
         memories, _ = _run_strategy([seed], traversal_rows=traversal_rows)
 
         assert len(memories) == 1
-        assert (
-            abs(memories[0].confidence - 0.5) < 0.001
-        ), f"Expected confidence ~0.5, got {memories[0].confidence}"
+        assert abs(memories[0].confidence - 0.5) < 0.001, (
+            f"Expected confidence ~0.5, got {memories[0].confidence}"
+        )
 
     def test_no_seeds_returns_empty(self) -> None:
         """When keyword search finds no seeds, no traversal should happen."""
@@ -178,9 +178,9 @@ class TestKtAffinityGetsConfidenceBonus:
 
         assert len(memories) == 1
         expected = 0.5 * (2.5 / 5.0) + 0.15
-        assert (
-            abs(memories[0].confidence - expected) < 0.001
-        ), f"Expected confidence ~{expected:.3f}, got {memories[0].confidence:.3f}"
+        assert abs(memories[0].confidence - expected) < 0.001, (
+            f"Expected confidence ~{expected:.3f}, got {memories[0].confidence:.3f}"
+        )
 
     def test_shared_entity_no_bonus(self) -> None:
         """shared_entity relationship type must NOT receive the kt_affinity bonus."""
@@ -195,9 +195,9 @@ class TestKtAffinityGetsConfidenceBonus:
 
         assert len(memories) == 1
         expected = 0.5 * (2.5 / 5.0)  # no bonus
-        assert (
-            abs(memories[0].confidence - expected) < 0.001
-        ), f"Expected confidence ~{expected:.3f} (no bonus), got {memories[0].confidence:.3f}"
+        assert abs(memories[0].confidence - expected) < 0.001, (
+            f"Expected confidence ~{expected:.3f} (no bonus), got {memories[0].confidence:.3f}"
+        )
 
     def test_high_weight_confidence_capped_at_1(self) -> None:
         """Confidence must be capped at 1.0 even with kt_affinity bonus and high weight."""

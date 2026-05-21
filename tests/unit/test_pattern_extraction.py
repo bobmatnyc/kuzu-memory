@@ -176,9 +176,9 @@ class TestPatternExtractor:
 
             # Corrections should be high confidence
             high_confidence_memories = [m for m in memories if m.confidence >= 0.9]
-            assert (
-                len(high_confidence_memories) > 0
-            ), f"No high-confidence memory for correction: {text}"
+            assert len(high_confidence_memories) > 0, (
+                f"No high-confidence memory for correction: {text}"
+            )
 
             found_content = any(expected_content.lower() in m.content.lower() for m in memories)
             assert found_content, f"Expected '{expected_content}' not found"

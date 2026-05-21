@@ -28,22 +28,19 @@ from kuzu_memory.core.container import (
 class ITestService(Protocol):
     """Test service interface."""
 
-    def get_value(self) -> str:
-        ...
+    def get_value(self) -> str: ...
 
 
 class IConfigService(Protocol):
     """Test config service interface."""
 
-    def get_config(self) -> dict:
-        ...
+    def get_config(self) -> dict: ...
 
 
 class IDependentService(Protocol):
     """Service that depends on other services."""
 
-    def get_dependency(self) -> ITestService:
-        ...
+    def get_dependency(self) -> ITestService: ...
 
 
 # Test service implementations

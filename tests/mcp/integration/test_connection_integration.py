@@ -107,9 +107,9 @@ class TestConnectionIntegration:
             else:
                 # All retries exhausted
                 if client.process:
-                    assert (
-                        client.process.poll() is not None
-                    ), "Server did not shut down gracefully after 6.2s"
+                    assert client.process.poll() is not None, (
+                        "Server did not shut down gracefully after 6.2s"
+                    )
 
         finally:
             # Ensure cleanup

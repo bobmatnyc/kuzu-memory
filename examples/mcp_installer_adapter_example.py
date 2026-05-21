@@ -82,16 +82,16 @@ def main() -> None:
         print(f"Checks Passed: {diagnostics['checks_passed']}")
         print(f"Checks Failed: {diagnostics['checks_failed']}")
 
-        if diagnostics['issues']:
+        if diagnostics["issues"]:
             print("\nIssues found:")
-            for issue in diagnostics['issues']:
+            for issue in diagnostics["issues"]:
                 print(f"  - [{issue['severity']}] {issue['message']}")
-                if issue['fix_suggestion']:
+                if issue["fix_suggestion"]:
                     print(f"    Fix: {issue['fix_suggestion']}")
 
-        if diagnostics['recommendations']:
+        if diagnostics["recommendations"]:
             print("\nRecommendations:")
-            for rec in diagnostics['recommendations']:
+            for rec in diagnostics["recommendations"]:
                 print(f"  - {rec}")
     except Exception as e:
         print(f"Diagnostics failed: {e}")
@@ -110,9 +110,9 @@ def main() -> None:
         print(f"Servers: {', '.join(inspection['server_names'])}")
         print(f"Summary: {inspection['summary']}")
 
-        if inspection['issues']:
+        if inspection["issues"]:
             print("\nValidation issues:")
-            for issue in inspection['issues']:
+            for issue in inspection["issues"]:
                 print(f"  - [{issue['severity']}] {issue['message']}")
     except Exception as e:
         print(f"Inspection failed: {e}")

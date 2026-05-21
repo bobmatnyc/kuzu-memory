@@ -39,7 +39,7 @@ def main():
                 content=personal_info,
                 user_id="alex-chen",
                 session_id="intro-session",
-                source="profile_setup"
+                source="profile_setup",
             )
 
             print(f"✓ Generated {len(memory_ids)} memories from personal information")
@@ -57,7 +57,7 @@ def main():
                 content=project_info,
                 user_id="alex-chen",
                 session_id="project-discussion",
-                source="team_meeting"
+                source="team_meeting",
             )
 
             print(f"✓ Generated {len(project_memory_ids)} memories from project information")
@@ -75,7 +75,7 @@ def main():
                 content=tech_preferences,
                 user_id="alex-chen",
                 session_id="tech-discussion",
-                source="best_practices"
+                source="best_practices",
             )
 
             print(f"✓ Generated {len(tech_memory_ids)} memories from technical preferences")
@@ -89,17 +89,13 @@ def main():
                 "What project am I working on?",
                 "Who are my teammates?",
                 "What are my testing preferences?",
-                "What database are we using?"
+                "What database are we using?",
             ]
 
             for i, prompt in enumerate(test_prompts, 1):
                 print(f"\n4.{i} Query: {prompt}")
 
-                context = memory.attach_memories(
-                    prompt=prompt,
-                    user_id="alex-chen",
-                    max_memories=3
-                )
+                context = memory.attach_memories(prompt=prompt, user_id="alex-chen", max_memories=3)
 
                 print(f"   Found {len(context.memories)} relevant memories")
                 print(f"   Confidence: {context.confidence:.2f}")
@@ -107,7 +103,11 @@ def main():
                 print(f"   Time: {context.recall_time_ms:.1f}ms")
 
                 # Show the enhanced prompt (first 200 characters)
-                enhanced_preview = context.enhanced_prompt[:200] + "..." if len(context.enhanced_prompt) > 200 else context.enhanced_prompt
+                enhanced_preview = (
+                    context.enhanced_prompt[:200] + "..."
+                    if len(context.enhanced_prompt) > 200
+                    else context.enhanced_prompt
+                )
                 print(f"   Enhanced prompt preview: {enhanced_preview}")
 
             # Example 5: Test different recall strategies
@@ -118,13 +118,12 @@ def main():
 
             for strategy in strategies:
                 context = memory.attach_memories(
-                    prompt=test_query,
-                    strategy=strategy,
-                    user_id="alex-chen",
-                    max_memories=5
+                    prompt=test_query, strategy=strategy, user_id="alex-chen", max_memories=5
                 )
 
-                print(f"   {strategy:8}: {len(context.memories)} memories, {context.recall_time_ms:.1f}ms")
+                print(
+                    f"   {strategy:8}: {len(context.memories)} memories, {context.recall_time_ms:.1f}ms"
+                )
 
             # Example 6: Show statistics
             print("\n6. Memory system statistics...")
@@ -132,13 +131,21 @@ def main():
             stats = memory.get_statistics()
 
             print(f"   Database path: {stats['system_info']['db_path']}")
-            print(f"   Total generate_memories() calls: {stats['performance_stats']['generate_memories_calls']}")
-            print(f"   Total attach_memories() calls: {stats['performance_stats']['attach_memories_calls']}")
-            print(f"   Average generation time: {stats['performance_stats']['avg_generate_time_ms']:.1f}ms")
-            print(f"   Average recall time: {stats['performance_stats']['avg_attach_time_ms']:.1f}ms")
+            print(
+                f"   Total generate_memories() calls: {stats['performance_stats']['generate_memories_calls']}"
+            )
+            print(
+                f"   Total attach_memories() calls: {stats['performance_stats']['attach_memories_calls']}"
+            )
+            print(
+                f"   Average generation time: {stats['performance_stats']['avg_generate_time_ms']:.1f}ms"
+            )
+            print(
+                f"   Average recall time: {stats['performance_stats']['avg_attach_time_ms']:.1f}ms"
+            )
 
-            if 'database_stats' in stats.get('storage_stats', {}):
-                db_stats = stats['storage_stats']['database_stats']
+            if "database_stats" in stats.get("storage_stats", {}):
+                db_stats = stats["storage_stats"]["database_stats"]
                 print(f"   Total memories stored: {db_stats.get('memory_count', 0)}")
                 print(f"   Total entities extracted: {db_stats.get('entity_count', 0)}")
                 print(f"   Database size: {db_stats.get('db_size_mb', 0):.1f} MB")

@@ -304,9 +304,9 @@ class TestRunnerHasFourEnrichers:
         runner = EnrichmentRunner(adapter, _make_config())
 
         fourth = runner._enrichers[3]
-        assert isinstance(
-            fourth, RelatesToEnricher
-        ), f"Expected RelatesToEnricher at index 3, got {type(fourth).__name__}"
+        assert isinstance(fourth, RelatesToEnricher), (
+            f"Expected RelatesToEnricher at index 3, got {type(fourth).__name__}"
+        )
         assert fourth.name == "relates_to"
 
     def test_runner_enricher_order(self) -> None:

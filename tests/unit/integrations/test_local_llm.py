@@ -1,4 +1,5 @@
 """Unit tests for local LLM detection and client."""
+
 from __future__ import annotations
 
 import json

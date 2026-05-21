@@ -1,4 +1,5 @@
 """Unit tests for LLMOptimizer in kuzu_memory.nlp.llm_optimizer."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -45,8 +45,8 @@ class AugmentedAIAssistant:
                 config={
                     "max_context_memories": 10,
                     "enable_learning": True,
-                    "learning_threshold": 0.7
-                }
+                    "learning_threshold": 0.7,
+                },
             )
 
             # Add custom rules for better AI assistance
@@ -63,70 +63,69 @@ class AugmentedAIAssistant:
         """Set up custom rules for enhanced AI assistance."""
 
         # Rule 1: Enhance coding questions with user's tech stack
-        self.auggie.rule_engine.add_rule(AuggieRule(
-            id="enhance_coding_with_stack",
-            name="Enhance Coding with Tech Stack",
-            description="Add user's technology stack context to coding questions",
-            rule_type=RuleType.CONTEXT_ENHANCEMENT,
-            priority=RulePriority.HIGH,
-            conditions={
-                "prompt_category": "coding",
-                "has_preference_memories": True
-            },
-            actions={
-                "add_context": "Include user's preferred technologies and frameworks",
-                "memory_types": ["preference", "decision"],
-                "include_tech_stack": True
-            }
-        ))
+        self.auggie.rule_engine.add_rule(
+            AuggieRule(
+                id="enhance_coding_with_stack",
+                name="Enhance Coding with Tech Stack",
+                description="Add user's technology stack context to coding questions",
+                rule_type=RuleType.CONTEXT_ENHANCEMENT,
+                priority=RulePriority.HIGH,
+                conditions={"prompt_category": "coding", "has_preference_memories": True},
+                actions={
+                    "add_context": "Include user's preferred technologies and frameworks",
+                    "memory_types": ["preference", "decision"],
+                    "include_tech_stack": True,
+                },
+            )
+        )
 
         # Rule 2: Learn from user corrections aggressively
-        self.auggie.rule_engine.add_rule(AuggieRule(
-            id="aggressive_correction_learning",
-            name="Aggressive Correction Learning",
-            description="Learn aggressively from any user corrections",
-            rule_type=RuleType.LEARNING_TRIGGER,
-            priority=RulePriority.CRITICAL,
-            conditions={
-                "user_feedback": True
-            },
-            actions={
-                "learn_from_response": {
-                    "extract_correction": True,
-                    "update_memories": True,
-                    "confidence_boost": 0.95,
-                    "create_preference": True
-                }
-            }
-        ))
+        self.auggie.rule_engine.add_rule(
+            AuggieRule(
+                id="aggressive_correction_learning",
+                name="Aggressive Correction Learning",
+                description="Learn aggressively from any user corrections",
+                rule_type=RuleType.LEARNING_TRIGGER,
+                priority=RulePriority.CRITICAL,
+                conditions={"user_feedback": True},
+                actions={
+                    "learn_from_response": {
+                        "extract_correction": True,
+                        "update_memories": True,
+                        "confidence_boost": 0.95,
+                        "create_preference": True,
+                    }
+                },
+            )
+        )
 
         # Rule 3: Personalize responses based on experience level
-        self.auggie.rule_engine.add_rule(AuggieRule(
-            id="personalize_by_experience",
-            name="Personalize by Experience Level",
-            description="Adjust response complexity based on user's experience level",
-            rule_type=RuleType.PROMPT_MODIFICATION,
-            priority=RulePriority.MEDIUM,
-            conditions={
-                "has_identity_memories": True
-            },
-            actions={
-                "modify_prompt": {
-                    "adjust_complexity": True,
-                    "include_examples": True,
-                    "mention_experience": True
-                }
-            }
-        ))
+        self.auggie.rule_engine.add_rule(
+            AuggieRule(
+                id="personalize_by_experience",
+                name="Personalize by Experience Level",
+                description="Adjust response complexity based on user's experience level",
+                rule_type=RuleType.PROMPT_MODIFICATION,
+                priority=RulePriority.MEDIUM,
+                conditions={"has_identity_memories": True},
+                actions={
+                    "modify_prompt": {
+                        "adjust_complexity": True,
+                        "include_examples": True,
+                        "mention_experience": True,
+                    }
+                },
+            )
+        )
 
-    async def process_message(self, user_message: str, context: dict[str, Any] = None) -> dict[str, Any]:
+    async def process_message(
+        self, user_message: str, context: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Process a user message with memory enhancement and learning."""
         try:
             # Step 1: Enhance the prompt using Auggie rules and memories
             enhancement = self.auggie.enhance_prompt(
-                prompt=user_message,
-                user_id=self.user_id,
-                context=context
+                prompt=user_message, user_id=self.user_id, context=context
             )
 
             enhanced_prompt = enhancement["enhanced_prompt"]
@@ -140,7 +139,7 @@ class AugmentedAIAssistant:
                 "enhanced_prompt": enhanced_prompt,
                 "ai_response": ai_response,
                 "enhancement_info": enhancement,
-                "timestamp": enhancement["rule_modifications"].get("timestamp")
+                "timestamp": enhancement["rule_modifications"].get("timestamp"),
             }
             self.conversation_history.append(interaction)
 
@@ -149,14 +148,14 @@ class AugmentedAIAssistant:
                 "enhancement_used": True,
                 "context_summary": enhancement["context_summary"],
                 "memories_used": len(enhancement.get("memory_context", {}).get("memories", [])),
-                "rules_applied": len(enhancement["rule_modifications"].get("executed_rules", []))
+                "rules_applied": len(enhancement["rule_modifications"].get("executed_rules", [])),
             }
 
         except Exception as e:
             print(f"❌ Error processing message: {e}")
             return {
                 "response": "I apologize, but I encountered an error processing your request.",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def _simulate_ai_response(self, enhanced_prompt: str, enhancement: dict[str, Any]) -> str:
@@ -174,7 +173,14 @@ class AugmentedAIAssistant:
                     user_preferences.append(memory.content)
                 elif memory.entities:
                     # Extract tech stack from entities
-                    tech_keywords = ["python", "javascript", "react", "django", "postgresql", "docker"]
+                    tech_keywords = [
+                        "python",
+                        "javascript",
+                        "react",
+                        "django",
+                        "postgresql",
+                        "docker",
+                    ]
                     for entity in memory.entities:
                         if any(keyword in entity.lower() for keyword in tech_keywords):
                             user_tech_stack.append(entity)
@@ -185,7 +191,7 @@ class AugmentedAIAssistant:
         if "python" in original_prompt and "function" in original_prompt:
             response = """Here's how to write a Python function"""
             if user_preferences:
-                response += f", considering your preference for {user_preferences[0][:50]}"""
+                response += f", considering your preference for {user_preferences[0][:50]}"
             response += """:\n\n```python
 def example_function(param1, param2):
     \"\"\"
@@ -229,7 +235,9 @@ def example_function(param1, param2):
 
         return response
 
-    async def learn_from_feedback(self, user_feedback: str, last_interaction_index: int = -1) -> dict[str, Any]:
+    async def learn_from_feedback(
+        self, user_feedback: str, last_interaction_index: int = -1
+    ) -> dict[str, Any]:
         """Learn from user feedback on the last interaction."""
         try:
             if not self.conversation_history:
@@ -243,14 +251,14 @@ def example_function(param1, param2):
                 ai_response=interaction["ai_response"],
                 user_feedback=user_feedback,
                 user_id=self.user_id,
-                context={"interaction_index": last_interaction_index}
+                context={"interaction_index": last_interaction_index},
             )
 
             return {
                 "learning_applied": True,
                 "memories_created": len(learning_result.get("extracted_memories", [])),
                 "corrections_found": len(learning_result.get("corrections", [])),
-                "quality_score": learning_result.get("quality_score", 0)
+                "quality_score": learning_result.get("quality_score", 0),
             }
 
         except Exception as e:
@@ -264,7 +272,7 @@ def example_function(param1, param2):
             context = self.memory.attach_memories(
                 prompt="Tell me about this user's background, preferences, and current work",
                 user_id=self.user_id,
-                max_memories=15
+                max_memories=15,
             )
 
             profile = {
@@ -273,7 +281,7 @@ def example_function(param1, param2):
                 "preferences": [],
                 "current_work": [],
                 "tech_stack": set(),
-                "experience_indicators": []
+                "experience_indicators": [],
             }
 
             for memory in context.memories:
@@ -286,14 +294,24 @@ def example_function(param1, param2):
 
                 # Extract tech stack from entities
                 if memory.entities:
-                    tech_keywords = ["python", "javascript", "react", "django", "postgresql", "docker", "kubernetes"]
+                    tech_keywords = [
+                        "python",
+                        "javascript",
+                        "react",
+                        "django",
+                        "postgresql",
+                        "docker",
+                        "kubernetes",
+                    ]
                     for entity in memory.entities:
                         if any(keyword in entity.lower() for keyword in tech_keywords):
                             profile["tech_stack"].add(entity)
 
                 # Look for experience indicators
                 content_lower = memory.content.lower()
-                if any(word in content_lower for word in ["senior", "lead", "principal", "architect"]):
+                if any(
+                    word in content_lower for word in ["senior", "lead", "principal", "architect"]
+                ):
                     profile["experience_indicators"].append("Senior level")
                 elif "junior" in content_lower:
                     profile["experience_indicators"].append("Junior level")
@@ -318,10 +336,7 @@ async def main():
     print("=" * 40)
 
     # Initialize assistant
-    assistant = AugmentedAIAssistant(
-        db_path=Path("ai_assistant_memories.db"),
-        user_id="demo-user"
-    )
+    assistant = AugmentedAIAssistant(db_path=Path("ai_assistant_memories.db"), user_id="demo-user")
 
     try:
         await assistant.initialize()
@@ -330,28 +345,22 @@ async def main():
         conversation_flow = [
             {
                 "message": "Hi, I'm Sarah, a senior Python developer at TechCorp. I work with Django and PostgreSQL.",
-                "feedback": None
+                "feedback": None,
             },
-            {
-                "message": "How do I write a good Python function?",
-                "feedback": None
-            },
+            {"message": "How do I write a good Python function?", "feedback": None},
             {
                 "message": "What's the best way to handle database connections in Django?",
-                "feedback": None
+                "feedback": None,
             },
             {
                 "message": "I prefer using pytest for testing. How should I structure my tests?",
-                "feedback": None
+                "feedback": None,
             },
             {
                 "message": "What testing framework should I use?",
-                "feedback": "Actually, I already told you I prefer pytest. Please remember that."
+                "feedback": "Actually, I already told you I prefer pytest. Please remember that.",
             },
-            {
-                "message": "How do I deploy a Django application?",
-                "feedback": None
-            }
+            {"message": "How do I deploy a Django application?", "feedback": None},
         ]
 
         print("\n🗣️  Starting Conversation:")
@@ -371,13 +380,15 @@ async def main():
                 print(f"👤 Feedback: {turn['feedback']}")
 
                 learning_result = await assistant.learn_from_feedback(turn["feedback"])
-                print(f"🧠 Learning: Created {learning_result.get('memories_created', 0)} memories, "
-                      f"found {learning_result.get('corrections_found', 0)} corrections")
+                print(
+                    f"🧠 Learning: Created {learning_result.get('memories_created', 0)} memories, "
+                    f"found {learning_result.get('corrections_found', 0)} corrections"
+                )
 
         # Show user profile summary
-        print("\n" + "="*40)
+        print("\n" + "=" * 40)
         print("👤 User Profile Summary:")
-        print("="*40)
+        print("=" * 40)
 
         profile = await assistant.get_user_profile_summary()
 
@@ -395,9 +406,9 @@ async def main():
             print(f"🛠️  Tech Stack: {', '.join(profile['tech_stack'])}")
 
         # Show integration statistics
-        print("\n" + "="*40)
+        print("\n" + "=" * 40)
         print("📈 Integration Statistics:")
-        print("="*40)
+        print("=" * 40)
 
         stats = assistant.auggie.get_integration_statistics()
         print(f"✨ Prompts enhanced: {stats['integration']['prompts_enhanced']}")
@@ -406,7 +417,9 @@ async def main():
         print(f"💾 Memories created: {stats['integration']['memories_created']}")
 
         print("\n🎉 Demo completed successfully!")
-        print("💡 The assistant now knows about Sarah's preferences and will provide personalized responses!")
+        print(
+            "💡 The assistant now knows about Sarah's preferences and will provide personalized responses!"
+        )
 
     except Exception as e:
         print(f"❌ Error in demo: {e}")

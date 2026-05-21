@@ -424,9 +424,9 @@ def fix_broken_mcp_args(config: Any) -> tuple[Any, list[str]]:
                     if needs_args_fix:
                         old_args = server_config["args"].copy()
                         new_args = _fix_mcp_args(old_args)
-                        result["projects"][project_path]["mcpServers"][server_name][
-                            "args"
-                        ] = new_args
+                        result["projects"][project_path]["mcpServers"][server_name]["args"] = (
+                            new_args
+                        )
                         fixes.append(
                             f"Fixed {server_name} in project {project_path}: args {old_args} -> {new_args}"
                         )
@@ -438,9 +438,9 @@ def fix_broken_mcp_args(config: Any) -> tuple[Any, list[str]]:
                     if needs_cmd_fix:
                         old_command = server_config["command"]
                         new_command = _fix_command(old_command)
-                        result["projects"][project_path]["mcpServers"][server_name][
-                            "command"
-                        ] = new_command
+                        result["projects"][project_path]["mcpServers"][server_name]["command"] = (
+                            new_command
+                        )
                         fixes.append(
                             f"Fixed {server_name} in project {project_path}: command '{old_command}' -> '{new_command}'"
                         )

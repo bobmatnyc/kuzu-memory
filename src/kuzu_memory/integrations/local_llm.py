@@ -9,6 +9,7 @@ Env vars:
   OLLAMA_MODEL      Force a specific model, skipping preference selection
   LM_STUDIO_URL     Override LM Studio base URL (default http://localhost:1234)
 """
+
 from __future__ import annotations
 
 import json

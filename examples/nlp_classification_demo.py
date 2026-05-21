@@ -52,36 +52,30 @@ def main():
         "My name is Alice and I'm a senior software engineer at TechCorp",
         "The project is called KuzuMemory, a graph-based memory system",
         "We are a team of five developers working on AI applications",
-
         # Preference memories
         "I prefer Python over JavaScript for backend development",
         "The team likes using Docker for containerization",
         "We always use pytest for unit testing our Python code",
-
         # Episodic memories (events/experiences)
         "We decided to use FastAPI for building the REST API",
         "The architecture will follow a microservices pattern",
         "Going with PostgreSQL as our primary database",
-
         # Procedural memories (patterns/how-to)
         "How to deploy: First build the Docker image, then push to registry, finally update k8s",
         "The process for code review: create PR, get approval, merge to main",
         "Steps to set up the dev environment: install Python 3.11, create venv, install deps",
-
         # Procedural memories (solutions/instructions)
         "Fixed the memory leak by implementing proper connection pooling",
         "Resolved the timeout issue by adding async processing",
         "The workaround is to use environment variables for configuration",
-
         # Working memories (current tasks)
         "Currently working on implementing the authentication module",
         "The migration to the new database is in progress",
         "TODO: Add error handling for network failures",
-
         # Episodic memories (contextual experiences)
         "John mentioned that the deadline is next Friday",
         "We discussed improving the performance in today's standup",
-        "The client asked about adding real-time notifications"
+        "The client asked about adding real-time notifications",
     ]
 
     print("\n" + "=" * 70)
@@ -107,9 +101,13 @@ def main():
     entities = classifier.extract_entities(complex_content)
     print("\n📝 Content: Complex technical discussion")
     print(f"\n👥 People: {', '.join(entities.people) if entities.people else 'None found'}")
-    print(f"🏢 Organizations: {', '.join(entities.organizations) if entities.organizations else 'None found'}")
+    print(
+        f"🏢 Organizations: {', '.join(entities.organizations) if entities.organizations else 'None found'}"
+    )
     print(f"📍 Locations: {', '.join(entities.locations) if entities.locations else 'None found'}")
-    print(f"💻 Technologies: {', '.join(entities.technologies) if entities.technologies else 'None found'}")
+    print(
+        f"💻 Technologies: {', '.join(entities.technologies) if entities.technologies else 'None found'}"
+    )
     print(f"📁 Projects: {', '.join(entities.projects) if entities.projects else 'None found'}")
     print(f"📅 Dates: {', '.join(entities.dates) if entities.dates else 'None found'}")
 
@@ -122,7 +120,7 @@ def main():
         ("User's email is john@example.com", MemoryType.IDENTITY),
         ("Maybe we should consider using Redis", MemoryType.DECISION),
         ("The critical security fix must be deployed immediately", MemoryType.SOLUTION),
-        ("Just chatting about the weather", MemoryType.EPISODIC)
+        ("Just chatting about the weather", MemoryType.EPISODIC),
     ]
 
     for content, mem_type in importance_tests:

@@ -29,13 +29,14 @@ from typing import Any
 
 class Colors:
     """Terminal color codes for output formatting."""
-    RESET = '\033[0m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    CYAN = '\033[36m'
-    BOLD = '\033[1m'
+
+    RESET = "\033[0m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    CYAN = "\033[36m"
+    BOLD = "\033[1m"
 
 
 class MCPConfigFixer:
@@ -64,9 +65,9 @@ class MCPConfigFixer:
         elif level == "warning":
             print(f"{Colors.YELLOW}⚠ {message}{Colors.RESET}")
         elif level == "header":
-            print(f"\n{Colors.CYAN}{Colors.BOLD}{'='*60}")
+            print(f"\n{Colors.CYAN}{Colors.BOLD}{'=' * 60}")
             print(f"  {message}")
-            print(f"{'='*60}{Colors.RESET}\n")
+            print(f"{'=' * 60}{Colors.RESET}\n")
         elif self.verbose or level == "info":
             print(f"{Colors.BLUE}ℹ {message}{Colors.RESET}")
 
@@ -115,7 +116,9 @@ class MCPConfigFixer:
             project_mcp_servers = project_config.get("mcpServers", {})
             for server_name, server_config in project_mcp_servers.items():
                 # Check if this is a kuzu-memory server
-                if "kuzu-memory" in server_name.lower() or self._is_kuzu_memory_server(server_config):
+                if "kuzu-memory" in server_name.lower() or self._is_kuzu_memory_server(
+                    server_config
+                ):
                     entries.append((server_name, server_config))
 
         return entries
@@ -256,11 +259,7 @@ class MCPConfigFixer:
             with open(self.config_path) as f:
                 config = json.load(f)
         except json.JSONDecodeError as e:
-            raise json.JSONDecodeError(
-                f"Invalid JSON in configuration file: {e}",
-                e.doc,
-                e.pos
-            )
+            raise json.JSONDecodeError(f"Invalid JSON in configuration file: {e}", e.doc, e.pos)
 
         # Step 3: Find kuzu-memory entries
         self._log("Searching for kuzu-memory MCP entries...", "info")
@@ -332,9 +331,9 @@ class MCPConfigFixer:
         # Step 7: Write updated configuration
         self._log("Writing updated configuration...", "info")
         try:
-            with open(self.config_path, 'w') as f:
+            with open(self.config_path, "w") as f:
                 json.dump(config, f, indent=2)
-                f.write('\n')  # Add trailing newline
+                f.write("\n")  # Add trailing newline
         except OSError as e:
             self._log(f"Failed to write configuration: {e}", "error")
             self._log(f"You can restore from backup: {backup_path}", "warning")
@@ -343,7 +342,10 @@ class MCPConfigFixer:
         # Step 8: Success message
         self._log("", "info")
         self._log("Configuration Fixed Successfully!", "header")
-        self._log(f"Fixed {self.fixes_applied} argument(s) in {len(entries_to_fix)} entry/entries", "success")
+        self._log(
+            f"Fixed {self.fixes_applied} argument(s) in {len(entries_to_fix)} entry/entries",
+            "success",
+        )
         self._log(f"Backup saved to: {backup_path}", "info")
         self._log("", "info")
         self._log("Next steps:", "info")
@@ -432,38 +434,26 @@ Notes:
   - A backup is created automatically before any changes
   - The script is idempotent (safe to run multiple times)
   - Use --dry-run to preview changes before applying
-"""
+""",
     )
 
     parser.add_argument(
-        "--config",
-        type=Path,
-        help="Path to claude.json file (default: ~/.claude.json)"
+        "--config", type=Path, help="Path to claude.json file (default: ~/.claude.json)"
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be changed without modifying the file"
+        help="Show what would be changed without modifying the file",
     )
     parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate configuration without making changes"
+        "--validate", action="store_true", help="Validate configuration without making changes"
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable detailed output"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed output")
 
     args = parser.parse_args()
 
     # Create fixer instance
-    fixer = MCPConfigFixer(
-        config_path=args.config,
-        dry_run=args.dry_run,
-        verbose=args.verbose
-    )
+    fixer = MCPConfigFixer(config_path=args.config, dry_run=args.dry_run, verbose=args.verbose)
 
     try:
         if args.validate:
@@ -495,6 +485,7 @@ Notes:
         print(f"{Colors.RED}✗ Unexpected error: {e}{Colors.RESET}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

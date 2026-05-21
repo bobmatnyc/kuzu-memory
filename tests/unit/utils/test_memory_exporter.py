@@ -185,9 +185,9 @@ class TestExportMemoriesToJson:
             value = mem.get(field)
             if value is not None:
                 # Should be parseable as a datetime
-                assert isinstance(
-                    value, str
-                ), f"Field '{field}' should be a string, got {type(value)}"
+                assert isinstance(value, str), (
+                    f"Field '{field}' should be a string, got {type(value)}"
+                )
                 # Verify it's a valid ISO string
                 datetime.fromisoformat(value.replace("Z", "+00:00"))
 

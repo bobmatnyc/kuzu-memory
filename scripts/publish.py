@@ -34,7 +34,7 @@ class Publisher:
         current = self.get_current_version()
 
         # Validate current version format
-        if not re.match(r'^\d+\.\d+\.\d+$', current):
+        if not re.match(r"^\d+\.\d+\.\d+$", current):
             raise ValueError(f"Invalid version format: {current}")
 
         major, minor, patch = map(int, current.split("."))
@@ -59,10 +59,7 @@ class Publisher:
             if self.pyproject_file.exists():
                 content = self.pyproject_file.read_text()
                 content = re.sub(
-                    r'version\s*=\s*"[^"]*"',
-                    f'version = "{new_version}"',
-                    content,
-                    count=1
+                    r'version\s*=\s*"[^"]*"', f'version = "{new_version}"', content, count=1
                 )
                 self.pyproject_file.write_text(content)
 
@@ -70,9 +67,7 @@ class Publisher:
             if self.version_py.exists():
                 content = self.version_py.read_text()
                 content = re.sub(
-                    r'__version__\s*=\s*"[^"]*"',
-                    f'__version__ = "{new_version}"',
-                    content
+                    r'__version__\s*=\s*"[^"]*"', f'__version__ = "{new_version}"', content
                 )
                 self.version_py.write_text(content)
 
@@ -195,7 +190,8 @@ class Publisher:
         if status.stdout:
             # Filter out version files
             other_changes = [
-                line for line in status.stdout.splitlines()
+                line
+                for line in status.stdout.splitlines()
                 if not any(f in line for f in ["VERSION", "pyproject.toml", "__version__.py"])
             ]
             if other_changes:
@@ -235,9 +231,7 @@ class Publisher:
             return True
 
         # Check if gh CLI is available
-        gh_check = subprocess.run(
-            ["which", "gh"], capture_output=True, text=True
-        )
+        gh_check = subprocess.run(["which", "gh"], capture_output=True, text=True)
         if gh_check.returncode != 0:
             print("  ⚠️  gh CLI not found. Skipping GitHub release.")
             print("     Install: https://cli.github.com/")
@@ -320,12 +314,8 @@ def main():
         action="store_true",
         help="Show what would be done without doing it",
     )
-    parser.add_argument(
-        "--skip-tests", action="store_true", help="Skip quality checks"
-    )
-    parser.add_argument(
-        "--skip-github", action="store_true", help="Skip GitHub release creation"
-    )
+    parser.add_argument("--skip-tests", action="store_true", help="Skip quality checks")
+    parser.add_argument("--skip-github", action="store_true", help="Skip GitHub release creation")
 
     args = parser.parse_args()
 

@@ -15,9 +15,7 @@ def run_command(cmd, description, timeout=30):
     """Run a command and return success status."""
     print(f"🔄 {description}...")
     try:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
-        )
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
         if result.returncode == 0:
             print(f"✅ {description} - SUCCESS")
             return True, result.stdout

@@ -2,6 +2,7 @@
 """
 Safely remove all kuzu-memory MCP server entries from global Claude configuration.
 """
+
 import json
 import sys
 from pathlib import Path
@@ -31,41 +32,43 @@ def main():
     removal_log = []
 
     # Check top-level mcpServers if exists
-    if 'mcpServers' in config and isinstance(config['mcpServers'], dict):
-        if 'kuzu-memory' in config['mcpServers']:
-            del config['mcpServers']['kuzu-memory']
+    if "mcpServers" in config and isinstance(config["mcpServers"], dict):
+        if "kuzu-memory" in config["mcpServers"]:
+            del config["mcpServers"]["kuzu-memory"]
             removed_count += 1
             removal_log.append("Removed kuzu-memory from top-level mcpServers")
             print("✓ Removed kuzu-memory from top-level mcpServers")
 
     # Check projects for mcpServers (this is where they actually are)
-    if 'projects' in config and isinstance(config['projects'], dict):
-        for project_path, project_data in list(config['projects'].items()):
+    if "projects" in config and isinstance(config["projects"], dict):
+        for project_path, project_data in list(config["projects"].items()):
             if isinstance(project_data, dict):
-                if 'mcpServers' in project_data and isinstance(project_data['mcpServers'], dict):
-                    if 'kuzu-memory' in project_data['mcpServers']:
-                        del project_data['mcpServers']['kuzu-memory']
+                if "mcpServers" in project_data and isinstance(project_data["mcpServers"], dict):
+                    if "kuzu-memory" in project_data["mcpServers"]:
+                        del project_data["mcpServers"]["kuzu-memory"]
                         removed_count += 1
                         # Show just the last part of the path for readability
                         project_name = Path(project_path).name if project_path else "unknown"
                         removal_log.append(f"Removed kuzu-memory from project: {project_name}")
-                        print(f"✓ Removed kuzu-memory from project: {project_name} ({project_path})")
+                        print(
+                            f"✓ Removed kuzu-memory from project: {project_name} ({project_path})"
+                        )
 
     # Check all other nested structures for mcpServers
     for key in list(config.keys()):
-        if key == 'projects':  # Already handled above
+        if key == "projects":  # Already handled above
             continue
         if isinstance(config[key], dict):
-            if 'mcpServers' in config[key] and isinstance(config[key]['mcpServers'], dict):
-                if 'kuzu-memory' in config[key]['mcpServers']:
-                    del config[key]['mcpServers']['kuzu-memory']
+            if "mcpServers" in config[key] and isinstance(config[key]["mcpServers"], dict):
+                if "kuzu-memory" in config[key]["mcpServers"]:
+                    del config[key]["mcpServers"]["kuzu-memory"]
                     removed_count += 1
                     removal_log.append(f"Removed kuzu-memory from {key}.mcpServers")
                     print(f"✓ Removed kuzu-memory from {key}.mcpServers")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Total kuzu-memory entries removed: {removed_count}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if removed_count == 0:
         print("⚠ No kuzu-memory entries found to remove")
@@ -73,7 +76,7 @@ def main():
 
     # Write back with pretty formatting
     try:
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             json.dump(config, f, indent=2, sort_keys=False)
         print(f"\n✅ Updated configuration written to {config_path}")
     except Exception as e:
@@ -87,6 +90,7 @@ def main():
         print(f"  - {log_entry}")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

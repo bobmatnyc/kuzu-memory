@@ -407,9 +407,9 @@ class TestFullCorpusFallback:
         coordinator._recall_all_memories(user_id=None, session_id=None, agent_id="default")
 
         assert len(captured_queries) == 1
-        assert (
-            "CONTAINS" not in captured_queries[0]
-        ), "_recall_all_memories must not apply any keyword pre-filter (CONTAINS clause found)"
+        assert "CONTAINS" not in captured_queries[0], (
+            "_recall_all_memories must not apply any keyword pre-filter (CONTAINS clause found)"
+        )
         assert "MATCH (m:Memory)" in captured_queries[0]
 
     def test_recall_all_memories_no_valid_to_filter(self) -> None:
@@ -439,9 +439,9 @@ class TestFullCorpusFallback:
             "_recall_all_memories must not filter by valid_to — "
             "episodic memories with historical timestamps would be excluded (issue #51)"
         )
-        assert (
-            "current_time" not in q.lower()
-        ), "_recall_all_memories must not use $current_time expiry check (issue #51)"
+        assert "current_time" not in q.lower(), (
+            "_recall_all_memories must not use $current_time expiry check (issue #51)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -612,12 +612,12 @@ class TestEntityMatchWeight:
 
         source = inspect.getsource(coord_module)
         # The literal 0.1 entity weight must be gone
-        assert (
-            "score += 0.1" not in source
-        ), "Entity weight is still 0.10 — expected 0.03 (issue #48 regression)"
-        assert (
-            "score += 0.03" in source
-        ), "Entity weight 0.03 not found in coordinator source (issue #48)"
+        assert "score += 0.1" not in source, (
+            "Entity weight is still 0.10 — expected 0.03 (issue #48 regression)"
+        )
+        assert "score += 0.03" in source, (
+            "Entity weight 0.03 not found in coordinator source (issue #48)"
+        )
 
     def test_entity_match_does_not_override_strong_jaccard_lead(self) -> None:
         """

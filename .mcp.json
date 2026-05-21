@@ -1,30 +1,30 @@
 {
-  "mcpServers": {
-    "kuzu-memory": {
-      "type": "stdio",
-      "command": "kuzu-memory",
-      "args": [
-        "mcp"
-      ],
-      "env": {
-        "KUZU_MEMORY_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
-        "KUZU_MEMORY_DB": "/Users/masa/Projects/kuzu-memory/.kuzu-memory/memories.db"
-      }
-    },
-    "mcp-vector-search": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/masa/Projects/kuzu-memory",
-        "mcp-vector-search",
-        "mcp"
-      ],
-      "env": {
-        "PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory",
-        "MCP_PROJECT_ROOT": "/Users/masa/Projects/kuzu-memory"
-      }
+    "mcpServers": {
+        "mcp-vector-search": {
+            "type": "stdio",
+            "command": "trusty-search",
+            "args": [
+                "serve"
+            ],
+            "env": {
+                "TRUSTY_INDEX": "kuzu-memory"
+            }
+        },
+        "trusty-search": {
+            "type": "stdio",
+            "command": "trusty-search",
+            "args": [
+                "serve"
+            ]
+        },
+        "trusty-memory": {
+            "type": "stdio",
+            "command": "trusty-memory",
+            "args": [
+                "serve",
+                "--palace",
+                "kuzu-memory"
+            ]
+        }
     }
-  }
 }

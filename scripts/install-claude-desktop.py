@@ -50,18 +50,19 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class Colors:
     """Terminal color codes for pretty output."""
-    RESET = '\033[0m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    CYAN = '\033[36m'
-    BOLD = '\033[1m'
+
+    RESET = "\033[0m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    CYAN = "\033[36m"
+    BOLD = "\033[1m"
 
 
 class ClaudeDesktopInstaller:
@@ -69,16 +70,16 @@ class ClaudeDesktopInstaller:
 
     # Type annotations for instance variables
     config_path: Path
-    kuzu_command: Optional[str]
-    pipx_venv_path: Optional[Path]
+    kuzu_command: str | None
+    pipx_venv_path: Path | None
 
     def __init__(
         self,
-        backup_dir: Optional[Path] = None,
-        memory_db: Optional[Path] = None,
+        backup_dir: Path | None = None,
+        memory_db: Path | None = None,
         force: bool = False,
         dry_run: bool = False,
-        verbose: bool = False
+        verbose: bool = False,
     ):
         """
         Initialize the installer.
@@ -110,9 +111,9 @@ class ClaudeDesktopInstaller:
         elif level == "warning":
             print(f"{Colors.YELLOW}⚠ {message}{Colors.RESET}")
         elif level == "header":
-            print(f"\n{Colors.CYAN}{'='*60}")
+            print(f"\n{Colors.CYAN}{'=' * 60}")
             print(f"  {message}")
-            print(f"{'='*60}{Colors.RESET}\n")
+            print(f"{'=' * 60}{Colors.RESET}\n")
         elif self.verbose or level == "info":
             print(f"{Colors.BLUE}ℹ {message}{Colors.RESET}")
 
@@ -121,7 +122,13 @@ class ClaudeDesktopInstaller:
         system = platform.system()
 
         if system == "Darwin":  # macOS
-            return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+            return (
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / "Claude"
+                / "claude_desktop_config.json"
+            )
         elif system == "Linux":
             # Check both possible locations
             xdg_config = os.getenv("XDG_CONFIG_HOME", Path.home() / ".config")
@@ -134,7 +141,7 @@ class ClaudeDesktopInstaller:
         else:
             raise OSError(f"Unsupported operating system: {system}")
 
-    def _find_kuzu_memory(self) -> tuple[Optional[str], Optional[Path]]:
+    def _find_kuzu_memory(self) -> tuple[str | None, Path | None]:
         """
         Find the kuzu-memory installation.
 
@@ -145,10 +152,7 @@ class ClaudeDesktopInstaller:
         try:
             # Check if pipx is installed
             pipx_result = subprocess.run(
-                ["pipx", "list", "--json"],
-                capture_output=True,
-                text=True,
-                check=False
+                ["pipx", "list", "--json"], capture_output=True, text=True, check=False
             )
 
             if pipx_result.returncode == 0:
@@ -170,7 +174,11 @@ class ClaudeDesktopInstaller:
                         # The structure is [{"__Path__": "/path/to/app", "__type__": "Path"}]
                         if isinstance(app_paths, list) and app_paths:
                             app_path_dict = app_paths[0]
-                            app_path = app_path_dict.get("__Path__") if isinstance(app_path_dict, dict) else str(app_path_dict)
+                            app_path = (
+                                app_path_dict.get("__Path__")
+                                if isinstance(app_path_dict, dict)
+                                else str(app_path_dict)
+                            )
                         else:
                             app_path = str(app_paths)
 
@@ -188,10 +196,7 @@ class ClaudeDesktopInstaller:
         # Fall back to checking PATH
         try:
             result = subprocess.run(
-                ["which", "kuzu-memory"],
-                capture_output=True,
-                text=True,
-                check=False
+                ["which", "kuzu-memory"], capture_output=True, text=True, check=False
             )
 
             if result.returncode == 0:
@@ -215,7 +220,7 @@ class ClaudeDesktopInstaller:
 
         return None, None
 
-    def _backup_config(self, config_path: Path) -> Optional[Path]:
+    def _backup_config(self, config_path: Path) -> Path | None:
         """
         Create a backup of the existing configuration.
 
@@ -264,30 +269,21 @@ class ClaudeDesktopInstaller:
             return {
                 "command": str(python_path),
                 "args": ["-m", "kuzu_memory.mcp.run_server"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp"
-                }
+                "env": {"KUZU_MEMORY_DB": str(self.memory_db), "KUZU_MEMORY_MODE": "mcp"},
             }
         elif self.kuzu_command:
             # Use the kuzu-memory command directly with MCP mode
             return {
                 "command": self.kuzu_command,
                 "args": ["mcp"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp"
-                }
+                "env": {"KUZU_MEMORY_DB": str(self.memory_db), "KUZU_MEMORY_MODE": "mcp"},
             }
         else:
             # Fallback to assuming kuzu-memory is in PATH
             return {
                 "command": "kuzu-memory",
                 "args": ["mcp"],
-                "env": {
-                    "KUZU_MEMORY_DB": str(self.memory_db),
-                    "KUZU_MEMORY_MODE": "mcp"
-                }
+                "env": {"KUZU_MEMORY_DB": str(self.memory_db), "KUZU_MEMORY_MODE": "mcp"},
             }
 
     def _update_config(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -372,7 +368,7 @@ class ClaudeDesktopInstaller:
             print(json.dumps(config, indent=2))
         else:
             try:
-                with open(self.config_path, 'w') as f:
+                with open(self.config_path, "w") as f:
                     json.dump(config, f, indent=2)
                 self._log(f"Updated configuration: {self.config_path}", "success")
             except OSError as e:
@@ -382,7 +378,9 @@ class ClaudeDesktopInstaller:
         # Step 6: Create memory database directory
         if not self.memory_db.parent.exists():
             if self.dry_run:
-                self._log(f"Would create memory database directory: {self.memory_db.parent}", "info")
+                self._log(
+                    f"Would create memory database directory: {self.memory_db.parent}", "info"
+                )
             else:
                 self.memory_db.parent.mkdir(parents=True, exist_ok=True)
                 self._log(f"Created memory database directory: {self.memory_db.parent}", "success")
@@ -437,7 +435,7 @@ class ClaudeDesktopInstaller:
                         del config["mcpServers"]
 
                     # Write updated configuration
-                    with open(self.config_path, 'w') as f:
+                    with open(self.config_path, "w") as f:
                         json.dump(config, f, indent=2)
 
                     self._log("Removed KuzuMemory from Claude Desktop configuration", "success")
@@ -526,44 +524,30 @@ Examples:
 
   # Dry run to see what would be done
   python scripts/install-claude-desktop.py --dry-run
-"""
+""",
     )
 
     parser.add_argument(
         "--backup-dir",
         type=Path,
-        help="Directory for configuration backups (default: ~/.kuzu-memory-backups)"
+        help="Directory for configuration backups (default: ~/.kuzu-memory-backups)",
     )
     parser.add_argument(
-        "--memory-db",
-        type=Path,
-        help="Path to memory database (default: ~/.kuzu-memory/memorydb)"
+        "--memory-db", type=Path, help="Path to memory database (default: ~/.kuzu-memory/memorydb)"
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force installation even if configuration exists"
+        "--force", action="store_true", help="Force installation even if configuration exists"
     )
     parser.add_argument(
         "--uninstall",
         action="store_true",
-        help="Remove KuzuMemory from Claude Desktop configuration"
+        help="Remove KuzuMemory from Claude Desktop configuration",
     )
+    parser.add_argument("--validate", action="store_true", help="Validate the current installation")
     parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate the current installation"
+        "--dry-run", action="store_true", help="Show what would be done without making changes"
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be done without making changes"
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose output"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     args = parser.parse_args()
 
@@ -573,7 +557,7 @@ Examples:
         memory_db=args.memory_db,
         force=args.force,
         dry_run=args.dry_run,
-        verbose=args.verbose
+        verbose=args.verbose,
     )
 
     # Execute requested action
@@ -594,6 +578,7 @@ Examples:
         print(f"{Colors.RED}Installation failed: {e}{Colors.RESET}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

@@ -176,10 +176,12 @@ class DatabaseConsolidator:
 def main():
     """Main entry point for database consolidation."""
     parser = argparse.ArgumentParser(description="Consolidate KuzuMemory databases")
-    parser.add_argument("--dry-run", action="store_true",
-                       help="Show what would be done without making changes")
-    parser.add_argument("--no-backup", action="store_true",
-                       help="Skip creating backups (not recommended)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be done without making changes"
+    )
+    parser.add_argument(
+        "--no-backup", action="store_true", help="Skip creating backups (not recommended)"
+    )
 
     args = parser.parse_args()
 
@@ -194,9 +196,7 @@ def main():
 
     # Create consolidator and run
     consolidator = DatabaseConsolidator(
-        project_root=project_root,
-        dry_run=args.dry_run,
-        backup=not args.no_backup
+        project_root=project_root, dry_run=args.dry_run, backup=not args.no_backup
     )
 
     try:

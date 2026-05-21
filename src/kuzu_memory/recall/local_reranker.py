@@ -1,4 +1,5 @@
 """Local LLM reranker for memory retrieval."""
+
 from __future__ import annotations
 
 import logging

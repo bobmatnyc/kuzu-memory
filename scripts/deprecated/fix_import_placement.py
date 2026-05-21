@@ -5,12 +5,13 @@ Fix misplaced 'from typing import Any' statements.
 The batch script incorrectly inserted 'from typing import Any' lines
 in the middle of multi-line from...import statements.
 """
+
 from pathlib import Path
 
 
 def fix_imports(content: str) -> str:
     """Fix import placement issues."""
-    lines = content.split('\n')
+    lines = content.split("\n")
     result = []
     i = 0
 
@@ -18,21 +19,23 @@ def fix_imports(content: str) -> str:
         line = lines[i]
 
         # Check if current line starts a from...import and next line is 'from typing import Any'
-        if (line.startswith('from ') and
-            i + 1 < len(lines) and
-            lines[i + 1] == 'from typing import Any'):
+        if (
+            line.startswith("from ")
+            and i + 1 < len(lines)
+            and lines[i + 1] == "from typing import Any"
+        ):
             # This is the problematic pattern
             # We need to find the end of the current from...import statement
 
             # If the current line ends with a parenthesis, it's multi-line
-            if '(' in line and ')' not in line:
+            if "(" in line and ")" not in line:
                 # Multi-line import
                 result.append(line)
                 i += 1
                 # Skip the 'from typing import Any' line
                 i += 1
                 # Continue with rest of multi-line import
-                while i < len(lines) and ')' not in lines[i-1]:
+                while i < len(lines) and ")" not in lines[i - 1]:
                     result.append(lines[i])
                     i += 1
             else:
@@ -48,21 +51,26 @@ def fix_imports(content: str) -> str:
     # Now find the first import block and insert 'from typing import Any' there
     # Find first import
     for i, line in enumerate(result):
-        if line.startswith('import ') or line.startswith('from '):
+        if line.startswith("import ") or line.startswith("from "):
             # Find end of import block
             j = i
             while j < len(result):
-                if result[j].strip() and not result[j].startswith('import ') and not result[j].startswith('from ') and not result[j].strip().startswith(')'):
+                if (
+                    result[j].strip()
+                    and not result[j].startswith("import ")
+                    and not result[j].startswith("from ")
+                    and not result[j].strip().startswith(")")
+                ):
                     break
                 j += 1
             # Check if 'from typing import Any' already exists
             import_block = result[i:j]
-            if 'from typing import Any' not in import_block:
+            if "from typing import Any" not in import_block:
                 # Insert it before the first import
-                result.insert(i, 'from typing import Any')
+                result.insert(i, "from typing import Any")
             break
 
-    return '\n'.join(result)
+    return "\n".join(result)
 
 
 def main() -> None:

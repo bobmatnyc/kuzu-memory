@@ -30,6 +30,7 @@ def print_banner():
 """
     print(banner)
 
+
 def run_command(cmd, description, show_output=False):
     """Run a command with progress indication."""
     print(f"⏳ {description}...")
@@ -38,18 +39,13 @@ def run_command(cmd, description, show_output=False):
         if show_output:
             result = subprocess.run(cmd, shell=True, check=True)
         else:
-            result = subprocess.run(
-                cmd,
-                shell=True,
-                check=True,
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         print(f"✅ {description} completed")
-        return True, result.stdout if hasattr(result, 'stdout') else ""
+        return True, result.stdout if hasattr(result, "stdout") else ""
     except subprocess.CalledProcessError as e:
         print(f"❌ {description} failed: {e}")
         return False, str(e)
+
 
 def check_python_version():
     """Check if Python version is compatible."""
@@ -64,6 +60,7 @@ def check_python_version():
     print(f"✅ Python {version.major}.{version.minor}.{version.micro} is compatible")
     return True
 
+
 def install_dependencies():
     """Install required dependencies."""
     dependencies = [
@@ -73,7 +70,7 @@ def install_dependencies():
         "pyyaml>=6.0",
         "python-dateutil>=2.8",
         "typing-extensions>=4.5",
-        "rich>=13.0.0"
+        "rich>=13.0.0",
     ]
 
     print("📦 Installing dependencies...")
@@ -84,6 +81,7 @@ def install_dependencies():
             return False
 
     return True
+
 
 def install_kuzu_memory():
     """Install KuzuMemory in development mode."""
@@ -98,6 +96,7 @@ def install_kuzu_memory():
 
     return success
 
+
 def detect_claude_installation():
     """Detect Claude Code or Claude Desktop installation."""
     system = platform.system()
@@ -105,24 +104,25 @@ def detect_claude_installation():
 
     if system == "Darwin":  # macOS
         claude_configs = [
-            Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+            Path.home()
+            / "Library"
+            / "Application Support"
+            / "Claude"
+            / "claude_desktop_config.json"
         ]
     elif system == "Linux":
-        claude_configs = [
-            Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
-        ]
+        claude_configs = [Path.home() / ".config" / "Claude" / "claude_desktop_config.json"]
     elif system == "Windows":
         app_data = os.environ.get("APPDATA", "")
         if app_data:
-            claude_configs = [
-                Path(app_data) / "Claude" / "claude_desktop_config.json"
-            ]
+            claude_configs = [Path(app_data) / "Claude" / "claude_desktop_config.json"]
 
     for config_path in claude_configs:
         if config_path.exists():
             return config_path
 
     return None
+
 
 def setup_claude_code_integration():
     """Setup MCP integration for Claude Code."""
@@ -145,15 +145,13 @@ def setup_claude_code_integration():
             "kuzu-memory": {
                 "command": str(Path.home() / ".local" / "bin" / "kuzu-memory-mcp"),
                 "args": [],
-                "env": {
-                    "KUZU_MEMORY_HOME": str(Path.home() / ".local" / "kuzu-memory")
-                }
+                "env": {"KUZU_MEMORY_HOME": str(Path.home() / ".local" / "kuzu-memory")},
             }
         }
     }
 
     mcp_config_path = config_dir / "mcp_server_config.json"
-    with open(mcp_config_path, 'w') as f:
+    with open(mcp_config_path, "w") as f:
         json.dump(mcp_config, f, indent=2)
 
     print(f"✅ MCP configuration saved to: {mcp_config_path}")
@@ -161,9 +159,10 @@ def setup_claude_code_integration():
     # Try to merge with existing Claude config
     try:
         # Backup existing config
-        backup_path = claude_config_path.with_suffix(f'.backup-{int(time.time())}.json')
+        backup_path = claude_config_path.with_suffix(f".backup-{int(time.time())}.json")
         if claude_config_path.exists():
             import shutil
+
             shutil.copy2(claude_config_path, backup_path)
             print(f"✅ Backed up existing config to: {backup_path}")
 
@@ -172,19 +171,19 @@ def setup_claude_code_integration():
                 existing_config = json.load(f)
 
             # Merge configurations
-            if 'mcpServers' not in existing_config:
-                existing_config['mcpServers'] = {}
+            if "mcpServers" not in existing_config:
+                existing_config["mcpServers"] = {}
 
-            existing_config['mcpServers']['kuzu-memory'] = mcp_config['mcpServers']['kuzu-memory']
+            existing_config["mcpServers"]["kuzu-memory"] = mcp_config["mcpServers"]["kuzu-memory"]
 
             # Write merged config
-            with open(claude_config_path, 'w') as f:
+            with open(claude_config_path, "w") as f:
                 json.dump(existing_config, f, indent=2)
 
             print("✅ Claude Code configuration updated with MCP server")
         else:
             # Create new config
-            with open(claude_config_path, 'w') as f:
+            with open(claude_config_path, "w") as f:
                 json.dump(mcp_config, f, indent=2)
             print("✅ Created new Claude Code configuration")
 
@@ -196,6 +195,7 @@ def setup_claude_code_integration():
         print(f"   Please manually add the MCP configuration from: {mcp_config_path}")
         return False
 
+
 def test_installation():
     """Test the installation."""
     print("🧪 Testing installation...")
@@ -203,20 +203,24 @@ def test_installation():
     try:
         # Test basic import
         import kuzu_memory
+
         print("✅ KuzuMemory imports successfully")
 
         # Test CLI
         from kuzu_memory.cli.commands import cli
+
         print("✅ CLI available")
 
         # Test core functionality
         from kuzu_memory.core.config import KuzuMemoryConfig
         from kuzu_memory.core.memory import KuzuMemory
+
         print("✅ Core components available")
 
         # Test MCP server
         try:
             from kuzu_memory.mcp import MCPServer
+
             print("✅ MCP server available for Claude Code")
         except ImportError:
             print("⚠️  MCP server not available (optional)")
@@ -224,6 +228,7 @@ def test_installation():
         # Test Auggie integration
         try:
             from kuzu_memory.integrations.auggie import AuggieIntegration
+
             print("✅ Auggie AI integration available")
         except ImportError:
             print("⚠️  Auggie integration not available (optional)")
@@ -234,17 +239,20 @@ def test_installation():
         print(f"❌ Installation test failed: {e}")
         return False
 
+
 def run_demo():
     """Run the interactive demo."""
     print("🎮 Running demo...")
 
     try:
         from kuzu_memory.cli.commands import cli
-        cli(['demo'])
+
+        cli(["demo"])
         return True
     except Exception as e:
         print(f"❌ Demo failed: {e}")
         return False
+
 
 def show_next_steps():
     """Show next steps to the user."""
@@ -281,6 +289,7 @@ Ready to build intelligent AI applications! 🧠✨
 
     print(next_steps)
 
+
 def main():
     """Main installation process."""
     start_time = time.time()
@@ -311,9 +320,9 @@ def main():
     setup_claude_code_integration()
 
     # Step 6: Run demo
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🎮 RUNNING DEMO")
-    print("="*60)
+    print("=" * 60)
 
     if not run_demo():
         print("⚠️  Demo failed, but installation is complete")
@@ -323,9 +332,9 @@ def main():
     minutes = int(elapsed_time // 60)
     seconds = int(elapsed_time % 60)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🎉 INSTALLATION COMPLETE!")
-    print("="*60)
+    print("=" * 60)
     print(f"⏱️  Total time: {minutes}m {seconds}s")
 
     if elapsed_time <= 180:  # 3 minutes
@@ -334,6 +343,7 @@ def main():
         print("⏰ Installation took longer than 3 minutes, but it's complete!")
 
     show_next_steps()
+
 
 if __name__ == "__main__":
     try:

@@ -331,9 +331,9 @@ class TestMCPToolsList:
         }
 
         # At least some expected tools should be present
-        assert (
-            len(expected_tools & tool_names) >= 3
-        ), f"Expected some of {expected_tools}, got {tool_names}"
+        assert len(expected_tools & tool_names) >= 3, (
+            f"Expected some of {expected_tools}, got {tool_names}"
+        )
 
         # Verify tool structure
         for tool in tools:

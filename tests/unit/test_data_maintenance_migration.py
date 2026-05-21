@@ -280,9 +280,9 @@ def _big_metadata(**extras: Any) -> str:
     }
     meta.update(extras)
     raw = json.dumps(meta)
-    assert (
-        len(raw) > _METADATA_THRESHOLD
-    ), f"test setup: metadata must exceed threshold, got {len(raw)} bytes"
+    assert len(raw) > _METADATA_THRESHOLD, (
+        f"test setup: metadata must exceed threshold, got {len(raw)} bytes"
+    )
     return raw
 
 

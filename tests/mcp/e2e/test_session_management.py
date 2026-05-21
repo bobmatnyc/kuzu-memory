@@ -523,9 +523,9 @@ class TestSessionCleanup:
             # Verify all cleaned up - wait for all processes to terminate
             for i, client in enumerate(clients):
                 terminated = await wait_for_process_termination(client.process, max_wait=2.0)
-                assert (
-                    terminated
-                ), f"Client {i} process did not terminate within 2s after disconnect"
+                assert terminated, (
+                    f"Client {i} process did not terminate within 2s after disconnect"
+                )
 
         finally:
             # Extra cleanup

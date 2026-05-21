@@ -5,6 +5,7 @@ Fix incorrectly added type annotations in function calls.
 The batch_fix_types.py script incorrectly added type annotations to
 function/method *arguments* instead of *parameters*. This script reverts those.
 """
+
 import re
 from pathlib import Path
 
@@ -15,16 +16,16 @@ def fix_function_call_annotations(content: str) -> str:
     # Should be: function_call(arg1, arg2, arg3)
 
     # Fix: argname: type | None -> argname
-    content = re.sub(r'(\w+):\s*str\s*\|\s*None(?=[,\)])', r'\1', content)
+    content = re.sub(r"(\w+):\s*str\s*\|\s*None(?=[,\)])", r"\1", content)
 
     # Fix: argname: str -> argname
-    content = re.sub(r'(\w+):\s*str(?=[,\)])', r'\1', content)
+    content = re.sub(r"(\w+):\s*str(?=[,\)])", r"\1", content)
 
     # Fix: argname: bool -> argname
-    content = re.sub(r'(\w+):\s*bool(?=[,\)])', r'\1', content)
+    content = re.sub(r"(\w+):\s*bool(?=[,\)])", r"\1", content)
 
     # Fix: argname: int -> argname
-    content = re.sub(r'(\w+):\s*int(?=[,\)])', r'\1', content)
+    content = re.sub(r"(\w+):\s*int(?=[,\)])", r"\1", content)
 
     return content
 

@@ -17,13 +17,12 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 
 class VersionManager:
     """Handles all version-related operations for the project."""
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         self.project_root = project_root or Path(__file__).parent.parent
         self.version_file = self.project_root / "VERSION"
         self.changelog_file = self.project_root / "CHANGELOG.md"
@@ -62,10 +61,7 @@ class VersionManager:
         content = self.pyproject_file.read_text()
         # Replace version = "X.X.X" with new version
         new_content = re.sub(
-            r'^version\s*=\s*"[^"]*"',
-            f'version = "{new_version}"',
-            content,
-            flags=re.MULTILINE
+            r'^version\s*=\s*"[^"]*"', f'version = "{new_version}"', content, flags=re.MULTILINE
         )
         self.pyproject_file.write_text(new_content)
 
@@ -82,7 +78,7 @@ class VersionManager:
             r'^__version__\s*=\s*"[^"]*"',
             f'__version__ = "{new_version}"',
             content,
-            flags=re.MULTILINE
+            flags=re.MULTILINE,
         )
         version_py_file.write_text(new_content)
 
@@ -140,7 +136,7 @@ class VersionManager:
         self.build_info_file.write_text(json.dumps(build_info, indent=2) + "\n")
         return build_info
 
-    def update_changelog(self, version: str, changes: Optional[list[str]] = None) -> None:
+    def update_changelog(self, version: str, changes: list[str] | None = None) -> None:
         """Update CHANGELOG.md with new version entry."""
         if not self.changelog_file.exists():
             print(f"Warning: CHANGELOG.md not found at {self.changelog_file}")
@@ -196,18 +192,18 @@ class VersionManager:
 
             # Update Unreleased link
             new_unreleased_link = f"[Unreleased]: {repo_url}/compare/v{version}...HEAD"
-            content = re.sub(
-                r"\[Unreleased\]: .+",
-                new_unreleased_link,
-                content
-            )
+            content = re.sub(r"\[Unreleased\]: .+", new_unreleased_link, content)
 
             # Add new version link
             new_version_link = f"[{version}]: {repo_url}/compare/v{current_version}...v{version}"
 
             # Insert after the Unreleased link
             unreleased_line_end = content.find(new_unreleased_link) + len(new_unreleased_link)
-            content = content[:unreleased_line_end] + f"\n{new_version_link}" + content[unreleased_line_end:]
+            content = (
+                content[:unreleased_line_end]
+                + f"\n{new_version_link}"
+                + content[unreleased_line_end:]
+            )
 
         return content
 
@@ -218,7 +214,7 @@ class VersionManager:
             subprocess.run(
                 ["git", "tag", "-a", tag_name, "-m", f"Release {version}"],
                 cwd=self.project_root,
-                check=True
+                check=True,
             )
             print(f"✅ Created git tag: {tag_name}")
         except subprocess.CalledProcessError as e:
@@ -233,7 +229,7 @@ class VersionManager:
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             if result.stdout.strip():
                 print("❌ Working tree is not clean. Please commit or stash changes first.")
@@ -266,7 +262,7 @@ class VersionManager:
                 cwd=self.project_root,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
             )
             print("✅ Fragment format validation passed")
             return True
@@ -286,7 +282,7 @@ class VersionManager:
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             print(result.stdout)
         except subprocess.CalledProcessError as e:
@@ -300,13 +296,7 @@ class VersionManager:
             cmd.append("--yes")
 
         try:
-            subprocess.run(
-                cmd,
-                cwd=self.project_root,
-                check=True,
-                capture_output=True,
-                text=True
-            )
+            subprocess.run(cmd, cwd=self.project_root, check=True, capture_output=True, text=True)
             print(f"✅ Built changelog for version {version}")
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to build changelog: {e.stderr}")
@@ -316,21 +306,33 @@ class VersionManager:
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(description="KuzuMemory version management")
-    parser.add_argument("action", choices=["current", "bump", "build-info", "tag",
-                                          "preview-changelog", "build-changelog", "validate-fragments"],
-                       help="Action to perform")
-    parser.add_argument("--type", choices=["major", "minor", "patch"],
-                       help="Version bump type (for bump action)")
-    parser.add_argument("--no-tag", action="store_true",
-                       help="Don't create git tag after version bump")
-    parser.add_argument("--force", action="store_true",
-                       help="Force operation even with dirty working tree")
-    parser.add_argument("--changelog", nargs="*",
-                       help="Custom changelog entries")
-    parser.add_argument("--version",
-                       help="Version to use (for preview-changelog, build-changelog)")
-    parser.add_argument("--yes", action="store_true",
-                       help="Auto-confirm fragment deletion (for build-changelog)")
+    parser.add_argument(
+        "action",
+        choices=[
+            "current",
+            "bump",
+            "build-info",
+            "tag",
+            "preview-changelog",
+            "build-changelog",
+            "validate-fragments",
+        ],
+        help="Action to perform",
+    )
+    parser.add_argument(
+        "--type", choices=["major", "minor", "patch"], help="Version bump type (for bump action)"
+    )
+    parser.add_argument(
+        "--no-tag", action="store_true", help="Don't create git tag after version bump"
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Force operation even with dirty working tree"
+    )
+    parser.add_argument("--changelog", nargs="*", help="Custom changelog entries")
+    parser.add_argument("--version", help="Version to use (for preview-changelog, build-changelog)")
+    parser.add_argument(
+        "--yes", action="store_true", help="Auto-confirm fragment deletion (for build-changelog)"
+    )
 
     args = parser.parse_args()
 

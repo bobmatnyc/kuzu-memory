@@ -104,9 +104,9 @@ class TestTemporalDecayWiredIntoRankMemories:
         new_mem = _make_memory("recall scoring test", days_old=0.5, importance=0.5)
 
         result = self._rank([old_mem, new_mem], "recall scoring test", apply_temporal_decay=True)
-        assert (
-            result[0] is new_mem
-        ), "With temporal decay, a memory < 1 day old should rank above one 120 days old"
+        assert result[0] is new_mem, (
+            "With temporal decay, a memory < 1 day old should rank above one 120 days old"
+        )
 
     def test_decay_score_ranges(self) -> None:
         """Temporal decay factors should stay in (0, 1] for all age buckets."""
@@ -117,9 +117,9 @@ class TestTemporalDecayWiredIntoRankMemories:
         for days in age_scenarios:
             mem = _make_memory("content", days_old=days, memory_type=MemoryType.EPISODIC)
             score = engine.calculate_temporal_score(mem)
-            assert (
-                0.0 < score <= 1.0
-            ), f"Decay score {score!r} out of range for {days}-day-old memory"
+            assert 0.0 < score <= 1.0, (
+                f"Decay score {score!r} out of range for {days}-day-old memory"
+            )
 
     def test_decay_decreases_with_age(self) -> None:
         """Older memories must receive a strictly lower decay score than newer ones."""
@@ -164,9 +164,9 @@ class TestTemporalDecayWiredIntoRankMemories:
 
         sig = inspect.signature(RecallCoordinator._rank_memories)
         default = sig.parameters["apply_temporal_decay"].default
-        assert (
-            default is False
-        ), "apply_temporal_decay must default to False to keep hook recall paths clean"
+        assert default is False, (
+            "apply_temporal_decay must default to False to keep hook recall paths clean"
+        )
 
     def test_attach_memories_default_apply_temporal_decay_is_false(self) -> None:
         """attach_memories must default to apply_temporal_decay=False."""
@@ -174,9 +174,9 @@ class TestTemporalDecayWiredIntoRankMemories:
 
         sig = inspect.signature(RecallCoordinator.attach_memories)
         default = sig.parameters["apply_temporal_decay"].default
-        assert (
-            default is False
-        ), "attach_memories must default to apply_temporal_decay=False for hook safety"
+        assert default is False, (
+            "attach_memories must default to apply_temporal_decay=False for hook safety"
+        )
 
     # ------------------------------------------------------------------
     # Deduplication still works when decay is enabled

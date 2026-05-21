@@ -81,9 +81,9 @@ class TestEntityExtractor:
 
             found_languages = {e.text for e in language_entities}
             for expected_lang in expected_languages:
-                assert (
-                    expected_lang in found_languages
-                ), f"Expected language '{expected_lang}' not found"
+                assert expected_lang in found_languages, (
+                    f"Expected language '{expected_lang}' not found"
+                )
 
     def test_technology_framework_extraction(self, entity_extractor):
         """Test extraction of technologies and frameworks."""
@@ -151,9 +151,9 @@ class TestEntityExtractor:
                     expected_compound.lower() in found_compound.lower()
                     for found_compound in found_compounds
                 )
-                assert (
-                    found_match
-                ), f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
+                assert found_match, (
+                    f"Expected compound '{expected_compound}' not found. Found: {found_compounds}"
+                )
 
     def test_person_name_extraction(self, entity_extractor):
         """Test extraction of person names."""
@@ -279,9 +279,9 @@ class TestEntityExtractor:
 
                 found_versions = {e.text for e in version_entities}
                 for expected_version in expected_versions:
-                    assert (
-                        expected_version in found_versions
-                    ), f"Expected version '{expected_version}' not found"
+                    assert expected_version in found_versions, (
+                        f"Expected version '{expected_version}' not found"
+                    )
 
     def test_date_extraction(self, entity_extractor):
         """Test extraction of dates and times."""

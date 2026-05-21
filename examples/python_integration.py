@@ -10,7 +10,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class KuzuMemoryIntegration:
@@ -21,7 +21,7 @@ class KuzuMemoryIntegration:
     This approach ensures compatibility and avoids import conflicts.
     """
 
-    def __init__(self, project_path: Optional[str] = None, timeout: int = 5):
+    def __init__(self, project_path: str | None = None, timeout: int = 5):
         """
         Initialize KuzuMemory integration.
 
@@ -32,8 +32,7 @@ class KuzuMemoryIntegration:
         self.project_path = Path(project_path) if project_path else Path.cwd()
         self.timeout = timeout
 
-    def enhance_prompt(self, prompt: str, format: str = 'plain',
-                      max_memories: int = 5) -> str:
+    def enhance_prompt(self, prompt: str, format: str = "plain", max_memories: int = 5) -> str:
         """
         Enhance a prompt with relevant memory context.
 
@@ -47,18 +46,19 @@ class KuzuMemoryIntegration:
         """
         try:
             cmd = [
-                'kuzu-memory', 'enhance', prompt,
-                '--format', format,
-                '--max-memories', str(max_memories),
-                '--project-root', str(self.project_path)
+                "kuzu-memory",
+                "enhance",
+                prompt,
+                "--format",
+                format,
+                "--max-memories",
+                str(max_memories),
+                "--project-root",
+                str(self.project_path),
             ]
 
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                check=True
+                cmd, capture_output=True, text=True, timeout=self.timeout, check=True
             )
 
             return result.stdout.strip()
@@ -73,8 +73,13 @@ class KuzuMemoryIntegration:
             print("Error: kuzu-memory command not found", file=sys.stderr)
             return prompt
 
-    def store_learning(self, content: str, source: str = 'ai-conversation',
-                      quiet: bool = True, metadata: Optional[dict[str, Any]] = None) -> bool:
+    def store_learning(
+        self,
+        content: str,
+        source: str = "ai-conversation",
+        quiet: bool = True,
+        metadata: dict[str, Any] | None = None,
+    ) -> bool:
         """
         Store learning content asynchronously (non-blocking).
 
@@ -89,16 +94,20 @@ class KuzuMemoryIntegration:
         """
         try:
             cmd = [
-                'kuzu-memory', 'learn', content,
-                '--source', source,
-                '--project-root', str(self.project_path)
+                "kuzu-memory",
+                "learn",
+                content,
+                "--source",
+                source,
+                "--project-root",
+                str(self.project_path),
             ]
 
             if quiet:
-                cmd.append('--quiet')
+                cmd.append("--quiet")
 
             if metadata:
-                cmd.extend(['--metadata', json.dumps(metadata)])
+                cmd.extend(["--metadata", json.dumps(metadata)])
 
             # Fire and forget - don't check return code
             subprocess.run(cmd, timeout=self.timeout, check=False)
@@ -117,17 +126,16 @@ class KuzuMemoryIntegration:
         """
         try:
             cmd = [
-                'kuzu-memory', 'stats',
-                '--format', 'json',
-                '--project-root', str(self.project_path)
+                "kuzu-memory",
+                "stats",
+                "--format",
+                "json",
+                "--project-root",
+                str(self.project_path),
             ]
 
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                check=True
+                cmd, capture_output=True, text=True, timeout=self.timeout, check=True
             )
 
             return json.loads(result.stdout)
@@ -181,7 +189,7 @@ def main():
     questions = [
         "How do I structure an API endpoint?",
         "What's the best way to handle database connections?",
-        "How should I write tests for this project?"
+        "How should I write tests for this project?",
     ]
 
     for question in questions:

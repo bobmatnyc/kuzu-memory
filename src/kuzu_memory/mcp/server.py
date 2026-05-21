@@ -819,7 +819,7 @@ class KuzuMemoryMCPServer:
             return {
                 "available": False,
                 "error": (
-                    "No local LLM detected. " "Install Ollama (https://ollama.ai) or LM Studio."
+                    "No local LLM detected. Install Ollama (https://ollama.ai) or LM Studio."
                 ),
             }
 

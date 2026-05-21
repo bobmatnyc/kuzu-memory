@@ -67,9 +67,9 @@ class TestRecallCommand:
 
                 result = runner.invoke(recall, ["test query", "--format", "simple"], obj={})
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
+                )
                 mock_memory_service.attach_memories.assert_called_once()
                 assert "test query" in mock_memory_service.attach_memories.call_args[0][0]
 
@@ -384,9 +384,9 @@ class TestGroupLevelDbPath:
                 # Pass group-level db_path via obj (simulates --db-path at group level)
                 result = runner.invoke(status, [], obj={"db_path": group_db_path})
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
+                )
                 # get_project_db_path should NOT have been called
                 mock_default.assert_not_called()
                 # ServiceManager should have been called with the group-level path
@@ -418,9 +418,9 @@ class TestGroupLevelDbPath:
                     obj={"db_path": group_db_path},
                 )
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
+                )
                 # Path() was called with the local path string (local flag wins)
                 mock_path_class.assert_called_once_with(local_db_path)
                 # ServiceManager should have been called with the constructed local path
@@ -442,9 +442,9 @@ class TestGroupLevelDbPath:
                 # obj has no db_path key
                 result = runner.invoke(status, [], obj={})
 
-                assert (
-                    result.exit_code == 0
-                ), f"Output: {result.output}\nException: {result.exception}"
+                assert result.exit_code == 0, (
+                    f"Output: {result.output}\nException: {result.exception}"
+                )
                 # Default path should have been used
                 mock_default.assert_called_once()
                 call_kwargs = mock_ctx.call_args[1]
