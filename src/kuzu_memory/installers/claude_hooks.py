@@ -1241,6 +1241,34 @@ exec {kuzu_cmd} "$@"
                     warnings=["Hooks not installed - running in subservient mode"],
                 )
 
+            # Auto-detect claude-mpm managed installation by scanning settings.local.json
+            # for claude-hook-fast.sh or claude-mpm in hook command strings.
+            # If detected, skip installation to avoid corrupting claude-mpm's hook config.
+            settings_local_path = self.project_root / ".claude" / "settings.local.json"
+            if settings_local_path.exists():
+                try:
+                    with open(settings_local_path, encoding="utf-8") as _f:
+                        _raw = _f.read()
+                    if "claude-hook-fast.sh" in _raw.lower() or "claude-mpm" in _raw.lower():
+                        _warning_msg = (
+                            "claude-mpm detected in settings.local.json — skipping hook "
+                            "installation to avoid conflict. Use trusty-memory for claude-mpm "
+                            "projects (https://github.com/bobmatnyc/trusty-memory)"
+                        )
+                        logger.warning(_warning_msg)
+                        print(f"WARNING: {_warning_msg}")
+                        return InstallationResult(
+                            success=True,
+                            ai_system=self.ai_system_name,
+                            files_created=[],
+                            files_modified=[],
+                            backup_files=[],
+                            message=_warning_msg,
+                            warnings=[_warning_msg],
+                        )
+                except Exception as _e:
+                    logger.debug(f"Could not read settings.local.json for claude-mpm check: {_e}")
+
             # Check prerequisites
             errors = self.check_prerequisites()
             if errors:
